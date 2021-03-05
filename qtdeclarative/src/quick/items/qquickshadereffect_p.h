@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,18 +45,52 @@
 // We mean it.
 //
 
-#include <private/qtquickglobal_p.h>
-
-QT_REQUIRE_CONFIG(quick_shadereffect);
-
 #include <QtQuick/qquickitem.h>
+
+#include <QtQuick/qsgmaterial.h>
 #include <private/qtquickglobal_p.h>
+#include <private/qsgadaptationlayer_p.h>
+#include <private/qquickshadereffectnode_p.h>
+#include "qquickshadereffectmesh_p.h"
+
+#include <QtCore/qpointer.h>
 
 QT_BEGIN_NAMESPACE
 
-class QQuickOpenGLShaderEffect;
-class QQuickGenericShaderEffect;
-class QQuickShaderEffectPrivate;
+const char *qtPositionAttributeName();
+const char *qtTexCoordAttributeName();
+
+class QSGContext;
+class QSignalMapper;
+class QQuickCustomMaterialShader;
+
+// Common class for QQuickShaderEffect and QQuickCustomParticle.
+struct Q_QUICK_PRIVATE_EXPORT QQuickShaderEffectCommon
+{
+    typedef QQuickShaderEffectMaterialKey Key;
+    typedef QQuickShaderEffectMaterial::UniformData UniformData;
+
+    ~QQuickShaderEffectCommon();
+    void disconnectPropertySignals(QQuickItem *item, Key::ShaderType shaderType);
+    void connectPropertySignals(QQuickItem *item, Key::ShaderType shaderType);
+    void updateParseLog(bool ignoreAttributes);
+    void lookThroughShaderCode(QQuickItem *item, Key::ShaderType shaderType, const QByteArray &code);
+    void updateShader(QQuickItem *item, Key::ShaderType shaderType);
+    void updateMaterial(QQuickShaderEffectNode *node, QQuickShaderEffectMaterial *material,
+                        bool updateUniforms, bool updateUniformValues, bool updateTextureProviders);
+    void updateWindow(QQuickWindow *window);
+
+    // Called by slots in QQuickShaderEffect:
+    void sourceDestroyed(QObject *object);
+    void propertyChanged(QQuickItem *item, int mappedId, bool *textureProviderChanged);
+
+    Key source;
+    QVector<QByteArray> attributes;
+    QVector<UniformData> uniformData[Key::ShaderTypeCount];
+    QVector<QSignalMapper *> signalMappers[Key::ShaderTypeCount];
+    QString parseLog;
+};
+
 
 class Q_QUICK_PRIVATE_EXPORT QQuickShaderEffect : public QQuickItem
 {
@@ -77,14 +105,16 @@ class Q_QUICK_PRIVATE_EXPORT QQuickShaderEffect : public QQuickItem
     Q_PROPERTY(bool supportsAtlasTextures READ supportsAtlasTextures WRITE setSupportsAtlasTextures NOTIFY supportsAtlasTexturesChanged REVISION 1)
 
 public:
-    enum CullMode {
-        NoCulling,
-        BackFaceCulling,
-        FrontFaceCulling
+    enum CullMode
+    {
+        NoCulling = QQuickShaderEffectMaterial::NoCulling,
+        BackFaceCulling = QQuickShaderEffectMaterial::BackFaceCulling,
+        FrontFaceCulling = QQuickShaderEffectMaterial::FrontFaceCulling
     };
     Q_ENUM(CullMode)
 
-    enum Status {
+    enum Status
+    {
         Compiled,
         Uncompiled,
         Error
@@ -92,34 +122,32 @@ public:
     Q_ENUM(Status)
 
     QQuickShaderEffect(QQuickItem *parent = 0);
+    ~QQuickShaderEffect();
 
-    QByteArray fragmentShader() const;
+    QByteArray fragmentShader() const { return m_common.source.sourceCode[Key::FragmentShader]; }
     void setFragmentShader(const QByteArray &code);
 
-    QByteArray vertexShader() const;
+    QByteArray vertexShader() const { return m_common.source.sourceCode[Key::VertexShader]; }
     void setVertexShader(const QByteArray &code);
 
-    bool blending() const;
+    bool blending() const { return m_blending; }
     void setBlending(bool enable);
 
     QVariant mesh() const;
     void setMesh(const QVariant &mesh);
 
-    CullMode cullMode() const;
+    CullMode cullMode() const { return m_cullMode; }
     void setCullMode(CullMode face);
 
-    bool supportsAtlasTextures() const;
+    QString log() const { return m_log; }
+    Status status() const { return m_status; }
+
+    bool supportsAtlasTextures() const { return m_supportsAtlasTextures; }
     void setSupportsAtlasTextures(bool supports);
 
-    QString log() const;
-    Status status() const;
-
-    bool isComponentComplete() const;
     QString parseLog();
 
-#if QT_CONFIG(opengl)
-    bool isOpenGLShaderEffect() const;
-#endif
+    bool event(QEvent *) Q_DECL_OVERRIDE;
 
 Q_SIGNALS:
     void fragmentShaderChanged();
@@ -132,19 +160,44 @@ Q_SIGNALS:
     void supportsAtlasTexturesChanged();
 
 protected:
-    bool event(QEvent *e) override;
-    void geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry) override;
-    QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *updatePaintNodeData) override;
-    void componentComplete() override;
-    void itemChange(ItemChange change, const ItemChangeData &value) override;
+    void geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry) Q_DECL_OVERRIDE;
+    QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *) Q_DECL_OVERRIDE;
+    void componentComplete() Q_DECL_OVERRIDE;
+    void itemChange(ItemChange change, const ItemChangeData &value) Q_DECL_OVERRIDE;
+
+private Q_SLOTS:
+    void updateGeometry();
+    void updateGeometryIfAtlased();
+    void updateLogAndStatus(const QString &log, int status);
+    void sourceDestroyed(QObject *object);
+    void propertyChanged(int mappedId);
 
 private:
-#if QT_CONFIG(opengl)
-    QQuickOpenGLShaderEffect *m_glImpl;
-#endif
-    QQuickGenericShaderEffect *m_impl;
+    friend class QQuickCustomMaterialShader;
+    friend class QQuickShaderEffectNode;
 
-    Q_DECLARE_PRIVATE(QQuickShaderEffect)
+    typedef QQuickShaderEffectMaterialKey Key;
+    typedef QQuickShaderEffectMaterial::UniformData UniformData;
+
+    QSize m_meshResolution;
+    QQuickShaderEffectMesh *m_mesh;
+    QQuickGridMesh m_defaultMesh;
+    CullMode m_cullMode;
+    QString m_log;
+    Status m_status;
+
+    QQuickShaderEffectCommon m_common;
+
+    uint m_blending : 1;
+    uint m_dirtyUniforms : 1;
+    uint m_dirtyUniformValues : 1;
+    uint m_dirtyTextureProviders : 1;
+    uint m_dirtyProgram : 1;
+    uint m_dirtyParseLog : 1;
+    uint m_dirtyMesh : 1;
+    uint m_dirtyGeometry : 1;
+    uint m_customVertexShader : 1;
+    uint m_supportsAtlasTextures : 1;
 };
 
 QT_END_NAMESPACE

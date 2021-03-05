@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -101,7 +106,7 @@ QStringList QDesignerPluginManager::defaultPluginPaths()
     const QStringList path_list = QCoreApplication::libraryPaths();
 
     const QString designer = QStringLiteral("designer");
-    for (const QString &path : path_list) {
+    foreach (const QString &path, path_list) {
         QString libPath = path;
         libPath += QDir::separator();
         libPath += designer;
@@ -546,8 +551,7 @@ void QDesignerPluginManagerPrivate::addCustomWidgets(const QObject *o,
         return;
     }
     if (const QDesignerCustomWidgetCollectionInterface *coll = qobject_cast<QDesignerCustomWidgetCollectionInterface*>(o)) {
-        const QList<QDesignerCustomWidgetInterface *> &collCustomWidgets = coll->customWidgets();
-        for (QDesignerCustomWidgetInterface *c : collCustomWidgets)
+        foreach(QDesignerCustomWidgetInterface *c, coll->customWidgets())
             addCustomWidget(c, pluginPath, designerLanguage);
     }
 }
@@ -664,7 +668,7 @@ void QDesignerPluginManager::updateRegisteredPlugins()
     if (debugPluginManager)
         qDebug() << Q_FUNC_INFO;
     m_d->m_registeredPlugins.clear();
-    for (const QString &path : qAsConst(m_d->m_pluginPaths))
+    foreach (const QString &path,  m_d->m_pluginPaths)
         registerPath(path);
 }
 
@@ -674,7 +678,7 @@ bool QDesignerPluginManager::registerNewPlugins()
         qDebug() << Q_FUNC_INFO;
 
     const int before = m_d->m_registeredPlugins.size();
-    for (const QString &path : qAsConst(m_d->m_pluginPaths))
+    foreach (const QString &path, m_d->m_pluginPaths)
         registerPath(path);
     const bool newPluginsFound = m_d->m_registeredPlugins.size() > before;
     // We force a re-initialize as Jambi collection might return
@@ -689,8 +693,9 @@ void QDesignerPluginManager::registerPath(const QString &path)
 {
     if (debugPluginManager)
         qDebug() << Q_FUNC_INFO << path;
-    const QStringList &candidates = findPlugins(path);
-    for (const QString &plugin : candidates)
+    QStringList candidates = findPlugins(path);
+
+    foreach (const QString &plugin, candidates)
         registerPlugin(plugin);
 }
 
@@ -742,13 +747,12 @@ void QDesignerPluginManager::ensureInitialized()
     const QObjectList staticPluginObjects = QPluginLoader::staticInstances();
     if (!staticPluginObjects.empty()) {
         const QString staticPluginPath = QCoreApplication::applicationFilePath();
-        for (QObject *o : staticPluginObjects)
+        foreach(QObject *o, staticPluginObjects)
             m_d->addCustomWidgets(o, staticPluginPath, designerLanguage);
     }
-    for (const QString &plugin : qAsConst(m_d->m_registeredPlugins)) {
+    foreach (const QString &plugin, m_d->m_registeredPlugins)
         if (QObject *o = instance(plugin))
             m_d->addCustomWidgets(o, plugin, designerLanguage);
-    }
 
     m_d->m_initialized = true;
 }
@@ -778,10 +782,10 @@ QDesignerCustomWidgetData QDesignerPluginManager::customWidgetData(const QString
 
 QObjectList QDesignerPluginManager::instances() const
 {
-    const QStringList &plugins = registeredPlugins();
+    QStringList plugins = registeredPlugins();
 
     QObjectList lst;
-    for (const QString &plugin : plugins) {
+    foreach (const QString &plugin, plugins) {
         if (QObject *o = instance(plugin))
             lst.append(o);
     }

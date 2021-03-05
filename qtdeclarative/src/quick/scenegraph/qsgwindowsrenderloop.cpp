@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -48,17 +42,12 @@
 
 #include <QtQuick/private/qsgcontext_p.h>
 #include <QtQuick/private/qquickwindow_p.h>
-#include <QtQuick/private/qsgrenderer_p.h>
-#include <QtQuick/private/qsgdefaultrendercontext_p.h>
 
 #include <QtQuick/QQuickWindow>
 
 #include <private/qquickprofiler_p.h>
+#include <private/qquickshadereffectnode_p.h>
 #include <private/qquickanimatorcontroller_p.h>
-
-#if QT_CONFIG(quick_shadereffect) && QT_CONFIG(opengl)
-#include <private/qquickopenglshadereffectnode_p.h>
-#endif
 
 QT_BEGIN_NAMESPACE
 
@@ -83,18 +72,19 @@ QSGWindowsRenderLoop::QSGWindowsRenderLoop()
     , m_updateTimer(0)
     , m_animationTimer(0)
 {
-    m_rc = static_cast<QSGDefaultRenderContext *>(m_sg->createRenderContext());
+    m_rc = m_sg->createRenderContext();
+
+    m_animationDriver = m_sg->createAnimationDriver(m_sg);
+    m_animationDriver->install();
+
+    connect(m_animationDriver, SIGNAL(started()), this, SLOT(started()));
+    connect(m_animationDriver, SIGNAL(stopped()), this, SLOT(stopped()));
 
     m_vsyncDelta = 1000 / QGuiApplication::primaryScreen()->refreshRate();
     if (m_vsyncDelta <= 0)
         m_vsyncDelta = 16;
 
     RLDEBUG("Windows Render Loop created");
-
-    m_animationDriver = m_sg->createAnimationDriver(m_sg);
-    connect(m_animationDriver, SIGNAL(started()), this, SLOT(started()));
-    connect(m_animationDriver, SIGNAL(stopped()), this, SLOT(stopped()));
-    m_animationDriver->install();
 
     qsg_render_timer.start();
 }
@@ -245,9 +235,7 @@ void QSGWindowsRenderLoop::windowDestroyed(QQuickWindow *window)
     if (Q_UNLIKELY(!current))
         qCDebug(QSG_LOG_RENDERLOOP) << "cleanup without an OpenGL context";
 
-#if QT_CONFIG(quick_shadereffect) && QT_CONFIG(opengl)
-    QQuickOpenGLShaderEffectMaterial::cleanupMaterialCache();
-#endif
+    QQuickShaderEffectMaterial::cleanupMaterialCache();
 
     d->cleanupNodesOnShutdown();
     if (m_windows.size() == 0) {
@@ -263,7 +251,7 @@ void QSGWindowsRenderLoop::windowDestroyed(QQuickWindow *window)
 
 bool QSGWindowsRenderLoop::anyoneShowing() const
 {
-    for (const WindowData &wd : qAsConst(m_windows))
+    foreach (const WindowData &wd, m_windows)
         if (wd.window->isVisible() && wd.window->isExposed() && wd.window->size().isValid())
             return true;
     return false;
@@ -326,7 +314,6 @@ QImage QSGWindowsRenderLoop::grab(QQuickWindow *window)
 
     bool alpha = window->format().alphaBufferSize() > 0 && window->color().alpha() != 255;
     QImage image = qt_gl_read_framebuffer(window->size() * window->effectiveDevicePixelRatio(), alpha, alpha);
-    image.setDevicePixelRatio(window->effectiveDevicePixelRatio());
     return image;
 }
 
@@ -346,11 +333,6 @@ void QSGWindowsRenderLoop::maybeUpdate(QQuickWindow *window)
 
     wd->pendingUpdate = true;
     maybePostUpdateTimer();
-}
-
-QSGRenderContext *QSGWindowsRenderLoop::createRenderContext(QSGContext *) const
-{
-    return m_rc;
 }
 
 bool QSGWindowsRenderLoop::event(QEvent *event)
@@ -383,7 +365,7 @@ void QSGWindowsRenderLoop::render()
 {
     RLDEBUG("render");
     bool rendered = false;
-    for (const WindowData &wd : qAsConst(m_windows)) {
+    foreach (const WindowData &wd, m_windows) {
         if (wd.pendingUpdate) {
             const_cast<WindowData &>(wd).pendingUpdate = false;
             renderWindow(wd.window);
@@ -446,15 +428,7 @@ void QSGWindowsRenderLoop::renderWindow(QQuickWindow *window)
         }
     }
 
-    bool lastDirtyWindow = true;
-    for (int i=0; i<m_windows.size(); ++i) {
-        if ( m_windows[i].pendingUpdate) {
-            lastDirtyWindow = false;
-            break;
-        }
-    }
-
-    d->flushFrameSynchronousEvents();
+    d->flushDelayedTouchEvent();
     // Event delivery or processing has caused the window to stop rendering.
     if (!windowData(window))
         return;
@@ -473,8 +447,6 @@ void QSGWindowsRenderLoop::renderWindow(QQuickWindow *window)
 
     RLDEBUG(" - syncing");
     d->syncSceneGraph();
-    if (lastDirtyWindow)
-        m_rc->endSync();
     QSG_RENDER_TIMING_SAMPLE(QQuickProfiler::SceneGraphRenderLoopFrame, time_synced,
                              QQuickProfiler::SceneGraphRenderLoopSync);
 
@@ -504,15 +476,4 @@ void QSGWindowsRenderLoop::renderWindow(QQuickWindow *window)
                               QQuickProfiler::SceneGraphRenderLoopSwap);
 }
 
-void QSGWindowsRenderLoop::releaseResources(QQuickWindow *w)
-{
-    // No full invalidation of the rendercontext, just clear some caches.
-    RLDEBUG("releaseResources");
-    QQuickWindowPrivate *d = QQuickWindowPrivate::get(w);
-    if (d->renderer)
-        d->renderer->releaseCachedResources();
-}
-
 QT_END_NAMESPACE
-
-#include "moc_qsgwindowsrenderloop_p.cpp"

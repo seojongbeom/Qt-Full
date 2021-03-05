@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -71,9 +76,34 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QUndoStack>
 #include <QtCore/QDebug>
+#include <QtCore/QSignalMapper>
 #include <QtCore/QCoreApplication>
 
 QT_BEGIN_NAMESPACE
+
+static QMenuBar *findMenuBar(const QWidget *widget)
+{
+    const QList<QObject*> children = widget->children();
+    foreach (QObject *obj, widget->children()) {
+        if (QMenuBar *mb = qobject_cast<QMenuBar*>(obj)) {
+            return mb;
+        }
+    }
+
+    return 0;
+}
+
+static QStatusBar *findStatusBar(const QWidget *widget)
+{
+    const QList<QObject*> children = widget->children();
+    foreach (QObject *obj, widget->children()) {
+        if (QStatusBar *sb = qobject_cast<QStatusBar*>(obj)) {
+            return sb;
+        }
+    }
+
+    return 0;
+}
 
 static inline QAction *createSeparatorHelper(QObject *parent) {
     QAction *rc = new QAction(parent);
@@ -88,10 +118,9 @@ static QString objName(const QDesignerFormEditorInterface *core, QObject *object
 
     const QString objectNameProperty = QStringLiteral("objectName");
     const int index = sheet->indexOf(objectNameProperty);
-    const QVariant v = sheet->property(index);
-    if (v.canConvert<qdesigner_internal::PropertySheetStringValue>())
-        return v.value<qdesigner_internal::PropertySheetStringValue>().value();
-    return v.toString();
+    const qdesigner_internal::PropertySheetStringValue objectNameValue
+            = qvariant_cast<qdesigner_internal::PropertySheetStringValue>(sheet->property(index));
+    return objectNameValue.value();
 }
 
 enum { ApplyMinimumWidth = 0x1, ApplyMinimumHeight = 0x2, ApplyMaximumWidth = 0x4, ApplyMaximumHeight = 0x8 };
@@ -448,7 +477,7 @@ void QDesignerTaskMenu::removeStatusBar()
         }
 
         DeleteStatusBarCommand *cmd = new DeleteStatusBarCommand(fw);
-        cmd->init(mw->findChild<QStatusBar *>(QString(), Qt::FindDirectChildrenOnly));
+        cmd->init(findStatusBar(mw));
         fw->commandHistory()->push(cmd);
     }
 }
@@ -464,16 +493,16 @@ QList<QAction*> QDesignerTaskMenu::taskActions() const
 
     if (const QMainWindow *mw = qobject_cast<const QMainWindow*>(formWindow->mainContainer()))  {
         if (isMainContainer || mw->centralWidget() == widget()) {
-            if (mw->findChild<QMenuBar *>(QString(), Qt::FindDirectChildrenOnly) == nullptr)
+            if (!findMenuBar(mw)) {
                 actions.append(d->m_addMenuBar);
+            }
 
             actions.append(d->m_addToolBar);
             // ### create the status bar
-            if (mw->findChild<QStatusBar *>(QString(), Qt::FindDirectChildrenOnly))
-                actions.append(d->m_removeStatusBar);
-            else
+            if (!findStatusBar(mw))
                 actions.append(d->m_addStatusBar);
-
+            else
+                actions.append(d->m_removeStatusBar);
             actions.append(d->m_separator);
         }
     }
@@ -654,7 +683,7 @@ void QDesignerTaskMenu::navigateToSlot(QDesignerFormEditorInterface *core,
         qdesigner_internal::MetaDataBaseItem *item = metaDataBase->metaDataBaseItem(object);
         Q_ASSERT(item);
         const QStringList fakeSignals = item->fakeSignals();
-        for (const QString &fakeSignal : fakeSignals)
+        foreach (const QString &fakeSignal, fakeSignals)
             classToSignalList[item->customClassName()][fakeSignal] = QStringList();
     }
 
@@ -666,7 +695,7 @@ void QDesignerTaskMenu::navigateToSlot(QDesignerFormEditorInterface *core,
             if (index >= 0) {
                 WidgetDataBaseItem* item = static_cast<WidgetDataBaseItem*>(db->item(index));
                 const QStringList fakeSignals = item->fakeSignals();
-                for (const QString &fakeSignal : fakeSignals)
+                foreach (const QString &fakeSignal, fakeSignals)
                     classToSignalList[promotedClassName][fakeSignal] = QStringList();
             }
         }

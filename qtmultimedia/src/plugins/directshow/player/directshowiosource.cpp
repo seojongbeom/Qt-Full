@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,13 +35,10 @@
 
 #include "directshowglobal.h"
 #include "directshowmediatype.h"
-#include "directshowmediatypeenum.h"
 #include "directshowpinenum.h"
 
 #include <QtCore/qcoreapplication.h>
 #include <QtCore/qurl.h>
-
-QT_BEGIN_NAMESPACE
 
 static const GUID directshow_subtypes[] =
 {
@@ -61,8 +52,10 @@ static const GUID directshow_subtypes[] =
     MEDIASUBTYPE_AU,
     MEDIASUBTYPE_DssVideo,
     MEDIASUBTYPE_MPEG1Audio,
-    MEDIASUBTYPE_MPEG1System,
-    MEDIASUBTYPE_MPEG1VideoCD
+    MEDIASUBTYPE_MPEG1System
+#ifndef Q_OS_WINCE
+    , MEDIASUBTYPE_MPEG1VideoCD
+#endif
 };
 
 DirectShowIOSource::DirectShowIOSource(DirectShowEventLoop *loop)
@@ -84,7 +77,8 @@ DirectShowIOSource::DirectShowIOSource(DirectShowEventLoop *loop)
     // The filter works in pull mode, the downstream filter is responsible for requesting
     // samples from this one.
     //
-    AM_MEDIA_TYPE type
+    QVector<AM_MEDIA_TYPE> mediaTypes;
+    AM_MEDIA_TYPE type =
     {
         MEDIATYPE_Stream,  // majortype
         MEDIASUBTYPE_NULL, // subtype
@@ -101,8 +95,10 @@ DirectShowIOSource::DirectShowIOSource(DirectShowEventLoop *loop)
 
     for (int i = 0; i < count; ++i) {
         type.subtype = directshow_subtypes[i];
-        m_supportedMediaTypes.append(DirectShowMediaType(type));
+        mediaTypes.append(type);
     }
+
+    setMediaTypes(mediaTypes);
 }
 
 DirectShowIOSource::~DirectShowIOSource()
@@ -373,24 +369,28 @@ HRESULT DirectShowIOSource::Connect(IPin *pReceivePin, const AM_MEDIA_TYPE *pmt)
          hr = pReceivePin->ReceiveConnection(this, pmt);
          // Update the media type for the current connection.
          if (SUCCEEDED(hr))
-             DirectShowMediaType::copy(&m_connectionMediaType, pmt);
+             m_connectionMediaType = *pmt;
     } else if (pmt && pmt->subtype == MEDIATYPE_NULL) { // - Partial type (Stream, but no subtype specified).
-        DirectShowMediaType::copy(&m_connectionMediaType, pmt);
+        m_connectionMediaType = *pmt;
         // Check if the receiving pin accepts any of the streaming subtypes.
-        for (const DirectShowMediaType &t : qAsConst(m_supportedMediaTypes)) {
-            m_connectionMediaType->subtype = t->subtype;
+        QVector<AM_MEDIA_TYPE>::const_iterator cit = m_mediaTypes.constBegin();
+        while (cit != m_mediaTypes.constEnd()) {
+            m_connectionMediaType.subtype = cit->subtype;
             hr = pReceivePin->ReceiveConnection(this, &m_connectionMediaType);
             if (SUCCEEDED(hr))
                 break;
+            ++cit;
         }
     } else { // - No media type specified.
         // Check if the receiving pin accepts any of the streaming types.
-        for (const DirectShowMediaType &t : qAsConst(m_supportedMediaTypes)) {
-            hr = pReceivePin->ReceiveConnection(this, &t);
+        QVector<AM_MEDIA_TYPE>::const_iterator cit = m_mediaTypes.constBegin();
+        while (cit != m_mediaTypes.constEnd()) {
+            hr = pReceivePin->ReceiveConnection(this, cit);
             if (SUCCEEDED(hr)) {
-                m_connectionMediaType = t;
+                m_connectionMediaType = *cit;
                 break;
             }
+            ++cit;
         }
     }
 
@@ -479,7 +479,7 @@ HRESULT DirectShowIOSource::ConnectionMediaType(AM_MEDIA_TYPE *pmt)
 
             return VFW_E_NOT_CONNECTED;
         } else {
-            DirectShowMediaType::copy(pmt, &m_connectionMediaType);
+            DirectShowMediaType::copy(pmt, m_connectionMediaType);
 
             return S_OK;
         }
@@ -535,7 +535,7 @@ HRESULT DirectShowIOSource::EnumMediaTypes(IEnumMediaTypes **ppEnum)
     if (!ppEnum) {
         return E_POINTER;
     } else {
-        *ppEnum = new DirectShowMediaTypeEnum(m_supportedMediaTypes);
+        *ppEnum = createMediaTypeEnum();
 
         return S_OK;
     }
@@ -583,5 +583,3 @@ HRESULT DirectShowIOSource::QueryDirection(PIN_DIRECTION *pPinDir)
         return S_OK;
     }
 }
-
-QT_END_NAMESPACE

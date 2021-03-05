@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,10 +34,8 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.GroupBox {
     id: control
@@ -51,26 +49,35 @@ T.GroupBox {
     contentHeight: contentItem.implicitHeight || (contentChildren.length === 1 ? contentChildren[0].implicitHeight : 0)
 
     spacing: 6
-    padding: 12
-    topPadding: padding + (label && label.implicitWidth > 0 ? label.implicitHeight + spacing : 0)
+    padding: 6
+    topPadding: 6 + (label && label.implicitWidth > 0 ? label.implicitHeight + spacing : 0)
 
+    //! [contentItem]
+    contentItem: Item { }
+    //! [contentItem]
+
+    //! [label]
     label: Text {
         x: control.leftPadding
         width: control.availableWidth
 
         text: control.title
         font: control.font
-        color: control.enabled ? Default.textColor : Default.textDisabledColor
+        color: control.enabled ? "#353637" : "#bdbebf"
         elide: Text.ElideRight
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 
-    background: Rectangle {
+    //! [frame]
+    frame: Rectangle {
         y: control.topPadding - control.padding
         width: parent.width
         height: parent.height - control.topPadding + control.padding
 
         color: "transparent"
-        border.color: Default.frameLightColor
+        border.color: "#bdbebf"
     }
+    //! [frame]
 }

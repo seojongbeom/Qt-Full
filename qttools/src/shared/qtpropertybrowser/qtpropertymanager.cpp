@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,7 +46,6 @@
 #include <QtGui/QPainter>
 #include <QtWidgets/QLabel>
 
-#include <limits>
 #include <limits.h>
 #include <float.h>
 
@@ -188,7 +181,9 @@ static Value getData(const QMap<const QtProperty *, PrivateData> &propertyMap,
             Value PrivateData::*data,
             const QtProperty *property, const Value &defaultValue = Value())
 {
-    const auto it = propertyMap.constFind(property);
+    typedef QMap<const QtProperty *, PrivateData> PropertyToData;
+    typedef typename PropertyToData::const_iterator PropertyToDataConstIterator;
+    const PropertyToDataConstIterator it = propertyMap.constFind(property);
     if (it == propertyMap.constEnd())
         return defaultValue;
     return it.value().*data;
@@ -222,7 +217,9 @@ static void setSimpleValue(QMap<const QtProperty *, Value> &propertyMap,
             void (PropertyManager::*valueChangedSignal)(QtProperty *, ValueChangeParameter),
             QtProperty *property, const Value &val)
 {
-    const auto it = propertyMap.find(property);
+    typedef QMap<const QtProperty *, Value> PropertyToData;
+    typedef typename PropertyToData::iterator PropertyToDataIterator;
+    const PropertyToDataIterator it = propertyMap.find(property);
     if (it == propertyMap.end())
         return;
 
@@ -242,11 +239,14 @@ static void setValueInRange(PropertyManager *manager, PropertyManagerPrivate *ma
             QtProperty *property, const Value &val,
             void (PropertyManagerPrivate::*setSubPropertyValue)(QtProperty *, ValueChangeParameter))
 {
-    const auto it = managerPrivate->m_values.find(property);
+    typedef typename PropertyManagerPrivate::Data PrivateData;
+    typedef QMap<const QtProperty *, PrivateData> PropertyToData;
+    typedef typename PropertyToData::iterator PropertyToDataIterator;
+    const PropertyToDataIterator it = managerPrivate->m_values.find(property);
     if (it == managerPrivate->m_values.end())
         return;
 
-    auto &data = it.value();
+    PrivateData &data = it.value();
 
     if (data.val == val)
         return;
@@ -274,7 +274,10 @@ static void setBorderValues(PropertyManager *manager, PropertyManagerPrivate *ma
             void (PropertyManagerPrivate::*setSubPropertyRange)(QtProperty *,
                     ValueChangeParameter, ValueChangeParameter, ValueChangeParameter))
 {
-    const auto it = managerPrivate->m_values.find(property);
+    typedef typename PropertyManagerPrivate::Data PrivateData;
+    typedef QMap<const QtProperty *, PrivateData> PropertyToData;
+    typedef typename PropertyToData::iterator PropertyToDataIterator;
+    const PropertyToDataIterator it = managerPrivate->m_values.find(property);
     if (it == managerPrivate->m_values.end())
         return;
 
@@ -282,7 +285,7 @@ static void setBorderValues(PropertyManager *manager, PropertyManagerPrivate *ma
     Value toVal = maxVal;
     orderBorders(fromVal, toVal);
 
-    auto &data = it.value();
+    PrivateData &data = it.value();
 
     if (data.minVal == fromVal && data.maxVal == toVal)
         return;
@@ -315,7 +318,9 @@ static void setBorderValue(PropertyManager *manager, PropertyManagerPrivate *man
             void (PropertyManagerPrivate::*setSubPropertyRange)(QtProperty *,
                     ValueChangeParameter, ValueChangeParameter, ValueChangeParameter))
 {
-    const auto it = managerPrivate->m_values.find(property);
+    typedef QMap<const QtProperty *, PrivateData> PropertyToData;
+    typedef typename PropertyToData::iterator PropertyToDataIterator;
+    const PropertyToDataIterator it = managerPrivate->m_values.find(property);
     if (it == managerPrivate->m_values.end())
         return;
 
@@ -409,27 +414,33 @@ private:
 static QList<QLocale::Country> sortCountries(const QList<QLocale::Country> &countries)
 {
     QMultiMap<QString, QLocale::Country> nameToCountry;
-    for (QLocale::Country country : countries)
+    QListIterator<QLocale::Country> itCountry(countries);
+    while (itCountry.hasNext()) {
+        QLocale::Country country = itCountry.next();
         nameToCountry.insert(QLocale::countryToString(country), country);
+    }
     return nameToCountry.values();
 }
 
 void QtMetaEnumProvider::initLocale()
 {
     QMultiMap<QString, QLocale::Language> nameToLanguage;
-    for (int l = QLocale::C, last = QLocale::LastLanguage; l <= last; ++l) {
-        const QLocale::Language language = static_cast<QLocale::Language>(l);
+    QLocale::Language language = QLocale::C;
+    while (language <= QLocale::LastLanguage) {
         QLocale locale(language);
         if (locale.language() == language)
             nameToLanguage.insert(QLocale::languageToString(language), language);
+        language = (QLocale::Language)((uint)language + 1); // ++language
     }
 
     const QLocale system = QLocale::system();
     if (!nameToLanguage.contains(QLocale::languageToString(system.language())))
         nameToLanguage.insert(QLocale::languageToString(system.language()), system.language());
 
-    const QList<QLocale::Language> languages = nameToLanguage.values();
-    for (QLocale::Language language : languages) {
+    QList<QLocale::Language> languages = nameToLanguage.values();
+    QListIterator<QLocale::Language> itLang(languages);
+    while (itLang.hasNext()) {
+        QLocale::Language language = itLang.next();
         QList<QLocale::Country> countries;
         countries = QLocale::countriesForLanguage(language);
         if (countries.isEmpty() && language == system.language())
@@ -441,8 +452,10 @@ void QtMetaEnumProvider::initLocale()
             m_indexToLanguage[langIdx] = language;
             m_languageToIndex[language] = langIdx;
             QStringList countryNames;
+            QListIterator<QLocale::Country> it(countries);
             int countryIdx = 0;
-            for (QLocale::Country country : qAsConst(countries)) {
+            while (it.hasNext()) {
+                QLocale::Country country = it.next();
                 countryNames << QLocale::countryToString(country);
                 m_indexToCountry[langIdx][countryIdx] = country;
                 m_countryToIndex[language][country] = countryIdx;
@@ -582,10 +595,11 @@ public:
 
     struct Data
     {
-        int val{0};
-        int minVal{-INT_MAX};
-        int maxVal{INT_MAX};
-        int singleStep{1};
+        Data() : val(0), minVal(-INT_MAX), maxVal(INT_MAX), singleStep(1) {}
+        int val;
+        int minVal;
+        int maxVal;
+        int singleStep;
         int minimumValue() const { return minVal; }
         int maximumValue() const { return maxVal; }
         void setMinimumValue(int newMinVal) { setSimpleMinimumData(this, newMinVal); }
@@ -858,11 +872,12 @@ public:
 
     struct Data
     {
-        double val{0};
-        double minVal{-DBL_MAX};
-        double maxVal{DBL_MAX};
-        double singleStep{1};
-        int decimals{2};
+        Data() : val(0), minVal(-DBL_MAX), maxVal(DBL_MAX), singleStep(1), decimals(2) {}
+        double val;
+        double minVal;
+        double maxVal;
+        double singleStep;
+        int decimals;
         double minimumValue() const { return minVal; }
         double maximumValue() const { return maxVal; }
         void setMinimumValue(double newMinVal) { setSimpleMinimumData(this, newMinVal); }
@@ -1540,9 +1555,11 @@ public:
 
     struct Data
     {
-        QDate val{QDate::currentDate()};
-        QDate minVal{QDate(1752, 9, 14)};
-        QDate maxVal{QDate(7999, 12, 31)};
+        Data() : val(QDate::currentDate()), minVal(QDate(1752, 9, 14)),
+                maxVal(QDate(7999, 12, 31)) {}
+        QDate val;
+        QDate minVal;
+        QDate maxVal;
         QDate minimumValue() const { return minVal; }
         QDate maximumValue() const { return maxVal; }
         void setMinimumValue(const QDate &newMinVal) { setSimpleMinimumData(this, newMinVal); }
@@ -2701,8 +2718,9 @@ public:
 
     struct Data
     {
+        Data() : decimals(2) {}
         QPointF val;
-        int decimals{2};
+        int decimals;
     };
 
     void slotDoubleChanged(QtProperty *property, double value);
@@ -2983,9 +3001,10 @@ public:
 
     struct Data
     {
-        QSize val{0, 0};
-        QSize minVal{0, 0};
-        QSize maxVal{INT_MAX, INT_MAX};
+        Data() : val(QSize(0, 0)), minVal(QSize(0, 0)), maxVal(QSize(INT_MAX, INT_MAX)) {}
+        QSize val;
+        QSize minVal;
+        QSize maxVal;
         QSize minimumValue() const { return minVal; }
         QSize maximumValue() const { return maxVal; }
         void setMinimumValue(const QSize &newMinVal) { setSizeMinimumData(this, newMinVal); }
@@ -3327,10 +3346,11 @@ public:
 
     struct Data
     {
-        QSizeF val{0, 0};
-        QSizeF minVal{0, 0};
-        QSizeF maxVal{std::numeric_limits<qreal>::max(), std::numeric_limits<qreal>::max()};
-        int decimals{2};
+        Data() : val(QSizeF(0, 0)), minVal(QSizeF(0, 0)), maxVal(QSizeF(INT_MAX, INT_MAX)), decimals(2) {}
+        QSizeF val;
+        QSizeF minVal;
+        QSizeF maxVal;
+        int decimals;
         QSizeF minimumValue() const { return minVal; }
         QSizeF maximumValue() const { return maxVal; }
         void setMinimumValue(const QSizeF &newMinVal) { setSizeMinimumData(this, newMinVal); }
@@ -3725,7 +3745,8 @@ public:
 
     struct Data
     {
-        QRect val{0, 0, 0, 0};
+        Data() : val(0, 0, 0, 0) {}
+        QRect val;
         QRect constraint;
     };
 
@@ -4133,9 +4154,10 @@ public:
 
     struct Data
     {
-        QRectF val{0, 0, 0, 0};
+        Data() : val(0, 0, 0, 0), decimals(2) {}
+        QRectF val;
         QRectF constraint;
-        int decimals{2};
+        int decimals;
     };
 
     typedef QMap<const QtProperty *, Data> PropertyValueMap;
@@ -4599,7 +4621,8 @@ public:
 
     struct Data
     {
-        int val{-1};
+        Data() : val(-1) {}
+        int val;
         QStringList enumNames;
         QMap<int, QIcon> enumIcons;
     };
@@ -4871,7 +4894,8 @@ public:
 
     struct Data
     {
-        int val{-1};
+        Data() : val(-1) {}
+        int val;
         QStringList flagNames;
     };
 
@@ -4891,11 +4915,10 @@ void QtFlagPropertyManagerPrivate::slotBoolChanged(QtProperty *property, bool va
     if (prop == 0)
         return;
 
-    const auto pfit = m_propertyToFlags.constFind(prop);
-    if (pfit == m_propertyToFlags.constEnd())
-            return;
+    QListIterator<QtProperty *> itProp(m_propertyToFlags[prop]);
     int level = 0;
-    for (QtProperty *p : pfit.value()) {
+    while (itProp.hasNext()) {
+        QtProperty *p = itProp.next();
         if (p == property) {
             int v = m_values[prop].val;
             if (value) {
@@ -5096,14 +5119,13 @@ void QtFlagPropertyManager::setValue(QtProperty *property, int val)
 
     it.value() = data;
 
-    const auto pfit = d_ptr->m_propertyToFlags.constFind(property);
+    QListIterator<QtProperty *> itProp(d_ptr->m_propertyToFlags[property]);
     int level = 0;
-    if (pfit != d_ptr->m_propertyToFlags.constEnd()) {
-        for (QtProperty *prop : pfit.value()) {
-            if (prop)
-                d_ptr->m_boolPropertyManager->setValue(prop, val & (1 << level));
-            level++;
-        }
+    while (itProp.hasNext()) {
+        QtProperty *prop = itProp.next();
+        if (prop)
+            d_ptr->m_boolPropertyManager->setValue(prop, val & (1 << level));
+        level++;
     }
 
     emit propertyChanged(property);
@@ -5133,18 +5155,19 @@ void QtFlagPropertyManager::setFlagNames(QtProperty *property, const QStringList
 
     it.value() = data;
 
-    const auto pfit = d_ptr->m_propertyToFlags.find(property);
-    if (pfit != d_ptr->m_propertyToFlags.end()) {
-        for (QtProperty *prop : qAsConst(pfit.value())) {
-            if (prop) {
-                delete prop;
-                d_ptr->m_flagToProperty.remove(prop);
-            }
+    QListIterator<QtProperty *> itProp(d_ptr->m_propertyToFlags[property]);
+    while (itProp.hasNext()) {
+        QtProperty *prop = itProp.next();
+        if (prop) {
+            delete prop;
+            d_ptr->m_flagToProperty.remove(prop);
         }
-        pfit.value().clear();
     }
+    d_ptr->m_propertyToFlags[property].clear();
 
-    for (const QString &flagName : flagNames) {
+    QStringListIterator itFlag(flagNames);
+    while (itFlag.hasNext()) {
+        const QString flagName = itFlag.next();
         QtProperty *prop = d_ptr->m_boolPropertyManager->addProperty();
         prop->setPropertyName(flagName);
         property->addSubProperty(prop);
@@ -5173,16 +5196,15 @@ void QtFlagPropertyManager::initializeProperty(QtProperty *property)
 */
 void QtFlagPropertyManager::uninitializeProperty(QtProperty *property)
 {
-    const auto it = d_ptr->m_propertyToFlags.find(property);
-    if (it != d_ptr->m_propertyToFlags.end()) {
-        for (QtProperty *prop : qAsConst(it.value()))  {
-            if (prop) {
-                delete prop;
-                d_ptr->m_flagToProperty.remove(prop);
-            }
+    QListIterator<QtProperty *> itProp(d_ptr->m_propertyToFlags[property]);
+    while (itProp.hasNext()) {
+        QtProperty *prop = itProp.next();
+        if (prop) {
+            delete prop;
+            d_ptr->m_flagToProperty.remove(prop);
         }
     }
-    d_ptr->m_propertyToFlags.erase(it);
+    d_ptr->m_propertyToFlags.remove(property);
 
     d_ptr->m_values.remove(property);
 }

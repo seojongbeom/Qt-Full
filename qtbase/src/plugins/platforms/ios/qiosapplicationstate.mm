@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,78 +33,81 @@
 
 #include "qiosapplicationstate.h"
 
-#include "qiosglobal.h"
-#include "qiosintegration.h"
-
 #include <qpa/qwindowsysteminterface.h>
 #include <QtCore/qcoreapplication.h>
 
 #include <QtGui/private/qguiapplication_p.h>
 
-QT_BEGIN_NAMESPACE
+#import <UIKit/UIKit.h>
 
-static void qRegisterApplicationStateNotifications()
+static Qt::ApplicationState qtApplicationState(UIApplicationState uiApplicationState)
 {
-    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-    NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-
-    // Map between notifications and corresponding application state. Note that
-    // there's no separate notification for moving to UIApplicationStateInactive,
-    // so we use UIApplicationWillResignActiveNotification as an intermediate.
-    static QMap<NSNotificationName, UIApplicationState> notifications {
-        { UIApplicationWillEnterForegroundNotification, UIApplicationStateInactive },
-        { UIApplicationDidBecomeActiveNotification, UIApplicationStateActive },
-        { UIApplicationWillResignActiveNotification, UIApplicationStateInactive },
-        { UIApplicationDidEnterBackgroundNotification, UIApplicationStateBackground },
-    };
-
-    for (auto i = notifications.constBegin(); i != notifications.constEnd(); ++i) {
-        [notificationCenter addObserverForName:i.key() object:nil queue:mainQueue
-            usingBlock:^void(NSNotification *notification) {
-                NSRange nameRange = NSMakeRange(2, notification.name.length - 14);
-                QString reason = QString::fromNSString([notification.name substringWithRange:nameRange]);
-                QIOSApplicationState::handleApplicationStateChanged(i.value(), reason);
-        }];
+    switch (uiApplicationState) {
+    case UIApplicationStateActive:
+        // The application is visible in front, and receiving events
+        return Qt::ApplicationActive;
+    case UIApplicationStateInactive:
+        // The app is running in the foreground but is not receiving events. This
+        // typically happens while transitioning to/from active/background, like
+        // upon app launch or when receiving incoming calls.
+        return Qt::ApplicationInactive;
+    case UIApplicationStateBackground:
+        // Normally the app would enter this state briefly before it gets
+        // suspeded (you have five seconds, according to Apple).
+        // You can request more time and start a background task, which would
+        // normally map closer to Qt::ApplicationHidden. But since we have no
+        // API for doing that yet, we handle this state as "about to be suspended".
+        // Note: A screen-shot for the SpringBoard will also be taken after this
+        // call returns.
+        return Qt::ApplicationSuspended;
     }
-
-    // Initialize correct startup state, which may not be the Qt default (inactive)
-    UIApplicationState startupState = [UIApplication sharedApplication].applicationState;
-    QIOSApplicationState::handleApplicationStateChanged(startupState, QLatin1String("Application loaded"));
 }
-Q_CONSTRUCTOR_FUNCTION(qRegisterApplicationStateNotifications)
+
+static void handleApplicationStateChanged(UIApplicationState uiApplicationState)
+{
+    Qt::ApplicationState state = qtApplicationState(uiApplicationState);
+    QWindowSystemInterface::handleApplicationStateChanged(state);
+    QWindowSystemInterface::flushWindowSystemEvents();
+}
+
+QT_BEGIN_NAMESPACE
 
 QIOSApplicationState::QIOSApplicationState()
 {
+    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+
+    m_observers.push_back([notificationCenter addObserverForName:UIApplicationDidBecomeActiveNotification
+        object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *) {
+            handleApplicationStateChanged(UIApplicationStateActive);
+        }
+    ]);
+
+    m_observers.push_back([notificationCenter addObserverForName:UIApplicationWillResignActiveNotification
+        object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *) {
+            // Note: UIApplication is still UIApplicationStateActive at this point,
+            // but since there is no separate notification for the inactive state,
+            // we report UIApplicationStateInactive now.
+            handleApplicationStateChanged(UIApplicationStateInactive);
+        }
+    ]);
+
+    m_observers.push_back([notificationCenter addObserverForName:UIApplicationDidEnterBackgroundNotification
+        object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *) {
+            handleApplicationStateChanged(UIApplicationStateBackground);
+        }
+    ]);
+
+    // Initialize correct startup state, which may not be the Qt default (inactive)
     UIApplicationState startupState = [UIApplication sharedApplication].applicationState;
-    QIOSApplicationState::handleApplicationStateChanged(startupState, QLatin1String("Application launched"));
+    QGuiApplicationPrivate::applicationState = qtApplicationState(startupState);
 }
 
-void QIOSApplicationState::handleApplicationStateChanged(UIApplicationState uiState, const QString &reason)
+QIOSApplicationState::~QIOSApplicationState()
 {
-    Qt::ApplicationState state = toQtApplicationState(uiState);
-    qCDebug(lcQpaApplication) << qPrintable(reason)
-        << "- moving from" << QGuiApplication::applicationState() << "to" << state;
-
-    if (QIOSIntegration *integration = QIOSIntegration::instance()) {
-        emit integration->applicationState.applicationStateWillChange(state);
-        QWindowSystemInterface::handleApplicationStateChanged(state);
-        emit integration->applicationState.applicationStateDidChange(state);
-        qCDebug(lcQpaApplication) << "done moving to" << state;
-    } else {
-        qCDebug(lcQpaApplication) << "no platform integration yet, setting state directly";
-        QGuiApplicationPrivate::applicationState = state;
-    }
+    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+    foreach (const NSObject* observer, m_observers)
+        [notificationCenter removeObserver:observer];
 }
-
-Qt::ApplicationState QIOSApplicationState::toQtApplicationState(UIApplicationState state)
-{
-    switch (state) {
-    case UIApplicationStateActive: return Qt::ApplicationActive;
-    case UIApplicationStateInactive: return Qt::ApplicationInactive;
-    case UIApplicationStateBackground: return Qt::ApplicationSuspended;
-    }
-}
-
-#include "moc_qiosapplicationstate.cpp"
 
 QT_END_NAMESPACE
+

@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -36,14 +36,10 @@
 Models can be defined in C++ and then made available to QML. This is useful
 for exposing existing C++ data models or otherwise complex datasets to QML.
 
-A C++ model class can be defined as a \l QStringList, a \l QVariantList, a
-QObjectList or a \l QAbstractItemModel. The first three are useful for exposing
-simpler datasets, while QAbstractItemModel provides a more flexible solution for
-more complex models.
-
-For a video tutorial that takes you through the whole process of exposing a C++
-model to QML, see the
-\l {https://youtu.be/9BcAYDlpuT8}{Using C++ Models in QML Tutorial}.
+A C++ model class can be defined as a \l QStringList, a QObjectList or a
+\l QAbstractItemModel. The first two are useful for exposing simpler datasets,
+while QAbstractItemModel provides a more flexible solution for more complex
+models.
 
 \section2 QStringList-based Model
 
@@ -64,22 +60,12 @@ The complete source code for this example is available in
 \l {models/stringlistmodel}{examples/quick/models/stringlistmodel}
 within the Qt install directory.
 
-\note There is no way for the view to know that the contents of a QStringList
-have changed. If the QStringList changes, it will be necessary to reset
+\b{Note:} There is no way for the view to know that the contents of a QStringList
+have changed.  If the QStringList changes, it will be necessary to reset
 the model by calling QQmlContext::setContextProperty() again.
 
-\section2 QVariantList-based Model
 
-A model may be a single \l QVariantList, which provides the contents of the list
-via the \e modelData role.
-
-The API works just like with \l QStringList, as shown in the previous section.
-
-\note There is no way for the view to know that the contents of a QVariantList
-have changed. If the QVariantList changes, it will be necessary to reset
-the model.
-
-\section2 QObjectList-based Model
+\section2 QObjectList-based model
 
 A list of QObject* values can also be used as a model. A QList<QObject*> provides
 the properties of the objects in the list as roles.
@@ -116,7 +102,7 @@ has changed.  If the QList changes, it is necessary to reset
 the model by calling QQmlContext::setContextProperty() again.
 
 
-\section2 QAbstractItemModel Subclass
+\section2 QAbstractItemModel subclass
 
 A model can be defined by subclassing QAbstractItemModel. This is the
 best approach if you have a more complex model that cannot be supported

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -509,6 +514,7 @@ void QmlDocVisitor::applyMetacommands(QQmlJS::AST::SourceLocation,
                 else if (node->isQmlType() || node->isJsType()) {
                     QmlTypeNode *qmlType = static_cast<QmlTypeNode*>(node);
                     qmlType->setQmlBaseName(args[0].first);
+                    QmlTypeNode::addInheritedBy(args[0].first,node);
                 }
             }
             else if (command == COMMAND_QMLDEFAULT) {
@@ -591,8 +597,10 @@ bool QmlDocVisitor::visit(QQmlJS::AST::UiObjectDefinition *definition)
         component->setTitle(name);
         component->setImportList(importList);
         importList.clear();
-        if (applyDocumentation(definition->firstSourceLocation(), component))
+        if (applyDocumentation(definition->firstSourceLocation(), component)) {
+            QmlTypeNode::addInheritedBy(type, component);
             component->setQmlBaseName(type);
+        }
         current = component;
     }
 
@@ -652,30 +660,6 @@ void QmlDocVisitor::endVisit(QQmlJS::AST::UiArrayBinding *)
 {
 }
 
-template <typename T>
-QString qualifiedIdToString(T node);
-
-template <>
-QString qualifiedIdToString(QStringRef node)
-{
-    return node.toString();
-}
-
-template <>
-QString qualifiedIdToString(QQmlJS::AST::UiQualifiedId *node)
-{
-    QString s;
-
-    for (QQmlJS::AST::UiQualifiedId *it = node; it; it = it->next) {
-        s.append(it->name);
-
-        if (it->next)
-            s.append(QLatin1Char('.'));
-    }
-
-    return s;
-}
-
 /*!
     Visits the public \a member declaration, which can be a
     signal or a property. It is a custom signal or property.
@@ -698,9 +682,8 @@ bool QmlDocVisitor::visit(QQmlJS::AST::UiPublicMember *member)
 
                 QVector<Parameter> parameters;
                 for (QQmlJS::AST::UiParameterList *it = member->parameters; it; it = it->next) {
-                    const QString type = qualifiedIdToString(it->type);
-                    if (!type.isEmpty() && !it->name.isEmpty())
-                        parameters.append(Parameter(type, QString(), it->name.toString()));
+                    if (!it->type.isEmpty() && !it->name.isEmpty())
+                        parameters.append(Parameter(it->type.toString(), QString(), it->name.toString()));
                 }
 
                 qmlSignal->setParameters(parameters);
@@ -711,7 +694,7 @@ bool QmlDocVisitor::visit(QQmlJS::AST::UiPublicMember *member)
     }
     case QQmlJS::AST::UiPublicMember::Property:
     {
-        QString type = qualifiedIdToString(member->memberType);
+        QString type = member->memberType.toString();
         QString name = member->name.toString();
         if (current->isQmlType() || current->isJsType()) {
             QmlTypeNode *qmlType = static_cast<QmlTypeNode *>(current);

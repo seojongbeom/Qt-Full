@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -64,8 +69,9 @@
 #include <QtGui/QContextMenuEvent>
 #include <QtCore/QItemSelection>
 
-#include <QtCore/QRegularExpression>
+#include <QtCore/QRegExp>
 #include <QtCore/QDebug>
+#include <QtCore/QSignalMapper>
 #include <QtCore/QBuffer>
 
 Q_DECLARE_METATYPE(QAction*)
@@ -101,8 +107,6 @@ public:
 };
 
 //--------  ActionEditor
-ObjectNamingMode ActionEditor::m_objectNamingMode = Underscore; // fixme Qt 6: CamelCase
-
 ActionEditor::ActionEditor(QDesignerFormEditorInterface *core, QWidget *parent, Qt::WindowFlags flags) :
     QDesignerActionEditorInterface(parent, flags),
     m_core(core),
@@ -121,7 +125,8 @@ ActionEditor::ActionEditor(QDesignerFormEditorInterface *core, QWidget *parent, 
     m_viewModeGroup(new  QActionGroup(this)),
     m_iconViewAction(0),
     m_listViewAction(0),
-    m_filterWidget(0)
+    m_filterWidget(0),
+    m_selectAssociatedWidgetsMapper(0)
 {
     m_actionView->initialize(m_core);
     m_actionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -287,7 +292,7 @@ void ActionEditor::setFormWindow(QDesignerFormWindowInterface *formWindow)
 
     if (m_formWindow != 0) {
         const ActionList actionList = m_formWindow->mainContainer()->findChildren<QAction*>();
-        for (QAction *action : actionList)
+        foreach (QAction *action, actionList)
             disconnect(action, &QAction::changed, this, &ActionEditor::slotActionChanged);
     }
 
@@ -312,7 +317,7 @@ void ActionEditor::setFormWindow(QDesignerFormWindowInterface *formWindow)
     m_filterWidget->setEnabled(true);
 
     const ActionList actionList = formWindow->mainContainer()->findChildren<QAction*>();
-    for (QAction *action : actionList)
+    foreach (QAction *action, actionList)
         if (!action->isSeparator() && core()->metaDataBase()->item(action) != 0) {
             // Show unless it has a menu. However, listen for change on menu actions also as it might be removed
             if (!action->menu())
@@ -605,7 +610,7 @@ void ActionEditor::deleteActions(QDesignerFormWindowInterface *fw, const ActionL
     const QString description = actions.size() == 1 ?
         tr("Remove action '%1'").arg(actions.front()->objectName()) : tr("Remove actions");
     fw->beginCommand(description);
-    for (QAction *action : actions) {
+    foreach(QAction *action, actions) {
         RemoveActionCommand *cmd = new RemoveActionCommand(fw);
         cmd->init(action);
         fw->commandHistory()->push(cmd);
@@ -650,61 +655,21 @@ void ActionEditor::slotDelete()
     deleteActions(fw,  selection);
 }
 
-// UnderScore: "Open file" -> actionOpen_file
-static QString underscore(QString text)
-{
-    const QString underscore = QString(QLatin1Char('_'));
-    static const QRegularExpression nonAsciiPattern(QStringLiteral("[^a-zA-Z_0-9]"));
-    Q_ASSERT(nonAsciiPattern.isValid());
-    text.replace(nonAsciiPattern, underscore);
-    static const QRegularExpression multipleSpacePattern(QStringLiteral("__*"));
-    Q_ASSERT(multipleSpacePattern.isValid());
-    text.replace(multipleSpacePattern, underscore);
-    if (text.endsWith(underscore.at(0)))
-        text.chop(1);
-    return text;
-}
-
-// CamelCase: "Open file" -> actionOpenFile, ignoring non-ASCII letters.
-
-enum CharacterCategory { OtherCharacter, DigitOrAsciiLetter, NonAsciiLetter };
-
-static inline CharacterCategory category(QChar c)
-{
-    if (c.isDigit())
-        return DigitOrAsciiLetter;
-    if (c.isLetter()) {
-        const ushort uc = c.unicode();
-        return (uc >= 'a' && uc <= 'z') || (uc >= 'A' && uc <= 'Z')
-            ? DigitOrAsciiLetter : NonAsciiLetter;
-    }
-    return OtherCharacter;
-}
-
-static QString camelCase(const QString &text)
-{
-    QString result;
-    result.reserve(text.size());
-    bool lastCharAccepted = false;
-    for (QChar c : text) {
-        const CharacterCategory cat = category(c);
-        if (cat != NonAsciiLetter) {
-            const bool acceptable = cat == DigitOrAsciiLetter;
-            if (acceptable)
-                result.append(lastCharAccepted ? c : c.toUpper()); // New word starts
-            lastCharAccepted = acceptable;
-        }
-    }
-    return result;
-}
-
 QString ActionEditor::actionTextToName(const QString &text, const QString &prefix)
 {
     QString name = text;
     if (name.isEmpty())
         return QString();
-    return prefix + (m_objectNamingMode == CamelCase ? camelCase(text) : underscore(text));
 
+    name[0] = name.at(0).toUpper();
+    name.prepend(prefix);
+    const QString underscore = QString(QLatin1Char('_'));
+    name.replace(QRegExp(QString(QStringLiteral("[^a-zA-Z_0-9]"))), underscore);
+    name.replace(QRegExp(QStringLiteral("__*")), underscore);
+    if (name.endsWith(underscore.at(0)))
+        name.truncate(name.size() - 1);
+
+    return name;
 }
 
 void  ActionEditor::resourceImageDropped(const QString &path, QAction *action)
@@ -816,6 +781,16 @@ void ActionEditor::slotPaste()
 
 void ActionEditor::slotContextMenuRequested(QContextMenuEvent *e, QAction *item)
 {
+    typedef void (QSignalMapper::*MapperQWidgetSignal)(QWidget *);
+    typedef void (QSignalMapper::*MapperVoidSlot)();
+
+    // set up signal mapper
+    if (!m_selectAssociatedWidgetsMapper) {
+        m_selectAssociatedWidgetsMapper = new QSignalMapper(this);
+        connect(m_selectAssociatedWidgetsMapper, static_cast<MapperQWidgetSignal>(&QSignalMapper::mapped),
+                this, &ActionEditor::slotSelectAssociatedWidget);
+    }
+
     QMenu menu(this);
     menu.addAction(m_actionNew);
     menu.addSeparator();
@@ -828,9 +803,11 @@ void ActionEditor::slotContextMenuRequested(QContextMenuEvent *e, QAction *item)
         const QWidgetList associatedWidgets = ActionModel::associatedWidgets(action);
         if (!associatedWidgets.empty()) {
             QMenu *associatedWidgetsSubMenu =  menu.addMenu(tr("Used In"));
-            for (QWidget *w : associatedWidgets) {
-                associatedWidgetsSubMenu->addAction(w->objectName(),
-                                                    this, [this, w] { this->slotSelectAssociatedWidget(w); });
+            foreach (QWidget *w, associatedWidgets) {
+                QAction *action = associatedWidgetsSubMenu->addAction(w->objectName());
+                m_selectAssociatedWidgetsMapper->setMapping(action, w);
+                connect(action, &QAction::triggered,
+                        m_selectAssociatedWidgetsMapper, static_cast<MapperVoidSlot>(&QSignalMapper::map));
             }
         }
     }

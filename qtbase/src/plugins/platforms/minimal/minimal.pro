@@ -1,10 +1,6 @@
 TARGET = qminimal
 
-QT += \
-    core-private gui-private \
-    eventdispatcher_support-private fontdatabase_support-private
-
-DEFINES += QT_NO_FOREACH
+QT += core-private gui-private platformsupport-private
 
 SOURCES =   main.cpp \
             qminimalintegration.cpp \
@@ -13,6 +9,9 @@ HEADERS =   qminimalintegration.h \
             qminimalbackingstore.h
 
 OTHER_FILES += minimal.json
+
+CONFIG += qpa/genericunixfontdatabase
+win32|darwin: DEFINES += QT_NO_FONTCONFIG
 
 PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = QMinimalIntegrationPlugin

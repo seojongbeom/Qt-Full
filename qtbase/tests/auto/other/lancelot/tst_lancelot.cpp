@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,8 +58,8 @@ private:
     };
 
     void setupTestSuite(const QStringList& blacklist = QStringList());
-    void runTestSuite(GraphicsEngine engine, QImage::Format format, const QSurfaceFormat &contextFormat = QSurfaceFormat());
-    void paint(QPaintDevice *device, GraphicsEngine engine, QImage::Format format, const QStringList &script, const QString &filePath);
+    void runTestSuite(GraphicsEngine engine, QImage::Format format);
+    void paint(QPaintDevice *device, GraphicsEngine engine, const QStringList &script, const QString &filePath);
 
     QStringList qpsFiles;
     QHash<QString, QStringList> scripts;
@@ -69,14 +74,8 @@ private slots:
     void testRasterARGB32PM();
     void testRasterRGB32_data();
     void testRasterRGB32();
-    void testRasterARGB32_data();
-    void testRasterARGB32();
     void testRasterRGB16_data();
     void testRasterRGB16();
-    void testRasterA2RGB30PM_data();
-    void testRasterA2RGB30PM();
-    void testRasterBGR30_data();
-    void testRasterBGR30();
     void testRasterARGB8565PM_data();
     void testRasterARGB8565PM();
     void testRasterGrayscale8_data();
@@ -85,11 +84,8 @@ private slots:
 #ifndef QT_NO_OPENGL
     void testOpenGL_data();
     void testOpenGL();
-    void testCoreOpenGL_data();
-    void testCoreOpenGL();
 private:
     bool checkSystemGLSupport();
-    bool checkSystemCoreGLSupport();
 #endif
 };
 
@@ -139,17 +135,6 @@ void tst_Lancelot::testRasterARGB32PM()
 }
 
 
-void tst_Lancelot::testRasterARGB32_data()
-{
-    setupTestSuite();
-}
-
-void tst_Lancelot::testRasterARGB32()
-{
-    runTestSuite(Raster, QImage::Format_ARGB32);
-}
-
-
 void tst_Lancelot::testRasterRGB32_data()
 {
     setupTestSuite();
@@ -171,30 +156,6 @@ void tst_Lancelot::testRasterRGB16_data()
 void tst_Lancelot::testRasterRGB16()
 {
     runTestSuite(Raster, QImage::Format_RGB16);
-}
-
-
-void tst_Lancelot::testRasterA2RGB30PM_data()
-{
-    setupTestSuite();
-}
-
-
-void tst_Lancelot::testRasterA2RGB30PM()
-{
-    runTestSuite(Raster, QImage::Format_A2RGB30_Premultiplied);
-}
-
-
-void tst_Lancelot::testRasterBGR30_data()
-{
-    setupTestSuite();
-}
-
-
-void tst_Lancelot::testRasterBGR30()
-{
-    runTestSuite(Raster, QImage::Format_BGR30);
 }
 
 
@@ -239,32 +200,6 @@ bool tst_Lancelot::checkSystemGLSupport()
     return true;
 }
 
-bool tst_Lancelot::checkSystemCoreGLSupport()
-{
-    if (QOpenGLContext::openGLModuleType() != QOpenGLContext::LibGL)
-        return false;
-
-    QSurfaceFormat coreFormat;
-    coreFormat.setVersion(3, 2);
-    coreFormat.setProfile(QSurfaceFormat::CoreProfile);
-    QWindow win;
-    win.setSurfaceType(QSurface::OpenGLSurface);
-    win.setFormat(coreFormat);
-    win.create();
-    QOpenGLFramebufferObjectFormat fmt;
-    fmt.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    fmt.setSamples(4);
-    QOpenGLContext ctx;
-    ctx.setFormat(coreFormat);
-    if (!ctx.create() || !ctx.makeCurrent(&win))
-        return false;
-    QOpenGLFramebufferObject fbo(800, 800, fmt);
-    if (!fbo.isValid() || !fbo.bind())
-        return false;
-
-    return true;
-}
-
 void tst_Lancelot::testOpenGL_data()
 {
     if (!checkSystemGLSupport())
@@ -277,22 +212,6 @@ void tst_Lancelot::testOpenGL_data()
 void tst_Lancelot::testOpenGL()
 {
     runTestSuite(OpenGL, QImage::Format_RGB32);
-}
-
-void tst_Lancelot::testCoreOpenGL_data()
-{
-    if (!checkSystemCoreGLSupport())
-        QSKIP("System under test does not meet preconditions for Core Profile GL testing. Skipping.");
-    QStringList localBlacklist = QStringList() << QLatin1String("rasterops.qps");
-    setupTestSuite(localBlacklist);
-}
-
-void tst_Lancelot::testCoreOpenGL()
-{
-    QSurfaceFormat coreFormat;
-    coreFormat.setVersion(3, 2);
-    coreFormat.setProfile(QSurfaceFormat::CoreProfile);
-    runTestSuite(OpenGL, QImage::Format_RGB32, coreFormat);
 }
 #endif
 
@@ -308,7 +227,7 @@ void tst_Lancelot::setupTestSuite(const QStringList& blacklist)
 }
 
 
-void tst_Lancelot::runTestSuite(GraphicsEngine engine, QImage::Format format, const QSurfaceFormat &contextFormat)
+void tst_Lancelot::runTestSuite(GraphicsEngine engine, QImage::Format format)
 {
     QFETCH(QString, qpsFile);
 
@@ -318,25 +237,23 @@ void tst_Lancelot::runTestSuite(GraphicsEngine engine, QImage::Format format, co
 
     if (engine == Raster) {
         QImage img(800, 800, format);
-        paint(&img, engine, format, script, QFileInfo(filePath).absoluteFilePath());
+        paint(&img, engine, script, QFileInfo(filePath).absoluteFilePath());
         rendered = img;
 #ifndef QT_NO_OPENGL
     } else if (engine == OpenGL) {
         QWindow win;
         win.setSurfaceType(QSurface::OpenGLSurface);
-        win.setFormat(contextFormat);
         win.create();
         QOpenGLFramebufferObjectFormat fmt;
         fmt.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         fmt.setSamples(4);
         QOpenGLContext ctx;
-        ctx.setFormat(contextFormat);
         QVERIFY(ctx.create());
         QVERIFY(ctx.makeCurrent(&win));
         QOpenGLFramebufferObject fbo(800, 800, fmt);
         fbo.bind();
         QOpenGLPaintDevice pdv(800, 800);
-        paint(&pdv, engine, format, script, QFileInfo(filePath).absoluteFilePath());
+        paint(&pdv, engine, script, QFileInfo(filePath).absoluteFilePath());
         rendered = fbo.toImage().convertToFormat(format);
 #endif
     }
@@ -344,14 +261,14 @@ void tst_Lancelot::runTestSuite(GraphicsEngine engine, QImage::Format format, co
     QBASELINE_TEST(rendered);
 }
 
-void tst_Lancelot::paint(QPaintDevice *device, GraphicsEngine engine, QImage::Format format, const QStringList &script, const QString &filePath)
+void tst_Lancelot::paint(QPaintDevice *device, GraphicsEngine engine, const QStringList &script, const QString &filePath)
 {
     QPainter p(device);
-    PaintCommands pcmd(script, 800, 800, format);
+    PaintCommands pcmd(script, 800, 800);
     //pcmd.setShouldDrawText(false);
     switch (engine) {
     case OpenGL:
-        pcmd.setType(OpenGLBufferType); // version/profile is communicated through the context's format()
+        pcmd.setType(OpenGLBufferType);
         break;
     case Raster:  // fallthrough
     default:

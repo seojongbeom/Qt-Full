@@ -1,20 +1,14 @@
 TEMPLATE = subdirs
-
-qtConfig(opengl(es1|es2)?) {
-    SUBDIRS += \
-            graph \
-            simplematerial \
-            sgengine \
-            textureinsgnode \
-            openglunderqml \
-            textureinthread \
-            twotextureproviders
-}
-
 SUBDIRS += \
         customgeometry \
-        rendernode \
-        threadedanimation
+        graph \
+        openglunderqml \
+        sgengine \
+        simplematerial \
+        textureinsgnode \
+        textureinthread \
+        threadedanimation \
+        twotextureproviders
 
 EXAMPLE_FILES += \
     shared

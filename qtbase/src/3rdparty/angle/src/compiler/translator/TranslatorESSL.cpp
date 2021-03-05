@@ -8,7 +8,6 @@
 
 #include "compiler/translator/BuiltInFunctionEmulatorGLSL.h"
 #include "compiler/translator/EmulatePrecision.h"
-#include "compiler/translator/RecordConstantPrecision.h"
 #include "compiler/translator/OutputESSL.h"
 #include "angle_gl.h"
 
@@ -20,18 +19,16 @@ TranslatorESSL::TranslatorESSL(sh::GLenum type, ShShaderSpec spec)
 void TranslatorESSL::initBuiltInFunctionEmulator(BuiltInFunctionEmulator *emu, int compileOptions)
 {
     if (compileOptions & SH_EMULATE_BUILT_IN_FUNCTIONS)
-    {
-        InitBuiltInFunctionEmulatorForGLSLWorkarounds(emu, getShaderType());
-    }
+        InitBuiltInFunctionEmulatorForGLSL(emu, getShaderType());
 }
 
 void TranslatorESSL::translate(TIntermNode *root, int) {
     TInfoSinkBase& sink = getInfoSink().obj;
 
-    int shaderVer = getShaderVersion();
-    if (shaderVer > 100)
+    int shaderVersion = getShaderVersion();
+    if (shaderVersion > 100)
     {
-        sink << "#version " << shaderVer << " es\n";
+        sink << "#version " << shaderVersion << " es\n";
     }
 
     writePragma();
@@ -43,13 +40,11 @@ void TranslatorESSL::translate(TIntermNode *root, int) {
 
     if (precisionEmulation)
     {
-        EmulatePrecision emulatePrecision(getSymbolTable(), shaderVer);
+        EmulatePrecision emulatePrecision;
         root->traverse(&emulatePrecision);
         emulatePrecision.updateTree();
         emulatePrecision.writeEmulationHelpers(sink, SH_ESSL_OUTPUT);
     }
-
-    RecordConstantPrecision(root, getTemporaryIndex());
 
     // Write emulated built-in functions if needed.
     if (!getBuiltInFunctionEmulator().IsOutputEmpty())
@@ -76,8 +71,13 @@ void TranslatorESSL::translate(TIntermNode *root, int) {
     getArrayBoundsClamper().OutputClampingFunctionDefinition(sink);
 
     // Write translated shader.
-    TOutputESSL outputESSL(sink, getArrayIndexClampingStrategy(), getHashFunction(), getNameMap(),
-                           getSymbolTable(), shaderVer, precisionEmulation);
+    TOutputESSL outputESSL(sink,
+                           getArrayIndexClampingStrategy(),
+                           getHashFunction(),
+                           getNameMap(),
+                           getSymbolTable(),
+                           shaderVersion,
+                           precisionEmulation);
     root->traverse(&outputESSL);
 }
 

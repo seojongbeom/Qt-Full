@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Ivan Vizir <define-true-false@yandex.com>
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2013 Ivan Vizir <define-true-false@yandex.com>
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWinExtras module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -214,6 +208,25 @@ QRegion QtWin::fromHRGN(HRGN hrgn)
     return region;
 }
 
+// Re-engineered from the inline function _com_error::ErrorMessage().
+// We cannot use it directly since it uses swprintf_s(), which is not
+// present in the MSVCRT.DLL found on Windows XP (QTBUG-35617).
+static inline QString errorMessageFromComError(const _com_error &comError)
+{
+     TCHAR *message = Q_NULLPTR;
+     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                   NULL, DWORD(comError.Error()), MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
+                   reinterpret_cast<LPWSTR>(&message), 0, NULL);
+     if (message) {
+         const QString result = QString::fromWCharArray(message).trimmed();
+         LocalFree(message);
+         return result;
+     }
+     if (const WORD wCode = comError.WCode())
+         return QStringLiteral("IDispatch error #") + QString::number(wCode);
+     return QStringLiteral("Unknown error HRESULT(0x0)") + QString::number(comError.Error(), 16);
+}
+
 /*!
     \since 5.2
 
@@ -223,7 +236,7 @@ QRegion QtWin::fromHRGN(HRGN hrgn)
 QString QtWin::stringFromHresult(HRESULT hresult)
 {
     _com_error error(hresult);
-    return QString::fromWCharArray(error.ErrorMessage());
+    return errorMessageFromComError(error);
 }
 
 /*!
@@ -1430,7 +1443,9 @@ QColor QtWin::colorizationColor(bool *opaqueBlend)
 
     DWORD colorization = 0;
     BOOL dummy = false;
-    DwmGetColorizationColor(&colorization, &dummy);
+    qtDwmApiDll.init();
+    if (qtDwmApiDll.dwmGetColorizationColor)
+        qtDwmApiDll.dwmGetColorizationColor(&colorization, &dummy);
     if (opaqueBlend)
         *opaqueBlend = dummy;
     return QColor::fromRgba(colorization);
@@ -1550,8 +1565,8 @@ void QtWin::setWindowFlip3DPolicy(QWindow *window, QtWin::WindowFlip3DPolicy pol
     HWND handle = reinterpret_cast<HWND>(window->winId());
 
     // Policy should be defaulted first, bug or smth.
-    DWORD value = DWMFLIP3D_DEFAULT;
-    QtDwmApiDll::setWindowAttribute(handle, DWMWA_FLIP3D_POLICY, value);
+    DWORD value = qt_DWMFLIP3D_DEFAULT;
+    QtDwmApiDll::setWindowAttribute(handle, qt_DWMWA_FLIP3D_POLICY, value);
 
     switch (policy) {
     default :
@@ -1559,15 +1574,15 @@ void QtWin::setWindowFlip3DPolicy(QWindow *window, QtWin::WindowFlip3DPolicy pol
         value = -1;
         break;
     case FlipExcludeBelow :
-        value = DWMFLIP3D_EXCLUDEBELOW;
+        value = qt_DWMFLIP3D_EXCLUDEBELOW;
         break;
     case FlipExcludeAbove :
-        value = DWMFLIP3D_EXCLUDEABOVE;
+        value = qt_DWMFLIP3D_EXCLUDEABOVE;
         break;
     }
 
-    if (DWMFLIP3D_DEFAULT != value)
-        QtDwmApiDll::setWindowAttribute(handle, DWMWA_FLIP3D_POLICY, value);
+    if (qt_DWMFLIP3D_DEFAULT != value)
+        QtDwmApiDll::setWindowAttribute(handle, qt_DWMWA_FLIP3D_POLICY, value);
 }
 
 /*!
@@ -1587,13 +1602,13 @@ QtWin::WindowFlip3DPolicy QtWin::windowFlip3DPolicy(QWindow *window)
 
     const DWORD value =
         QtDwmApiDll::windowAttribute<DWORD>(reinterpret_cast<HWND>(window->winId()),
-                                            DWMWA_FLIP3D_POLICY, DWORD(DWMFLIP3D_DEFAULT));
+                                            qt_DWMWA_FLIP3D_POLICY, DWORD(qt_DWMFLIP3D_DEFAULT));
     QtWin::WindowFlip3DPolicy policy = QtWin::FlipDefault;
     switch (value) {
-    case DWMFLIP3D_EXCLUDEABOVE :
+    case qt_DWMFLIP3D_EXCLUDEABOVE :
         policy = QtWin::FlipExcludeAbove;
         break;
-    case DWMFLIP3D_EXCLUDEBELOW :
+    case qt_DWMFLIP3D_EXCLUDEBELOW :
         policy = QtWin::FlipExcludeBelow;
         break;
     default :
@@ -1605,8 +1620,12 @@ QtWin::WindowFlip3DPolicy QtWin::windowFlip3DPolicy(QWindow *window)
 void qt_ExtendFrameIntoClientArea(QWindow *window, int left, int top, int right, int bottom)
 {
     QWinEventFilter::setup();
-    MARGINS margins = {left, right, top, bottom};
-    DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(window->winId()), &margins);
+
+    qtDwmApiDll.init();
+    if (qtDwmApiDll.dwmExtendFrameIntoClientArea) {
+        MARGINS margins = {left, right, top, bottom};
+        qtDwmApiDll.dwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(window->winId()), &margins);
+    }
 }
 
 /*! \fn void QtWin::extendFrameIntoClientArea(QWidget *window, int left, int top, int right, int bottom)
@@ -1700,18 +1719,22 @@ void QtWin::enableBlurBehindWindow(QWindow *window, const QRegion &region)
 {
     Q_ASSERT_X(window, Q_FUNC_INFO, "window is null");
 
-    DWM_BLURBEHIND dwmbb = {0, 0, 0, 0};
-    dwmbb.dwFlags = DWM_BB_ENABLE;
+    qtDwmApiDll.init();
+    if (!qtDwmApiDll.dwmEnableBlurBehindWindow)
+        return;
+
+    qt_DWM_BLURBEHIND dwmbb = {0, 0, 0, 0};
+    dwmbb.dwFlags = qt_DWM_BB_ENABLE;
     dwmbb.fEnable = TRUE;
     HRGN rgn = 0;
     if (!region.isNull()) {
         rgn = toHRGN(region);
         if (rgn) {
             dwmbb.hRgnBlur = rgn;
-            dwmbb.dwFlags |= DWM_BB_BLURREGION;
+            dwmbb.dwFlags |= qt_DWM_BB_BLURREGION;
         }
     }
-    DwmEnableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
+    qtDwmApiDll.dwmEnableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
     if (rgn)
         DeleteObject(rgn);
 }
@@ -1750,9 +1773,12 @@ void QtWin::enableBlurBehindWindow(QWindow *window)
 void QtWin::disableBlurBehindWindow(QWindow *window)
 {
     Q_ASSERT_X(window, Q_FUNC_INFO, "window is null");
-    DWM_BLURBEHIND dwmbb = {0, 0, 0, 0};
-    dwmbb.dwFlags = DWM_BB_ENABLE;
-    DwmEnableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
+    qt_DWM_BLURBEHIND dwmbb = {0, 0, 0, 0};
+    dwmbb.dwFlags = qt_DWM_BB_ENABLE;
+    dwmbb.fEnable = FALSE;
+    qtDwmApiDll.init();
+    if (qtDwmApiDll.dwmEnableBlurBehindWindow)
+        qtDwmApiDll.dwmEnableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
 }
 
 /*!
@@ -1765,7 +1791,9 @@ bool QtWin::isCompositionEnabled()
     QWinEventFilter::setup();
 
     BOOL enabled = FALSE;
-    DwmIsCompositionEnabled(&enabled);
+    qtDwmApiDll.init();
+    if (qtDwmApiDll.dwmIsCompositionEnabled)
+        qtDwmApiDll.dwmIsCompositionEnabled(&enabled);
     return enabled;
 }
 
@@ -1777,17 +1805,15 @@ bool QtWin::isCompositionEnabled()
     \note The underlying function was declared deprecated as of Windows 8 and
     takes no effect.
  */
-
-QT_WARNING_PUSH
-QT_WARNING_DISABLE_MSVC(4995)
 void QtWin::setCompositionEnabled(bool enabled)
 {
     QWinEventFilter::setup();
 
     UINT compositionEnabled = enabled;
-    DwmEnableComposition(compositionEnabled);
+    qtDwmApiDll.init();
+    if (qtDwmApiDll.dwmEnableComposition)
+        qtDwmApiDll.dwmEnableComposition(compositionEnabled);
 }
-QT_WARNING_POP
 
 /*!
     \since 5.2

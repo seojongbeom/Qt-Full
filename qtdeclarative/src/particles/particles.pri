@@ -1,5 +1,6 @@
 HEADERS += \
     $$PWD/qquickangledirection_p.h \
+    $$PWD/qquickcustomparticle_p.h \
     $$PWD/qquickcustomaffector_p.h \
     $$PWD/qquickellipseextruder_p.h \
     $$PWD/qquicktrailemitter_p.h \
@@ -32,6 +33,7 @@ HEADERS += \
 
 SOURCES += \
     $$PWD/qquickangledirection.cpp \
+    $$PWD/qquickcustomparticle.cpp \
     $$PWD/qquickcustomaffector.cpp \
     $$PWD/qquickellipseextruder.cpp \
     $$PWD/qquicktrailemitter.cpp \
@@ -60,14 +62,6 @@ SOURCES += \
     $$PWD/qquickrectangleextruder.cpp \
     $$PWD/qquickparticlegroup.cpp \
     $$PWD/qquickgroupgoal.cpp
-
-qtConfig(quick-shadereffect) {
-HEADERS += \
-    $$PWD/qquickcustomparticle_p.h
-
-SOURCES += \
-    $$PWD/qquickcustomparticle.cpp
-}
 
 OTHER_FILES += \
     $$PWD/shaders/customparticletemplate.vert \

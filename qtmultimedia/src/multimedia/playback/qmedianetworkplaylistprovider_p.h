@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -62,26 +56,25 @@ class Q_MULTIMEDIA_EXPORT QMediaNetworkPlaylistProvider : public QMediaPlaylistP
     Q_OBJECT
 public:
     QMediaNetworkPlaylistProvider(QObject *parent=0);
-    ~QMediaNetworkPlaylistProvider();
+    virtual ~QMediaNetworkPlaylistProvider();
 
-    bool load(const QNetworkRequest &request, const char *format = 0) override;
+    virtual bool load(const QNetworkRequest &request, const char *format = 0);
 
-    int mediaCount() const override;
-    QMediaContent media(int pos) const override;
+    virtual int mediaCount() const;
+    virtual QMediaContent media(int pos) const;
 
-    bool isReadOnly() const override;
+    virtual bool isReadOnly() const;
 
-    bool addMedia(const QMediaContent &content) override;
-    bool addMedia(const QList<QMediaContent> &items) override;
-    bool insertMedia(int pos, const QMediaContent &content) override;
-    bool insertMedia(int pos, const QList<QMediaContent> &items) override;
-    bool moveMedia(int from, int to) override;
-    bool removeMedia(int pos) override;
-    bool removeMedia(int start, int end) override;
-    bool clear() override;
+    virtual bool addMedia(const QMediaContent &content);
+    virtual bool addMedia(const QList<QMediaContent> &items);
+    virtual bool insertMedia(int pos, const QMediaContent &content);
+    virtual bool insertMedia(int pos, const QList<QMediaContent> &items);
+    virtual bool removeMedia(int pos);
+    virtual bool removeMedia(int start, int end);
+    virtual bool clear();
 
 public Q_SLOTS:
-    void shuffle() override;
+    virtual void shuffle();
 
 private:
     Q_DISABLE_COPY(QMediaNetworkPlaylistProvider)

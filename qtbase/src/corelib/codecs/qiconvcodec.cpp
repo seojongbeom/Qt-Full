@@ -1,48 +1,41 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
-#include <QtCore/private/qglobal_p.h>
-
-QT_REQUIRE_CONFIG(iconv);
+#ifndef QT_NO_ICONV
 
 #include "qiconvcodec_p.h"
 #include "qtextcodec_p.h"
+#include <qlibrary.h>
 #include <qdebug.h>
 #include <qthreadstorage.h>
 
@@ -63,7 +56,7 @@ QT_REQUIRE_CONFIG(iconv);
 #elif defined(Q_OS_AIX)
 #  define NO_BOM
 #  define UTF16 "UCS-2"
-#elif defined(Q_OS_FREEBSD)
+#elif defined(Q_OS_FREEBSD) || defined(Q_OS_MAC)
 #  define NO_BOM
 #  if Q_BYTE_ORDER == Q_BIG_ENDIAN
 #    define UTF16 "UTF-16BE"
@@ -72,6 +65,19 @@ QT_REQUIRE_CONFIG(iconv);
 #  endif
 #else
 #  define UTF16 "UTF-16"
+#endif
+
+#if defined(Q_OS_MAC)
+#ifndef GNU_LIBICONV
+#define GNU_LIBICONV
+#endif
+typedef iconv_t (*Ptr_iconv_open) (const char*, const char*);
+typedef size_t (*Ptr_iconv) (iconv_t, const char **, size_t *, char **, size_t *);
+typedef int (*Ptr_iconv_close) (iconv_t);
+
+static Ptr_iconv_open ptr_iconv_open = 0;
+static Ptr_iconv ptr_iconv = 0;
+static Ptr_iconv_close ptr_iconv_close = 0;
 #endif
 
 QT_BEGIN_NAMESPACE
@@ -91,6 +97,33 @@ void QIconvCodec::init() const
         fprintf(stderr, "QIconvCodec::convertToUnicode: internal error, UTF-16 codec not found\n");
         utf16Codec = reinterpret_cast<QTextCodec *>(~0);
     }
+#if defined(Q_OS_MAC)
+    if (ptr_iconv_open == 0) {
+        QLibrary libiconv(QLatin1String("/usr/lib/libiconv"));
+        libiconv.setLoadHints(QLibrary::ExportExternalSymbolsHint);
+
+        ptr_iconv_open = reinterpret_cast<Ptr_iconv_open>(libiconv.resolve("libiconv_open"));
+        if (!ptr_iconv_open)
+            ptr_iconv_open = reinterpret_cast<Ptr_iconv_open>(libiconv.resolve("iconv_open"));
+        ptr_iconv = reinterpret_cast<Ptr_iconv>(libiconv.resolve("libiconv"));
+        if (!ptr_iconv)
+            ptr_iconv = reinterpret_cast<Ptr_iconv>(libiconv.resolve("iconv"));
+        ptr_iconv_close = reinterpret_cast<Ptr_iconv_close>(libiconv.resolve("libiconv_close"));
+        if (!ptr_iconv_close)
+            ptr_iconv_close = reinterpret_cast<Ptr_iconv_close>(libiconv.resolve("iconv_close"));
+
+        Q_ASSERT_X(ptr_iconv_open && ptr_iconv && ptr_iconv_close,
+        "QIconvCodec::QIconvCodec()",
+        "internal error, could not resolve the iconv functions");
+
+#       undef iconv_open
+#       define iconv_open ptr_iconv_open
+#       undef iconv
+#       define iconv ptr_iconv
+#       undef iconv_close
+#       define iconv_close ptr_iconv_close
+    }
+#endif
 }
 
 QIconvCodec::~QIconvCodec()
@@ -182,7 +215,7 @@ QString QIconvCodec::convertToUnicode(const char* chars, int len, ConverterState
     IconvState *state = *pstate;
     size_t inBytesLeft = len;
     // best case assumption, each byte is converted into one UTF-16 character, plus 2 bytes for the BOM
-#if !QT_CONFIG(posix_libiconv)
+#ifdef GNU_LIBICONV
     // GNU doesn't disagree with POSIX :/
     const char *inBytes = chars;
 #else
@@ -281,7 +314,7 @@ static bool setByteOrder(iconv_t cd)
     size_t outBytesLeft = sizeof buf;
     size_t inBytesLeft = sizeof bom;
 
-#if !QT_CONFIG(posix_libiconv)
+#if defined(GNU_LIBICONV)
     const char **inBytesPtr = const_cast<const char **>(&inBytes);
 #else
     char **inBytesPtr = &inBytes;
@@ -303,7 +336,7 @@ QByteArray QIconvCodec::convertFromUnicode(const QChar *uc, int len, ConverterSt
     char *outBytes;
     size_t inBytesLeft;
 
-#if !QT_CONFIG(posix_libiconv)
+#if defined(GNU_LIBICONV)
     const char **inBytesPtr = const_cast<const char **>(&inBytes);
 #else
     char **inBytesPtr = &inBytes;
@@ -372,7 +405,7 @@ QByteArray QIconvCodec::convertFromUnicode(const QChar *uc, int len, ConverterSt
             switch (errno) {
             case EILSEQ:
                 ++invalidCount;
-                Q_FALLTHROUGH();
+                // fall through
             case EINVAL:
                 {
                     inBytes += sizeof(QChar);
@@ -433,7 +466,7 @@ iconv_t QIconvCodec::createIconv_t(const char *to, const char *from) const
         init();
 
     iconv_t cd = (iconv_t) -1;
-#if defined(__GLIBC__) || !QT_CONFIG(posix_libiconv) || defined(Q_OS_QNX)
+#if defined(__GLIBC__) || defined(GNU_LIBICONV) || defined(Q_OS_QNX)
 #if defined(Q_OS_QNX)
     // on QNX the default locale is UTF-8, and an empty string will cause iconv_open to fail
     static const char empty_codeset[] = "UTF-8";
@@ -523,3 +556,5 @@ iconv_t QIconvCodec::createIconv_t(const char *to, const char *from) const
 }
 
 QT_END_NAMESPACE
+
+#endif /* #ifndef QT_NO_ICONV */

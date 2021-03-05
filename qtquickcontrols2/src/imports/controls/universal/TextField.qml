@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,36 +34,35 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.TextField {
     id: control
 
-    implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            placeholderText ? placeholder.implicitWidth + leftPadding + rightPadding : 0)
-                            || contentWidth + leftPadding + rightPadding
+    implicitWidth: Math.max(contentWidth + leftPadding + rightPadding,
+                            background ? background.implicitWidth : 0,
+                            placeholder.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(contentHeight + topPadding + bottomPadding,
                              background ? background.implicitHeight : 0,
                              placeholder.implicitHeight + topPadding + bottomPadding)
 
     // TextControlThemePadding + 2 (border)
-    padding: 12
-    topPadding: padding - 7
-    rightPadding: padding - 4
-    bottomPadding: padding - 5
+    topPadding: 5
+    leftPadding: 12
+    rightPadding: 8
+    bottomPadding: 7
 
     Universal.theme: activeFocus ? Universal.Light : undefined
 
-    color: !enabled ? Universal.chromeDisabledLowColor : Universal.foreground
+    color: !enabled ? Universal.chromeDisabledLowColor :
+            activeFocus ? Universal.chromeBlackHighColor : Universal.baseHighColor
     selectionColor: Universal.accent
     selectedTextColor: Universal.chromeWhiteColor
     verticalAlignment: TextInput.AlignVCenter
 
-    PlaceholderText {
+    Text {
         id: placeholder
         x: control.leftPadding
         y: control.topPadding
@@ -74,19 +73,21 @@ T.TextField {
         font: control.font
         color: !control.enabled ? control.Universal.chromeDisabledLowColor :
                 control.activeFocus ? control.Universal.chromeBlackMediumLowColor : control.Universal.baseMediumColor
-        visible: !control.length && !control.preeditText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
+        visible: !control.displayText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
+        horizontalAlignment: control.horizontalAlignment
         verticalAlignment: control.verticalAlignment
         elide: Text.ElideRight
     }
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 60 // TextControlThemeMinWidth - 4 (border)
         implicitHeight: 28 // TextControlThemeMinHeight - 4 (border)
 
         border.width: 2 // TextControlBorderThemeThickness
         border.color: !control.enabled ? control.Universal.baseLowColor :
-                       control.activeFocus ? control.Universal.accent :
-                       control.hovered ? control.Universal.baseMediumColor : control.Universal.chromeDisabledLowColor
-        color: control.enabled ? control.Universal.background : control.Universal.baseLowColor
+                       control.activeFocus ? control.Universal.accent : control.Universal.chromeDisabledLowColor
+        color: control.enabled ? control.Universal.altHighColor : control.Universal.baseLowColor
     }
+    //! [background]
 }

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -308,7 +302,7 @@ static QString decode(const QString &input, DecodeMode decodeMode, bool *ok)
                         ++r;
                     }
                     if (*r)
-                        output.append(input.midRef(start, i - start + 1));
+                        output.append(input.mid(start, i - start + 1));
                     else
                         output.append(QChar(b));
                 } else {
@@ -330,22 +324,21 @@ static QString decode(const QString &input, DecodeMode decodeMode, bool *ok)
 
 DEFINE_OBJECT_VTABLE(EvalFunction);
 
-void Heap::EvalFunction::init(QV4::ExecutionContext *scope)
+Heap::EvalFunction::EvalFunction(QV4::ExecutionContext *scope)
+    : Heap::FunctionObject(scope, scope->d()->engine->id_eval())
 {
     Scope s(scope);
-    Heap::FunctionObject::init(scope, s.engine->id_eval());
     ScopedFunctionObject f(s, this);
     f->defineReadonlyProperty(s.engine->id_length(), Primitive::fromInt32(1));
 }
 
-void EvalFunction::evalCall(Scope &scope, CallData *callData, bool directCall) const
+ReturnedValue EvalFunction::evalCall(CallData *callData, bool directCall) const
 {
-    if (callData->argc < 1) {
-        scope.result = Encode::undefined();
-        return;
-    }
+    if (callData->argc < 1)
+        return Encode::undefined();
 
     ExecutionEngine *v4 = engine();
+    Scope scope(v4);
     ExecutionContextSaver ctxSaver(scope);
 
     ExecutionContext *currentContext = v4->currentContext;
@@ -357,36 +350,28 @@ void EvalFunction::evalCall(Scope &scope, CallData *callData, bool directCall) c
         ctx = v4->pushGlobalContext();
     }
 
-    String *scode = callData->args[0].stringValue();
-    if (!scode) {
-        scope.result = callData->args[0].asReturnedValue();
-        return;
-    }
+    if (!callData->args[0].isString())
+        return callData->args[0].asReturnedValue();
 
-    const QString code = scode->toQString();
+    const QString code = callData->args[0].stringValue()->toQString();
     bool inheritContext = !ctx->d()->strictMode;
 
     Script script(ctx, code, QStringLiteral("eval code"));
     script.strictMode = (directCall && currentContext->d()->strictMode);
     script.inheritContext = inheritContext;
     script.parse();
-    if (v4->hasException) {
-        scope.result = Encode::undefined();
-        return;
-    }
+    if (v4->hasException)
+        return Encode::undefined();
 
     Function *function = script.function();
-    if (!function) {
-        scope.result = Encode::undefined();
-        return;
-    }
+    if (!function)
+        return Encode::undefined();
 
     if (function->isStrict() || (ctx->d()->strictMode)) {
         ScopedFunctionObject e(scope, FunctionObject::createScriptFunction(ctx, function));
         ScopedCallData callData(scope, 0);
         callData->thisObject = ctx->thisObject();
-        e->call(scope, callData);
-        return;
+        return e->call(callData);
     }
 
     ContextStateSaver stateSaver(scope, ctx);
@@ -394,16 +379,15 @@ void EvalFunction::evalCall(Scope &scope, CallData *callData, bool directCall) c
     // set the correct strict mode flag on the context
     ctx->d()->strictMode = false;
     ctx->d()->compilationUnit = function->compilationUnit;
-    ctx->d()->constantTable = function->compilationUnit->constants;
 
-    scope.result = Q_V4_PROFILE(ctx->engine(), function);
+    return Q_V4_PROFILE(ctx->engine(), function);
 }
 
 
-void EvalFunction::call(const Managed *that, Scope &scope, CallData *callData)
+ReturnedValue EvalFunction::call(const Managed *that, CallData *callData)
 {
     // indirect call
-    static_cast<const EvalFunction *>(that)->evalCall(scope, callData, false);
+    return static_cast<const EvalFunction *>(that)->evalCall(callData, false);
 }
 
 
@@ -424,15 +408,18 @@ static inline int toInt(const QChar &qc, int R)
 }
 
 // parseInt [15.1.2.2]
-void GlobalFunctions::method_parseInt(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_parseInt(CallContext *ctx)
 {
-    ScopedValue inputString(scope, callData->argument(0));
-    ScopedValue radix(scope, callData->argument(1));
+    Scope scope(ctx);
+    ScopedValue inputString(scope, ctx->argument(0));
+    ScopedValue radix(scope, ctx->argument(1));
     int R = radix->isUndefined() ? 0 : radix->toInt32();
 
     // [15.1.2.2] step by step:
     QString trimmed = inputString->toQString().trimmed(); // 1 + 2
-    CHECK_EXCEPTION();
+
+    if (ctx->d()->engine->hasException)
+        return Encode::undefined();
 
     const QChar *pos = trimmed.constData();
     const QChar *end = pos + trimmed.length();
@@ -447,7 +434,7 @@ void GlobalFunctions::method_parseInt(const BuiltinFunction *, Scope &scope, Cal
     bool stripPrefix = true; // 7
     if (R) { // 8
         if (R < 2 || R > 36)
-            RETURN_RESULT(Encode(std::numeric_limits<double>::quiet_NaN())); // 8a
+            return Encode(std::numeric_limits<double>::quiet_NaN()); // 8a
         if (R != 16)
             stripPrefix = false; // 8b
     } else { // 9
@@ -464,13 +451,13 @@ void GlobalFunctions::method_parseInt(const BuiltinFunction *, Scope &scope, Cal
     // 11: Z is progressively built below
     // 13: this is handled by the toInt function
     if (pos == end) // 12
-        RETURN_RESULT(Encode(std::numeric_limits<double>::quiet_NaN()));
+        return Encode(std::numeric_limits<double>::quiet_NaN());
     bool overflow = false;
     qint64 v_overflow = 0;
     unsigned overflow_digit_count = 0;
     int d = toInt(*pos++, R);
     if (d == -1)
-        RETURN_RESULT(Encode(std::numeric_limits<double>::quiet_NaN()));
+        return Encode(std::numeric_limits<double>::quiet_NaN());
     qint64 v = d;
     while (pos != end) {
         d = toInt(*pos++, R);
@@ -497,148 +484,155 @@ void GlobalFunctions::method_parseInt(const BuiltinFunction *, Scope &scope, Cal
     if (overflow) {
         double result = (double) v_overflow * pow(static_cast<double>(R), static_cast<double>(overflow_digit_count));
         result += v;
-        RETURN_RESULT(Encode(sign * result));
+        return Encode(sign * result);
     } else {
-        RETURN_RESULT(Encode(sign * (double) v)); // 15
+        return Encode(sign * (double) v); // 15
     }
 }
 
 // parseFloat [15.1.2.3]
-void GlobalFunctions::method_parseFloat(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_parseFloat(CallContext *ctx)
 {
+    Scope scope(ctx);
+
     // [15.1.2.3] step by step:
-    ScopedString inputString(scope, callData->argument(0), ScopedString::Convert);
-    CHECK_EXCEPTION();
+    ScopedString inputString(scope, ctx->argument(0), ScopedString::Convert);
+    if (scope.engine->hasException)
+        return Encode::undefined();
 
     QString trimmed = inputString->toQString().trimmed(); // 2
 
     // 4:
     if (trimmed.startsWith(QLatin1String("Infinity"))
             || trimmed.startsWith(QLatin1String("+Infinity")))
-        RETURN_RESULT(Encode(Q_INFINITY));
-    if (trimmed.startsWith(QLatin1String("-Infinity")))
-        RETURN_RESULT(Encode(-Q_INFINITY));
+        return Encode(Q_INFINITY);
+    if (trimmed.startsWith(QStringLiteral("-Infinity")))
+        return Encode(-Q_INFINITY);
     QByteArray ba = trimmed.toLatin1();
     bool ok;
     const char *begin = ba.constData();
     const char *end = 0;
     double d = qstrtod(begin, &end, &ok);
     if (end - begin == 0)
-        RETURN_RESULT(Encode(std::numeric_limits<double>::quiet_NaN())); // 3
+        return Encode(std::numeric_limits<double>::quiet_NaN()); // 3
     else
-        RETURN_RESULT(Encode(d));
+        return Encode(d);
 }
 
 /// isNaN [15.1.2.4]
-void GlobalFunctions::method_isNaN(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_isNaN(CallContext *ctx)
 {
-    if (!callData->argc)
+    if (!ctx->argc())
         // undefined gets converted to NaN
-        RETURN_RESULT(Encode(true));
+        return Encode(true);
 
-    if (callData->args[0].integerCompatible())
-        RETURN_RESULT(Encode(false));
+    if (ctx->args()[0].integerCompatible())
+        return Encode(false);
 
-    double d = callData->args[0].toNumber();
-    RETURN_RESULT(Encode((bool)std::isnan(d)));
+    double d = ctx->args()[0].toNumber();
+    return Encode((bool)std::isnan(d));
 }
 
 /// isFinite [15.1.2.5]
-void GlobalFunctions::method_isFinite(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_isFinite(CallContext *ctx)
 {
-    if (!callData->argc)
+    if (!ctx->argc())
         // undefined gets converted to NaN
-        RETURN_RESULT(Encode(false));
+        return Encode(false);
 
-    if (callData->args[0].integerCompatible())
-        RETURN_RESULT(Encode(true));
+    if (ctx->args()[0].integerCompatible())
+        return Encode(true);
 
-    double d = callData->args[0].toNumber();
-    RETURN_RESULT(Encode((bool)std::isfinite(d)));
+    double d = ctx->args()[0].toNumber();
+    return Encode((bool)std::isfinite(d));
 }
 
 /// decodeURI [15.1.3.1]
-void GlobalFunctions::method_decodeURI(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_decodeURI(CallContext *context)
 {
-    if (callData->argc == 0)
-        RETURN_UNDEFINED();
+    if (context->argc() == 0)
+        return Encode::undefined();
 
-    QString uriString = callData->args[0].toQString();
+    QString uriString = context->args()[0].toQString();
     bool ok;
     QString out = decode(uriString, DecodeNonReserved, &ok);
     if (!ok) {
-        ScopedString s(scope, scope.engine->newString(QStringLiteral("malformed URI sequence")));
-        RETURN_RESULT(scope.engine->throwURIError(s));
+        Scope scope(context);
+        ScopedString s(scope, context->d()->engine->newString(QStringLiteral("malformed URI sequence")));
+        return context->engine()->throwURIError(s);
     }
 
-    RETURN_RESULT(scope.engine->newString(out));
+    return context->d()->engine->newString(out)->asReturnedValue();
 }
 
 /// decodeURIComponent [15.1.3.2]
-void GlobalFunctions::method_decodeURIComponent(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_decodeURIComponent(CallContext *context)
 {
-    if (callData->argc == 0)
-        RETURN_UNDEFINED();
+    if (context->argc() == 0)
+        return Encode::undefined();
 
-    QString uriString = callData->args[0].toQString();
+    QString uriString = context->args()[0].toQString();
     bool ok;
     QString out = decode(uriString, DecodeAll, &ok);
     if (!ok) {
-        ScopedString s(scope, scope.engine->newString(QStringLiteral("malformed URI sequence")));
-        RETURN_RESULT(scope.engine->throwURIError(s));
+        Scope scope(context);
+        ScopedString s(scope, context->d()->engine->newString(QStringLiteral("malformed URI sequence")));
+        return context->engine()->throwURIError(s);
     }
 
-    RETURN_RESULT(scope.engine->newString(out));
+    return context->d()->engine->newString(out)->asReturnedValue();
 }
 
 /// encodeURI [15.1.3.3]
-void GlobalFunctions::method_encodeURI(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_encodeURI(CallContext *context)
 {
-    if (callData->argc == 0)
-        RETURN_UNDEFINED();
+    if (context->argc() == 0)
+        return Encode::undefined();
 
-    QString uriString = callData->args[0].toQString();
+    QString uriString = context->args()[0].toQString();
     bool ok;
     QString out = encode(uriString, uriUnescapedReserved, &ok);
     if (!ok) {
-        ScopedString s(scope, scope.engine->newString(QStringLiteral("malformed URI sequence")));
-        RETURN_RESULT(scope.engine->throwURIError(s));
+        Scope scope(context);
+        ScopedString s(scope, context->d()->engine->newString(QStringLiteral("malformed URI sequence")));
+        return context->engine()->throwURIError(s);
     }
 
-    RETURN_RESULT(scope.engine->newString(out));
+    return context->d()->engine->newString(out)->asReturnedValue();
 }
 
 /// encodeURIComponent [15.1.3.4]
-void GlobalFunctions::method_encodeURIComponent(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_encodeURIComponent(CallContext *context)
 {
-    if (callData->argc == 0)
-        RETURN_UNDEFINED();
+    if (context->argc() == 0)
+        return Encode::undefined();
 
-    QString uriString = callData->args[0].toQString();
+    QString uriString = context->args()[0].toQString();
     bool ok;
     QString out = encode(uriString, uriUnescaped, &ok);
     if (!ok) {
-        ScopedString s(scope, scope.engine->newString(QStringLiteral("malformed URI sequence")));
-        RETURN_RESULT(scope.engine->throwURIError(s));
+        Scope scope(context);
+        ScopedString s(scope, context->d()->engine->newString(QStringLiteral("malformed URI sequence")));
+        return context->engine()->throwURIError(s);
     }
 
-    RETURN_RESULT(scope.engine->newString(out));
+    return context->d()->engine->newString(out)->asReturnedValue();
 }
 
-void GlobalFunctions::method_escape(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_escape(CallContext *context)
 {
-    if (!callData->argc)
-        RETURN_RESULT(scope.engine->newString(QStringLiteral("undefined")));
+    if (!context->argc())
+        return context->d()->engine->newString(QStringLiteral("undefined"))->asReturnedValue();
 
-    QString str = callData->args[0].toQString();
-    RETURN_RESULT(scope.engine->newString(escape(str)));
+    QString str = context->args()[0].toQString();
+    return context->d()->engine->newString(escape(str))->asReturnedValue();
 }
 
-void GlobalFunctions::method_unescape(const BuiltinFunction *, Scope &scope, CallData *callData)
+ReturnedValue GlobalFunctions::method_unescape(CallContext *context)
 {
-    if (!callData->argc)
-        RETURN_RESULT(scope.engine->newString(QStringLiteral("undefined")));
+    if (!context->argc())
+        return context->d()->engine->newString(QStringLiteral("undefined"))->asReturnedValue();
 
-    QString str = callData->args[0].toQString();
-    RETURN_RESULT(scope.engine->newString(unescape(str)));
+    QString str = context->args()[0].toQString();
+    return context->d()->engine->newString(unescape(str))->asReturnedValue();
 }

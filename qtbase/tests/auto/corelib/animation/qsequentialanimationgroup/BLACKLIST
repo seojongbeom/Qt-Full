@@ -2,6 +2,3 @@
 windows
 [finishWithUncontrolledAnimation]
 windows
-osx-10.12
-[groupWithZeroDurationAnimations]
-osx

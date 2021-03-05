@@ -36,9 +36,21 @@ SOURCES += \
     qgraphicssvgitem.cpp    \
     qsvggenerator.cpp
 
-qtConfig(system-zlib): \
-    QMAKE_USE_PRIVATE += zlib
-else: \
+wince*: {
+    SOURCES += \
+        qsvgfunctions_wince.cpp
+    HEADERS += \
+        qsvgfunctions_wince_p.h
+}
+
+contains(QT_CONFIG, system-zlib) {
+    if(unix|mingw):          LIBS_PRIVATE += -lz
+    else {
+        isEmpty(ZLIB_LIBS): LIBS += zdll.lib
+        else: LIBS += $$ZLIB_LIBS
+    }
+} else {
     QT_PRIVATE += zlib-private
+}
 
 load(qt_module)

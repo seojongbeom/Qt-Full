@@ -3,7 +3,7 @@ TEMPLATE = app
 OBJECTIVE_SOURCES += main.mm
 HEADERS += rasterwindow.h
 SOURCES += rasterwindow.cpp
-LIBS += -framework AppKit
+LIBS += -framework Cocoa
 
 QT += gui widgets quick
 

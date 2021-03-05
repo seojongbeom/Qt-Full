@@ -1,10 +1,6 @@
 requires(qtHaveModule(widgets))
 
 TEMPLATE      = subdirs
-
-qtConfig(sharedmemory): SUBDIRS = sharedmemory
-qtHaveModule(network) {
-    QT_FOR_CONFIG += network
-
-    qtConfig(localserver): SUBDIRS += localfortuneserver localfortuneclient
-}
+# no QSharedMemory
+!vxworks:SUBDIRS = sharedmemory
+!wince:qtHaveModule(network): SUBDIRS += localfortuneserver localfortuneclient

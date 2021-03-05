@@ -23,6 +23,15 @@
 namespace
 {
 
+enum ShaderVariableType
+{
+    SHADERVAR_UNIFORM,
+    SHADERVAR_VARYING,
+    SHADERVAR_ATTRIBUTE,
+    SHADERVAR_OUTPUTVARIABLE,
+    SHADERVAR_INTERFACEBLOCK
+};
+    
 bool isInitialized = false;
 
 //
@@ -31,40 +40,36 @@ bool isInitialized = false;
 //
 
 template <typename VarT>
-const std::vector<VarT> *GetVariableList(const TCompiler *compiler);
+const std::vector<VarT> *GetVariableList(const TCompiler *compiler, ShaderVariableType variableType);
 
 template <>
-const std::vector<sh::Uniform> *GetVariableList(const TCompiler *compiler)
+const std::vector<sh::Uniform> *GetVariableList(const TCompiler *compiler, ShaderVariableType)
 {
     return &compiler->getUniforms();
 }
 
 template <>
-const std::vector<sh::Varying> *GetVariableList(const TCompiler *compiler)
+const std::vector<sh::Varying> *GetVariableList(const TCompiler *compiler, ShaderVariableType)
 {
     return &compiler->getVaryings();
 }
 
 template <>
-const std::vector<sh::Attribute> *GetVariableList(const TCompiler *compiler)
+const std::vector<sh::Attribute> *GetVariableList(const TCompiler *compiler, ShaderVariableType variableType)
 {
-    return &compiler->getAttributes();
+    return (variableType == SHADERVAR_ATTRIBUTE ?
+        &compiler->getAttributes() :
+        &compiler->getOutputVariables());
 }
 
 template <>
-const std::vector<sh::OutputVariable> *GetVariableList(const TCompiler *compiler)
-{
-    return &compiler->getOutputVariables();
-}
-
-template <>
-const std::vector<sh::InterfaceBlock> *GetVariableList(const TCompiler *compiler)
+const std::vector<sh::InterfaceBlock> *GetVariableList(const TCompiler *compiler, ShaderVariableType)
 {
     return &compiler->getInterfaceBlocks();
 }
 
 template <typename VarT>
-const std::vector<VarT> *GetShaderVariables(const ShHandle handle)
+const std::vector<VarT> *GetShaderVariables(const ShHandle handle, ShaderVariableType variableType)
 {
     if (!handle)
     {
@@ -78,7 +83,7 @@ const std::vector<VarT> *GetShaderVariables(const ShHandle handle)
         return NULL;
     }
 
-    return GetVariableList<VarT>(compiler);
+    return GetVariableList<VarT>(compiler, variableType);
 }
 
 TCompiler *GetCompilerFromHandle(ShHandle handle)
@@ -99,7 +104,7 @@ TranslatorHLSL *GetTranslatorHLSLFromHandle(ShHandle handle)
 }
 #endif // ANGLE_ENABLE_HLSL
 
-}  // anonymous namespace
+}  // namespace anonymous
 
 //
 // Driver must call this first, once, before doing any other compiler operations.
@@ -149,7 +154,6 @@ void ShInitBuiltInResources(ShBuiltInResources* resources)
     resources->OES_standard_derivatives = 0;
     resources->OES_EGL_image_external = 0;
     resources->ARB_texture_rectangle = 0;
-    resources->EXT_blend_func_extended      = 0;
     resources->EXT_draw_buffers = 0;
     resources->EXT_frag_depth = 0;
     resources->EXT_shader_texture_lod = 0;
@@ -169,9 +173,6 @@ void ShInitBuiltInResources(ShBuiltInResources* resources)
     resources->MinProgramTexelOffset = -8;
     resources->MaxProgramTexelOffset = 7;
 
-    // Extensions constants.
-    resources->MaxDualSourceDrawBuffers = 0;
-
     // Disable name hashing by default.
     resources->HashFunction = NULL;
 
@@ -189,16 +190,9 @@ ShHandle ShConstructCompiler(sh::GLenum type, ShShaderSpec spec,
                              const ShBuiltInResources* resources)
 {
     TShHandleBase* base = static_cast<TShHandleBase*>(ConstructCompiler(type, spec, output));
-    if (base == nullptr)
-    {
-        return 0;
-    }
-
     TCompiler* compiler = base->getAsCompiler();
-    if (compiler == nullptr)
-    {
+    if (compiler == 0)
         return 0;
-    }
 
     // Generate built-in symbol table.
     if (!compiler->Init(*resources)) {
@@ -244,13 +238,6 @@ bool ShCompile(
     ASSERT(compiler);
 
     return compiler->compile(shaderStrings, numStrings, compileOptions);
-}
-
-void ShClearResults(const ShHandle handle)
-{
-    TCompiler *compiler = GetCompilerFromHandle(handle);
-    ASSERT(compiler);
-    compiler->clearResults();
 }
 
 int ShGetShaderVersion(const ShHandle handle)
@@ -301,27 +288,27 @@ const std::map<std::string, std::string> *ShGetNameHashingMap(
 
 const std::vector<sh::Uniform> *ShGetUniforms(const ShHandle handle)
 {
-    return GetShaderVariables<sh::Uniform>(handle);
+    return GetShaderVariables<sh::Uniform>(handle, SHADERVAR_UNIFORM);
 }
 
 const std::vector<sh::Varying> *ShGetVaryings(const ShHandle handle)
 {
-    return GetShaderVariables<sh::Varying>(handle);
+    return GetShaderVariables<sh::Varying>(handle, SHADERVAR_VARYING);
 }
 
 const std::vector<sh::Attribute> *ShGetAttributes(const ShHandle handle)
 {
-    return GetShaderVariables<sh::Attribute>(handle);
+    return GetShaderVariables<sh::Attribute>(handle, SHADERVAR_ATTRIBUTE);
 }
 
-const std::vector<sh::OutputVariable> *ShGetOutputVariables(const ShHandle handle)
+const std::vector<sh::Attribute> *ShGetOutputVariables(const ShHandle handle)
 {
-    return GetShaderVariables<sh::OutputVariable>(handle);
+    return GetShaderVariables<sh::Attribute>(handle, SHADERVAR_OUTPUTVARIABLE);
 }
 
 const std::vector<sh::InterfaceBlock> *ShGetInterfaceBlocks(const ShHandle handle)
 {
-    return GetShaderVariables<sh::InterfaceBlock>(handle);
+    return GetShaderVariables<sh::InterfaceBlock>(handle, SHADERVAR_INTERFACEBLOCK);
 }
 
 bool ShCheckVariablesWithinPackingLimits(

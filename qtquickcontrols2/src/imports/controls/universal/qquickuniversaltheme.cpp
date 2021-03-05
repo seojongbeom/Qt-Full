@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -37,19 +37,17 @@
 #include "qquickuniversaltheme_p.h"
 
 #include <QtGui/qfont.h>
-#include <QtGui/qfontinfo.h>
 
 QT_BEGIN_NAMESPACE
 
 QQuickUniversalTheme::QQuickUniversalTheme(QPlatformTheme *theme)
     : QQuickProxyTheme(theme)
 {
-    const QFont font(QLatin1String("Segoe UI"));
-    if (QFontInfo(font).family() == QLatin1String("Segoe UI")) {
-        const QString family = font.family();
-        systemFont.setFamily(family);
-        groupBoxTitleFont.setFamily(family);
-        tabButtonFont.setFamily(family);
+    const QFont font(QStringLiteral("Segoe UI"));
+    if (font.exactMatch()) {
+        systemFont.setFamily(font.family());
+        groupBoxTitleFont.setFamily(font.family());
+        tabButtonFont.setFamily(font.family());
     }
 
     systemFont.setPixelSize(15);
@@ -59,6 +57,10 @@ QQuickUniversalTheme::QQuickUniversalTheme(QPlatformTheme *theme)
 
     tabButtonFont.setPixelSize(24);
     tabButtonFont.setWeight(QFont::Light);
+}
+
+QQuickUniversalTheme::~QQuickUniversalTheme()
+{
 }
 
 const QFont *QQuickUniversalTheme::font(QPlatformTheme::Font type) const

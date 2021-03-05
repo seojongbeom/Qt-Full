@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,8 +57,16 @@ class tst_QSocks5SocketEngine : public QObject, public QAbstractSocketEngineRece
 {
     Q_OBJECT
 
-private slots:
+public:
+    tst_QSocks5SocketEngine();
+    virtual ~tst_QSocks5SocketEngine();
+
+
+public slots:
     void initTestCase();
+    void init();
+    void cleanup();
+private slots:
     void construction();
     void errorTest_data();
     void errorTest();
@@ -73,6 +86,13 @@ private slots:
     void incomplete();
 
 protected slots:
+    void tcpSocketNonBlocking_hostFound();
+    void tcpSocketNonBlocking_connected();
+    void tcpSocketNonBlocking_closed();
+    void tcpSocketNonBlocking_readyRead();
+    void tcpSocketNonBlocking_bytesWritten(qint64);
+    void exitLoopSlot();
+    void downloadBigFileSlot();
     void proxyAuthenticationRequired(const QNetworkProxy &proxy, QAuthenticator *auth);
 
 private:
@@ -81,6 +101,11 @@ private:
     void closeNotification() { }
     void exceptionNotification() { }
     void connectionNotification() { }
+    QTcpSocket *tcpSocketNonBlocking_socket;
+    QStringList tcpSocketNonBlocking_data;
+    qint64 tcpSocketNonBlocking_totalWritten;
+    QTcpSocket *tmpSocket;
+    qint64 bytesAvailable;
 };
 
 class MiniSocks5ResponseHandler : public QObject
@@ -135,9 +160,27 @@ private slots:
     }
 };
 
+tst_QSocks5SocketEngine::tst_QSocks5SocketEngine()
+{
+}
+
+tst_QSocks5SocketEngine::~tst_QSocks5SocketEngine()
+{
+}
+
 void tst_QSocks5SocketEngine::initTestCase()
 {
     QVERIFY(QtNetworkSettings::verifyTestNetworkSettings());
+}
+
+void tst_QSocks5SocketEngine::init()
+{
+    tmpSocket = 0;
+    bytesAvailable = 0;
+}
+
+void tst_QSocks5SocketEngine::cleanup()
+{
 }
 
 //---------------------------------------------------------------------------
@@ -570,8 +613,8 @@ void tst_QSocks5SocketEngine::tcpSocketBlockingTest()
 
     // Read greeting
     QVERIFY(socket.waitForReadyRead(5000));
-    QByteArray s = socket.readLine();
-    QVERIFY2(QtNetworkSettings::compareReplyIMAP(s), s.constData());
+    QString s = socket.readLine();
+    QVERIFY2(QtNetworkSettings::compareReplyIMAP(s.toLatin1()), s.toLatin1().constData());
 
     // Write NOOP
     QCOMPARE((int) socket.write("1 NOOP\r\n", 8), 8);
@@ -581,7 +624,7 @@ void tst_QSocks5SocketEngine::tcpSocketBlockingTest()
 
     // Read response
     s = socket.readLine();
-    QCOMPARE(s, QByteArrayLiteral("1 OK Completed\r\n"));
+    QCOMPARE(s.toLatin1().constData(), "1 OK Completed\r\n");
 
     // Write LOGOUT
     QCOMPARE((int) socket.write("2 LOGOUT\r\n", 10), 10);
@@ -591,13 +634,13 @@ void tst_QSocks5SocketEngine::tcpSocketBlockingTest()
 
     // Read two lines of respose
     s = socket.readLine();
-    QCOMPARE(s, QByteArrayLiteral("* BYE LOGOUT received\r\n"));
+    QCOMPARE(s.toLatin1().constData(), "* BYE LOGOUT received\r\n");
 
     if (!socket.canReadLine())
         QVERIFY(socket.waitForReadyRead(5000));
 
     s = socket.readLine();
-    QCOMPARE(s, QByteArrayLiteral("2 OK Completed\r\n"));
+    QCOMPARE(s.toLatin1().constData(), "2 OK Completed\r\n");
 
     // Close the socket
     socket.close();
@@ -612,27 +655,13 @@ void tst_QSocks5SocketEngine::tcpSocketNonBlockingTest()
 {
     QSocks5SocketEngineHandler socks5;
 
-    qint64 tcpSocketNonBlocking_totalWritten  = 0;
-    QStringList tcpSocketNonBlocking_data;
     QTcpSocket socket;
-    connect(&socket, &QAbstractSocket::hostFound,
-            &QTestEventLoop::instance(), &QTestEventLoop::exitLoop);
-    connect(&socket, &QAbstractSocket::connected,
-            &QTestEventLoop::instance(), &QTestEventLoop::exitLoop);
-    connect(&socket, &QIODevice::bytesWritten,
-            [&tcpSocketNonBlocking_totalWritten] (qint64 written)
-            {
-                tcpSocketNonBlocking_totalWritten += written;
-                QTestEventLoop::instance().exitLoop();
-            });
-
-    connect(&socket, &QIODevice::readyRead,
-            [&tcpSocketNonBlocking_data, &socket] ()
-            {
-                while (socket.canReadLine())
-                    tcpSocketNonBlocking_data.append(socket.readLine());
-                QTestEventLoop::instance().exitLoop();
-            });
+    connect(&socket, SIGNAL(hostFound()), SLOT(tcpSocketNonBlocking_hostFound()));
+    connect(&socket, SIGNAL(connected()), SLOT(tcpSocketNonBlocking_connected()));
+    connect(&socket, SIGNAL(disconnected()), SLOT(tcpSocketNonBlocking_closed()));
+    connect(&socket, SIGNAL(bytesWritten(qint64)), SLOT(tcpSocketNonBlocking_bytesWritten(qint64)));
+    connect(&socket, SIGNAL(readyRead()), SLOT(tcpSocketNonBlocking_readyRead()));
+    tcpSocketNonBlocking_socket = &socket;
 
     // Connect
     socket.connectToHost(QtNetworkSettings::serverName(), 143);
@@ -686,7 +715,7 @@ void tst_QSocks5SocketEngine::tcpSocketNonBlockingTest()
 
     // Read response
     QVERIFY(!tcpSocketNonBlocking_data.isEmpty());
-    QCOMPARE(tcpSocketNonBlocking_data.at(0), QLatin1String("1 OK Completed\r\n"));
+    QCOMPARE(tcpSocketNonBlocking_data.at(0).toLatin1().constData(), "1 OK Completed\r\n");
     tcpSocketNonBlocking_data.clear();
 
 
@@ -720,67 +749,101 @@ void tst_QSocks5SocketEngine::tcpSocketNonBlockingTest()
     QCOMPARE(socket.state(), QTcpSocket::UnconnectedState);
 }
 
+void tst_QSocks5SocketEngine::tcpSocketNonBlocking_hostFound()
+{
+    QTestEventLoop::instance().exitLoop();
+}
+
+void tst_QSocks5SocketEngine::tcpSocketNonBlocking_connected()
+{
+    QTestEventLoop::instance().exitLoop();
+}
+
+void tst_QSocks5SocketEngine::tcpSocketNonBlocking_readyRead()
+{
+    while (tcpSocketNonBlocking_socket->canReadLine())
+        tcpSocketNonBlocking_data.append(tcpSocketNonBlocking_socket->readLine());
+
+    QTestEventLoop::instance().exitLoop();
+}
+
+void tst_QSocks5SocketEngine::tcpSocketNonBlocking_bytesWritten(qint64 written)
+{
+    tcpSocketNonBlocking_totalWritten += written;
+    QTestEventLoop::instance().exitLoop();
+}
+
+void tst_QSocks5SocketEngine::tcpSocketNonBlocking_closed()
+{
+}
+
 //----------------------------------------------------------------------------------
 
 void tst_QSocks5SocketEngine::downloadBigFile()
 {
     QSocks5SocketEngineHandler socks5;
 
-    QTcpSocket socket;
-    qint64 bytesAvailable = 0;
+    if (tmpSocket)
+        delete tmpSocket;
+    tmpSocket = new QTcpSocket;
 
-    QElapsedTimer stopWatch;
-    stopWatch.start();
+    connect(tmpSocket, SIGNAL(connected()), SLOT(exitLoopSlot()));
+    connect(tmpSocket, SIGNAL(readyRead()), SLOT(downloadBigFileSlot()));
 
-    connect(&socket, &QAbstractSocket::connected,
-            &QTestEventLoop::instance(), &QTestEventLoop::exitLoop);
-    connect(&socket, &QIODevice::readyRead,
-            [&socket, &bytesAvailable] ()
-            {
-                const QByteArray tmp = socket.readAll();
-                int correction = tmp.indexOf(char(0), 0); //skip header
-                if (correction == -1)
-                    correction = 0;
-                bytesAvailable += (tmp.size() - correction);
-                if (bytesAvailable >= 10000000)
-                    QTestEventLoop::instance().exitLoop();
-            });
-
-    connect(&socket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error),
-            [&socket, &stopWatch] (QAbstractSocket::SocketError errorCode)
-            {
-                qWarning().noquote().nospace() << QTest::currentTestFunction()
-                    << ": error " << errorCode << ": " << socket.errorString()
-                    << " (" << stopWatch.elapsed() << "ms)";
-            });
-
-    socket.connectToHost(QtNetworkSettings::serverName(), 80);
+    tmpSocket->connectToHost(QtNetworkSettings::serverName(), 80);
 
     QTestEventLoop::instance().enterLoop(30);
     if (QTestEventLoop::instance().timeout())
         QFAIL("Network operation timed out");
 
     QByteArray hostName = QtNetworkSettings::serverName().toLatin1();
-    QCOMPARE(socket.state(), QAbstractSocket::ConnectedState);
-    QVERIFY(socket.write("GET /qtest/mediumfile HTTP/1.0\r\n") > 0);
-    QVERIFY(socket.write("HOST: ") > 0);
-    QVERIFY(socket.write(hostName.data()) > 0);
-    QVERIFY(socket.write("\r\n") > 0);
-    QVERIFY(socket.write("\r\n") > 0);
+    QCOMPARE(tmpSocket->state(), QAbstractSocket::ConnectedState);
+    QVERIFY(tmpSocket->write("GET /qtest/mediumfile HTTP/1.0\r\n") > 0);
+    QVERIFY(tmpSocket->write("HOST: ") > 0);
+    QVERIFY(tmpSocket->write(hostName.data()) > 0);
+    QVERIFY(tmpSocket->write("\r\n") > 0);
+    QVERIFY(tmpSocket->write("\r\n") > 0);
 
-    stopWatch.restart();
+    bytesAvailable = 0;
+
+    QTime stopWatch;
+    stopWatch.start();
+
+#if !defined(Q_OS_WINCE)
     QTestEventLoop::instance().enterLoop(60);
+#else
+    QTestEventLoop::instance().enterLoop(180);
+#endif
     if (QTestEventLoop::instance().timeout())
         QFAIL("Network operation timed out");
 
     QCOMPARE(bytesAvailable, qint64(10000000));
 
-    QCOMPARE(socket.state(), QAbstractSocket::ConnectedState);
+    QCOMPARE(tmpSocket->state(), QAbstractSocket::ConnectedState);
 
     /*qDebug("\t\t%.1fMB/%.1fs: %.1fMB/s",
            bytesAvailable / (1024.0 * 1024.0),
            stopWatch.elapsed() / 1024.0,
            (bytesAvailable / (stopWatch.elapsed() / 1000.0)) / (1024 * 1024));*/
+
+    delete tmpSocket;
+    tmpSocket = 0;
+}
+
+void tst_QSocks5SocketEngine::exitLoopSlot()
+{
+    QTestEventLoop::instance().exitLoop();
+}
+
+
+void tst_QSocks5SocketEngine::downloadBigFileSlot()
+{
+    QByteArray tmp=tmpSocket->readAll();
+    int correction=tmp.indexOf((char)0,0); //skip header
+    if (correction==-1) correction=0;
+    bytesAvailable += (tmp.size()-correction);
+    if (bytesAvailable >= 10000000)
+        QTestEventLoop::instance().exitLoop();
 }
 
 void tst_QSocks5SocketEngine::passwordAuth()

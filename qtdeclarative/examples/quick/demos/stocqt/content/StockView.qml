@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,6 @@
 
 import QtQuick 2.0
 import QtQuick.Window 2.1
-import QtQuick.Layouts 1.1
 
 Rectangle {
     id: root
@@ -71,40 +60,42 @@ Rectangle {
         color: "transparent"
         anchors.fill: parent
 
-        GridLayout {
-            anchors.fill: parent
-            rows: 2
-            columns: Screen.primaryOrientation === Qt.PortraitOrientation ? 1 : 2
+        StockInfo {
+            id: stockInfo
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.top: parent.top
+            anchors.topMargin: 15
+            height: 160
+            anchors.right: Screen.primaryOrientation === Qt.PortraitOrientation ? parent.right : chart.left
+            anchors.rightMargin: 20
+            stock: root.stock
+        }
 
-            StockInfo {
-                id: stockInfo
-                Layout.alignment: Qt.AlignTop
-                Layout.preferredWidth: 400
-                Layout.preferredHeight: 160
-                stock: root.stock
-            }
+        StockChart {
+            id: chart
+            anchors.bottom: Screen.primaryOrientation === Qt.PortraitOrientation ? settingsPanel.top : parent.bottom
+            anchors.bottomMargin: 20
+            anchors.top : Screen.primaryOrientation === Qt.PortraitOrientation ? stockInfo.bottom : parent.top
+            anchors.topMargin: 20
+            anchors.right: parent.right
+            anchors.rightMargin: 20
+            width: Screen.primaryOrientation === Qt.PortraitOrientation ? parent.width - 40 : 0.6 * parent.width
+            stockModel: root.stock
+            settings: settingsPanel
+        }
 
-            StockChart {
-                id: chart
-                Layout.alignment: Qt.AlignRight
-                Layout.margins: 5
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.rowSpan: 2
-                stockModel: root.stock
-                settings: settingsPanel
-            }
-            StockSettingsPanel {
-                id: settingsPanel
-                Layout.alignment: Qt.AlignBottom
-                Layout.fillHeight: true
-                Layout.preferredWidth: 400
-                Layout.bottomMargin: 5
-                onDrawOpenPriceChanged: root.update()
-                onDrawClosePriceChanged: root.update();
-                onDrawHighPriceChanged: root.update();
-                onDrawLowPriceChanged: root.update();
-            }
+        StockSettingsPanel {
+            id: settingsPanel
+            anchors.left: parent.left
+            anchors.leftMargin: 20
+            anchors.right: Screen.primaryOrientation === Qt.PortraitOrientation ? parent.right : chart.left
+            anchors.rightMargin: 20
+            anchors.bottom: parent.bottom
+            onDrawOpenPriceChanged: root.update()
+            onDrawClosePriceChanged: root.update();
+            onDrawHighPriceChanged: root.update();
+            onDrawLowPriceChanged: root.update();
         }
     }
 }

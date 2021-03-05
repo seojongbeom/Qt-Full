@@ -1,9 +1,11 @@
 # Create the super cache so modules will add themselves to it.
 cache(, super)
 
-TEMPLATE      = subdirs
+CONFIG += build_pass   # hack to disable the .qmake.super auto-add
+load(qt_build_config)
+CONFIG -= build_pass   # unhack, as it confuses Qt Creator
 
-CONFIG += prepare_docs qt_docs_targets
+TEMPLATE      = subdirs
 
 # Extract submodules from .gitmodules.
 lines = $$cat(.gitmodules, lines)
@@ -23,27 +25,6 @@ for (line, lines) {
     }
 }
 QMAKE_INTERNAL_INCLUDED_FILES += $$PWD/.gitmodules
-
-QT_SKIP_MODULES =
-
-# This is a bit hacky, but a proper implementation is not worth it.
-args = $$QMAKE_EXTRA_ARGS
-contains(args, -redo): \
-    args += $$cat($$OUT_PWD/config.opt, lines)
-for (ever) {
-    isEmpty(args): break()
-    a = $$take_first(args)
-
-    equals(a, -skip) {
-        isEmpty(args): break()
-        m = $$take_first(args)
-        contains(m, -.*): next()
-        m ~= s/^(qt)?/qt/
-        !contains(modules, $$m): \
-            error("-skip command line argument used with non-existent module '$$m'.")
-        QT_SKIP_MODULES += $$m
-    }
-}
 
 modules = $$sort_depends(modules, module., .depends .recommends .serialize)
 modules = $$reverse(modules)
@@ -91,5 +72,3 @@ for (mod, modules) {
 
     SUBDIRS += $$mod
 }
-
-load(qt_configure)

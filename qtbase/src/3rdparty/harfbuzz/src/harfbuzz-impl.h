@@ -59,7 +59,7 @@ HB_BEGIN_HEADER
 #endif
 
 #ifndef HB_UNUSED
-# define HB_UNUSED(arg) ((void)(arg))
+# define HB_UNUSED(arg) ((arg) = (arg))
 #endif
 
 #define HB_LIKELY(cond) (cond)

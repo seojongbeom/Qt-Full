@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Copyright (C) 2013 Intel Corporation
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -283,6 +277,7 @@ char Parser::nextToken()
     case ValueSeparator:
     case EndArray:
     case EndObject:
+        eatSpace();
     case Quote:
         break;
     default:
@@ -299,7 +294,7 @@ QJsonDocument Parser::parse(QJsonParseError *error)
 {
 #ifdef PARSER_DEBUG
     indent = 0;
-    qDebug(">>>>> parser begin");
+    qDebug() << ">>>>> parser begin";
 #endif
     // allocate some space
     dataLength = qMax(end - json, (ptrdiff_t) 256);
@@ -345,7 +340,7 @@ QJsonDocument Parser::parse(QJsonParseError *error)
 
 error:
 #ifdef PARSER_DEBUG
-    qDebug(">>>>> parser error");
+    qDebug() << ">>>>> parser error";
 #endif
     if (error) {
         error->offset = json - head;
@@ -468,10 +463,6 @@ bool Parser::parseMember(int baseOffset)
         lastError = QJsonParseError::MissingNameSeparator;
         return false;
     }
-    if (!eatSpace()) {
-        lastError = QJsonParseError::UnterminatedObject;
-        return false;
-    }
     QJsonPrivate::Value val;
     if (!parseValue(&val, baseOffset))
         return false;
@@ -548,10 +539,6 @@ bool Parser::parseArray()
         nextToken();
     } else {
         while (1) {
-            if (!eatSpace()) {
-                lastError = QJsonParseError::UnterminatedArray;
-                return false;
-            }
             QJsonPrivate::Value val;
             if (!parseValue(&val, arrayOffset))
                 return false;
@@ -694,12 +681,6 @@ bool Parser::parseValue(QJsonPrivate::Value *val, int baseOffset)
         DEBUG << "value: object";
         END;
         return true;
-    case ValueSeparator:
-        // Essentially missing value, but after a colon, not after a comma
-        // like the other MissingObject errors.
-        lastError = QJsonParseError::IllegalValue;
-        return false;
-    case EndObject:
     case EndArray:
         lastError = QJsonParseError::MissingObject;
         return false;
@@ -804,7 +785,7 @@ bool Parser::parseNumber(QJsonPrivate::Value *val, int baseOffset)
     int pos = reserveSpace(sizeof(double));
     if (pos < 0)
         return false;
-    qToLittleEndian(ui, data + pos);
+    qToLittleEndian(ui, reinterpret_cast<uchar *>(data + pos));
     if (current - baseOffset >= Value::MaxSize) {
         lastError = QJsonParseError::DocumentTooLarge;
         return false;

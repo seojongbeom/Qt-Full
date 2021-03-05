@@ -1,7 +1,7 @@
 /****************************************************************************
 **
 ** Copyright (C) 2012 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Stephen Kelly <stephen.kelly@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -38,7 +38,7 @@
 
     \c{CMake} is a 3rd party tool with its own \l{CMake Documentation}{documentation}.
     The rest of this manual details the specifics of how to use Qt 5 with \c{CMake}.
-    The minimum version required to use Qt5 is \c{CMake} 2.8.3, but 3.1.0 is recommended.
+    The minimum version required to use Qt5 is \c{CMake} 2.8.3, but 2.8.11 is recommended.
 
     \section1 Getting Started
 
@@ -97,21 +97,6 @@
     \c{Qt5}\e{<Module>}\c{_PLUGINS} variable.
 
     \snippet snippets/cmake/CMakeLists.pro 5
-
-    \section2 Using Qt 5 with \c{CMake} older than 3.1.0
-
-    Qt 5.7 requires C++11 support. \c{CMake} starting from version 3.1.0 implicitly adds the
-    minimum required compiler flags (e.g. \c{-std=gnu++11}) to the Qt5 module targets. If you use
-    \c{CMake} version older than 3.1.0, you need to add the needed \c{-std=...} to the targets
-    linking against Qt5 modules yourself.
-
-    If you use Qt 5.7 and a \c{CMake} version above 3.1.0, plus require a more recent C++ standard
-    version, use the CMake way of selecting the standard version, or specify features required and
-    let CMake compute the flags. Example:
-
-    \snippet snippets/cmake/CMakeLists.pro 6
-
-    Also see: \l{https://cmake.org/cmake/help/v3.1/manual/cmake-compile-features.7.html}{CMake cmake-compile-features Documentation}
 
     \section2 Using Qt 5 with \c{CMake} older than 2.8.12
 

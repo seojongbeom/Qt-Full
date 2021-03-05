@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtAddOn.ImageFormats module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -37,8 +42,6 @@ private slots:
     void initTestCase();
     void readImage_data();
     void readImage();
-    void readAnimation_data();
-    void readAnimation();
     void writeImage_data();
     void writeImage();
 };
@@ -69,65 +72,6 @@ void tst_qwebp::readImage()
     QImage image = reader.read();
     QVERIFY2(!image.isNull(), qPrintable(reader.errorString()));
     QCOMPARE(image.size(), size);
-}
-
-void tst_qwebp::readAnimation_data()
-{
-    QTest::addColumn<QString>("fileName");
-    QTest::addColumn<QSize>("size");
-    QTest::addColumn<int>("imageCount");
-    QTest::addColumn<int>("loopCount");
-    QTest::addColumn<QColor>("bgColor");
-    QTest::addColumn<QList<QRect> >("imageRects");
-    QTest::addColumn<QList<int> >("imageDelays");
-
-    QTest::newRow("kollada")
-        << QString("kollada")
-        << QSize(436, 160)
-        << 1
-        << 0
-        << QColor()
-        << (QList<QRect>() << QRect(0, 0, 436, 160))
-        << (QList<int>() << 0);
-    QTest::newRow("kollada_animation")
-        << QString("kollada_animation")
-        << QSize(536, 260)
-        << 2
-        << 2
-        << QColor(128, 128, 128, 128)
-        << (QList<QRect>() << QRect(0, 0, 436, 160) << QRect(100, 100, 436, 160))
-        << (QList<int>() << 1000 << 1200);
-}
-
-void tst_qwebp::readAnimation()
-{
-    QFETCH(QString, fileName);
-    QFETCH(QSize, size);
-    QFETCH(int, imageCount);
-    QFETCH(int, loopCount);
-    QFETCH(QColor, bgColor);
-    QFETCH(QList<QRect>, imageRects);
-    QFETCH(QList<int>, imageDelays);
-
-    const QString path = QStringLiteral(":/images/") + fileName + QStringLiteral(".webp");
-    QImageReader reader(path);
-    QVERIFY(reader.canRead());
-    QCOMPARE(reader.size(), size);
-    QCOMPARE(reader.imageCount(), imageCount);
-    QCOMPARE(reader.loopCount(), loopCount);
-    QCOMPARE(reader.backgroundColor(), bgColor);
-
-    for (int i = 0; i < reader.imageCount(); ++i) {
-        QImage image = reader.read();
-        QVERIFY2(!image.isNull(), qPrintable(reader.errorString()));
-        QCOMPARE(image.size(), size);
-        QCOMPARE(reader.currentImageNumber(), i);
-        QCOMPARE(reader.currentImageRect(), imageRects[i]);
-        QCOMPARE(reader.nextImageDelay(), imageDelays[i]);
-    }
-
-    QVERIFY(reader.read().isNull());
-    QCOMPARE(reader.canRead(), !reader.supportsAnimation());
 }
 
 void tst_qwebp::writeImage_data()

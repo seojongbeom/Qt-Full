@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Dialogs module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -64,9 +61,7 @@ Q_LOGGING_CATEGORY(lcRegistration, "qt.quick.dialogs.registration")
 
 static void initResources()
 {
-#ifdef QT_STATIC
-    Q_INIT_RESOURCE(qmake_QtQuick_Dialogs);
-#endif
+    Q_INIT_RESOURCE(dialogs);
 }
 
 QT_BEGIN_NAMESPACE
@@ -92,7 +87,7 @@ class QtQuick2DialogsPlugin : public QQmlExtensionPlugin
     Q_PLUGIN_METADATA(IID QQmlExtensionInterface_iid)
 
 public:
-    QtQuick2DialogsPlugin() : QQmlExtensionPlugin(), m_useResources(true) { initResources(); }
+    QtQuick2DialogsPlugin() : QQmlExtensionPlugin(), m_useResources(true) { }
 
     virtual void initializeEngine(QQmlEngine *engine, const char * uri) {
         qCDebug(lcRegistration) << uri << m_decorationComponentUrl;
@@ -101,18 +96,16 @@ public:
     }
 
     virtual void registerTypes(const char *uri) {
+        initResources();
+
         Q_ASSERT(QLatin1String(uri) == QLatin1String("QtQuick.Dialogs"));
         bool hasTopLevelWindows = QGuiApplicationPrivate::platformIntegration()->
             hasCapability(QPlatformIntegration::MultipleWindows);
         qCDebug(lcRegistration) << uri << "can use top-level windows?" << hasTopLevelWindows;
         QDir qmlDir(baseUrl().toLocalFile());
         QDir widgetsDir(baseUrl().toLocalFile());
-#ifndef QT_STATIC
         widgetsDir.cd("../PrivateWidgets");
-#endif
-#ifdef QT_STATIC
-        m_useResources = false;
-#else
+
 #ifndef ALWAYS_LOAD_FROM_RESOURCES
         // If at least one file was actually installed, then use installed qml files instead of resources.
         // This makes debugging and incremental development easier, whereas the "normal" installation
@@ -120,14 +113,10 @@ public:
         if (qmlDir.exists(QString("DefaultFileDialog.qml")))
             m_useResources = false;
 #endif
-#endif
         m_decorationComponentUrl = m_useResources ?
             QUrl("qrc:/QtQuick/Dialogs/qml/DefaultWindowDecoration.qml") :
-#ifndef QT_STATIC
             QUrl::fromLocalFile(qmlDir.filePath(QString("qml/DefaultWindowDecoration.qml")));
-#else
-            QUrl("qrc:/qt-project.org/imports/QtQuick/Dialogs/qml/DefaultWindowDecoration.qml");
-#endif
+
         // Prefer the QPA dialog helpers if the platform supports them.
         // Else if there is a QWidget-based implementation, check whether it's
         // possible to instantiate it from Qt Quick.
@@ -175,14 +164,10 @@ public:
         // Dialog
         {
             // @uri QtQuick.Dialogs.AbstractDialog
-            qmlRegisterType<QQuickDialog1>(uri, 1, 2, "AbstractDialog"); // implementation wrapper
+            qmlRegisterType<QQuickDialog>(uri, 1, 2, "AbstractDialog"); // implementation wrapper
             QUrl dialogQmlPath = m_useResources ?
                 QUrl("qrc:/QtQuick/Dialogs/DefaultDialogWrapper.qml") :
-#ifndef QT_STATIC
                 QUrl::fromLocalFile(qmlDir.filePath("DefaultDialogWrapper.qml"));
-#else
-                QUrl("qrc:/qt-project.org/imports/QtQuick/Dialogs/DefaultDialogWrapper.qml");
-#endif
             qCDebug(lcRegistration) << "    registering" << dialogQmlPath << "as Dialog";
             qmlRegisterType(dialogQmlPath, uri, 1, 2, "Dialog");
         }
@@ -214,8 +199,7 @@ protected:
 #if defined(Q_OS_IOS)
         mobileTouchPlatform = true;
 #elif defined(Q_OS_ANDROID) || defined(Q_OS_BLACKBERRY) || defined(Q_OS_QNX) || defined(Q_OS_WINRT)
-        const auto devices = QTouchDevice::devices();
-        for (const QTouchDevice *dev : devices)
+        foreach (const QTouchDevice *dev, QTouchDevice::devices())
             if (dev->type() == QTouchDevice::TouchScreen)
                 mobileTouchPlatform = true;
 #endif
@@ -229,12 +213,7 @@ protected:
                 QCoreApplication::instance()->inherits("QApplication")) {
             QUrl dialogQmlPath =  m_useResources ?
                 QUrl(QString("qrc:/QtQuick/Dialogs/Widget%1.qml").arg(qmlName)) :
-#ifndef QT_STATIC
-                    QUrl::fromLocalFile(qmlDir.filePath(QString("Widget%1.qml").arg(qmlName)));
-#else
-                    QUrl(QString("qrc:/qt-project.org/imports/QtQuick/Dialogs/Widget%1.qml").arg(qmlName));
-            Q_UNUSED(qmlDir);
-#endif
+                QUrl::fromLocalFile(qmlDir.filePath(QString("Widget%1.qml").arg(qmlName)));
             if (qmlRegisterType(dialogQmlPath, uri, versionMajor, versionMinor, qmlName) >= 0) {
                 qCDebug(lcRegistration) << "    registering" << qmlName << " as " << dialogQmlPath;
                 return true;
@@ -252,12 +231,7 @@ protected:
         qmlRegisterType<WrapperType>(uri, versionMajor, versionMinor, abstractTypeName);
         QUrl dialogQmlPath =  m_useResources ?
                     QUrl(QString("qrc:/QtQuick/Dialogs/Default%1.qml").arg(qmlName)) :
-#ifndef QT_STATIC
                     QUrl::fromLocalFile(qmlDir.filePath(QString("Default%1.qml").arg(qmlName)));
-#else
-                    QUrl(QString("qrc:/qt-project.org/imports/QtQuick/Dialogs/Default%1.qml").arg(qmlName));
-        Q_UNUSED(qmlDir);
-#endif
         qCDebug(lcRegistration) << "    registering" << qmlName << " as " << dialogQmlPath;
         qmlRegisterType(dialogQmlPath, uri, versionMajor, versionMinor, qmlName);
     }

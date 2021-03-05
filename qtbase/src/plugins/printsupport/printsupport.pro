@@ -1,6 +1,8 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += printsupport-private
 
 osx:   SUBDIRS += cocoa
 win32: SUBDIRS += windows
-unix:!darwin:qtConfig(cups): SUBDIRS += cups
+unix:!mac:contains(QT_CONFIG, cups) {
+    load(qfeatures)
+    !contains(QT_DISABLED_FEATURES, cups): SUBDIRS += cups
+}

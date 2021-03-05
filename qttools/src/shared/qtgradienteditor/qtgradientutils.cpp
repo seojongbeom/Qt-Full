@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -146,9 +140,10 @@ static QDomElement saveGradient(QDomDocument &doc, const QGradient &gradient)
     gradElem.setAttribute(QLatin1String("spread"), gradientSpreadToString(gradient.spread()));
     gradElem.setAttribute(QLatin1String("coordinateMode"), gradientCoordinateModeToString(gradient.coordinateMode()));
 
-    const QGradientStops stops = gradient.stops();
-    for (const QGradientStop &stop : stops)
-        gradElem.appendChild(saveGradientStop(doc, stop));
+    QGradientStops stops = gradient.stops();
+    QVectorIterator<QGradientStop > it(stops);
+    while (it.hasNext())
+        gradElem.appendChild(saveGradientStop(doc, it.next()));
 
     if (type == QGradient::LinearGradient) {
         const QLinearGradient &g = *static_cast<const QLinearGradient *>(&gradient);
@@ -244,7 +239,9 @@ QString QtGradientUtils::saveState(const QtGradientManager *manager)
     QDomElement rootElem = doc.createElement(QLatin1String("gradients"));
 
     QMap<QString, QGradient> grads = manager->gradients();
-    for (auto itGrad = grads.cbegin(), end = grads.cend(); itGrad != end; ++itGrad) {
+    QMapIterator<QString, QGradient> itGrad(grads);
+    while (itGrad.hasNext()) {
+        itGrad.next();
         QDomElement idElem = doc.createElement(QLatin1String("gradient"));
         idElem.setAttribute(QLatin1String("name"), itGrad.key());
         QDomElement gradElem = saveGradient(doc, itGrad.value());
@@ -390,8 +387,7 @@ static QStringList styleSheetParameters(const QGradient &gradient)
 static QStringList styleSheetStops(const QGradient &gradient)
 {
     QStringList result;
-    const QGradientStops &stops = gradient.stops();
-    for (const QGradientStop &stop : stops) {
+    foreach (const QGradientStop &stop, gradient.stops()) {
         const QColor color = stop.second;
 
         const QString stopDescription = QLatin1String("stop:") + QString::number(stop.first) + QLatin1String(" rgba(")

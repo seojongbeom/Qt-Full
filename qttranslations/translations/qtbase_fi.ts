@@ -729,14 +729,6 @@ Peru painamalla ESC</translation>
         <source>Invalid hostname</source>
         <translation>Virheellinen konenimi</translation>
     </message>
-    <message>
-        <source>Host %1 could not be found.</source>
-        <translation>Konetta %1 ei löydetty.</translation>
-    </message>
-    <message>
-        <source>Unknown error</source>
-        <translation>Tuntematon virhe</translation>
-    </message>
 </context>
 <context>
     <name>QDockWidget</name>
@@ -770,16 +762,8 @@ Peru painamalla ESC</translation>
         <translation>Varoitus:</translation>
     </message>
     <message>
-        <source>Critical Error:</source>
-        <translation>Kriittinen virhe:</translation>
-    </message>
-    <message>
         <source>Fatal Error:</source>
         <translation>Vakava virhe:</translation>
-    </message>
-    <message>
-        <source>Information:</source>
-        <translation>Ilmoitus:</translation>
     </message>
     <message>
         <source>&amp;Show this message again</source>
@@ -1540,6 +1524,10 @@ Haluatko silti poistaa sen?</translation>
         <source>Unknown error (%1)</source>
         <translation>Tuntematon virhe (%1)</translation>
     </message>
+    <message>
+        <source>Host %1 could not be found.</source>
+        <translation>Konetta %1 ei löydetty.</translation>
+    </message>
 </context>
 <context>
     <name>QHttp</name>
@@ -1774,10 +1762,6 @@ Haluatko silti poistaa sen?</translation>
         <translation>Laitetta ei ole asetettu</translation>
     </message>
     <message>
-        <source>Cannot open device for writing: %1</source>
-        <translation>Laitetta ei voitu avata kirjoitusta varten: %1</translation>
-    </message>
-    <message>
         <source>Device not writable</source>
         <translation>Laitteeseen ei voi kirjoittaa</translation>
     </message>
@@ -1883,55 +1867,8 @@ Haluatko silti poistaa sen?</translation>
         <translation>”%1” on virheellinen ELF-objekti (%2)</translation>
     </message>
     <message>
-        <source>odd cpu architecture</source>
-        <translation>outo prosessoriarkkitehtuuri</translation>
-    </message>
-    <message>
-        <source>wrong cpu architecture</source>
-        <translation>väärä prosessoriarkkitehtuuri</translation>
-    </message>
-    <message>
-        <source>odd endianness</source>
-        <translation>outo tavujärjestys</translation>
-    </message>
-    <message>
-        <source>unexpected e_shsize</source>
-        <translation>odottamaton e_shsize</translation>
-    </message>
-    <message>
-        <source>unexpected e_shentsize</source>
-        <translation>odottamaton e_shentsize</translation>
-    </message>
-    <message numerus="yes">
-        <source>announced %n section(s), each %1 byte(s), exceed file size</source>
-        <translation>
-            <numerusform>ilmoitettu %n osio, kooltaan %1 tavua, ylittää tiedoston koon</numerusform>
-            <numerusform>ilmoitettu %n osiota, kukin %1 tavua, ylittää tiedoston koon</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>shstrtab section header seems to be at %1</source>
-        <translation>shstrtab-osion otsake näyttäisi olevan sijainnissa %1</translation>
-    </message>
-    <message>
-        <source>string table seems to be at %1</source>
-        <translation>merkkijonotaulukko näyttäisi olevan sijainnissa %1</translation>
-    </message>
-    <message>
-        <source>section name %1 of %2 behind end of file</source>
-        <translation>osion nimi %1/%2 on tiedoston lopun jälkeen</translation>
-    </message>
-    <message>
-        <source>empty .rodata. not a library.</source>
-        <translation>tyhjä .rodata, ei ole kirjasto.</translation>
-    </message>
-    <message>
-        <source>missing section data. This is not a library.</source>
-        <translation>osiolla ei ole dataa. Tämä ei ole kirjasto.</translation>
-    </message>
-    <message>
-        <source>Failed to extract plugin meta data from &apos;%1&apos;</source>
-        <translation>Liitännäismetatietojen saaminen kirjastosta ”%1” epäonnistui</translation>
+        <source>Plugin verification data mismatch in &apos;%1&apos;</source>
+        <translation>Liitännäisen varmennus ei täsmää kirjastossa ”%1”</translation>
     </message>
     <message>
         <source>The shared library was not found.</source>
@@ -2274,24 +2211,34 @@ Haluatko silti poistaa sen?</translation>
         <translation>Piilota yksityiskohdat…</translation>
     </message>
     <message>
-        <source>&lt;p&gt;Qt is a C++ toolkit for cross-platform application development.&lt;/p&gt;&lt;p&gt;Qt provides single-source portability across all major desktop operating systems. It is also available for embedded Linux and other embedded and mobile operating systems.&lt;/p&gt;&lt;p&gt;Qt is available under three different licensing options designed to accommodate the needs of our various users.&lt;/p&gt;&lt;p&gt;Qt licensed under our commercial license agreement is appropriate for development of proprietary/commercial software where you do not want to share any source code with third parties or otherwise cannot comply with the terms of the GNU LGPL version 3.&lt;/p&gt;&lt;p&gt;Qt licensed under the GNU LGPL version 3 is appropriate for the development of Qt&amp;nbsp;applications provided you can comply with the terms and conditions of the GNU LGPL version 3.&lt;/p&gt;&lt;p&gt;Please see &lt;a href=&quot;http://%2/&quot;&gt;%2&lt;/a&gt; for an overview of Qt licensing.&lt;/p&gt;&lt;p&gt;Copyright (C) %1 The Qt Company Ltd and other contributors.&lt;/p&gt;&lt;p&gt;Qt and the Qt logo are trademarks of The Qt Company Ltd.&lt;/p&gt;&lt;p&gt;Qt is The Qt Company Ltd product developed as an open source project. See &lt;a href=&quot;http://%3/&quot;&gt;%3&lt;/a&gt; for more information.&lt;/p&gt;</source>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <source>Help</source>
+        <translation>Ohje</translation>
+    </message>
+    <message>
+        <source>&lt;h3&gt;About Qt&lt;/h3&gt;&lt;p&gt;This program uses Qt version %1.&lt;/p&gt;</source>
+        <translation>&lt;h3&gt;Tietoja Qt:stä&lt;/h3&gt;&lt;p&gt;Tämä ohjelma käyttää Qt-versiota %1.&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Qt is a C++ toolkit for cross-platform application development.&lt;/p&gt;&lt;p&gt;Qt provides single-source portability across all major desktop operating systems. It is also available for embedded Linux and other embedded and mobile operating systems.&lt;/p&gt;&lt;p&gt;Qt is available under three different licensing options designed to accommodate the needs of our various users.&lt;/p&gt;&lt;p&gt;Qt licensed under our commercial license agreement is appropriate for development of proprietary/commercial software where you do not want to share any source code with third parties or otherwise cannot comply with the terms of the GNU LGPL version 3 or GNU LGPL version 2.1.&lt;/p&gt;&lt;p&gt;Qt licensed under the GNU LGPL version 3 is appropriate for the development of Qt&amp;nbsp;applications provided you can comply with the terms and conditions of the GNU LGPL version 3.&lt;/p&gt;&lt;p&gt;Qt licensed under the GNU LGPL version 2.1 is appropriate for the development of Qt&amp;nbsp;applications provided you can comply with the terms and conditions of the GNU LGPL version 2.1.&lt;/p&gt;&lt;p&gt;Please see &lt;a href=&quot;http://%2/&quot;&gt;%2&lt;/a&gt; for an overview of Qt licensing.&lt;/p&gt;&lt;p&gt;Copyright (C) %1 The Qt Company Ltd and other contributors.&lt;/p&gt;&lt;p&gt;Qt and the Qt logo are trademarks of The Qt Company Ltd.&lt;/p&gt;&lt;p&gt;Qt is The Qt Company Ltd product developed as an open source project. See &lt;a href=&quot;http://%3/&quot;&gt;%3&lt;/a&gt; for more information.&lt;/p&gt;</source>
         <translation>&lt;p&gt;Qt on C++-työkalupaketti alustariippumattomaan sovelluskehitykseen.&lt;/p&gt;
 &lt;p&gt;Qt tarjoaa saman lähdekoodin siirrettävyyden kaikkiin merkittäviin työpöytäkäyttöjärjestelmiin.
 Qt on myös saatavilla sulautetulle Linuxille ja muille mobiili- sekä sulautetuille käyttöjärjestelmille.&lt;/p&gt;
 &lt;p&gt;Qt on saatavilla kolmella eri lisenssillä, jotka on tarkoitettu vastaamaan erilaisten käyttäjien tarpeisiin.&lt;/p&gt;
 &lt;p&gt;Kaupallisen lisenssisopimuksen ehtojen mukaisesti lisensoitu Qt sopii omisteisen tai kaupallisen ohjelmiston
 kehittämiseen silloin, kun lähdekoodia ei haluta jakaa kolmansille osapuolille tai ei voida muuten noudattaa
-GNU LGPL 3:n ehtoja.&lt;/p&gt;
+GNU LGPL 3:n tai GNU LGPL 2.1:n ehtoja.&lt;/p&gt;
 &lt;p&gt;GNU LGPL 3:n ehtojen mukaisesti lisensoitu Qt sopii Qt-sovellusten kehittämiseen silloin,
 kun GNU LGPL 3:n ehtoja voidaan noudattaa.&lt;/p&gt;
+&lt;p&gt;GNU LGPL 2.1:n ehtojen mukaisesti lisensoitu Qt sopii Qt-sovellusten kehittämiseen silloin,
+kun GNU LGPL 2.1:n ehtoja voidaan noudattaa.&lt;/p&gt;
 &lt;p&gt;Katso yhteenveto Qt-lisensoinnista osoitteesta &lt;a href=&quot;http://%2/&quot;&gt;%2&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Copyright © %1 The Qt Company Ltd ja/tai sen tytäryhtiö(t) ja muut avustajat.&lt;/p&gt;
 &lt;p&gt;Qt ja Qt-logo ovat The Qt Company Ltd:n ja/tai sen tytäryhtiö(ide)n tavaramerkkejä.&lt;/p&gt;
 &lt;p&gt;Qt on The Qt Company Ltd -tuote, jota kehitetään avoimen lähdekoodin projektina. Katso lisätietoja osoitteesta &lt;a href=&quot;http://%3/&quot;&gt;%3&lt;/a&gt;.&lt;/p&gt;</translation>
-    </message>
-    <message>
-        <source>&lt;h3&gt;About Qt&lt;/h3&gt;&lt;p&gt;This program uses Qt version %1.&lt;/p&gt;</source>
-        <translation>&lt;h3&gt;Tietoja Qt:stä&lt;/h3&gt;&lt;p&gt;Tämä ohjelma käyttää Qt-versiota %1.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>About Qt</source>
@@ -2403,14 +2350,6 @@ kun GNU LGPL 3:n ehtoja voidaan noudattaa.&lt;/p&gt;
     <message>
         <source>Temporary error</source>
         <translation>Tilapäinen virhe</translation>
-    </message>
-    <message>
-        <source>Network dropped connection on reset</source>
-        <translation>Verkko pudotti yhteyden nollauksen yhteydessä</translation>
-    </message>
-    <message>
-        <source>Connection reset by peer</source>
-        <translation>Verkkovertainen nollasi yhteyden</translation>
     </message>
     <message>
         <source>Unknown error</source>
@@ -3823,6 +3762,10 @@ Poista toinen niistä käytöstä.</translation>
         <translation>Prosessin käynnistyminen epäonnistui</translation>
     </message>
     <message>
+        <source>Process failed to start (spawned process exited with code 127)</source>
+        <translation>Prosessin käynnistyminen epäonnistui (luotu prosessi päättyi koodilla 127)</translation>
+    </message>
+    <message>
         <source>No program defined</source>
         <translation>Ohjelmaa ei ole määritetty</translation>
     </message>
@@ -3852,6 +3795,20 @@ Poista toinen niistä käytöstä.</translation>
     <message>
         <source>Cancel</source>
         <translation>Peru</translation>
+    </message>
+</context>
+<context>
+    <name>QQnxFileDialogHelper</name>
+    <message>
+        <source>All files (*.*)</source>
+        <translation>Kaikki tiedostot (*.*)</translation>
+    </message>
+</context>
+<context>
+    <name>QQnxFilePicker</name>
+    <message>
+        <source>Pick a file</source>
+        <translation>Valitse tiedosto</translation>
     </message>
 </context>
 <context>
@@ -3944,6 +3901,10 @@ Poista toinen niistä käytöstä.</translation>
         <translation>alue epäjärjestyksessä merkkijoukolle</translation>
     </message>
     <message>
+        <source>nothing to repeat</source>
+        <translation>ei mitään toistettavaa</translation>
+    </message>
+    <message>
         <source>internal error: unexpected repeat</source>
         <translation>sisäinen virhe: odottamaton toisto</translation>
     </message>
@@ -3956,16 +3917,44 @@ Poista toinen niistä käytöstä.</translation>
         <translation>POSIXin nimettyjä luokkia tuetaan vain luokan sisällä</translation>
     </message>
     <message>
+        <source>missing )</source>
+        <translation>puuttuva )</translation>
+    </message>
+    <message>
         <source>reference to non-existent subpattern</source>
         <translation>viittaus olemattomaan alimalliin</translation>
+    </message>
+    <message>
+        <source>erroffset passed as NULL</source>
+        <translation>annettu erroffset on NULL</translation>
+    </message>
+    <message>
+        <source>unknown option bit(s) set</source>
+        <translation>tuntematon valitsinbitti tai -bitit</translation>
+    </message>
+    <message>
+        <source>missing ) after comment</source>
+        <translation>puuttuva ) kommentin jälkeen</translation>
     </message>
     <message>
         <source>regular expression is too large</source>
         <translation>liian pitkä säännöllinen lauseke</translation>
     </message>
     <message>
+        <source>failed to get memory</source>
+        <translation>muistin varaaminen epäonnistui</translation>
+    </message>
+    <message>
+        <source>unmatched parentheses</source>
+        <translation>sulkeet eivät täsmää</translation>
+    </message>
+    <message>
         <source>internal error: code overflow</source>
         <translation>sisäinen virhe: koodin ylivuoto</translation>
+    </message>
+    <message>
+        <source>unrecognized character after (?&lt;</source>
+        <translation>tuntematon merkki (?&lt; jälkeen</translation>
     </message>
     <message>
         <source>lookbehind assertion is not fixed length</source>
@@ -3980,6 +3969,10 @@ Poista toinen niistä käytöstä.</translation>
         <translation>ehtoryhmässä on enemmän kuin kaksi haaraa</translation>
     </message>
     <message>
+        <source>assertion expected after (?(</source>
+        <translation>odotettiin ehtolause (?( jälkeen</translation>
+    </message>
+    <message>
         <source>(?R or (?[+-]digits must be followed by )</source>
         <translation>) tulee seurata (?R tai (?[+-]numeroita</translation>
     </message>
@@ -3992,12 +3985,36 @@ Poista toinen niistä käytöstä.</translation>
         <translation>POSIX-merkkijärjestyselementtejä ei tueta</translation>
     </message>
     <message>
+        <source>this version of PCRE is not compiled with PCRE_UTF8 support</source>
+        <translation>tätä PCRE-versiota ei ole käännetty PCRE_UTF8-tuella</translation>
+    </message>
+    <message>
+        <source>character value in \x{...} sequence is too large</source>
+        <translation>merkin arvo \x{...} sekvenssissä on liian suuri</translation>
+    </message>
+    <message>
         <source>invalid condition (?(0)</source>
         <translation>virheellinen ehto (?(0)</translation>
     </message>
     <message>
+        <source>\C not allowed in lookbehind assertion</source>
+        <translation>\C ei ole sallittu lookbehind-ehtolauseessa</translation>
+    </message>
+    <message>
         <source>PCRE does not support \L, \l, \N{name}, \U, or \u</source>
         <translation>PCRE ei tue \L, \I, \N{nimi}, \U tai \u</translation>
+    </message>
+    <message>
+        <source>number after (?C is &gt; 255</source>
+        <translation>numero (?C jälkeen &gt; 255</translation>
+    </message>
+    <message>
+        <source>closing ) for (?C expected</source>
+        <translation>(?C jälkeen odotettiin sulkeva )</translation>
+    </message>
+    <message>
+        <source>recursive call could loop indefinitely</source>
+        <translation>rekursiivinen kutsu voisi olla päättymätön</translation>
     </message>
     <message>
         <source>unrecognized character after (?P</source>
@@ -4008,12 +4025,36 @@ Poista toinen niistä käytöstä.</translation>
         <translation>syntaksivirhe alimallin nimessä (päätemerkki puuttuu)</translation>
     </message>
     <message>
+        <source>two named subpatterns have the same name</source>
+        <translation>kahdella nimetyllä alimallilla on sama nimi</translation>
+    </message>
+    <message>
+        <source>invalid UTF-8 string</source>
+        <translation>virheellinen UTF-8-merkkijono</translation>
+    </message>
+    <message>
+        <source>support for \P, \p, and \X has not been compiled</source>
+        <translation>\P, \p ja \X tukea ei ole käännetty</translation>
+    </message>
+    <message>
         <source>malformed \P or \p sequence</source>
         <translation>väärin muotoiltu \P- tai \p-sekvenssi</translation>
     </message>
     <message>
         <source>unknown property name after \P or \p</source>
         <translation>tuntematon ominaisuuden nimi \P- tai \p-sekvenssin jälkeen</translation>
+    </message>
+    <message>
+        <source>subpattern name is too long (maximum 32 characters)</source>
+        <translation>alimallin nimi on liian pitkä (enintään 32 merkkiä)</translation>
+    </message>
+    <message>
+        <source>too many named subpatterns (maximum 10000)</source>
+        <translation>liian monta nimettyä alimallia (enintään 10000)</translation>
+    </message>
+    <message>
+        <source>octal value is greater than \377 (not in UTF-8 mode)</source>
+        <translation>oktaaliarvo on suurempi kuin \377 (ei UTF-8-tilassa)</translation>
     </message>
     <message>
         <source>internal error: overran compiling workspace</source>
@@ -4028,6 +4069,14 @@ Poista toinen niistä käytöstä.</translation>
         <translation>DEFINE-ryhmä sisältää useampia kuin yhden haaran</translation>
     </message>
     <message>
+        <source>repeating a DEFINE group is not allowed</source>
+        <translation>DEFINE-ryhmän toisto ei ole sallittua</translation>
+    </message>
+    <message>
+        <source>inconsistent NEWLINE options</source>
+        <translation>sopimaton yhdistelmä NEWLINE-valitsimia</translation>
+    </message>
+    <message>
         <source>\g is not followed by a braced, angle-bracketed, or quoted name/number or by a plain number</source>
         <translation>\g:tä ei seuraa nimi tai numero suljettuna {}, [] tai &apos;&apos;-merkkeihin, eikä paljas numero</translation>
     </message>
@@ -4038,6 +4087,10 @@ Poista toinen niistä käytöstä.</translation>
     <message>
         <source>an argument is not allowed for (*ACCEPT), (*FAIL), or (*COMMIT)</source>
         <translation>(*ACCEPT), (*FAIL) tai (*COMMIT) ei hyväksy argumenttia</translation>
+    </message>
+    <message>
+        <source>(*VERB) not recognized</source>
+        <translation>ei tunnistettu (*VERBI)</translation>
     </message>
     <message>
         <source>number is too big</source>
@@ -4052,12 +4105,24 @@ Poista toinen niistä käytöstä.</translation>
         <translation>odotettiin numero (?+ jälkeen</translation>
     </message>
     <message>
+        <source>] is an invalid data character in JavaScript compatibility mode</source>
+        <translation>] on virheellinen datamerkki JavaScript-yhteensopivuustilassa</translation>
+    </message>
+    <message>
         <source>different names for subpatterns of the same number are not allowed</source>
         <translation>saman numeron alimalleille ei sallita eri nimiä</translation>
     </message>
     <message>
         <source>(*MARK) must have an argument</source>
         <translation>(*MARK) vaatii argumentin</translation>
+    </message>
+    <message>
+        <source>this version of PCRE is not compiled with PCRE_UCP support</source>
+        <translation>tätä PCRE-versiota ei ole käännetty PCRE_UCP-tuella</translation>
+    </message>
+    <message>
+        <source>\c must be followed by an ASCII character</source>
+        <translation>ASCII-merkki pitää tulla \c jälkeen</translation>
     </message>
     <message>
         <source>\k is not followed by a braced, angle-bracketed, or quoted name</source>
@@ -4072,12 +4137,32 @@ Poista toinen niistä käytöstä.</translation>
         <translation>\N ei ole tuettu luokassa</translation>
     </message>
     <message>
+        <source>too many forward references</source>
+        <translation>liian monta viittausta eteenpäin</translation>
+    </message>
+    <message>
         <source>disallowed Unicode code point (&gt;= 0xd800 &amp;&amp; &lt;= 0xdfff)</source>
         <translation>ei sallittu Unicode-merkkikoodi (&gt;= 0xd800 &amp;&amp; &lt;= 0xdfff)</translation>
     </message>
     <message>
+        <source>invalid UTF-16 string</source>
+        <translation>virheellinen UTF-16-merkkijono</translation>
+    </message>
+    <message>
         <source>name is too long in (*MARK), (*PRUNE), (*SKIP), or (*THEN)</source>
         <translation>nimi on liian pitkä jollekin (*MARK), (*PRUNE), (*SKIP) tai (*THEN)</translation>
+    </message>
+    <message>
+        <source>character value in \u.... sequence is too large</source>
+        <translation>merkin arvo \u... -sekvenssissä on liian suuri</translation>
+    </message>
+    <message>
+        <source>invalid UTF-32 string</source>
+        <translation>virheellinen UTF-32-merkkijono</translation>
+    </message>
+    <message>
+        <source>setting UTF is disabled by the application</source>
+        <translation>sovellus on poistanut UTF:n asettamisen käytöstä</translation>
     </message>
     <message>
         <source>non-hex character in \x{} (closing brace missing?)</source>
@@ -4104,414 +4189,12 @@ Poista toinen niistä käytöstä.</translation>
         <translation>ryhmän nimen täytyy alkaa muulla kuin numerolla</translation>
     </message>
     <message>
-        <source>quantifier does not follow a repeatable item</source>
-        <translation>määre ei tule toistettavan alkion jälkeen</translation>
-    </message>
-    <message>
-        <source>missing closing parenthesis</source>
-        <translation>sulkeva kaarisulje puuttuu</translation>
-    </message>
-    <message>
-        <source>pattern passed as NULL</source>
-        <translation>annettu malli on NULL</translation>
-    </message>
-    <message>
-        <source>unrecognised compile-time option bit(s)</source>
-        <translation>käännöksen aikaista valitsinbittiä tai -bittejä ei voitu tunnistaa</translation>
-    </message>
-    <message>
-        <source>missing ) after (?# comment</source>
-        <translation>sulkeva kaarisulje puuttuu (?#-kommentin jälkeen</translation>
-    </message>
-    <message>
-        <source>failed to allocate heap memory</source>
-        <translation>kekomuistin varaaminen epäonnistui</translation>
-    </message>
-    <message>
-        <source>unmatched closing parenthesis</source>
-        <translation>sulkeva kaarisulje ei täsmää</translation>
-    </message>
-    <message>
-        <source>letter or underscore expected after (?&lt; or (?&apos;</source>
-        <translation>odotettiin kirjainta tai alaviivaa (?&lt;:n tai (?&apos;:n jälkeen</translation>
-    </message>
-    <message>
-        <source>assertion expected after (?( or (?(?C)</source>
-        <translation>odotettiin ehtolausetta (?(:n tai (?(?C):n jälkeen</translation>
-    </message>
-    <message>
-        <source>internal error in pcre2_study(): should not occur</source>
-        <translation>sisäinen virhe pcre2_study():ssa: ei pitäisi tapahtua</translation>
-    </message>
-    <message>
-        <source>this version of PCRE2 does not have Unicode support</source>
-        <translation>tämä PCRE2-versio ei tue Unicodea</translation>
-    </message>
-    <message>
         <source>parentheses are too deeply nested (stack check)</source>
         <translation>liian paljon sisäkkäisiä sulkeita (pinotarkistus)</translation>
     </message>
     <message>
-        <source>character code point value in \x{} or \o{} is too large</source>
-        <translation>merkkikoodin arvo \x{}- tai \o{}-sekvenssissä on liian suuri</translation>
-    </message>
-    <message>
-        <source>\C is not allowed in a lookbehind assertion</source>
-        <translation>\C ei ole sallittu lookbehind-ehtolauseessa</translation>
-    </message>
-    <message>
-        <source>number after (?C is greater than 255</source>
-        <translation>numero (?C:n jälkeen on suurempi kuin 255</translation>
-    </message>
-    <message>
-        <source>closing parenthesis for (?C expected</source>
-        <translation>(?C:n jälkeen odotettiin sulkevaa kaarisuljetta</translation>
-    </message>
-    <message>
-        <source>invalid escape sequence in (*VERB) name</source>
-        <translation>virheellinen ohjauskoodi (*VERB)-nimessä</translation>
-    </message>
-    <message>
-        <source>two named subpatterns have the same name (PCRE2_DUPNAMES not set)</source>
-        <translation>kahdella nimetyllä alimallilla on sama nimi (PCRE2_DUPNAMES:ia ei ole asetettu)</translation>
-    </message>
-    <message>
-        <source>this version of PCRE2 does not have support for \P, \p, or \X</source>
-        <translation>tämä PCRE2-versio ei tue \P-, \p- tai \X-sekvenssiä</translation>
-    </message>
-    <message>
-        <source>subpattern name is too long (maximum 10000 characters)</source>
-        <translation>alimallin nimi on liian pitkä (maksimi on 10000 merkkiä)</translation>
-    </message>
-    <message>
-        <source>too many named subpatterns (maximum 256)</source>
-        <translation>liian monta nimettyä alimallia (maksimi on 256)</translation>
-    </message>
-    <message>
-        <source>octal value is greater than \377 in 8-bit non-UTF-8 mode</source>
-        <translation>oktaaliarvo on suurempi kuin \377 8-bittisessä ei-UTF-8-tilassa</translation>
-    </message>
-    <message>
-        <source>internal error: unknown newline setting</source>
-        <translation>sisäinen virhe: tuntematon rivinvaihtoasetus</translation>
-    </message>
-    <message>
-        <source>(*VERB) not recognized or malformed</source>
-        <translation>(*VERB)-nimeä ei tunnistettu tai se on virheellinen</translation>
-    </message>
-    <message>
-        <source>\c must be followed by a printable ASCII character</source>
-        <translation>\c:n jälkeen pitää tulla tulostettava ASCII-merkki</translation>
-    </message>
-    <message>
-        <source>\c must be followed by a letter or one of [\]^_?</source>
-        <translation>\c:n jälkeen pitää tulla kirjain tai joku joukosta [\]^_?</translation>
-    </message>
-    <message>
-        <source>SPARE ERROR</source>
-        <translatorcomment>In PCRE2 this message is nowadays &quot;internal error: parsed pattern overflow&quot;</translatorcomment>
-        <translation>sisäinen virhe: jäsennetyn mallin ylivuoto</translation>
-    </message>
-    <message>
-        <source>using UTF is disabled by the application</source>
-        <translation>sovellus on poistanut UTF:n käytöstä</translation>
-    </message>
-    <message>
-        <source>using UCP is disabled by the application</source>
-        <translation>sovellus on poistanut UCP:n käytöstä</translation>
-    </message>
-    <message>
-        <source>character code point value in \u.... sequence is too large</source>
-        <translation>merkkikoodin arvo \u...-sekvenssissä on liian suuri</translation>
-    </message>
-    <message>
         <source>digits missing in \x{} or \o{}</source>
         <translation>numerot puuttuvat merkinnästä \x{} tai \o{}</translation>
-    </message>
-    <message>
-        <source>syntax error in (?(VERSION condition</source>
-        <translation>syntaksivirhe (?(VERSION-ehdossa</translation>
-    </message>
-    <message>
-        <source>internal error: unknown opcode in auto_possessify()</source>
-        <translation>sisäinen virhe: tuntematon toimintakoodi auto_possessify()-funktiossa</translation>
-    </message>
-    <message>
-        <source>missing terminating delimiter for callout with string argument</source>
-        <translation>palautekutsusta merkkijonoargumentin kanssa puuttuu lopettava erotin</translation>
-    </message>
-    <message>
-        <source>unrecognized string delimiter follows (?C</source>
-        <translation>tuntematon merkkijonoerotin (?C:n jälkeen</translation>
-    </message>
-    <message>
-        <source>using \C is disabled by the application</source>
-        <translation>sovellus on poistanut \C:n käytöstä</translation>
-    </message>
-    <message>
-        <source>(?| and/or (?J: or (?x: parentheses are too deeply nested</source>
-        <translation>(?|- ja/tai (?J:- tai (?x:-lausekkeessa on liian monia sisäkkäisiä sulkeita</translation>
-    </message>
-    <message>
-        <source>using \C is disabled in this PCRE2 library</source>
-        <translation>\C ei ole käytössä tässä PCRE2-kirjastossa</translation>
-    </message>
-    <message>
-        <source>regular expression is too complicated</source>
-        <translation>säännöllinen lauseke on liian monimutkainen</translation>
-    </message>
-    <message>
-        <source>lookbehind assertion is too long</source>
-        <translation>lookbehind-tyyppinen ehtolause on liian pitkä</translation>
-    </message>
-    <message>
-        <source>pattern string is longer than the limit set by the application</source>
-        <translation>malli on pidempi kuin sovelluksen asettama raja</translation>
-    </message>
-    <message>
-        <source>no match</source>
-        <translation>ei osumaa</translation>
-    </message>
-    <message>
-        <source>partial match</source>
-        <translation>osittainen osuma</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 1 byte missing at end</source>
-        <translation>UTF-8 virhe: yksi tavu puuttuu lopusta</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 2 bytes missing at end</source>
-        <translation>UTF-8 virhe: kaksi tavua puuttuu lopusta</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 3 bytes missing at end</source>
-        <translation>UTF-8 virhe: kolme tavua puuttuu lopusta</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 4 bytes missing at end</source>
-        <translation>UTF-8 virhe: neljä tavua puuttuu lopusta</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 5 bytes missing at end</source>
-        <translation>UTF-8 virhe: viisi tavua puuttuu lopusta</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: byte 2 top bits not 0x80</source>
-        <translation>UTF-8 virhe: tavun kaksi eniten merkitsevää bittiä eivät ole 0x80</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: byte 3 top bits not 0x80</source>
-        <translation>UTF-8 virhe: tavun kolme eniten merkitsevää bittiä eivät ole 0x80</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: byte 4 top bits not 0x80</source>
-        <translation>UTF-8 virhe: tavun neljä eniten merkitsevää bittiä eivät ole 0x80</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: byte 5 top bits not 0x80</source>
-        <translation>UTF-8 virhe: tavun viisi eniten merkitsevää bittiä eivät ole 0x80</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: byte 6 top bits not 0x80</source>
-        <translation>UTF-8 virhe: tavun kuusi eniten merkitsevää bittiä eivät ole 0x80</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 5-byte character is not allowed (RFC 3629)</source>
-        <translation>UTF-8 virhe: viisitavuinen merkki ei ole sallittu (RFC 3629)</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: 6-byte character is not allowed (RFC 3629)</source>
-        <translation>UTF-8 virhe: kuusitavuinen merkki ei ole sallittu (RFC 3629)</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: code points greater than 0x10ffff are not defined</source>
-        <translation>UTF-8 virhe: suuremmat merkkikoodit kuin 0x10ffff eivät ole määriteltyjä</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: code points 0xd800-0xdfff are not defined</source>
-        <translation>UTF-8 virhe: merkkikoodit 0xd800-0xdfff eivät ole määriteltyjä</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: overlong 2-byte sequence</source>
-        <translation>UTF-8 virhe: ylipitkä kahden tavun sekvenssi</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: overlong 3-byte sequence</source>
-        <translation>UTF-8 virhe: ylipitkä kolmen tavun sekvenssi</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: overlong 4-byte sequence</source>
-        <translation>UTF-8 virhe: ylipitkä neljän tavun sekvenssi</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: overlong 5-byte sequence</source>
-        <translation>UTF-8 virhe: ylipitkä viiden tavun sekvenssi</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: overlong 6-byte sequence</source>
-        <translation>UTF-8 virhe: ylipitkä kuuden tavun sekvenssi</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: isolated byte with 0x80 bit set</source>
-        <translation>UTF-8 virhe: yksittäinen tavu, jossa 0x80-bitti on asetettu</translation>
-    </message>
-    <message>
-        <source>UTF-8 error: illegal byte (0xfe or 0xff)</source>
-        <translation>UTF-8 virhe: virheellinen tavu (0xfe tai 0xff)</translation>
-    </message>
-    <message>
-        <source>UTF-16 error: missing low surrogate at end</source>
-        <translation>UTF-16 virhe: lopusta puuttuu alempi laajennuskoodi</translation>
-    </message>
-    <message>
-        <source>UTF-16 error: invalid low surrogate</source>
-        <translation>UTF-16 virhe: virheellinen alempi laajennuskoodi</translation>
-    </message>
-    <message>
-        <source>UTF-16 error: isolated low surrogate</source>
-        <translation>UTF-16 virhe: yksittäinen alempi laajennuskoodi</translation>
-    </message>
-    <message>
-        <source>UTF-32 error: code points 0xd800-0xdfff are not defined</source>
-        <translation>UTF-32 virhe: merkkikoodit 0xd800-0xdfff eivät ole määriteltyjä</translation>
-    </message>
-    <message>
-        <source>UTF-32 error: code points greater than 0x10ffff are not defined</source>
-        <translation>UTF-32 virhe: suuremmat merkkikoodit kuin 0x10ffff eivät ole määriteltyjä</translation>
-    </message>
-    <message>
-        <source>bad data value</source>
-        <translation>virheellinen data-arvo</translation>
-    </message>
-    <message>
-        <source>patterns do not all use the same character tables</source>
-        <translation>kaikki mallit eivät käytä samoja merkkitaulukkoja</translation>
-    </message>
-    <message>
-        <source>magic number missing</source>
-        <translation>tunnisteluku puuttuu</translation>
-    </message>
-    <message>
-        <source>pattern compiled in wrong mode: 8/16/32-bit error</source>
-        <translation>malli on käännetty väärässä muodossa: 8/16/32-bittisyysvirhe</translation>
-    </message>
-    <message>
-        <source>bad offset value</source>
-        <translation>virheellinen siirtymän arvo</translation>
-    </message>
-    <message>
-        <source>bad option value</source>
-        <translation>virheellinen valitsimen arvo</translation>
-    </message>
-    <message>
-        <source>invalid replacement string</source>
-        <translation>virheellinen korvausmerkkijono</translation>
-    </message>
-    <message>
-        <source>bad offset into UTF string</source>
-        <translation>virheellinen UTF-merkkijonosiirtymä</translation>
-    </message>
-    <message>
-        <source>callout error code</source>
-        <translation>palautekutsun virhekoodi</translation>
-    </message>
-    <message>
-        <source>invalid data in workspace for DFA restart</source>
-        <translation>työtilassa on virheellistä dataa DFA:n uudelleenkäynnistystä varten</translation>
-    </message>
-    <message>
-        <source>too much recursion for DFA matching</source>
-        <translation>liian paljon rekursiota DFA-haulle</translation>
-    </message>
-    <message>
-        <source>backreference condition or recursion test is not supported for DFA matching</source>
-        <translation>DFA-haku ei tue takaisinviittausehtoa eikä rekursiotestiä</translation>
-    </message>
-    <message>
-        <source>function is not supported for DFA matching</source>
-        <translation>DFA-haku ei tue funktiota</translation>
-    </message>
-    <message>
-        <source>pattern contains an item that is not supported for DFA matching</source>
-        <translation>mallissa on osa, jota DFA-haku ei tue</translation>
-    </message>
-    <message>
-        <source>workspace size exceeded in DFA matching</source>
-        <translation>työtilan koko ylittyi DFA-haussa</translation>
-    </message>
-    <message>
-        <source>internal error - pattern overwritten?</source>
-        <translation>sisäinen virhe - ylikirjoitettu malli?</translation>
-    </message>
-    <message>
-        <source>bad JIT option</source>
-        <translation>virheellinen JIT-valitsin</translation>
-    </message>
-    <message>
-        <source>JIT stack limit reached</source>
-        <translation>saavutettiin JIT-pinon raja</translation>
-    </message>
-    <message>
-        <source>match limit exceeded</source>
-        <translation>ylitettiin osumien raja</translation>
-    </message>
-    <message>
-        <source>no more memory</source>
-        <translation>muisti loppu</translation>
-    </message>
-    <message>
-        <source>unknown substring</source>
-        <translation>tuntematon alimerkkijono</translation>
-    </message>
-    <message>
-        <source>non-unique substring name</source>
-        <translation>alimerkkijonon nimi ei ole yksilöllinen</translation>
-    </message>
-    <message>
-        <source>NULL argument passed</source>
-        <translation>annettu argumentti on NULL</translation>
-    </message>
-    <message>
-        <source>nested recursion at the same subject position</source>
-        <translatorcomment>I have no idea what the original text is supposed to mean</translatorcomment>
-        <translation>sisäkkäinen rekursio samassa aiheen paikassa</translation>
-    </message>
-    <message>
-        <source>recursion limit exceeded</source>
-        <translation>ylitettiin rekursion raja</translation>
-    </message>
-    <message>
-        <source>requested value is not available</source>
-        <translation>pyydetty arvo ei ole saatavilla</translation>
-    </message>
-    <message>
-        <source>requested value is not set</source>
-        <translation>pyydetty arvo ei ole asetettu</translation>
-    </message>
-    <message>
-        <source>offset limit set without PCRE2_USE_OFFSET_LIMIT</source>
-        <translation>siirtymän raja annettu ilman PCRE2_USE_OFFSET_LIMIT:iä</translation>
-    </message>
-    <message>
-        <source>bad escape sequence in replacement string</source>
-        <translation>virheellinen ohjauskoodi korvausmerkkijonossa</translation>
-    </message>
-    <message>
-        <source>expected closing curly bracket in replacement string</source>
-        <translation>odotettiin sulkevaa aaltosuljetta korvausmerkkijonossa</translation>
-    </message>
-    <message>
-        <source>bad substitution in replacement string</source>
-        <translation>virheellinen korvaus korvausmerkkijonossa</translation>
-    </message>
-    <message>
-        <source>match with end before start is not supported</source>
-        <translation>loppuun hakua ei tueta ennen alkuun hakua</translation>
-    </message>
-    <message>
-        <source>too many replacements (more than INT_MAX)</source>
-        <translation>liian monta korvausta (enemmän kuin INT_MAX)</translation>
     </message>
 </context>
 <context>
@@ -4666,13 +4349,6 @@ Poista toinen niistä käytöstä.</translation>
     <message>
         <source>Scroll down</source>
         <translation>Vieritä alas</translation>
-    </message>
-</context>
-<context>
-    <name>QSctpSocket</name>
-    <message>
-        <source>The remote host closed the connection</source>
-        <translation>Palvelin sulki yhteyden</translation>
     </message>
 </context>
 <context>
@@ -6171,21 +5847,6 @@ Role of an accessible object</extracomment>
     </message>
 </context>
 <context>
-    <name>QSslDiffieHellmanParameter</name>
-    <message>
-        <source>No error</source>
-        <translation>Ei virhettä</translation>
-    </message>
-    <message>
-        <source>Invalid input data</source>
-        <translation>Virheelliset syötetiedot</translation>
-    </message>
-    <message>
-        <source>The given Diffie-Hellman parameters are deemed unsafe</source>
-        <translation>Annetut Diffie-Hellman-parametrit katsotaan turvattomiksi</translation>
-    </message>
-</context>
-<context>
     <name>QSslSocket</name>
     <message>
         <source>Error when setting the elliptic curves (%1)</source>
@@ -6218,10 +5879,6 @@ Role of an accessible object</extracomment>
     <message>
         <source>Private key does not certify public key, %1</source>
         <translation>Yksityinen avain ei varmenna julkista avainta, %1</translation>
-    </message>
-    <message>
-        <source>Diffie-Hellman parameters are not valid</source>
-        <translation>Diffie-Hellman-parametrit eivät ole kelvolliset</translation>
     </message>
     <message>
         <source>OpenSSL version too old, need at least v1.0.2</source>
@@ -6543,17 +6200,6 @@ Role of an accessible object</extracomment>
     <message>
         <source>Could not reset to read data</source>
         <translation>Nollaaminen luettuun dataan epäonnistui</translation>
-    </message>
-</context>
-<context>
-    <name>QUdpSocket</name>
-    <message>
-        <source>Unable to send a datagram</source>
-        <translation>Datagrammin lähetys epäonnistui</translation>
-    </message>
-    <message>
-        <source>No datagram available for reading</source>
-        <translation>Ei datagrammia luettavaksi</translation>
     </message>
 </context>
 <context>

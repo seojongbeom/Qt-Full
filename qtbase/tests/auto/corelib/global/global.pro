@@ -5,7 +5,6 @@ SUBDIRS=\
     qgetputenv \
     qglobal \
     qnumeric \
-    qfloat16 \
     qrand \
     qlogging \
     qtendian \

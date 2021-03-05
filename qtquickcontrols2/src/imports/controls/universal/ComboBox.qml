@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,11 +34,10 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Window 2.3
-import QtQuick.Controls 2.2
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import QtQuick.Window 2.2
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.ComboBox {
     id: control
@@ -46,77 +45,46 @@ T.ComboBox {
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
                             contentItem.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
-                                      indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
+                             contentItem.implicitHeight + topPadding + bottomPadding)
     baselineOffset: contentItem.y + contentItem.baselineOffset
 
-    leftPadding: padding + (!control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width + spacing)
-    rightPadding: padding + (control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width + spacing)
+    spacing: 10
+    topPadding: 5
+    leftPadding: 12
+    rightPadding: 10
+    bottomPadding: 7
 
-    Universal.theme: editable && activeFocus ? Universal.Light : undefined
-
+    //! [delegate]
     delegate: ItemDelegate {
-        width: parent.width
+        width: control.width
         text: control.textRole ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole]) : modelData
         highlighted: control.highlightedIndex === index
-        hoverEnabled: control.hoverEnabled
+        pressed: highlighted && control.pressed
     }
+    //! [delegate]
 
-    indicator: Image {
-        x: control.mirrored ? control.padding : control.width - width - control.padding
-        y: control.topPadding + (control.availableHeight - height) / 2
-        source: "image://universal/downarrow/" + (!control.enabled ? control.Universal.baseLowColor : control.Universal.baseMediumHighColor)
-        sourceSize.width: width
-        sourceSize.height: height
-
-        Rectangle {
-            z: -1
-            width: parent.width
-            height: parent.height
-            color: control.activeFocus ? control.Universal.accent :
-                   control.pressed ? control.Universal.baseMediumLowColor :
-                   control.hovered ? control.Universal.baseLowColor : "transparent"
-            visible: control.editable && !contentItem.hovered && (control.pressed || control.hovered)
-            opacity: control.activeFocus && !control.pressed ? 0.4 : 1.0
-        }
-    }
-
-    contentItem: T.TextField {
-        leftPadding: control.mirrored ? 1 : 12
-        rightPadding: control.mirrored ? 10 : 1
-        topPadding: 5 - control.topPadding
-        bottomPadding: 7 - control.bottomPadding
-
-        text: control.editable ? control.editText : control.displayText
-
-        enabled: control.editable
-        autoScroll: control.editable
-        readOnly: control.down
-        inputMethodHints: control.inputMethodHints
-        validator: control.validator
-
+    //! [contentItem]
+    contentItem: Text {
+        text: control.displayText
         font: control.font
-        color: !control.enabled ? control.Universal.chromeDisabledLowColor :
-                control.editable && control.activeFocus ? control.Universal.chromeBlackHighColor : control.Universal.foreground
-        selectionColor: control.Universal.accent
-        selectedTextColor: control.Universal.chromeWhiteColor
+        color: !control.enabled ? control.Universal.baseLowColor : control.Universal.baseHighColor
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
+        elide: Text.ElideRight
+        rightPadding: 12 + control.spacing
     }
+    //! [contentItem]
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 120
         implicitHeight: 32
 
-        border.width: control.flat ? 0 : 2 // ComboBoxBorderThemeThickness
+        border.width: 2 // ComboBoxBorderThemeThickness
         border.color: !control.enabled ? control.Universal.baseLowColor :
-                       control.editable && control.activeFocus ? control.Universal.accent :
-                       control.down ? control.Universal.baseMediumLowColor :
-                       control.hovered ? control.Universal.baseMediumColor : control.Universal.baseMediumLowColor
+                       control.pressed || popup.visible ? control.Universal.baseMediumLowColor : control.Universal.baseMediumLowColor
         color: !control.enabled ? control.Universal.baseLowColor :
-                control.down ? control.Universal.listMediumColor :
-                control.flat && control.hovered ? control.Universal.listLowColor :
-                control.editable && control.activeFocus ? control.Universal.background : control.Universal.altMediumLowColor
-        visible: !control.flat || control.pressed || control.hovered || control.visualFocus
+                control.pressed || popup.visible ? control.Universal.listMediumColor : control.Universal.altMediumLowColor
 
         Rectangle {
             x: 2
@@ -124,15 +92,24 @@ T.ComboBox {
             width: parent.width - 4
             height: parent.height - 4
 
-            visible: control.visualFocus && !control.editable
+            visible: control.activeFocus && (control.focusReason === Qt.TabFocusReason || control.focusReason === Qt.BacktabFocusReason)
             color: control.Universal.accent
             opacity: control.Universal.theme === Universal.Light ? 0.4 : 0.6
         }
-    }
 
+        Image {
+            id: checkmark
+            x: parent.width - width - control.rightPadding
+            y: (parent.height - height) / 2
+            source: "image://universal/downarrow/" + (!control.enabled ? control.Universal.baseLowColor : control.Universal.baseMediumHighColor)
+        }
+    }
+    //! [background]
+
+    //! [popup]
     popup: T.Popup {
-        width: control.width
-        height: Math.min(contentItem.implicitHeight, control.Window.height - topMargin - bottomMargin)
+        implicitWidth: control.width
+        implicitHeight: Math.min(396, listview.contentHeight)
         topMargin: 8
         bottomMargin: 8
 
@@ -140,12 +117,10 @@ T.ComboBox {
         Universal.accent: control.Universal.accent
 
         contentItem: ListView {
+            id: listview
             clip: true
-            implicitHeight: contentHeight
-            model: control.delegateModel
+            model: control.popup.visible ? control.delegateModel : null
             currentIndex: control.highlightedIndex
-            highlightRangeMode: ListView.ApplyRange
-            highlightMoveDuration: 0
 
             T.ScrollIndicator.vertical: ScrollIndicator { }
         }
@@ -156,4 +131,5 @@ T.ComboBox {
             border.width: 1 // FlyoutBorderThemeThickness
         }
     }
+    //! [popup]
 }

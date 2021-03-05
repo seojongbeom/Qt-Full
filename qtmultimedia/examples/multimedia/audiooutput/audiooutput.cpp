@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -260,11 +250,7 @@ void AudioTest::createAudioOutput()
     m_audioOutput = new QAudioOutput(m_device, m_format, this);
     m_generator->start();
     m_audioOutput->start(m_generator);
-
-    qreal initialVolume = QAudio::convertVolume(m_audioOutput->volume(),
-                                                QAudio::LinearVolumeScale,
-                                                QAudio::LogarithmicVolumeScale);
-    m_volumeSlider->setValue(qRound(initialVolume * 100));
+    m_volumeSlider->setValue(int(m_audioOutput->volume()*100.0f));
 }
 
 AudioTest::~AudioTest()
@@ -284,13 +270,8 @@ void AudioTest::deviceChanged(int index)
 
 void AudioTest::volumeChanged(int value)
 {
-    if (m_audioOutput) {
-        qreal linearVolume =  QAudio::convertVolume(value / qreal(100),
-                                                    QAudio::LogarithmicVolumeScale,
-                                                    QAudio::LinearVolumeScale);
-
-        m_audioOutput->setVolume(linearVolume);
-    }
+    if (m_audioOutput)
+        m_audioOutput->setVolume(qreal(value/100.0f));
 }
 
 void AudioTest::pushTimerExpired()

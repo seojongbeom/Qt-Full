@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -35,8 +40,6 @@
 #include <qdir.h>
 #include <qset.h>
 #include <qtextcodec.h>
-
-#include <QtTest/private/qtesthelpers_p.h>
 
 #if defined(Q_OS_WIN)
 # include <windows.h>
@@ -99,7 +102,7 @@ void tst_QTemporaryFile::initTestCase()
     QVERIFY(QDir("test-XXXXXX").exists() || QDir().mkdir("test-XXXXXX"));
     QCoreApplication::setApplicationName("tst_qtemporaryfile");
 
-#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_EMBEDDED)
+#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
     QString sourceDir(":/android_testdata/");
     QDirIterator it(sourceDir, QDirIterator::Subdirectories);
     while (it.hasNext()) {
@@ -141,6 +144,16 @@ void tst_QTemporaryFile::getSetCheck()
     QCOMPARE(false, obj1.autoRemove());
     obj1.setAutoRemove(true);
     QCOMPARE(true, obj1.autoRemove());
+}
+
+static inline bool canHandleUnicodeFileNames()
+{
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE)
+    return true;
+#else
+    // Check for UTF-8 by converting the Euro symbol (see tst_utf8)
+    return QFile::encodeName(QString(QChar(0x20AC))) == QByteArrayLiteral("\342\202\254");
+#endif
 }
 
 static QString hanTestText()
@@ -191,7 +204,7 @@ void tst_QTemporaryFile::fileTemplate_data()
     QTest::newRow("set template, with xxx") << "" << "qt_" << ".xxx" << "qt_XXXXXX.xxx";
     QTest::newRow("set template, with >6 X's") << "" << "qt_" << ".xxx" << "qt_XXXXXXXXXXXXXX.xxx";
     QTest::newRow("set template, with >6 X's, no suffix") << "" << "qt_" << "" << "qt_XXXXXXXXXXXXXX";
-    if (QTestPrivate::canHandleUnicodeFileNames()) {
+    if (canHandleUnicodeFileNames()) {
         // Test Umlauts (contained in Latin1)
         QString prefix = "qt_" + umlautTestText();
         QTest::newRow("Umlauts") << (prefix + "XXXXXX") << prefix << QString() << QString();
@@ -323,7 +336,7 @@ void tst_QTemporaryFile::nonWritableCurrentDir()
 
     ChdirOnReturn cor(QDir::currentPath());
 
-#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_EMBEDDED)
+#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
     QDir::setCurrent("/data");
 #else
     QDir::setCurrent("/home");
@@ -407,7 +420,9 @@ void tst_QTemporaryFile::size()
     // On CE it takes more time for the filesystem to update
     // the information. Usually you have to close it or seek
     // to get latest information. flush() does not help either.
+#if !defined(Q_OS_WINCE)
     QCOMPARE(file.size(), qint64(6));
+#endif
     file.seek(0);
     QCOMPARE(file.size(), qint64(6));
 }
@@ -426,7 +441,7 @@ void tst_QTemporaryFile::resize()
 
 void tst_QTemporaryFile::openOnRootDrives()
 {
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     unsigned int lastErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 #endif
     // If it's possible to create a file in the root directory, it
@@ -440,14 +455,19 @@ void tst_QTemporaryFile::openOnRootDrives()
             QVERIFY(file.open());
         }
     }
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     SetErrorMode(lastErrorMode);
 #endif
 }
 
 void tst_QTemporaryFile::stressTest()
 {
+#if defined(Q_OS_WINCE)
+    // 200 is still ok, first colision happens after ~30
+    const int iterations = 200;
+#else
     const int iterations = 1000;
+#endif
 
     QSet<QString> names;
     for (int i = 0; i < iterations; ++i) {
@@ -492,7 +512,7 @@ void tst_QTemporaryFile::renameFdLeak()
 {
 #ifdef Q_OS_UNIX
 
-#  if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_EMBEDDED)
+#  if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
     ChdirOnReturn cor(QDir::currentPath());
     QDir::setCurrent(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
 #  endif
@@ -566,16 +586,15 @@ void tst_QTemporaryFile::keepOpenMode()
     {
         QTemporaryFile file;
         QVERIFY(file.open());
-        QCOMPARE(file.openMode(), QIODevice::ReadWrite);
         QCOMPARE(file.write(data), (qint64)data.size());
         QVERIFY(file.rename("temporary-file.txt"));
 
         QVERIFY(((QFile &)file).open(QIODevice::ReadOnly));
-        QCOMPARE(file.openMode(), QIODevice::ReadOnly);
+        QVERIFY(QIODevice::ReadOnly == file.openMode());
         QCOMPARE(file.readAll(), data);
 
         QVERIFY(((QFile &)file).open(QIODevice::WriteOnly));
-        QCOMPARE(file.openMode(), QIODevice::WriteOnly);
+        QVERIFY(QIODevice::WriteOnly == file.openMode());
     }
 }
 
@@ -701,7 +720,7 @@ void tst_QTemporaryFile::createNativeFile_data()
     QTest::addColumn<bool>("valid");
     QTest::addColumn<QByteArray>("content");
 
-#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_EMBEDDED)
+#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
     const QString nativeFilePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + QStringLiteral("/resources/test.txt");
 #else
     const QString nativeFilePath = QFINDTESTDATA("resources/test.txt");
@@ -729,7 +748,7 @@ void tst_QTemporaryFile::createNativeFile()
         f.seek(currentPos);
     }
     QTemporaryFile *tempFile = QTemporaryFile::createNativeFile(f);
-    QCOMPARE(valid, (bool)tempFile);
+    QVERIFY(valid == (bool)tempFile);
     if (currentPos != -1)
         QCOMPARE(currentPos, f.pos());
     if (valid) {
@@ -752,12 +771,9 @@ void tst_QTemporaryFile::QTBUG_4796_data()
     QTest::newRow("blaXXXXXX") << QString("bla") << QString() << true;
     QTest::newRow("XXXXXXbla") << QString() << QString("bla") << true;
     QTest::newRow("does-not-exist/qt_temp.XXXXXX") << QString("does-not-exist/qt_temp") << QString() << false;
-
-    if (QTestPrivate::canHandleUnicodeFileNames()) {
-        QTest::newRow("XXXXXX<unicode>") << QString() << unicode << true;
-        QTest::newRow("<unicode>XXXXXX") << unicode << QString() << true;
-        QTest::newRow("<unicode>XXXXXX<unicode>") << unicode << unicode << true;
-    }
+    QTest::newRow("XXXXXX<unicode>") << QString() << unicode << true;
+    QTest::newRow("<unicode>XXXXXX") << unicode << QString() << true;
+    QTest::newRow("<unicode>XXXXXX<unicode>") << unicode << unicode << true;
 }
 
 void tst_QTemporaryFile::QTBUG_4796()

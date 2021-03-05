@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,13 +50,13 @@
 #include "qquickanchors_p.h"
 #include "qquickanchors_p_p.h"
 #include "qquickitemchangelistener_p.h"
-#include "qquickevents_p_p.h"
 
 #include "qquickwindow_p.h"
 
 #include <QtQuick/qsgnode.h>
 #include "qquickclipnode_p.h"
 
+#include <private/qpodvector_p.h>
 #include <QtQuick/private/qquickstate_p.h>
 #include <private/qqmlnullablevalue_p.h>
 #include <private/qqmlnotifier_p.h>
@@ -76,9 +70,8 @@
 #include <QtCore/qdebug.h>
 #include <QtCore/qelapsedtimer.h>
 
-#if QT_CONFIG(quick_shadereffect)
 #include <QtQuick/private/qquickshadereffectsource_p.h>
-#endif
+#include <QtQuick/private/qquickshadereffect_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -100,7 +93,7 @@ public:
     void complete();
 
 protected:
-    void itemGeometryChanged(QQuickItem *item, QQuickGeometryChange change, const QRectF &) Q_DECL_OVERRIDE;
+    void itemGeometryChanged(QQuickItem *item, const QRectF &newGeometry, const QRectF &oldGeometry) Q_DECL_OVERRIDE;
     void itemDestroyed(QQuickItem *item) Q_DECL_OVERRIDE;
     void itemChildAdded(QQuickItem *, QQuickItem *) Q_DECL_OVERRIDE;
     void itemChildRemoved(QQuickItem *, QQuickItem *) Q_DECL_OVERRIDE;
@@ -137,7 +130,6 @@ public:
     QList<QQuickItem *> items;
 };
 
-#if QT_CONFIG(quick_shadereffect)
 
 class QQuickItemLayer : public QObject, public QQuickItemChangeListener
 {
@@ -191,7 +183,7 @@ public:
 
     QQuickShaderEffectSource *effectSource() const { return m_effectSource; }
 
-    void itemGeometryChanged(QQuickItem *, QQuickGeometryChange, const QRectF &) Q_DECL_OVERRIDE;
+    void itemGeometryChanged(QQuickItem *, const QRectF &, const QRectF &) Q_DECL_OVERRIDE;
     void itemOpacityChanged(QQuickItem *) Q_DECL_OVERRIDE;
     void itemParentChanged(QQuickItem *, QQuickItem *) Q_DECL_OVERRIDE;
     void itemSiblingOrderChanged(QQuickItem *) Q_DECL_OVERRIDE;
@@ -239,8 +231,6 @@ private:
     QQuickShaderEffectSource::TextureMirroring m_textureMirroring;
 };
 
-#endif
-
 class Q_QUICK_PRIVATE_EXPORT QQuickItemPrivate : public QObjectPrivate
 {
     Q_DECLARE_PUBLIC(QQuickItem)
@@ -248,6 +238,8 @@ class Q_QUICK_PRIVATE_EXPORT QQuickItemPrivate : public QObjectPrivate
 public:
     static QQuickItemPrivate* get(QQuickItem *item) { return item->d_func(); }
     static const QQuickItemPrivate* get(const QQuickItem *item) { return item->d_func(); }
+
+    static void registerAccessorProperties();
 
     QQuickItemPrivate();
     ~QQuickItemPrivate();
@@ -304,6 +296,7 @@ public:
     static void transform_clear(QQmlListProperty<QQuickTransform> *list);
 
     void _q_resourceObjectDeleted(QObject *);
+    void _q_windowChanged(QQuickWindow *w);
     quint64 _q_createJSWrapper(QV4::ExecutionEngine *engine);
 
     enum ChangeType {
@@ -321,12 +314,24 @@ public:
 
     Q_DECLARE_FLAGS(ChangeTypes, ChangeType)
 
+    enum GeometryChangeType {
+        NoChange = 0,
+        XChange = 0x01,
+        YChange = 0x02,
+        WidthChange = 0x04,
+        HeightChange = 0x08,
+        SizeChange = WidthChange | HeightChange,
+        GeometryChange = XChange | YChange | SizeChange
+    };
+
+    Q_DECLARE_FLAGS(GeometryChangeTypes, GeometryChangeType)
+
     struct ChangeListener {
-        ChangeListener(QQuickItemChangeListener *l = nullptr, QQuickItemPrivate::ChangeTypes t = 0) : listener(l), types(t), gTypes(QQuickGeometryChange::All) {}
-        ChangeListener(QQuickItemChangeListener *l, QQuickGeometryChange gt) : listener(l), types(Geometry), gTypes(gt) {}
+        ChangeListener(QQuickItemChangeListener *l, QQuickItemPrivate::ChangeTypes t) : listener(l), types(t), gTypes(GeometryChange) {}
+        ChangeListener(QQuickItemChangeListener *l, QQuickItemPrivate::GeometryChangeTypes gt) : listener(l), types(Geometry), gTypes(gt) {}
         QQuickItemChangeListener *listener;
         QQuickItemPrivate::ChangeTypes types;
-        QQuickGeometryChange gTypes;  //NOTE: not used for ==
+        QQuickItemPrivate::GeometryChangeTypes gTypes;  //NOTE: not used for ==
         bool operator==(const ChangeListener &other) const { return listener == other.listener && types == other.types; }
     };
 
@@ -343,10 +348,8 @@ public:
         QQuickLayoutMirroringAttached* layoutDirectionAttached;
         QQuickEnterKeyAttached *enterKeyAttached;
         QQuickItemKeyFilter *keyHandler;
-#if QT_CONFIG(quick_shadereffect)
         mutable QQuickItemLayer *layer;
-#endif
-#if QT_CONFIG(cursor)
+#ifndef QT_NO_CURSOR
         QCursor cursor;
 #endif
         QPointF userTransformOriginPoint;
@@ -378,12 +381,12 @@ public:
 
     inline Qt::MouseButtons acceptedMouseButtons() const;
 
-    QVector<QQuickItemPrivate::ChangeListener> changeListeners;
+    QPODVector<QQuickItemPrivate::ChangeListener,4> changeListeners;
 
     void addItemChangeListener(QQuickItemChangeListener *listener, ChangeTypes types);
     void removeItemChangeListener(QQuickItemChangeListener *, ChangeTypes types);
-    void updateOrAddGeometryChangeListener(QQuickItemChangeListener *listener, QQuickGeometryChange types);
-    void updateOrRemoveGeometryChangeListener(QQuickItemChangeListener *listener, QQuickGeometryChange types);
+    void updateOrAddGeometryChangeListener(QQuickItemChangeListener *listener, GeometryChangeTypes types);
+    void updateOrRemoveGeometryChangeListener(QQuickItemChangeListener *listener, GeometryChangeTypes types);
 
     QQuickStateGroup *_states();
     QQuickStateGroup *_stateGroup;
@@ -419,9 +422,8 @@ public:
     bool isAccessible:1;
     bool culled:1;
     bool hasCursor:1;
-    bool subtreeCursorEnabled:1;
+    bool hasCursorInChild:1;
     // Bit 32
-    bool subtreeHoverEnabled:1;
     bool activeFocusOnTab:1;
     bool implicitAntialiasing:1;
     bool antialiasingValid:1;
@@ -481,6 +483,7 @@ public:
     inline QSGRenderContext *sceneGraphRenderContext() const;
 
     QQuickItem *parentItem;
+    QQmlNotifier parentNotifier;
 
     QList<QQuickItem *> childItems;
     mutable QList<QQuickItem *> *sortedChildItems;
@@ -500,8 +503,6 @@ public:
     QTransform windowToItemTransform() const;
     QTransform itemToWindowTransform() const;
     void itemToParentTransform(QTransform &) const;
-    QTransform globalToWindowTransform() const;
-    QTransform windowToGlobalTransform() const;
 
     static bool focusNextPrev(QQuickItem *item, bool forward);
     static QQuickItem *nextTabChildItem(const QQuickItem *item, int start);
@@ -533,7 +534,7 @@ public:
     virtual void implicitWidthChanged();
     virtual void implicitHeightChanged();
 
-#if QT_CONFIG(accessibility)
+#ifndef QT_NO_ACCESSIBILITY
     virtual QAccessible::Role accessibleRole() const;
 #endif
 
@@ -555,12 +556,9 @@ public:
     virtual void transformChanged();
 
     void deliverKeyEvent(QKeyEvent *);
-#if QT_CONFIG(im)
+#ifndef QT_NO_IM
     void deliverInputMethodEvent(QInputMethodEvent *);
 #endif
-    void deliverShortcutOverrideEvent(QKeyEvent *);
-
-    virtual void setVisible(bool visible);
 
     bool isTransparentForPositioner() const;
     void setTransparentForPositioner(bool trans);
@@ -601,9 +599,6 @@ public:
     virtual void mirrorChange() {}
 
     void setHasCursorInChild(bool hasCursor);
-    void setHasHoverInChild(bool hasHover);
-
-    virtual void updatePolish() { }
 };
 
 /*
@@ -620,11 +615,10 @@ public:
 
     virtual void keyPressed(QKeyEvent *event, bool post);
     virtual void keyReleased(QKeyEvent *event, bool post);
-#if QT_CONFIG(im)
+#ifndef QT_NO_IM
     virtual void inputMethodEvent(QInputMethodEvent *event, bool post);
     virtual QVariant inputMethodQuery(Qt::InputMethodQuery query) const;
 #endif
-    virtual void shortcutOverride(QKeyEvent *event);
     virtual void componentComplete();
 
     bool m_processPost;
@@ -772,7 +766,6 @@ public:
     QQuickItem *imeItem;
     QList<QQuickItem *> targets;
     QQuickItem *item;
-    QQuickKeyEvent theKeyEvent;
 };
 
 class QQuickKeysAttached : public QObject, public QQuickItemKeyFilter
@@ -816,7 +809,6 @@ Q_SIGNALS:
     void priorityChanged();
     void pressed(QQuickKeyEvent *event);
     void released(QQuickKeyEvent *event);
-    void shortcutOverride(QQuickKeyEvent *event);
     void digit0Pressed(QQuickKeyEvent *event);
     void digit1Pressed(QQuickKeyEvent *event);
     void digit2Pressed(QQuickKeyEvent *event);
@@ -861,14 +853,13 @@ Q_SIGNALS:
 private:
     void keyPressed(QKeyEvent *event, bool post) Q_DECL_OVERRIDE;
     void keyReleased(QKeyEvent *event, bool post) Q_DECL_OVERRIDE;
-#if QT_CONFIG(im)
+#ifndef QT_NO_IM
     void inputMethodEvent(QInputMethodEvent *, bool post) Q_DECL_OVERRIDE;
     QVariant inputMethodQuery(Qt::InputMethodQuery query) const Q_DECL_OVERRIDE;
 #endif
-    void shortcutOverride(QKeyEvent *event) override;
-    static QByteArray keyToSignal(int key);
+    const QByteArray keyToSignal(int key);
 
-    bool isConnected(const char *signalName) const;
+    bool isConnected(const char *signalName);
 };
 
 Qt::MouseButtons QQuickItemPrivate::acceptedMouseButtons() const
@@ -931,13 +922,10 @@ QSGNode *QQuickItemPrivate::childContainerNode()
 }
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QQuickItemPrivate::ChangeTypes)
-Q_DECLARE_TYPEINFO(QQuickItemPrivate::ChangeListener, Q_PRIMITIVE_TYPE);
 
 QT_END_NAMESPACE
 
-#if QT_CONFIG(quick_shadereffect)
 QML_DECLARE_TYPE(QQuickItemLayer)
-#endif
 QML_DECLARE_TYPE(QQuickKeysAttached)
 QML_DECLARE_TYPEINFO(QQuickKeysAttached, QML_HAS_ATTACHED_PROPERTIES)
 QML_DECLARE_TYPE(QQuickKeyNavigationAttached)

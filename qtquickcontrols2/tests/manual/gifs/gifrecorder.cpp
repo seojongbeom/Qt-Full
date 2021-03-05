@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -64,8 +64,8 @@ namespace {
 }
 
 GifRecorder::GifRecorder() :
-    QObject(nullptr),
-    mWindow(nullptr),
+    QObject(Q_NULLPTR),
+    mWindow(Q_NULLPTR),
     mHighQuality(false),
     mRecordingDuration(0),
     mRecordCursor(false),
@@ -83,7 +83,7 @@ GifRecorder::GifRecorder() :
 void GifRecorder::setRecordingDuration(int duration)
 {
     QVERIFY2(duration >= 1, qPrintable(QString::fromLatin1("Recording duration %1 must be larger than 1 second").arg(duration)));
-    QVERIFY2(duration < 20, qPrintable(QString::fromLatin1("Recording duration %1 must be less than 20 seconds").arg(duration)));
+    QVERIFY2(duration < 10, qPrintable(QString::fromLatin1("Recording duration %1 must be less than 10 seconds").arg(duration)));
 
     mRecordingDuration = duration;
 }
@@ -243,7 +243,7 @@ void GifRecorder::waitForFinish()
     if (mHighQuality) {
         // Indicate the end of recording and the beginning of conversion.
         QQmlComponent busyComponent(&mEngine);
-        busyComponent.setData("import QtQuick 2.6; import QtQuick.Controls 2.1; Rectangle { anchors.fill: parent; " \
+        busyComponent.setData("import QtQuick 2.6; import Qt.labs.controls 1.0; Rectangle { anchors.fill: parent; " \
             "BusyIndicator { width: 32; height: 32; anchors.centerIn: parent } }", QUrl());
         QCOMPARE(busyComponent.status(), QQmlComponent::Ready);
         QQuickItem *busyRect = qobject_cast<QQuickItem*>(busyComponent.create());

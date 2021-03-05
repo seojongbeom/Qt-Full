@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,9 +44,14 @@ class tst_QTextScriptEngine : public QObject
 
 public:
     tst_QTextScriptEngine();
+    virtual ~tst_QTextScriptEngine();
 
-private slots:
+
+public slots:
     void initTestCase();
+    void init();
+    void cleanup();
+private slots:
     void devanagari_data();
     void devanagari();
     void bengali_data();
@@ -87,6 +97,10 @@ tst_QTextScriptEngine::tst_QTextScriptEngine()
 {
 }
 
+tst_QTextScriptEngine::~tst_QTextScriptEngine()
+{
+}
+
 void tst_QTextScriptEngine::initTestCase()
 {
     if (!haveTestFonts) {
@@ -100,6 +114,14 @@ void tst_QTextScriptEngine::initTestCase()
     }
 }
 
+void tst_QTextScriptEngine::init()
+{
+}
+
+void tst_QTextScriptEngine::cleanup()
+{
+}
+
 struct ShapeTable {
     unsigned short unicode[16];
     unsigned short glyphs[16];
@@ -108,7 +130,7 @@ struct ShapeTable {
 static void prepareShapingTest(const QFont &font, const ShapeTable *shape_table)
 {
     for (const ShapeTable *s = shape_table; s->unicode[0]; ++s) {
-        QByteArray testName = font.family().toLatin1() + ':';
+        QByteArray testName = font.family().toLatin1() + ":";
         QString string;
         for (const ushort *u = s->unicode; *u; ++u) {
             string.append(QChar(*u));
@@ -150,7 +172,7 @@ static void doShapingTests()
         }
     } else {
         // decomposed shaping
-        if (string.at(0) == QChar(0x1fc1) || string.at(0) == QChar(0x1fed))
+        if (string.at(0) == 0x1fc1 || string.at(0) == 0x1fed)
             return;
         if (string.normalized(QString::NormalizationForm_D).normalized(QString::NormalizationForm_C) != string)
             return;
@@ -1075,6 +1097,8 @@ void tst_QTextScriptEngine::mirroredChars()
 
 void tst_QTextScriptEngine::controlInSyllable_qtbug14204()
 {
+    QSKIP("Result differs for HarfBuzz-NG, skip test.");
+
     QFontDatabase db;
     if (!db.families().contains(QStringLiteral("Aparajita")))
         QSKIP("couldn't find 'Aparajita' font");
@@ -1099,13 +1123,13 @@ void tst_QTextScriptEngine::controlInSyllable_qtbug14204()
     QCOMPARE(fe->fontDef.family, font.family());
 
     e->shape(0);
-    QCOMPARE(e->layoutData->items[0].num_glyphs, ushort(3));
+    QCOMPARE(e->layoutData->items[0].num_glyphs, ushort(2));
 
     const ushort *log_clusters = e->logClusters(&e->layoutData->items[0]);
     QCOMPARE(log_clusters[0], ushort(0));
     QCOMPARE(log_clusters[1], ushort(0));
     QCOMPARE(log_clusters[2], ushort(0));
-    QCOMPARE(log_clusters[3], ushort(2));
+    QCOMPARE(log_clusters[3], ushort(0));
 }
 
 void tst_QTextScriptEngine::combiningMarks_qtbug15675_data()
@@ -1214,9 +1238,6 @@ void tst_QTextScriptEngine::thaiWithZWJ()
     QFont font(QStringLiteral("Waree"));
     font.setStyleStrategy(QFont::NoFontMerging);
 
-    if (QFontInfo(font).styleName() != QStringLiteral("Book"))
-        QSKIP("couldn't find 'Waree Book' font");
-
     QString s(QString::fromUtf8("\xe0\xb8\xa3\xe2\x80\x8d\xe0\xb8\xa3\xe2\x80"
                                 "\x8c\x2e\xe0\xb8\xa3\x2e\xe2\x80\x9c\xe0\xb8"
                                 "\xa3\xe2\x80\xa6\xe0\xb8\xa3\xe2\x80\x9d\xe0"
@@ -1226,32 +1247,38 @@ void tst_QTextScriptEngine::thaiWithZWJ()
     QTextLayout layout(s, font);
     QTextEngine *e = layout.engine();
     e->itemize();
-    QCOMPARE(e->layoutData->items.size(), 3);
+    QCOMPARE(e->layoutData->items.size(), 11);
 
     for (int item = 0; item < e->layoutData->items.size(); ++item)
         e->shape(item);
 
-    QCOMPARE(e->layoutData->items[0].num_glyphs, ushort(15));  // Thai, Inherited and Common
-    QCOMPARE(e->layoutData->items[1].num_glyphs, ushort(1));  // Japanese: Kanji for tree
-    QCOMPARE(e->layoutData->items[2].num_glyphs, ushort(2)); // Thai: Thai character followed by superscript "a" which is of inherited type
+    QCOMPARE(e->layoutData->items[0].num_glyphs, ushort(7));  // Thai: The ZWJ and ZWNJ characters are inherited, so should be part of the thai script
+    QCOMPARE(e->layoutData->items[1].num_glyphs, ushort(1));  // Common: The smart quotes cannot be handled by thai, so should be a separate item
+    QCOMPARE(e->layoutData->items[2].num_glyphs, ushort(1));  // Thai: Thai character
+    QCOMPARE(e->layoutData->items[3].num_glyphs, ushort(1));  // Common: Ellipsis
+    QCOMPARE(e->layoutData->items[4].num_glyphs, ushort(1));  // Thai: Thai character
+    QCOMPARE(e->layoutData->items[5].num_glyphs, ushort(1));  // Common: Smart quote
+    QCOMPARE(e->layoutData->items[6].num_glyphs, ushort(1));  // Thai: Thai character
+    QCOMPARE(e->layoutData->items[7].num_glyphs, ushort(1));  // Common: \xA0 = non-breaking space. Could be useful to have in thai, but not currently implemented
+    QCOMPARE(e->layoutData->items[8].num_glyphs, ushort(1));  // Thai: Thai character
+    QCOMPARE(e->layoutData->items[9].num_glyphs, ushort(1));  // Japanese: Kanji for tree
+    QCOMPARE(e->layoutData->items[10].num_glyphs, ushort(2)); // Thai: Thai character followed by superscript "a" which is of inherited type
 
     //A quick sanity check - check all the characters are individual clusters
+    unsigned short *logClusters = e->layoutData->logClustersPtr;
+    for (int i = 0; i < 7; i++)
+        QCOMPARE(logClusters[i], ushort(i));
+    for (int i = 0; i < 10; i++)
+        QCOMPARE(logClusters[i+7], ushort(0));
+
     // A thai implementation could either remove the ZWJ and ZWNJ characters, or hide them.
     // The current implementation hides them, so we test for that.
-    unsigned short *logClusters = e->layoutData->logClustersPtr;
-    QCOMPARE(logClusters[0], ushort(0));
-    QCOMPARE(logClusters[1], ushort(0));
-    QCOMPARE(logClusters[2], ushort(2));
-    QCOMPARE(logClusters[3], ushort(2));
-    for (int i = 4; i < 15; i++)
-        QCOMPARE(logClusters[i], ushort(i));
-    for (int i = 0; i < 3; i++)
-        QCOMPARE(logClusters[i+15], ushort(0));
-
     // The only characters that we should be hiding are the ZWJ and ZWNJ characters in position 1 and 3.
     const QGlyphLayout glyphLayout = e->layoutData->glyphLayout;
     for (int i = 0; i < 18; i++) {
-        if (i == 1 || i == 3)
+        if (i == 17)
+            QCOMPARE(glyphLayout.advances[i].toInt(), 0);
+        else if (i == 1 || i == 3)
             QCOMPARE(glyphLayout.advances[i].toInt(), 0);
         else
             QVERIFY(glyphLayout.advances[i].toInt() != 0);

@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,8 +34,8 @@
 **
 ****************************************************************************/
 
-#ifndef QQUICKMATERIALTHEME_P_H
-#define QQUICKMATERIALTHEME_P_H
+#ifndef QQUICKMATERIALTHEME_H
+#define QQUICKMATERIALTHEME_H
 
 //
 //  W A R N I N G
@@ -48,31 +48,28 @@
 // We mean it.
 //
 
-#include <QtCore/qvariant.h>
+#include <QtGui/qpa/qplatformtheme.h>
 #include <QtGui/qfont.h>
-#include <QtQuickControls2/private/qquickproxytheme_p.h>
+#include <QtLabsControls/private/qquickproxytheme_p.h>
 
 QT_BEGIN_NAMESPACE
 
 class QQuickMaterialTheme :  public QQuickProxyTheme
 {
 public:
-    explicit QQuickMaterialTheme(QPlatformTheme *theme = nullptr);
+    QQuickMaterialTheme(QPlatformTheme *theme);
 
-    const QFont *font(Font type = SystemFont) const override;
+    ~QQuickMaterialTheme();
 
-    QVariant themeHint(ThemeHint hint) const override;
+    const QFont *font(Font type = SystemFont) const Q_DECL_OVERRIDE;
 
 private:
     QFont systemFont;
     QFont buttonFont;
-    QFont toolTipFont;
     QFont itemViewFont;
-    QFont listViewFont;
     QFont menuItemFont;
-    QFont editorFont;
 };
 
 QT_END_NAMESPACE
 
-#endif // QQUICKMATERIALTHEME_P_H
+#endif // QQUICKMATERIALTHEME_H

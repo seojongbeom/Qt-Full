@@ -39,7 +39,7 @@ using namespace WTF;
 namespace JSC { namespace Yarr {
 
 template<YarrJITCompileMode compileMode>
-class YarrGenerator : private DefaultMacroAssembler {
+class YarrGenerator : private MacroAssembler {
     friend void jitCompile(JSGlobalData*, YarrCodeBlock& jitObject, const String& pattern, unsigned& numSubpatterns, const char*& error, bool ignoreCase, bool multiline);
 
 #if CPU(ARM)
@@ -53,17 +53,6 @@ class YarrGenerator : private DefaultMacroAssembler {
 
     static const RegisterID returnRegister = ARMRegisters::r0;
     static const RegisterID returnRegister2 = ARMRegisters::r1;
-#elif CPU(ARM64)
-    static const RegisterID input = ARM64Registers::x0;
-    static const RegisterID index = ARM64Registers::x1;
-    static const RegisterID length = ARM64Registers::x2;
-    static const RegisterID output = ARM64Registers::x3;
-
-    static const RegisterID regT0 = ARM64Registers::x4;
-    static const RegisterID regT1 = ARM64Registers::x5;
-
-    static const RegisterID returnRegister = ARM64Registers::x0;
-    static const RegisterID returnRegister2 = ARM64Registers::x1;
 #elif CPU(MIPS)
     static const RegisterID input = MIPSRegisters::a0;
     static const RegisterID index = MIPSRegisters::a1;
@@ -338,31 +327,17 @@ class YarrGenerator : private DefaultMacroAssembler {
         jump(Address(stackPointerRegister, frameLocation * sizeof(void*)));
     }
 
-    unsigned alignCallFrameSizeInBytes(unsigned callFrameSize)
-    {
-        callFrameSize *= sizeof(void*);
-        if (callFrameSize / sizeof(void*) != m_pattern.m_body->m_callFrameSize)
-            CRASH();
-        // Originally, the code was:
-//        callFrameSize = (callFrameSize + 0x3f) & ~0x3f;
-        // However, 64 bytes is a bit surprising. The biggest "alignment" requirement is on Aarch64, where:
-        // "SP mod 16 = 0. The stack must be quad-word aligned." (IHI0055B_aapcs64.pdf)
-        callFrameSize = (callFrameSize + 0xf) & ~0xf;
-        if (!callFrameSize)
-            CRASH();
-        return callFrameSize;
-    }
     void initCallFrame()
     {
         unsigned callFrameSize = m_pattern.m_body->m_callFrameSize;
         if (callFrameSize)
-            subPtr(Imm32(alignCallFrameSizeInBytes(callFrameSize)), stackPointerRegister);
+            subPtr(Imm32(callFrameSize * sizeof(void*)), stackPointerRegister);
     }
     void removeCallFrame()
     {
         unsigned callFrameSize = m_pattern.m_body->m_callFrameSize;
         if (callFrameSize)
-            addPtr(Imm32(alignCallFrameSizeInBytes(callFrameSize)), stackPointerRegister);
+            addPtr(Imm32(callFrameSize * sizeof(void*)), stackPointerRegister);
     }
 
     // Used to record subpatters, should only be called if compileMode is IncludeSubpatterns.
@@ -468,16 +443,16 @@ class YarrGenerator : private DefaultMacroAssembler {
 
         // The operation, as a YarrOpCode, and also a reference to the PatternTerm.
         YarrOpCode m_op;
-        PatternTerm* m_term = nullptr;
+        PatternTerm* m_term;
 
         // For alternatives, this holds the PatternAlternative and doubly linked
         // references to this alternative's siblings. In the case of the
         // OpBodyAlternativeEnd node at the end of a section of repeating nodes,
         // m_nextOp will reference the OpBodyAlternativeBegin node of the first
         // repeating alternative.
-        PatternAlternative* m_alternative = nullptr;
-        size_t m_previousOp = 0;
-        size_t m_nextOp = 0;
+        PatternAlternative* m_alternative;
+        size_t m_previousOp;
+        size_t m_nextOp;
 
         // Used to record a set of Jumps out of the generated code, typically
         // used for jumps out to backtracking code, and a single reentry back
@@ -599,7 +574,7 @@ class YarrGenerator : private DefaultMacroAssembler {
         }
 
         // Called at the end of code generation to link all return addresses.
-        void linkDataLabels(LinkBuffer<JSC::DefaultMacroAssembler>& linkBuffer)
+        void linkDataLabels(LinkBuffer& linkBuffer)
         {
             ASSERT(isEmpty());
             for (unsigned i = 0; i < m_backtrackRecords.size(); ++i)
@@ -2579,10 +2554,6 @@ class YarrGenerator : private DefaultMacroAssembler {
         if (compileMode == IncludeSubpatterns)
             loadPtr(Address(X86Registers::ebp, 2 * sizeof(void*)), output);
     #endif
-#elif CPU(ARM64)
-        // The ABI doesn't guarantee the upper bits are zero on unsigned arguments, so clear them ourselves.
-        zeroExtend32ToPtr(index, index);
-        zeroExtend32ToPtr(length, length);
 #elif CPU(ARM)
         push(ARMRegisters::r4);
         push(ARMRegisters::r5);
@@ -2676,7 +2647,7 @@ public:
         backtrack();
 
         // Link & finalize the code.
-        LinkBuffer<JSC::DefaultMacroAssembler> linkBuffer(*globalData, this, REGEXP_CODE_ID);
+        LinkBuffer linkBuffer(*globalData, this, REGEXP_CODE_ID);
         m_backtrackingState.linkDataLabels(linkBuffer);
 
         if (compileMode == MatchOnly) {

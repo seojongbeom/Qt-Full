@@ -5,3 +5,4 @@ QT += core multimedia-private testlib
 
 SOURCES += tst_qaudioformat.cpp
 
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Research In Motion.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2013 Research In Motion.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -46,6 +51,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QStringList>
 #include <QScopedPointer>
 #include <QDebug>
@@ -55,9 +61,7 @@
 #include <QLibraryInfo>
 #include <qqml.h>
 #include <qqmldebug.h>
-#if QT_CONFIG(animation)
 #include <private/qabstractanimation_p.h>
-#endif
 
 #include <cstdio>
 #include <cstring>
@@ -71,9 +75,7 @@
 
 static Config *conf = 0;
 static QQmlApplicationEngine *qae = 0;
-#if defined(Q_OS_DARWIN) || defined(QT_GUI_LIB)
 static int exitTimerId = -1;
-#endif
 bool verboseMode = false;
 
 static void loadConf(const QString &override, bool quiet) // Terminates app on failure
@@ -163,23 +165,18 @@ public:
     LoadWatcher(QQmlApplicationEngine *e, int expected)
         : QObject(e)
         , earlyExit(false)
-        , returnCode(0)
         , expect(expected)
         , haveOne(false)
     {
         connect(e, SIGNAL(objectCreated(QObject*,QUrl)),
             this, SLOT(checkFinished(QObject*)));
         // QQmlApplicationEngine also connects quit() to QCoreApplication::quit
-        // and exit() to QCoreApplication::exit but if called before exec()
-        // then QCoreApplication::quit or QCoreApplication::exit does nothing
+        // but if called before exec() then QCoreApplication::quit does nothing
         connect(e, SIGNAL(quit()),
             this, SLOT(quit()));
-        connect(e, &QQmlEngine::exit,
-            this, &LoadWatcher::exit);
     }
 
     bool earlyExit;
-    int returnCode;
 
 private:
     void contain(QObject *o, const QUrl &containPath);
@@ -195,7 +192,7 @@ public Q_SLOTS:
             checkForWindow(o);
             haveOne = true;
             if (conf && qae)
-                for (PartialScene *ps : qAsConst(conf->completers))
+                foreach (PartialScene *ps, conf->completers)
                     if (o->inherits(ps->itemType().toUtf8().constData()))
                         contain(o, ps->container());
         }
@@ -204,21 +201,15 @@ public Q_SLOTS:
 
         if (! --expect) {
             printf("qml: Did not load any objects, exiting.\n");
-            std::exit(2);//Different return code from qFatal
+            exit(2);//Different return code from qFatal
         }
     }
 
     void quit() {
         //Will be checked before calling exec()
         earlyExit = true;
-        returnCode = 0;
     }
-    void exit(int retCode) {
-        earlyExit = true;
-        returnCode = retCode;
-    }
-
-#if defined(QT_GUI_LIB) && QT_CONFIG(opengl)
+#if defined(QT_GUI_LIB) && !defined(QT_NO_OPENGL)
     void onOpenGlContextCreated(QOpenGLContext *context);
 #endif
 };
@@ -240,7 +231,7 @@ void LoadWatcher::contain(QObject *o, const QUrl &containPath)
 
 void LoadWatcher::checkForWindow(QObject *o)
 {
-#if defined(QT_GUI_LIB) && QT_CONFIG(opengl)
+#if defined(QT_GUI_LIB) && !defined(QT_NO_OPENGL)
     if (verboseMode && o->isWindowType() && o->inherits("QQuickWindow")) {
         connect(o, SIGNAL(openglContextCreated(QOpenGLContext*)),
                 this, SLOT(onOpenGlContextCreated(QOpenGLContext*)));
@@ -250,7 +241,7 @@ void LoadWatcher::checkForWindow(QObject *o)
 #endif // QT_GUI_LIB && !QT_NO_OPENGL
 }
 
-#if defined(QT_GUI_LIB) && QT_CONFIG(opengl)
+#if defined(QT_GUI_LIB) && !defined(QT_NO_OPENGL)
 void LoadWatcher::onOpenGlContextCreated(QOpenGLContext *context)
 {
     context->makeCurrent(qobject_cast<QWindow *>(sender()));
@@ -390,9 +381,6 @@ void getAppFlags(int &argc, char **argv)
             argc -= 2;
         }
     }
-#else
-    Q_UNUSED(argc)
-    Q_UNUSED(argv)
 #endif // QT_GUI_LIB
 }
 
@@ -419,8 +407,8 @@ static void loadDummyDataFiles(QQmlEngine &engine, const QString& directory)
         QObject *dummyData = comp.create();
 
         if (comp.isError()) {
-            const QList<QQmlError> errors = comp.errors();
-            for (const QQmlError &error : errors)
+            QList<QQmlError> errors = comp.errors();
+            foreach (const QQmlError &error, errors)
                 qWarning() << error;
         }
 
@@ -459,7 +447,6 @@ int main(int argc, char *argv[])
     app->setApplicationName("Qml Runtime");
     app->setOrganizationName("QtProject");
     app->setOrganizationDomain("qt-project.org");
-    QCoreApplication::setApplicationVersion(QLatin1String(QT_VERSION_STR));
 
     qmlRegisterType<Config>("QmlRuntime.Config", 1, 0, "Configuration");
     qmlRegisterType<PartialScene>("QmlRuntime.Config", 1, 0, "PartialScene");
@@ -470,7 +457,7 @@ int main(int argc, char *argv[])
     QString dummyDir;
 
     //Handle main arguments
-    const QStringList argList = app->arguments();
+    QStringList argList = app->arguments();
     for (int i = 1; i < argList.count(); i++) {
         const QString &arg = argList[i];
         if (arg == QLatin1String("-quiet"))
@@ -483,12 +470,10 @@ int main(int argc, char *argv[])
             break;
         else if (arg == QLatin1String("-verbose"))
             verboseMode = true;
-#if QT_CONFIG(animation)
         else if (arg == QLatin1String("-slow-animations"))
             QUnifiedTimer::instance()->setSlowModeEnabled(true);
         else if (arg == QLatin1String("-fixed-animations"))
             QUnifiedTimer::instance()->setConsistentTiming(true);
-#endif
         else if (arg == QLatin1String("-I")) {
             if (i+1 == argList.count())
                 continue;//Invalid usage, but just ignore it
@@ -532,7 +517,7 @@ int main(int argc, char *argv[])
     if (quietMode && verboseMode)
         verboseMode = false;
 
-#if QT_CONFIG(translation)
+#ifndef QT_NO_TRANSLATION
     //qt_ translations loaded by QQmlApplicationEngine
     QString sysLocale = QLocale::system().name();
 
@@ -557,7 +542,7 @@ int main(int argc, char *argv[])
         qInstallMessageHandler(quietMessageHandler);
 
     if (files.count() <= 0) {
-#if defined(Q_OS_DARWIN)
+#if defined(Q_OS_MAC)
         if (applicationType == QmlApplicationTypeGui)
             exitTimerId = static_cast<LoaderApplication *>(app)->startTimer(FILE_OPEN_EVENT_WAIT_TIME);
         else
@@ -575,19 +560,34 @@ int main(int argc, char *argv[])
     if (!dummyDir.isEmpty() && QFileInfo (dummyDir).isDir())
         loadDummyDataFiles(e, dummyDir);
 
-    for (const QString &path : qAsConst(files)) {
-        QUrl url = QUrl::fromUserInput(path, QDir::currentPath(), QUrl::AssumeLocalFile);
-        if (verboseMode)
-            printf("qml: loading %s\n", qPrintable(url.toString()));
-        QByteArray strippedFile;
-        if (getFileSansBangLine(path, strippedFile))
-            e.loadData(strippedFile, e.baseUrl().resolved(url)); //QQmlComponent won't resolve it for us, it doesn't know it's a valid file if we loadData
-        else //Errors or no bang line
+    foreach (const QString &path, files) {
+        //QUrl::fromUserInput doesn't treat no scheme as relative file paths
+#ifndef QT_NO_REGULAREXPRESSION
+        QRegularExpression urlRe("[[:word:]]+://.*");
+        if (urlRe.match(path).hasMatch()) { //Treat as a URL
+            QUrl url = QUrl::fromUserInput(path);
+            if (verboseMode)
+                printf("qml: loading %s\n",
+                        qPrintable(url.isLocalFile()
+                        ? QDir::toNativeSeparators(url.toLocalFile())
+                        : url.toString()));
             e.load(url);
+        } else
+#endif
+        { //Local file path
+            if (verboseMode)
+                printf("qml: loading %s\n", qPrintable(QDir::toNativeSeparators(path)));
+
+            QByteArray strippedFile;
+            if (getFileSansBangLine(path, strippedFile))
+                e.loadData(strippedFile, e.baseUrl().resolved(QUrl::fromLocalFile(path))); //QQmlComponent won't resolve it for us, it doesn't know it's a valid file if we loadData
+            else //Errors or no bang line
+                e.load(path);
+        }
     }
 
     if (lw->earlyExit)
-        return lw->returnCode;
+        return 0;
 
     return app->exec();
 }

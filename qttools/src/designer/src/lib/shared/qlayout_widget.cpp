@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -99,6 +104,15 @@ inline void getGridItemPosition(QFormLayout *formLayout, int index, int *row, in
 {
     qdesigner_internal::getFormLayoutItemPosition(formLayout, index, row, column, rowspan, colspan);
 }
+
+QRect gridItemInfo(const QFormLayout *form, int index)
+{
+    int row;
+    int column;
+    int colspan;
+    qdesigner_internal::getFormLayoutItemPosition(form, index, &row, &column, 0, &colspan);
+    return QRect(column, row, colspan, 1);
+}
 } // namespace anonymous
 
 QT_BEGIN_NAMESPACE
@@ -141,6 +155,7 @@ static QDebug debugGridLikeLayout(QDebug str, const GridLikeLayout &gl)
 }
 
 static inline QDebug operator<<(QDebug str, const QGridLayout &gl) { return debugGridLikeLayout(str, gl); }
+static inline QDebug operator<<(QDebug str, const QFormLayout &fl) { return debugGridLikeLayout(str, fl); }
 
 static inline bool isEmptyFormLayoutRow(const QFormLayout *fl, int row)
 {
@@ -747,7 +762,8 @@ QRect LayoutHelper::itemInfo(QLayout *lt, const QWidget *widget) const
     void GridLayoutState::insertRow(int row)
     {
         rowCount++;
-        for (auto it = widgetItemMap.begin(), iend = widgetItemMap.end(); it != iend; ++it) {
+        const WidgetItemMap::iterator iend = widgetItemMap.end();
+        for (WidgetItemMap::iterator it = widgetItemMap.begin(); it != iend; ++it) {
             const int topRow = it.value().y();
             if (topRow >= row) {
                 it.value().translate(0, 1);
@@ -762,7 +778,8 @@ QRect LayoutHelper::itemInfo(QLayout *lt, const QWidget *widget) const
     void GridLayoutState::insertColumn(int column)
     {
         colCount++;
-        for (auto it = widgetItemMap.begin(), iend = widgetItemMap.end(); it != iend; ++it) {
+        const WidgetItemMap::iterator iend = widgetItemMap.end();
+        for (WidgetItemMap::iterator it = widgetItemMap.begin(); it != iend; ++it) {
             const int leftColumn = it.value().x();
             if (leftColumn >= column) {
                 it.value().translate(1, 0);
@@ -826,7 +843,8 @@ QRect LayoutHelper::itemInfo(QLayout *lt, const QWidget *widget) const
 
     void GridLayoutState::removeFreeRow(int removeRow)
     {
-        for (auto it = widgetItemMap.begin(), iend = widgetItemMap.end(); it != iend; ++it) {
+        const WidgetItemMap::iterator iend = widgetItemMap.end();
+        for (WidgetItemMap::iterator it = widgetItemMap.begin(); it != iend; ++it) {
             const int r = it.value().y();
             Q_ASSERT(r != removeRow); // Free rows only
             if (r < removeRow) { // Does the item span it? - shrink it
@@ -845,7 +863,8 @@ QRect LayoutHelper::itemInfo(QLayout *lt, const QWidget *widget) const
 
     void GridLayoutState::removeFreeColumn(int removeColumn)
     {
-        for (auto it = widgetItemMap.begin(), iend = widgetItemMap.end(); it != iend; ++it) {
+        const WidgetItemMap::iterator iend = widgetItemMap.end();
+        for (WidgetItemMap::iterator it = widgetItemMap.begin(); it != iend; ++it) {
             const int c = it.value().x();
             Q_ASSERT(c != removeColumn); // Free columns only
             if (c < removeColumn) { // Does the item span it? - shrink it

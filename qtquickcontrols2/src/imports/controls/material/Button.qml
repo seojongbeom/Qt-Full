@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,41 +34,43 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
+import QtGraphicalEffects 1.0
 
 T.Button {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            label ? label.implicitWidth + leftPadding + rightPadding : 0)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+                             label ? label.implicitHeight + topPadding + bottomPadding : 0)
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     // external vertical padding is 6 (to increase touch area)
     padding: 12
-    leftPadding: padding - 4
-    rightPadding: padding - 4
+    leftPadding: 8
+    rightPadding: 8
 
-    Material.elevation: flat ? control.down || control.hovered ? 2 : 0
-                             : control.down ? 8 : 2
-    Material.background: flat ? "transparent" : undefined
+    //! [label]
+    label: Text {
+        x: control.leftPadding
+        y: control.topPadding
+        width: control.availableWidth
+        height: control.availableHeight
 
-    contentItem: Text {
         text: control.text
         font: control.font
         color: !control.enabled ? control.Material.hintTextColor :
-            control.flat && control.highlighted ? control.Material.accentColor :
-            control.highlighted ? control.Material.primaryHighlightedTextColor : control.Material.foreground
+            control.highlighted ? control.Material.primaryHighlightedTextColor : control.Material.primaryTextColor
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
+    //! [label]
 
-    // TODO: Add a proper ripple/ink effect for mouse/touch input and focus state
+    //! [background]
     background: Rectangle {
         implicitWidth: 64
         implicitHeight: 48
@@ -78,36 +80,32 @@ T.Button {
         width: parent.width
         height: parent.height - 12
         radius: 2
-        color: !control.enabled ? control.Material.buttonDisabledColor :
-                control.highlighted ? control.Material.highlightedButtonColor : control.Material.buttonColor
+        color: !control.enabled ? (control.highlighted ? control.Material.raisedHighlightedButtonDisabledColor : control.Material.raisedButtonDisabledColor) :
+            (control.pressed ? (control.highlighted ? control.Material.raisedHighlightedButtonPressColor : control.Material.raisedButtonPressColor) :
+            (control.activeFocus ? (control.highlighted ? control.Material.raisedHighlightedButtonHoverColor : control.Material.raisedButtonHoverColor) :
+            (control.highlighted ? control.Material.raisedHighlightedButtonColor : control.Material.raisedButtonColor)))
 
-        PaddedRectangle {
-            y: parent.height - 4
-            width: parent.width
-            height: 4
-            radius: 2
-            topPadding: -2
-            clip: true
-            visible: control.checkable && (!control.highlighted || control.flat)
-            color: control.checked && control.enabled ? control.Material.accentColor : control.Material.secondaryTextColor
+        Behavior on color {
+            ColorAnimation {
+                duration: 400
+            }
         }
 
-        // The layer is disabled when the button color is transparent so you can do
-        // Material.background: "transparent" and get a proper flat button without needing
-        // to set Material.elevation as well
-        layer.enabled: control.enabled && control.Material.buttonColor.a > 0
-        layer.effect: ElevationEffect {
-            elevation: control.Material.elevation
-        }
-
-        Ripple {
-            clipRadius: 2
+        Rectangle {
             width: parent.width
             height: parent.height
-            pressed: control.pressed
-            anchor: control
-            active: control.down || control.visualFocus || control.hovered
-            color: control.Material.rippleColor
+            radius: parent.radius
+            visible: control.activeFocus
+            color: control.Material.checkBoxUncheckedRippleColor
+        }
+
+        layer.enabled: control.enabled
+        layer.effect: DropShadow {
+            verticalOffset: 1
+            color: control.Material.dropShadowColor
+            samples: control.pressed ? 15 : 9
+            spread: 0.5
         }
     }
+    //! [background]
 }

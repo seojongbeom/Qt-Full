@@ -44,8 +44,8 @@ namespace OT {
 
 struct LongMetric
 {
-  UFWORD	advance; /* Advance width/height. */
-  FWORD		lsb; /* Leading (left/top) side bearing. */
+  USHORT	advance; /* Advance width/height. */
+  SHORT		lsb; /* Leading (left/top) side bearing. */
   public:
   DEFINE_SIZE_STATIC (4);
 };
@@ -74,7 +74,7 @@ struct _mtx
 					 * be in the array, but that entry is
 					 * required. The last entry applies to
 					 * all subsequent glyphs. */
-  FWORD		leadingBearingX[VAR];	/* Here the advance is assumed
+  SHORT		leadingBearingX[VAR];	/* Here the advance is assumed
 					 * to be the same as the advance
 					 * for the last entry above. The
 					 * number of entries in this array is

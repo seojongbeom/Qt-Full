@@ -1,7 +1,6 @@
 #ifndef QT_QTDBUS_MODULE_H
 #define QT_QTDBUS_MODULE_H
 #include <QtDBus/QtDBusDepends>
-#include "qtdbusglobal.h"
 #include "qdbusabstractadaptor.h"
 #include "qdbusabstractinterface.h"
 #include "qdbusargument.h"
@@ -11,6 +10,7 @@
 #include "qdbuserror.h"
 #include "qdbusextratypes.h"
 #include "qdbusinterface.h"
+#include "qdbusmacros.h"
 #include "qdbusmessage.h"
 #include "qdbusmetatype.h"
 #include "qdbuspendingcall.h"

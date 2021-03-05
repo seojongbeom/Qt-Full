@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
 #############################################################################
 ##
-## Copyright (C) 2016 The Qt Company Ltd.
-## Contact: https://www.qt.io/licensing/
+## Copyright (C) 2015 The Qt Company Ltd.
+## Contact: http://www.qt.io/licensing/
 ##
 ## This file is part of the release tools of the Qt Toolkit.
 ##
-## $QT_BEGIN_LICENSE:GPL-EXCEPT$
+## $QT_BEGIN_LICENSE:LGPL21$
 ## Commercial License Usage
 ## Licensees holding valid commercial Qt licenses may use this file in
 ## accordance with the commercial license agreement provided with the
 ## Software or, alternatively, in accordance with the terms contained in
 ## a written agreement between you and The Qt Company. For licensing terms
-## and conditions see https://www.qt.io/terms-conditions. For further
-## information use the contact form at https://www.qt.io/contact-us.
+## and conditions see http://www.qt.io/terms-conditions. For further
+## information use the contact form at http://www.qt.io/contact-us.
 ##
-## GNU General Public License Usage
-## Alternatively, this file may be used under the terms of the GNU
-## General Public License version 3 as published by the Free Software
-## Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-## included in the packaging of this file. Please review the following
-## information to ensure the GNU General Public License requirements will
-## be met: https://www.gnu.org/licenses/gpl-3.0.html.
+## GNU Lesser General Public License Usage
+## Alternatively, this file may be used under the terms of the GNU Lesser
+## General Public License version 2.1 or version 3 as published by the Free
+## Software Foundation and appearing in the file LICENSE.LGPLv21 and
+## LICENSE.LGPLv3 included in the packaging of this file. Please review the
+## following information to ensure the GNU Lesser General Public License
+## requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+## http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+##
+## As a special exception, The Qt Company gives you certain additional
+## rights. These rights are described in The Qt Company LGPL Exception
+## version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 ##
 ## $QT_END_LICENSE$
 ##
@@ -74,6 +79,7 @@ class Cleaner (object):
             (r'(Totals:.*,) *[0-9.]+ms', r'\1 0ms'), # txt
             # Benchmarks:
             (r'[0-9,.]+( (?:CPU ticks|msecs) per iteration \(total:) [0-9,.]+ ', r'0\1 0, '), # txt
+            (r'(,"(?:CPUTicks|WalltimeMilliseconds)"),\d+,\d+,', r'\1,0,0,'), # csv
             (r'(<BenchmarkResult metric="(?:CPUTicks|WalltimeMilliseconds)".*\bvalue=)"[^"]+"', r'\1"0"'), # xml, lightxml
             # Build details:
             (r'(Config: Using QtTest library).*', r'\1'), # txt
@@ -81,7 +87,7 @@ class Cleaner (object):
             (r'(<property value=")[^"]+(" name="QtBuild"/>)', r'\1\2'), # xunitxml
             # Line numbers in source files:
             (r'(Loc: \[[^[\]()]+)\(\d+\)', r'\1(0)'), # txt
-            (r'(\[Loc: [^[\]()]+)\(\d+\)', r'\1(0)'), # teamcity
+            # (r'(\[Loc: [^[\]()]+)\(\d+\)', r'\1(0)'), # teamcity
             (r'(<Incident.*\bfile=.*\bline=)"\d+"', r'\1"0"'), # lightxml, xml
             ),
                       precook = re.compile):
@@ -146,7 +152,7 @@ class Cleaner (object):
             yield line
 
 def generateTestData(testname, clean,
-                     formats = ('xml', 'txt', 'xunitxml', 'lightxml', 'teamcity'),
+                     formats = ('xml', 'csv', 'txt', 'xunitxml', 'lightxml'), # +'teamcity' in 5.7
                      extraArgs = {
         "commandlinedata": "fiveTablePasses fiveTablePasses:fiveTablePasses_data1 -v2",
         "benchlibcallgrind": "-callgrind",
@@ -186,13 +192,7 @@ def generateTestData(testname, clean,
 
 def main(name, *args):
     """Minimal argument parsing and driver for the real work"""
-    os.environ.update(
-        LC_ALL = 'C', # Use standard locale
-        # Avoid interference from any qtlogging.ini files, e.g. in
-        # /etc/xdg/QtProject/, (must match tst_selftests.cpp's
-        # processEnvironment()'s value):
-        QT_LOGGING_RULES = '*.debug=true;qt.*=false')
-
+    os.environ['LC_ALL'] = 'C'
     herePath = os.getcwd()
     cleaner = Cleaner(herePath, name)
 

@@ -5,8 +5,6 @@ IMPORT_VERSION = 1.0
 
 QT += qml quick winextras winextras-private
 
-DEFINES += QT_NO_FOREACH
-
 QML_FILES += \
     JumpListLink.qml \
     JumpListDestination.qml \
@@ -41,6 +39,6 @@ OTHER_FILES += \
     JumpListDestination.qml \
     JumpListSeparator.qml
 
-!qtHaveModule(opengl)|qtConfig(dynamicgl):LIBS_PRIVATE += -luser32
+contains(QT_CONFIG, dynamicgl):LIBS_PRIVATE += -luser32
 
 load(qml_plugin)

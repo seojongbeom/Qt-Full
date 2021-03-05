@@ -1,7 +1,5 @@
 TEMPLATE = subdirs
 SUBDIRS += testplugin controls activeFocusOnTab applicationwindow dialogs \
            extras qquicktreemodeladaptor customcontrolsstyle
+!osx: SUBDIRS += menubar
 controls.depends = testplugin
-
-# QTBUG-60268
-boot2qt: SUBDIRS -= controls activeFocusOnTab applicationwindow dialogs extras customcontrolsstyle

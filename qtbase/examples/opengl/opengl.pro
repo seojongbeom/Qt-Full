@@ -8,12 +8,13 @@ qtHaveModule(widgets) {
     SUBDIRS += contextinfo \
                threadedqopenglwidget \
                2dpainting \
-               hellogl2 \
-               qopenglwidget \
-               cube \
-               textures \
-               hellogles3 \
-               computegles31
+               hellogl2
+
+    !wince: SUBDIRS += \
+                qopenglwidget \
+                cube \
+                textures \
+                hellogles3
 }
 
 EXAMPLE_FILES += \

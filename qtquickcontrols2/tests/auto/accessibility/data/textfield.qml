@@ -1,6 +1,13 @@
 import QtQuick 2.5
-import QtQuick.Controls 2.1
+import QtQuick.Window 2.2
+import Qt.labs.controls 1.0
 
-TextField {
-    text: "TextField"
+Window {
+    visible: true
+
+    TextField {
+        id: textfield
+        objectName: "textfield"
+        text: "TextField"
+    }
 }

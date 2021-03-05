@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -245,7 +250,6 @@ private slots:
     void qhashInt() const { qhash<int>(); }
     void qhashMovable() const { qhash<Movable>(); }
     void qhashCustom() const { qhash<Custom>(); }
-    void removeAllWithAlias() const;
     void removeInt() const;
     void removeMovable() const;
     void removeCustom() const;
@@ -736,11 +740,10 @@ void tst_QVector::clear() const
     QVector<T> myvec;
     myvec << SimpleValue<T>::at(0) << SimpleValue<T>::at(1) << SimpleValue<T>::at(2);
 
-    const auto oldCapacity = myvec.capacity();
-    QCOMPARE(myvec.size(), 3);
+    QVERIFY(myvec.size() == 3);
     myvec.clear();
-    QCOMPARE(myvec.size(), 0);
-    QCOMPARE(myvec.capacity(), oldCapacity);
+    QVERIFY(myvec.size() == 0);
+    QVERIFY(myvec.capacity() == 0);
 }
 
 void tst_QVector::clearInt() const
@@ -1723,13 +1726,6 @@ void tst_QVector::prependCustom() const
     QCOMPARE(instancesCount, Custom::counter.loadAcquire());
 }
 
-void tst_QVector::removeAllWithAlias() const
-{
-    QVector<QString> strings;
-    strings << "One" << "Two" << "Three" << "One" /* must be distinct, but equal */;
-    QCOMPARE(strings.removeAll(strings.front()), 2); // will trigger asan/ubsan
-}
-
 template<typename T>
 void tst_QVector::remove() const
 {
@@ -1955,7 +1951,7 @@ void tst_QVector::resizePOD() const
 
     const int capacity = vector.capacity();
 
-    vector.clear();
+    vector.resize(0);
     QCOMPARE(vector.size(), 0);
     QVERIFY(vector.capacity() <= capacity);
 }
@@ -2417,7 +2413,6 @@ void tst_QVector::reallocAfterCopy_data()
     int result1, result2, result3, result4;
     int fill_size;
     for (int i = 70; i <= 100; i += 10) {
-        const QByteArray prefix = "reallocAfterCopy:" + QByteArray::number(i) + ',';
         fill_size = i - 20;
         for (int j = 0; j <= 3; j++) {
             if (j == 0) { // append
@@ -2441,8 +2436,7 @@ void tst_QVector::reallocAfterCopy_data()
                 result3 = i - 10;
                 result4 = i - 20;
             }
-            QTest::newRow((prefix + QByteArray::number(j)).constData())
-                    << i << fill_size << j << result1 << result2 << result3 << result4;
+            QTest::newRow(qPrintable(QString("reallocAfterCopy:%1,%2").arg(i).arg(j))) << i << fill_size << j << result1 << result2 << result3 << result4;
         }
     }
 }

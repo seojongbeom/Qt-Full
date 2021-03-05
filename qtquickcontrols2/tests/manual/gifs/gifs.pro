@@ -3,7 +3,7 @@ TARGET = tst_gifs
 
 QT += quick testlib
 CONFIG += testcase
-macos:CONFIG -= app_bundle
+osx:CONFIG -= app_bundle
 
 HEADERS += \
     $$PWD/gifrecorder.h \

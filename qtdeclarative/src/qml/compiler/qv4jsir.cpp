@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -157,13 +151,12 @@ AluOp binaryOperator(int op)
     }
 }
 
-class RemoveSharedExpressions
+struct RemoveSharedExpressions: IR::StmtVisitor, IR::ExprVisitor
 {
     CloneExpr clone;
     std::vector<Expr *> subexpressions; // contains all the non-cloned subexpressions in the given function. sorted using std::lower_bound.
     Expr *uniqueExpr;
 
-public:
     RemoveSharedExpressions(): uniqueExpr(0) {}
 
     void operator()(IR::Function *function)
@@ -171,18 +164,17 @@ public:
         subexpressions.clear();
         subexpressions.reserve(function->basicBlockCount() * 8);
 
-        for (BasicBlock *block : function->basicBlocks()) {
+        foreach (BasicBlock *block, function->basicBlocks()) {
             if (block->isRemoved())
                 continue;
             clone.setBasicBlock(block);
 
-            for (Stmt *s : block->statements()) {
-                visit(s);
+            foreach (Stmt *s, block->statements()) {
+                s->accept(this);
             }
         }
     }
 
-private:
     template <typename Expr_>
     Expr_ *cleanup(Expr_ *expr)
     {
@@ -191,7 +183,7 @@ private:
             subexpressions.insert(it, expr);
             IR::Expr *e = expr;
             qSwap(uniqueExpr, e);
-            visit(expr);
+            expr->accept(this);
             qSwap(uniqueExpr, e);
             return static_cast<Expr_ *>(e);
         }
@@ -201,54 +193,91 @@ private:
         return clone(expr);
     }
 
-    void visit(Stmt *s)
+    // statements
+    virtual void visitExp(Exp *s)
     {
-        if (auto e = s->asExp()) {
-            e->expr = cleanup(e->expr);
-        } else if (auto m = s->asMove()) {
-            m->target = cleanup(m->target);
-            m->source = cleanup(m->source);
-        } else if (auto c = s->asCJump()) {
-            c->cond = cleanup(c->cond);
-        } else if (auto r = s->asRet()) {
-            r->expr = cleanup(r->expr);
-        }
+        s->expr = cleanup(s->expr);
     }
 
-    void visit(Expr *e)
+    virtual void visitMove(Move *s)
     {
-        if (auto c = e->asConvert()) {
-            c->expr = cleanup(c->expr);
-        } else if (auto u = e->asUnop()) {
-            u->expr = cleanup(u->expr);
-        } else if (auto b = e->asBinop()) {
-            b->left = cleanup(b->left);
-            b->right = cleanup(b->right);
-        } else if (auto c = e->asCall()) {
-            c->base = cleanup(c->base);
-            for (IR::ExprList *it = c->args; it; it = it->next) {
-                it->expr = cleanup(it->expr);
-            }
-        } else if (auto n = e->asNew()) {
-            n->base = cleanup(n->base);
-            for (IR::ExprList *it = n->args; it; it = it->next) {
-                it->expr = cleanup(it->expr);
-            }
-        } else if (auto s = e->asSubscript()) {
-            s->base = cleanup(s->base);
-            s->index = cleanup(s->index);
-        } else if (auto m = e->asMember()) {
-            m->base = cleanup(m->base);
-        }
+        s->target = cleanup(s->target);
+        s->source = cleanup(s->source);
+    }
+
+    virtual void visitJump(Jump *)
+    {
+        // nothing to do for Jump statements
+    }
+
+    virtual void visitCJump(CJump *s)
+    {
+        s->cond = cleanup(s->cond);
+    }
+
+    virtual void visitRet(Ret *s)
+    {
+        s->expr = cleanup(s->expr);
+    }
+
+    virtual void visitPhi(IR::Phi *) { Q_UNIMPLEMENTED(); }
+
+    // expressions
+    virtual void visitConst(Const *) {}
+    virtual void visitString(String *) {}
+    virtual void visitRegExp(RegExp *) {}
+    virtual void visitName(Name *) {}
+    virtual void visitTemp(Temp *) {}
+    virtual void visitArgLocal(ArgLocal *) {}
+    virtual void visitClosure(Closure *) {}
+
+    virtual void visitConvert(Convert *e)
+    {
+        e->expr = cleanup(e->expr);
+    }
+
+    virtual void visitUnop(Unop *e)
+    {
+        e->expr = cleanup(e->expr);
+    }
+
+    virtual void visitBinop(Binop *e)
+    {
+        e->left = cleanup(e->left);
+        e->right = cleanup(e->right);
+    }
+
+    virtual void visitCall(Call *e)
+    {
+        e->base = cleanup(e->base);
+        for (IR::ExprList *it = e->args; it; it = it->next)
+            it->expr = cleanup(it->expr);
+    }
+
+    virtual void visitNew(New *e)
+    {
+        e->base = cleanup(e->base);
+        for (IR::ExprList *it = e->args; it; it = it->next)
+            it->expr = cleanup(it->expr);
+    }
+
+    virtual void visitSubscript(Subscript *e)
+    {
+        e->base = cleanup(e->base);
+        e->index = cleanup(e->index);
+    }
+
+    virtual void visitMember(Member *e)
+    {
+        e->base = cleanup(e->base);
     }
 };
 
-void Name::initGlobal(const QString *id, quint32 line, quint32 column, bool forceLookup)
+void Name::initGlobal(const QString *id, quint32 line, quint32 column)
 {
     this->id = id;
     this->builtin = builtin_invalid;
     this->global = true;
-    this->forceLookup = forceLookup;
     this->qmlSingleton = false;
     this->freeOfSideEffects = false;
     this->line = line;
@@ -260,7 +289,6 @@ void Name::init(const QString *id, quint32 line, quint32 column)
     this->id = id;
     this->builtin = builtin_invalid;
     this->global = false;
-    this->forceLookup = false;
     this->qmlSingleton = false;
     this->freeOfSideEffects = false;
     this->line = line;
@@ -272,7 +300,6 @@ void Name::init(Builtin builtin, quint32 line, quint32 column)
     this->id = 0;
     this->builtin = builtin;
     this->global = false;
-    this->forceLookup = false;
     this->qmlSingleton = false;
     this->freeOfSideEffects = false;
     this->line = line;
@@ -351,12 +378,11 @@ Module::~Module()
 
 void Module::setFileName(const QString &name)
 {
-    fileName = name;
-}
-
-void Module::setFinalUrl(const QString &url)
-{
-    finalUrl = url;
+    if (fileName.isEmpty())
+        fileName = name;
+    else {
+        Q_ASSERT(fileName == name);
+    }
 }
 
 Function::Function(Module *module, Function *outer, const QString &name)
@@ -368,16 +394,13 @@ Function::Function(Module *module, Function *outer, const QString &name)
     , insideWithOrCatch(0)
     , hasDirectEval(false)
     , usesArgumentsObject(false)
-    , usesThis(false)
     , isStrict(false)
     , isNamedExpression(false)
     , hasTry(false)
     , hasWith(false)
-    , isQmlBinding(false)
-    , returnsClosure(false)
     , unused(0)
-    , line(0)
-    , column(0)
+    , line(-1)
+    , column(-1)
     , _allBasicBlocks(0)
     , _statementCount(0)
 {
@@ -428,7 +451,7 @@ void Function::removeBasicBlock(BasicBlock *block)
 int Function::liveBasicBlocksCount() const
 {
     int count = 0;
-    for (BasicBlock *bb : basicBlocks())
+    foreach (BasicBlock *bb, basicBlocks())
         if (!bb->isRemoved())
             ++count;
     return count;
@@ -454,6 +477,10 @@ void Function::setScheduledBlocks(const QVector<BasicBlock *> &scheduled)
     Q_ASSERT(!_allBasicBlocks);
     _allBasicBlocks = new QVector<BasicBlock *>(basicBlocks());
     _basicBlocks = scheduled;
+}
+
+void Function::renumberBasicBlocks()
+{
     for (int i = 0, ei = basicBlockCount(); i != ei; ++i)
         basicBlock(i)->changeIndex(i);
 }
@@ -478,21 +505,342 @@ void Function::setStatementCount(int cnt)
     _statementCount = cnt;
 }
 
+BasicBlock::~BasicBlock()
+{
+    foreach (Stmt *s, _statements) {
+        Phi *p = s->asPhi();
+        if (p)
+            p->destroyData();
+    }
+}
+
+unsigned BasicBlock::newTemp()
+{
+    Q_ASSERT(!isRemoved());
+    return function->tempCount++;
+}
+
+Temp *BasicBlock::TEMP(unsigned index)
+{
+    Q_ASSERT(!isRemoved());
+    Temp *e = function->New<Temp>();
+    e->init(Temp::VirtualRegister, index);
+    return e;
+}
+
+ArgLocal *BasicBlock::ARG(unsigned index, unsigned scope)
+{
+    Q_ASSERT(!isRemoved());
+    ArgLocal *e = function->New<ArgLocal>();
+    e->init(scope ? ArgLocal::ScopedFormal : ArgLocal::Formal, index, scope);
+    return e;
+}
+
+ArgLocal *BasicBlock::LOCAL(unsigned index, unsigned scope)
+{
+    Q_ASSERT(!isRemoved());
+    ArgLocal *e = function->New<ArgLocal>();
+    e->init(scope ? ArgLocal::ScopedLocal : ArgLocal::Local, index, scope);
+    return e;
+}
+
+Expr *BasicBlock::CONST(Type type, double value)
+{
+    Q_ASSERT(!isRemoved());
+    Const *e = function->New<Const>();
+    if (type == NumberType) {
+        int ival = (int)value;
+        // +0 != -0, so we need to convert to double when negating 0
+        if (ival == value && !(value == 0 && isNegative(value)))
+            type = SInt32Type;
+        else
+            type = DoubleType;
+    } else if (type == NullType) {
+        value = 0;
+    } else if (type == UndefinedType) {
+        value = qSNaN();
+    }
+
+    e->init(type, value);
+    return e;
+}
+
+Expr *BasicBlock::STRING(const QString *value)
+{
+    Q_ASSERT(!isRemoved());
+    String *e = function->New<String>();
+    e->init(value);
+    return e;
+}
+
+Expr *BasicBlock::REGEXP(const QString *value, int flags)
+{
+    Q_ASSERT(!isRemoved());
+    RegExp *e = function->New<RegExp>();
+    e->init(value, flags);
+    return e;
+}
+
+Name *BasicBlock::NAME(const QString &id, quint32 line, quint32 column)
+{
+    Q_ASSERT(!isRemoved());
+    Name *e = function->New<Name>();
+    e->init(function->newString(id), line, column);
+    return e;
+}
+
+Name *BasicBlock::GLOBALNAME(const QString &id, quint32 line, quint32 column)
+{
+    Q_ASSERT(!isRemoved());
+    Name *e = function->New<Name>();
+    e->initGlobal(function->newString(id), line, column);
+    return e;
+}
+
+
+Name *BasicBlock::NAME(Name::Builtin builtin, quint32 line, quint32 column)
+{
+    Q_ASSERT(!isRemoved());
+    Name *e = function->New<Name>();
+    e->init(builtin, line, column);
+    return e;
+}
+
+Closure *BasicBlock::CLOSURE(int functionInModule)
+{
+    Q_ASSERT(!isRemoved());
+    Closure *clos = function->New<Closure>();
+    clos->init(functionInModule, function->module->functions.at(functionInModule)->name);
+    return clos;
+}
+
+Expr *BasicBlock::CONVERT(Expr *expr, Type type)
+{
+    Q_ASSERT(!isRemoved());
+    Convert *e = function->New<Convert>();
+    e->init(expr, type);
+    return e;
+}
+
+Expr *BasicBlock::UNOP(AluOp op, Expr *expr)
+{
+    Q_ASSERT(!isRemoved());
+    Unop *e = function->New<Unop>();
+    e->init(op, expr);
+    return e;
+}
+
+Expr *BasicBlock::BINOP(AluOp op, Expr *left, Expr *right)
+{
+    Q_ASSERT(!isRemoved());
+    Binop *e = function->New<Binop>();
+    e->init(op, left, right);
+    return e;
+}
+
+Expr *BasicBlock::CALL(Expr *base, ExprList *args)
+{
+    Q_ASSERT(!isRemoved());
+    Call *e = function->New<Call>();
+    e->init(base, args);
+    int argc = 0;
+    for (ExprList *it = args; it; it = it->next)
+        ++argc;
+    function->maxNumberOfArguments = qMax(function->maxNumberOfArguments, argc);
+    return e;
+}
+
+Expr *BasicBlock::NEW(Expr *base, ExprList *args)
+{
+    Q_ASSERT(!isRemoved());
+    New *e = function->New<New>();
+    e->init(base, args);
+    return e;
+}
+
+Expr *BasicBlock::SUBSCRIPT(Expr *base, Expr *index)
+{
+    Q_ASSERT(!isRemoved());
+    Subscript *e = function->New<Subscript>();
+    e->init(base, index);
+    return e;
+}
+
+Expr *BasicBlock::MEMBER(Expr *base, const QString *name, QQmlPropertyData *property, uchar kind, int attachedPropertiesIdOrEnumValue)
+{
+    Q_ASSERT(!isRemoved());
+    Member*e = function->New<Member>();
+    e->init(base, name, property, kind, attachedPropertiesIdOrEnumValue);
+    return e;
+}
+
+Stmt *BasicBlock::EXP(Expr *expr)
+{
+    Q_ASSERT(!isRemoved());
+    if (isTerminated())
+        return 0;
+
+    Exp *s = function->NewStmt<Exp>();
+    s->init(expr);
+    appendStatement(s);
+    return s;
+}
+
+Stmt *BasicBlock::MOVE(Expr *target, Expr *source)
+{
+    Q_ASSERT(!isRemoved());
+    if (isTerminated())
+        return 0;
+
+    Move *s = function->NewStmt<Move>();
+    s->init(target, source);
+    appendStatement(s);
+    return s;
+}
+
+Stmt *BasicBlock::JUMP(BasicBlock *target)
+{
+    Q_ASSERT(!isRemoved());
+    if (isTerminated())
+        return 0;
+
+    Jump *s = function->NewStmt<Jump>();
+    s->init(target);
+    appendStatement(s);
+
+    Q_ASSERT(! out.contains(target));
+    out.append(target);
+
+    Q_ASSERT(! target->in.contains(this));
+    target->in.append(this);
+
+    return s;
+}
+
+Stmt *BasicBlock::CJUMP(Expr *cond, BasicBlock *iftrue, BasicBlock *iffalse)
+{
+    Q_ASSERT(!isRemoved());
+    if (isTerminated())
+        return 0;
+
+    if (iftrue == iffalse) {
+        MOVE(TEMP(newTemp()), cond);
+        return JUMP(iftrue);
+    }
+
+    CJump *s = function->NewStmt<CJump>();
+    s->init(cond, iftrue, iffalse, this);
+    appendStatement(s);
+
+    Q_ASSERT(! out.contains(iftrue));
+    out.append(iftrue);
+
+    Q_ASSERT(! iftrue->in.contains(this));
+    iftrue->in.append(this);
+
+    Q_ASSERT(! out.contains(iffalse));
+    out.append(iffalse);
+
+    Q_ASSERT(! iffalse->in.contains(this));
+    iffalse->in.append(this);
+
+    return s;
+}
+
+Stmt *BasicBlock::RET(Expr *expr)
+{
+    Q_ASSERT(!isRemoved());
+    if (isTerminated())
+        return 0;
+
+    Ret *s = function->NewStmt<Ret>();
+    s->init(expr);
+    appendStatement(s);
+    return s;
+}
+
 void BasicBlock::setStatements(const QVector<Stmt *> &newStatements)
 {
     Q_ASSERT(!isRemoved());
     Q_ASSERT(newStatements.size() >= _statements.size());
-    for (Stmt *s : qAsConst(_statements)) {
-        if (Phi *p = s->asPhi()) {
-            if (!newStatements.contains(p)) {
-                // phi-node was not copied over, so:
-                p->destroyData();
-            }
-        } else {
-            break;
-        }
+    // FIXME: this gets quite inefficient for large basic-blocks, so this function/case should be re-worked.
+    foreach (Stmt *s, _statements) {
+        Phi *p = s->asPhi();
+        if (!p)
+            continue;
+
+        if (!newStatements.contains(p))
+            p->destroyData();
     }
     _statements = newStatements;
+}
+
+void BasicBlock::appendStatement(Stmt *statement)
+{
+    Q_ASSERT(!isRemoved());
+    if (nextLocation.startLine)
+        statement->location = nextLocation;
+    _statements.append(statement);
+}
+
+void BasicBlock::prependStatement(Stmt *stmt)
+{
+    Q_ASSERT(!isRemoved());
+    _statements.prepend(stmt);
+}
+
+void BasicBlock::prependStatements(const QVector<Stmt *> &stmts)
+{
+    Q_ASSERT(!isRemoved());
+    QVector<Stmt *> newStmts = stmts;
+    newStmts += _statements;
+    _statements = newStmts;
+}
+
+void BasicBlock::insertStatementBefore(Stmt *before, Stmt *newStmt)
+{
+    int idx = _statements.indexOf(before);
+    Q_ASSERT(idx >= 0);
+    _statements.insert(idx, newStmt);
+}
+
+void BasicBlock::insertStatementBefore(int index, Stmt *newStmt)
+{
+    Q_ASSERT(index >= 0);
+    _statements.insert(index, newStmt);
+}
+
+void BasicBlock::insertStatementBeforeTerminator(Stmt *stmt)
+{
+    Q_ASSERT(!isRemoved());
+    _statements.insert(_statements.size() - 1, stmt);
+}
+
+void BasicBlock::replaceStatement(int index, Stmt *newStmt)
+{
+    Q_ASSERT(!isRemoved());
+    Phi *p = _statements[index]->asPhi();
+    if (p)
+        p->destroyData();
+    _statements[index] = newStmt;
+}
+
+void BasicBlock::removeStatement(Stmt *stmt)
+{
+    Q_ASSERT(!isRemoved());
+    Phi *p = stmt->asPhi();
+    if (p)
+        p->destroyData();
+    _statements.remove(_statements.indexOf(stmt));
+}
+
+void BasicBlock::removeStatement(int idx)
+{
+    Q_ASSERT(!isRemoved());
+    Phi *p = _statements[idx]->asPhi();
+    if (p)
+        p->destroyData();
+    _statements.remove(idx);
 }
 
 CloneExpr::CloneExpr(BasicBlock *block)
@@ -515,39 +863,75 @@ ExprList *CloneExpr::clone(ExprList *list)
     return clonedList;
 }
 
-void CloneExpr::visit(Expr *e)
+void CloneExpr::visitConst(Const *e)
 {
-    if (auto c = e->asConst()) {
-        cloned = cloneConst(c, block->function);
-    } else if (auto s = e->asString()) {
-        cloned = block->STRING(s->value);
-    } else if (auto r = e->asRegExp()) {
-        cloned = block->REGEXP(r->value, r->flags);
-    } else if (auto n = e->asName()) {
-        cloned = cloneName(n, block->function);
-    } else if (auto t = e->asTemp()) {
-        cloned = cloneTemp(t, block->function);
-    } else if (auto a = e->asArgLocal()) {
-        cloned = cloneArgLocal(a, block->function);
-    } else if (auto c = e->asClosure()) {
-        cloned = block->CLOSURE(c->value);
-    } else if (auto c = e->asConvert()) {
-        cloned = block->CONVERT(clone(c->expr), c->type);
-    } else if (auto u = e->asUnop()) {
-        cloned = block->UNOP(u->op, clone(u->expr));
-    } else if (auto b = e->asBinop()) {
-        cloned = block->BINOP(b->op, clone(b->left), clone(b->right));
-    } else if (auto c = e->asCall()) {
-        cloned = block->CALL(clone(c->base), clone(c->args));
-    } else if (auto n = e->asNew()) {
-        cloned = block->NEW(clone(n->base), clone(n->args));
-    } else if (auto s = e->asSubscript()) {
-        cloned = block->SUBSCRIPT(clone(s->base), clone(s->index));
-    } else if (auto m = e->asMember()) {
-        cloned = block->MEMBER(clone(m->base), m->name, m->property, m->kind, m->idIndex);
-    } else {
-        Q_UNREACHABLE();
-    }
+    cloned = cloneConst(e, block->function);
+}
+
+void CloneExpr::visitString(String *e)
+{
+    cloned = block->STRING(e->value);
+}
+
+void CloneExpr::visitRegExp(RegExp *e)
+{
+    cloned = block->REGEXP(e->value, e->flags);
+}
+
+void CloneExpr::visitName(Name *e)
+{
+    cloned = cloneName(e, block->function);
+}
+
+void CloneExpr::visitTemp(Temp *e)
+{
+    cloned = cloneTemp(e, block->function);
+}
+
+void CloneExpr::visitArgLocal(ArgLocal *e)
+{
+    cloned = cloneArgLocal(e, block->function);
+}
+
+void CloneExpr::visitClosure(Closure *e)
+{
+    cloned = block->CLOSURE(e->value);
+}
+
+void CloneExpr::visitConvert(Convert *e)
+{
+    cloned = block->CONVERT(clone(e->expr), e->type);
+}
+
+void CloneExpr::visitUnop(Unop *e)
+{
+    cloned = block->UNOP(e->op, clone(e->expr));
+}
+
+void CloneExpr::visitBinop(Binop *e)
+{
+    cloned = block->BINOP(e->op, clone(e->left), clone(e->right));
+}
+
+void CloneExpr::visitCall(Call *e)
+{
+    cloned = block->CALL(clone(e->base), clone(e->args));
+}
+
+void CloneExpr::visitNew(New *e)
+{
+    cloned = block->NEW(clone(e->base), clone(e->args));
+}
+
+void CloneExpr::visitSubscript(Subscript *e)
+{
+    cloned = block->SUBSCRIPT(clone(e->base), clone(e->index));
+}
+
+void CloneExpr::visitMember(Member *e)
+{
+    Expr *clonedBase = clone(e->base);
+    cloned = block->MEMBER(clonedBase, e->name, e->property, e->kind, e->idIndex);
 }
 
 IRPrinter::IRPrinter(QTextStream *out)
@@ -563,17 +947,17 @@ IRPrinter::~IRPrinter()
 
 void IRPrinter::print(Stmt *s)
 {
-    visit(s);
+    s->accept(this);
 }
 
 void IRPrinter::print(const Expr &e)
 {
-    visit(const_cast<Expr *>(&e));
+    const_cast<Expr *>(&e)->accept(this);
 }
 
 void IRPrinter::print(Expr *e)
 {
-    visit(e);
+    e->accept(this);
 }
 
 void IRPrinter::print(Function *f)
@@ -594,11 +978,11 @@ void IRPrinter::print(Function *f)
     *out << ')' << endl
         << '{' << endl;
 
-    for (const QString *local : qAsConst(f->locals))
+    foreach (const QString *local, f->locals)
         *out << "    local var " << *local << endl;
 
     bool needsSeperator = !f->locals.isEmpty();
-    for (BasicBlock *bb : f->basicBlocks()) {
+    foreach (BasicBlock *bb, f->basicBlocks()) {
         if (bb->isRemoved())
             continue;
 
@@ -616,7 +1000,7 @@ void IRPrinter::print(BasicBlock *bb)
     std::swap(currentBB, bb);
     printBlockStart();
 
-    for (Stmt *s : currentBB->statements()) {
+    foreach (Stmt *s, currentBB->statements()) {
         if (!s)
             continue;
 
@@ -627,7 +1011,7 @@ void IRPrinter::print(BasicBlock *bb)
         QTextStream *prevOut = &os;
         std::swap(out, prevOut);
         addStmtNr(s);
-        visit(s);
+        s->accept(this);
         if (s->location.startLine) {
             out->flush();
             for (int i = 58 - str.length(); i > 0; --i)
@@ -644,29 +1028,10 @@ void IRPrinter::print(BasicBlock *bb)
     std::swap(currentBB, bb);
 }
 
-void IRPrinter::visit(Stmt *s)
-{
-    if (auto e = s->asExp()) {
-        visitExp(e);
-    } else if (auto m = s->asMove()) {
-        visitMove(m);
-    } else if (auto j = s->asJump()) {
-        visitJump(j);
-    } else if (auto c = s->asCJump()) {
-        visitCJump(c);
-    } else if (auto r = s->asRet()) {
-        visitRet(r);
-    } else if (auto p = s->asPhi()) {
-        visitPhi(p);
-    } else {
-        Q_UNREACHABLE();
-    }
-}
-
 void IRPrinter::visitExp(Exp *s)
 {
     *out << "void ";
-    visit(s->expr);
+    s->expr->accept(this);
 }
 
 void IRPrinter::visitMove(Move *s)
@@ -675,13 +1040,13 @@ void IRPrinter::visitMove(Move *s)
         if (!s->swap && targetTemp->type != UnknownType)
             *out << typeName(targetTemp->type) << ' ';
 
-    visit(s->target);
+    s->target->accept(this);
     *out << ' ';
     if (s->swap)
         *out << "<=> ";
     else
         *out << "= ";
-    visit(s->source);
+    s->source->accept(this);
 }
 
 void IRPrinter::visitJump(Jump *s)
@@ -692,7 +1057,7 @@ void IRPrinter::visitJump(Jump *s)
 void IRPrinter::visitCJump(CJump *s)
 {
     *out << "if ";
-    visit(s->cond);
+    s->cond->accept(this);
     *out << " goto L" << s->iftrue->index()
          << " else goto L" << s->iffalse->index();
 }
@@ -702,7 +1067,7 @@ void IRPrinter::visitRet(Ret *s)
     *out << "return";
     if (s->expr) {
         *out << ' ';
-        visit(s->expr);
+        s->expr->accept(this);
     }
 }
 
@@ -711,50 +1076,15 @@ void IRPrinter::visitPhi(Phi *s)
     if (s->targetTemp->type != UnknownType)
         *out << typeName(s->targetTemp->type) << ' ';
 
-    visit(s->targetTemp);
+    s->targetTemp->accept(this);
     *out << " = phi ";
-    for (int i = 0, ei = s->incoming.size(); i < ei; ++i) {
+    for (int i = 0, ei = s->d->incoming.size(); i < ei; ++i) {
         if (i > 0)
             *out << ", ";
         if (currentBB)
             *out << 'L' << currentBB->in.at(i)->index() << ": ";
-        if (s->incoming[i])
-            visit(s->incoming[i]);
-    }
-}
-
-void IRPrinter::visit(Expr *e)
-{
-    if (auto c = e->asConst()) {
-        visitConst(c);
-    } else if (auto s = e->asString()) {
-        visitString(s);
-    } else if (auto r = e->asRegExp()) {
-        visitRegExp(r);
-    } else if (auto n = e->asName()) {
-        visitName(n);
-    } else if (auto t = e->asTemp()) {
-        visitTemp(t);
-    } else if (auto a = e->asArgLocal()) {
-        visitArgLocal(a);
-    } else if (auto c = e->asClosure()) {
-        visitClosure(c);
-    } else if (auto c = e->asConvert()) {
-        visitConvert(c);
-    } else if (auto u = e->asUnop()) {
-        visitUnop(u);
-    } else if (auto b = e->asBinop()) {
-        visitBinop(b);
-    } else if (auto c = e->asCall()) {
-        visitCall(c);
-    } else if (auto n = e->asNew()) {
-        visitNew(n);
-    } else if (auto s = e->asSubscript()) {
-        visitSubscript(s);
-    } else if (auto m = e->asMember()) {
-        visitMember(m);
-    } else {
-        Q_UNREACHABLE();
+        if (s->d->incoming[i])
+            s->d->incoming[i]->accept(this);
     }
 }
 
@@ -809,7 +1139,7 @@ void IRPrinter::visitRegExp(RegExp *e)
 void IRPrinter::visitName(Name *e)
 {
     if (e->id) {
-        if (*e->id != QLatin1String("this"))
+        if (*e->id != QStringLiteral("this"))
             *out << '.';
         *out << *e->id;
     } else {
@@ -852,32 +1182,32 @@ void IRPrinter::visitClosure(Closure *e)
 void IRPrinter::visitConvert(Convert *e)
 {
     *out << "convert " << typeName(e->expr->type) << " to " << typeName(e->type) << ' ';
-    visit(e->expr);
+    e->expr->accept(this);
 }
 
 void IRPrinter::visitUnop(Unop *e)
 {
     *out << opname(e->op) << ' ';
-    visit(e->expr);
+    e->expr->accept(this);
 }
 
 void IRPrinter::visitBinop(Binop *e)
 {
     *out << opname(e->op) << ' ';
-    visit(e->left);
+    e->left->accept(this);
     *out << ", ";
-    visit(e->right);
+    e->right->accept(this);
 }
 
 void IRPrinter::visitCall(Call *e)
 {
     *out << "call ";
-    visit(e->base);
+    e->base->accept(this);
     *out << '(';
     for (ExprList *it = e->args; it; it = it->next) {
         if (it != e->args)
             *out << ", ";
-        visit(it->expr);
+        it->expr->accept(this);
     }
     *out << ')';
 }
@@ -885,21 +1215,21 @@ void IRPrinter::visitCall(Call *e)
 void IRPrinter::visitNew(New *e)
 {
     *out << "new ";
-    visit(e->base);
+    e->base->accept(this);
     *out << '(';
     for (ExprList *it = e->args; it; it = it->next) {
         if (it != e->args)
             *out << ", ";
-        visit(it->expr);
+        it->expr->accept(this);
     }
     *out << ')';
 }
 
 void IRPrinter::visitSubscript(Subscript *e)
 {
-    visit(e->base);
+    e->base->accept(this);
     *out << '[';
-    visit(e->index);
+    e->index->accept(this);
     *out << ']';
 }
 
@@ -909,12 +1239,12 @@ void IRPrinter::visitMember(Member *e)
             && e->attachedPropertiesId != 0 && !e->base->asTemp())
         *out << "[[attached property from " << e->attachedPropertiesId << "]]";
     else
-        visit(e->base);
+        e->base->accept(this);
     *out << '.' << *e->name;
 #ifndef V4_BOOTSTRAP
     if (e->property)
-        *out << " (meta-property " << e->property->coreIndex()
-            << " <" << QMetaType::typeName(e->property->propType())
+        *out << " (meta-property " << e->property->coreIndex
+            << " <" << QMetaType::typeName(e->property->propType)
             << ">)";
     else if (e->kind == Member::MemberOfIdObjectsArray)
         *out << "(id object " << e->idIndex << ")";
@@ -927,15 +1257,15 @@ QString IRPrinter::escape(const QString &s)
     for (int i = 0; i < s.length(); ++i) {
         const QChar ch = s.at(i);
         if (ch == QLatin1Char('\n'))
-            r += QLatin1String("\\n");
+            r += QStringLiteral("\\n");
         else if (ch == QLatin1Char('\r'))
-            r += QLatin1String("\\r");
+            r += QStringLiteral("\\r");
         else if (ch == QLatin1Char('\\'))
-            r += QLatin1String("\\\\");
+            r += QStringLiteral("\\\\");
         else if (ch == QLatin1Char('"'))
-            r += QLatin1String("\\\"");
+            r += QStringLiteral("\\\"");
         else if (ch == QLatin1Char('\''))
-            r += QLatin1String("\\'");
+            r += QStringLiteral("\\'");
         else
             r += ch;
     }
@@ -985,7 +1315,7 @@ void IRPrinter::printBlockStart()
     *out << str;
 
     *out << "; predecessors:";
-    for (BasicBlock *in : qAsConst(currentBB->in))
+    foreach (BasicBlock *in, currentBB->in)
         *out << " L" << in->index();
     if (currentBB->in.isEmpty())
         *out << " none";

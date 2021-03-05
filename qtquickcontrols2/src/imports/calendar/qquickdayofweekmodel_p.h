@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Labs Calendar module of the Qt Toolkit.
@@ -63,7 +63,7 @@ class QQuickDayOfWeekModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount CONSTANT FINAL)
 
 public:
-    explicit QQuickDayOfWeekModel(QObject *parent = nullptr);
+    explicit QQuickDayOfWeekModel(QObject *parent = Q_NULLPTR);
 
     QLocale locale() const;
     void setLocale(const QLocale &locale);
@@ -77,9 +77,9 @@ public:
         NarrowNameRole
     };
 
-    QHash<int, QByteArray> roleNames() const override;
-    QVariant data(const QModelIndex &index, int role) const override;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
 
 Q_SIGNALS:
     void localeChanged();

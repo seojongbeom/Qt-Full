@@ -1,5 +1,6 @@
 !force_bootstrap {
-    requires(qtConfig(xmlstreamwriter))
+    load(qfeatures)
+    requires(!contains(QT_DISABLED_FEATURES, xmlstreamwriter))
 }
 
 option(host_build)

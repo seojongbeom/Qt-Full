@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,7 +43,7 @@
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
 #ifndef QT_NO_OPENGL
-#include <QtGui/qopengltextureblitter.h>
+#include <QtGui/private/qopengltextureblitter_p.h>
 #endif
 #include <qpa/qplatformgraphicsbuffer.h>
 #include <qpa/qplatformgraphicsbufferhelper.h>
@@ -77,7 +71,6 @@ class QPlatformBackingStorePrivate
 public:
     QPlatformBackingStorePrivate(QWindow *w)
         : window(w)
-        , backingStore(0)
 #ifndef QT_NO_OPENGL
         , textureId(0)
         , blitter(0)
@@ -101,7 +94,6 @@ public:
 #endif
     }
     QWindow *window;
-    QBackingStore *backingStore;
 #ifndef QT_NO_OPENGL
     mutable GLuint textureId;
     mutable QSize textureSize;
@@ -258,8 +250,9 @@ static QRegion deviceRegion(const QRegion &region, QWindow *window, const QPoint
         return region;
 
     QVector<QRect> rects;
-    rects.reserve(region.rectCount());
-    for (const QRect &rect : region)
+    const QVector<QRect> regionRects = region.rects();
+    rects.reserve(regionRects.count());
+    foreach (const QRect &rect, regionRects)
         rects.append(deviceRect(rect.translated(offset), window));
 
     QRegion deviceRegion;
@@ -397,7 +390,7 @@ void QPlatformBackingStore::composeAndFlush(QWindow *window, const QRegion &regi
 
     if (textureId) {
         if (d_ptr->needsSwizzle)
-            d_ptr->blitter->setRedBlueSwizzle(true);
+            d_ptr->blitter->setSwizzleRB(true);
         // The backingstore is for the entire tlw.
         // In case of native children offset tells the position relative to the tlw.
         const QRect srcRect = toBottomLeftRect(deviceWindowRect.translated(deviceWindowOffset), d_ptr->textureSize.height());
@@ -406,7 +399,7 @@ void QPlatformBackingStore::composeAndFlush(QWindow *window, const QRegion &regi
                                                                          origin);
         d_ptr->blitter->blit(textureId, QMatrix4x4(), source);
         if (d_ptr->needsSwizzle)
-            d_ptr->blitter->setRedBlueSwizzle(false);
+            d_ptr->blitter->setSwizzleRB(false);
     }
 
     // Textures for renderToTexture widgets that have WA_AlwaysStackOnTop set.
@@ -420,7 +413,7 @@ void QPlatformBackingStore::composeAndFlush(QWindow *window, const QRegion &regi
 
     context->swapBuffers(window);
 }
-#endif
+
 /*!
   Implemented in subclasses to return the content of the backingstore as a QImage.
 
@@ -433,7 +426,7 @@ QImage QPlatformBackingStore::toImage() const
 {
     return QImage();
 }
-#ifndef QT_NO_OPENGL
+
 /*!
   May be reimplemented in subclasses to return the content of the
   backingstore as an OpenGL texture. \a dirtyRegion is the part of the
@@ -479,14 +472,14 @@ GLuint QPlatformBackingStore::toTexture(const QRegion &dirtyRegion, QSize *textu
     switch (image.format()) {
     case QImage::Format_ARGB32_Premultiplied:
         *flags |= TexturePremultiplied;
-        Q_FALLTHROUGH();
+        // no break
     case QImage::Format_RGB32:
     case QImage::Format_ARGB32:
         *flags |= TextureSwizzle;
         break;
     case QImage::Format_RGBA8888_Premultiplied:
         *flags |= TexturePremultiplied;
-        Q_FALLTHROUGH();
+        // no break
     case QImage::Format_RGBX8888:
     case QImage::Format_RGBA8888:
         break;
@@ -628,23 +621,6 @@ QPlatformBackingStore::~QPlatformBackingStore()
 QWindow* QPlatformBackingStore::window() const
 {
     return d_ptr->window;
-}
-
-/*!
-    Sets the backing store associated with this surface.
-*/
-void QPlatformBackingStore::setBackingStore(QBackingStore *backingStore)
-{
-    d_ptr->backingStore = backingStore;
-}
-
-/*!
-    Returns a pointer to the backing store associated with this
-    surface.
-*/
-QBackingStore *QPlatformBackingStore::backingStore() const
-{
-    return d_ptr->backingStore;
 }
 
 /*!

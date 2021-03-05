@@ -1,4 +1,5 @@
-msvc {
+
+win32-msvc2*|wince*msvc* {
     QMAKE_CFLAGS -= -Zi
     QMAKE_CFLAGS_DEBUG -= -Zi
     QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO -= -Zi

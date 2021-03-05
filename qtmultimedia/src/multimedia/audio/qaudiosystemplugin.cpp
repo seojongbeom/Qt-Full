@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,15 +33,10 @@
 
 
 #include "qaudiosystemplugin.h"
-#include "qaudiosystempluginext_p.h"
 
 QT_BEGIN_NAMESPACE
 
 QAudioSystemFactoryInterface::~QAudioSystemFactoryInterface()
-{
-}
-
-QAudioSystemPluginExtension::~QAudioSystemPluginExtension()
 {
 }
 
@@ -58,6 +47,7 @@ QAudioSystemPluginExtension::~QAudioSystemPluginExtension()
     \ingroup multimedia
     \ingroup multimedia_audio
     \inmodule QtMultimedia
+    \internal
 
     Writing a audio plugin is achieved by subclassing this base class,
     reimplementing the pure virtual functions availableDevices(),
@@ -76,15 +66,25 @@ QAudioSystemPluginExtension::~QAudioSystemPluginExtension()
 
     \sa QAbstractAudioDeviceInfo, QAbstractAudioOutput, QAbstractAudioInput
 
-    Qt comes with plugins for Windows (WinMM and WASAPI), Linux (ALSA and PulseAudio), \macos / iOS
-    (CoreAudio), Android (OpenSL ES) and QNX.
+    Qt supports win32, linux(alsa) and \macos standard (builtin to the
+    QtMultimedia library at compile time).
 
-    If no audio plugins are available, a fallback dummy backend will be used.
-    This should print out warnings if this is the case when you try and use QAudioInput
-    or QAudioOutput. To fix this problem, make sure the dependencies for the Qt plugins are
-    installed on the system and reconfigure Qt (e.g. alsa-devel package on Linux), or create your
-    own plugin with a default key to always override the dummy fallback. The easiest way to
-    determine if you have only a dummy backend is to get a list of available audio devices.
+    You can support other backends other than these predefined ones by
+    creating a plugin subclassing QAudioSystemPlugin, QAbstractAudioDeviceInfo,
+    QAbstractAudioOutput and QAbstractAudioInput.
+
+
+    -audio-backend configure option will force compiling in of the builtin backend
+    into the QtMultimedia library at compile time. This is automatic by default
+    and will only be compiled into the library if the dependencies are installed.
+    eg. alsa-devel package installed for linux.
+
+    If the builtin backend is not compiled into the QtMultimedia library and
+    no audio plugins are available a fallback dummy backend will be used.
+    This should print out warnings if this is the case when you try and use QAudioInput or QAudioOutput. To fix this problem
+    reconfigure Qt using -audio-backend or create your own plugin with a default
+    key to always override the dummy fallback. The easiest way to determine
+    if you have only a dummy backend is to get a list of available audio devices.
 
     QAudioDeviceInfo::availableDevices(QAudio::AudioOutput).size() = 0 (dummy backend)
 */

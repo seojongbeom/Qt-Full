@@ -19,7 +19,7 @@ SUBDIRS=\
    qgraphicsview \
    qgraphicswidget \
 
-!qtConfig(private_tests): SUBDIRS -= \
+!contains(QT_CONFIG, private_tests): SUBDIRS -= \
            qgraphicsanchorlayout \
            qgraphicsanchorlayout1 \
            qgraphicsitem \

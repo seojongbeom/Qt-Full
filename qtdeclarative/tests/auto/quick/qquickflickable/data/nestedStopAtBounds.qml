@@ -32,10 +32,6 @@ Flickable {
                 anchors.margins: 100
                 color: "blue"
             }
-            MouseArea {
-                anchors.fill: parent
-                objectName: "mouseArea"
-            }
         }
     }
 }

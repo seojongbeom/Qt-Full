@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Copyright (C) 2015 Klaralvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author David Faure <david.faure@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,11 +47,11 @@
 #include <QtCore/QSet>
 #include <QtCore/QBuffer>
 #include <QtCore/QUrl>
+#include <QtCore/QStack>
 #include <QtCore/QDebug>
 
 #include <algorithm>
 #include <functional>
-#include <stack>
 
 QT_BEGIN_NAMESPACE
 
@@ -108,13 +102,12 @@ QMimeType QMimeDatabasePrivate::mimeTypeForName(const QString &nameOrAlias)
     return provider()->mimeTypeForName(provider()->resolveAlias(nameOrAlias));
 }
 
-QStringList QMimeDatabasePrivate::mimeTypeForFileName(const QString &fileName)
+QStringList QMimeDatabasePrivate::mimeTypeForFileName(const QString &fileName, QString *foundSuffix)
 {
     if (fileName.endsWith(QLatin1Char('/')))
         return QStringList() << QLatin1String("inode/directory");
 
-    QStringList matchingMimeTypes = provider()->findByFileName(QFileInfo(fileName).fileName()).m_matchingMimeTypes;
-    matchingMimeTypes.sort(); // make it deterministic
+    const QStringList matchingMimeTypes = provider()->findByFileName(QFileInfo(fileName).fileName(), foundSuffix);
     return matchingMimeTypes;
 }
 
@@ -168,17 +161,13 @@ QMimeType QMimeDatabasePrivate::mimeTypeForFileNameAndData(const QString &fileNa
     *accuracyPtr = 0;
 
     // Pass 1) Try to match on the file name
-    QMimeGlobMatchResult candidatesByName;
-    if (fileName.endsWith(QLatin1Char('/')))
-        candidatesByName.addMatch(QLatin1String("inode/directory"), 100, QString());
-    else
-        candidatesByName = provider()->findByFileName(QFileInfo(fileName).fileName());
-    if (candidatesByName.m_allMatchingMimeTypes.count() == 1) {
+    QStringList candidatesByName = mimeTypeForFileName(fileName);
+    if (candidatesByName.count() == 1) {
         *accuracyPtr = 100;
-        const QMimeType mime = mimeTypeForName(candidatesByName.m_matchingMimeTypes.at(0));
+        const QMimeType mime = mimeTypeForName(candidatesByName.at(0));
         if (mime.isValid())
             return mime;
-        candidatesByName = {};
+        candidatesByName.clear();
     }
 
     // Extension is unknown, or matches multiple mimetypes.
@@ -197,7 +186,7 @@ QMimeType QMimeDatabasePrivate::mimeTypeForFileNameAndData(const QString &fileNa
             // "for glob_match in glob_matches:"
             // "if glob_match is subclass or equal to sniffed_type, use glob_match"
             const QString sniffedMime = candidateByData.name();
-            for (const QString &m : qAsConst(candidatesByName.m_matchingMimeTypes)) {
+            foreach (const QString &m, candidatesByName) {
                 if (inherits(m, sniffedMime)) {
                     // We have magic + pattern pointing to this, so it's a pretty good match
                     *accuracyPtr = 100;
@@ -209,10 +198,10 @@ QMimeType QMimeDatabasePrivate::mimeTypeForFileNameAndData(const QString &fileNa
         }
     }
 
-    if (candidatesByName.m_allMatchingMimeTypes.count() > 1) {
-        candidatesByName.m_matchingMimeTypes.sort(); // make it deterministic
+    if (candidatesByName.count() > 1) {
         *accuracyPtr = 20;
-        const QMimeType mime = mimeTypeForName(candidatesByName.m_matchingMimeTypes.at(0));
+        candidatesByName.sort(); // to make it deterministic
+        const QMimeType mime = mimeTypeForName(candidatesByName.at(0));
         if (mime.isValid())
             return mime;
     }
@@ -229,14 +218,13 @@ bool QMimeDatabasePrivate::inherits(const QString &mime, const QString &parent)
 {
     const QString resolvedParent = provider()->resolveAlias(parent);
     //Q_ASSERT(provider()->resolveAlias(mime) == mime);
-    std::stack<QString, QStringList> toCheck;
+    QStack<QString> toCheck;
     toCheck.push(mime);
-    while (!toCheck.empty()) {
-        if (toCheck.top() == resolvedParent)
+    while (!toCheck.isEmpty()) {
+        const QString current = toCheck.pop();
+        if (current == resolvedParent)
             return true;
-        const auto parents = provider()->parents(toCheck.top());
-        toCheck.pop();
-        for (const QString &par : parents)
+        foreach (const QString &par, provider()->parents(current))
             toCheck.push(par);
     }
     return false;
@@ -290,7 +278,7 @@ bool QMimeDatabasePrivate::inherits(const QString &mime, const QString &parent)
 
     \snippet code/src_corelib_mimetype_qmimedatabase.cpp 0
 
-    \sa QMimeType, {MIME Type Browser Example}
+    \sa QMimeType
  */
 
 /*!
@@ -411,7 +399,7 @@ QMimeType QMimeDatabase::mimeTypeForFile(const QString &fileName, MatchMode mode
 {
     if (mode == MatchExtension) {
         QMutexLocker locker(&d->mutex);
-        const QStringList matches = d->mimeTypeForFileName(fileName);
+        QStringList matches = d->mimeTypeForFileName(fileName);
         const int matchCount = matches.count();
         if (matchCount == 0) {
             return d->mimeTypeForName(d->defaultMimeType());
@@ -419,6 +407,7 @@ QMimeType QMimeDatabase::mimeTypeForFile(const QString &fileName, MatchMode mode
             return d->mimeTypeForName(matches.first());
         } else {
             // We have to pick one.
+            matches.sort(); // Make it deterministic
             return d->mimeTypeForName(matches.first());
         }
     } else {
@@ -444,10 +433,11 @@ QList<QMimeType> QMimeDatabase::mimeTypesForFileName(const QString &fileName) co
 {
     QMutexLocker locker(&d->mutex);
 
-    const QStringList matches = d->mimeTypeForFileName(fileName);
+    QStringList matches = d->mimeTypeForFileName(fileName);
     QList<QMimeType> mimes;
+    matches.sort(); // Make it deterministic
     mimes.reserve(matches.count());
-    for (const QString &mime : matches)
+    foreach (const QString &mime, matches)
         mimes.append(d->mimeTypeForName(mime));
     return mimes;
 }
@@ -460,7 +450,9 @@ QList<QMimeType> QMimeDatabase::mimeTypesForFileName(const QString &fileName) co
 QString QMimeDatabase::suffixForFileName(const QString &fileName) const
 {
     QMutexLocker locker(&d->mutex);
-    return d->provider()->findByFileName(QFileInfo(fileName).fileName()).m_foundSuffix;
+    QString foundSuffix;
+    d->mimeTypeForFileName(fileName, &foundSuffix);
+    return foundSuffix;
 }
 
 /*!
@@ -526,7 +518,7 @@ QMimeType QMimeDatabase::mimeTypeForUrl(const QUrl &url) const
     if (scheme.startsWith(QLatin1String("http")) || scheme == QLatin1String("mailto"))
         return mimeTypeForName(d->defaultMimeType());
 
-    return mimeTypeForFile(url.path(), MatchExtension);
+    return mimeTypeForFile(url.path());
 }
 
 /*!

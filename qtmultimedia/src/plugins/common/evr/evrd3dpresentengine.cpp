@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,7 +41,6 @@
 #include <QDebug>
 #include <qthread.h>
 #include <private/qmediaopenglhelper_p.h>
-#include <QOffscreenSurface>
 
 #ifdef MAYBE_ANGLE
 # include <qtgui/qguiapplication.h>
@@ -57,8 +50,6 @@
 #endif
 
 static const int PRESENTER_BUFFER_COUNT = 3;
-
-QT_BEGIN_NAMESPACE
 
 #ifdef MAYBE_ANGLE
 
@@ -129,65 +120,11 @@ class OpenGLResources : public QObject
 {
 public:
     OpenGLResources()
-        : m_egl(new EGLWrapper)
-        , m_eglDisplay(nullptr)
-        , m_eglSurface(nullptr)
-        , m_glTexture(0)
-        , m_glContext(QOpenGLContext::currentContext())
-    {
-        Q_ASSERT(m_glContext);
-    }
-
-    unsigned int glTexture() const
-    {
-        return m_glTexture;
-    }
-
-    bool createTexture(const QVideoSurfaceFormat &format, IDirect3DDevice9Ex *device,
-        IDirect3DTexture9 **texture)
-    {
-        if (!m_glContext)
-            return false;
-
-        m_glContext->functions()->glGenTextures(1, &m_glTexture);
-        QPlatformNativeInterface *nativeInterface = QGuiApplication::platformNativeInterface();
-        m_eglDisplay = static_cast<EGLDisplay*>(
-            nativeInterface->nativeResourceForContext("eglDisplay", m_glContext));
-        EGLConfig *eglConfig = static_cast<EGLConfig*>(
-            nativeInterface->nativeResourceForContext("eglConfig", m_glContext));
-
-        const bool hasAlpha = m_glContext->format().hasAlpha();
-
-        EGLint attribs[] = {
-            EGL_WIDTH, format.frameWidth(),
-            EGL_HEIGHT, format.frameHeight(),
-            EGL_TEXTURE_FORMAT, (hasAlpha ? EGL_TEXTURE_RGBA : EGL_TEXTURE_RGB),
-            EGL_TEXTURE_TARGET, EGL_TEXTURE_2D,
-            EGL_NONE
-        };
-
-        m_eglSurface = m_egl->createPbufferSurface(m_eglDisplay, eglConfig, attribs);
-
-        HANDLE share_handle = 0;
-        PFNEGLQUERYSURFACEPOINTERANGLEPROC eglQuerySurfacePointerANGLE =
-            reinterpret_cast<PFNEGLQUERYSURFACEPOINTERANGLEPROC>(
-                m_egl->getProcAddress("eglQuerySurfacePointerANGLE"));
-        Q_ASSERT(eglQuerySurfacePointerANGLE);
-        eglQuerySurfacePointerANGLE(
-            m_eglDisplay,
-            m_eglSurface,
-            EGL_D3D_TEXTURE_2D_SHARE_HANDLE_ANGLE, &share_handle);
-
-        device->CreateTexture(format.frameWidth(), format.frameHeight(), 1,
-            D3DUSAGE_RENDERTARGET,
-            (hasAlpha ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8),
-            D3DPOOL_DEFAULT, texture, &share_handle);
-
-        m_glContext->functions()->glBindTexture(GL_TEXTURE_2D, m_glTexture);
-        m_egl->bindTexImage(m_eglDisplay, m_eglSurface, EGL_BACK_BUFFER);
-
-        return texture != NULL;
-    }
+        : egl(new EGLWrapper)
+        , eglDisplay(0)
+        , eglSurface(0)
+        , glTexture(0)
+    {}
 
     void release()
     {
@@ -197,32 +134,24 @@ public:
             deleteLater();
     }
 
-private:
-    EGLWrapper *m_egl;
-    EGLDisplay *m_eglDisplay;
-    EGLSurface m_eglSurface;
-    unsigned int m_glTexture;
-    QOpenGLContext *m_glContext;
+    EGLWrapper *egl;
+    EGLDisplay *eglDisplay;
+    EGLSurface eglSurface;
+    unsigned int glTexture;
 
+private:
     ~OpenGLResources()
     {
-        QScopedPointer<QOffscreenSurface> surface;
-        if (m_glContext != QOpenGLContext::currentContext()) {
-            surface.reset(new QOffscreenSurface);
-            surface->create();
-            m_glContext->makeCurrent(surface.data());
-        }
+        Q_ASSERT(QOpenGLContext::currentContext() != NULL);
 
-        if (m_eglSurface && m_egl) {
-            m_egl->releaseTexImage(m_eglDisplay, m_eglSurface, EGL_BACK_BUFFER);
-            m_egl->destroySurface(m_eglDisplay, m_eglSurface);
+        if (eglSurface && egl) {
+            egl->releaseTexImage(eglDisplay, eglSurface, EGL_BACK_BUFFER);
+            egl->destroySurface(eglDisplay, eglSurface);
         }
-        if (m_glTexture)
-            m_glContext->functions()->glDeleteTextures(1, &m_glTexture);
+        if (glTexture)
+            QOpenGLContext::currentContext()->functions()->glDeleteTextures(1, &glTexture);
 
-        delete m_egl;
-        if (surface)
-            m_glContext->doneCurrent();
+        delete egl;
     }
 };
 
@@ -322,7 +251,7 @@ QVariant IMFSampleVideoBuffer::handle() const
 
     if (m_textureUpdated || m_engine->updateTexture(m_surface)) {
         m_textureUpdated = true;
-        handle = QVariant::fromValue<unsigned int>(m_engine->m_glResources->glTexture());
+        handle = QVariant::fromValue<unsigned int>(m_engine->m_glResources->glTexture);
     }
 #endif
 
@@ -578,7 +507,7 @@ done:
     if (SUCCEEDED(hr)) {
         m_surfaceFormat = QVideoSurfaceFormat(QSize(width, height),
                                               m_useTextureRendering ? QVideoFrame::Format_RGB32
-                                                                    : qt_evr_pixelFormatFromD3DFormat(d3dFormat),
+                                                                    : qt_evr_pixelFormatFromD3DFormat((D3DFORMAT)d3dFormat),
                                               m_useTextureRendering ? QAbstractVideoBuffer::GLTextureHandle
                                                                     : QAbstractVideoBuffer::NoHandle);
     } else {
@@ -616,11 +545,61 @@ QVideoFrame D3DPresentEngine::makeVideoFrame(IMFSample *sample)
 
 bool D3DPresentEngine::createRenderTexture()
 {
-    if (m_glResources)
-        m_glResources->release();
+    if (m_texture)
+        return true;
 
-    m_glResources = new OpenGLResources;
-    return m_glResources->createTexture(m_surfaceFormat, m_device, &m_texture);
+    Q_ASSERT(QOpenGLContext::currentContext() != NULL);
+
+    if (!m_glResources)
+        m_glResources = new OpenGLResources;
+
+    QOpenGLContext *currentContext = QOpenGLContext::currentContext();
+    if (!currentContext)
+        return false;
+
+    QPlatformNativeInterface *nativeInterface = QGuiApplication::platformNativeInterface();
+    m_glResources->eglDisplay = static_cast<EGLDisplay*>(
+                nativeInterface->nativeResourceForContext("eglDisplay", currentContext));
+    EGLConfig *eglConfig = static_cast<EGLConfig*>(
+                nativeInterface->nativeResourceForContext("eglConfig", currentContext));
+
+    currentContext->functions()->glGenTextures(1, &m_glResources->glTexture);
+
+    bool hasAlpha = currentContext->format().hasAlpha();
+
+    EGLint attribs[] = {
+        EGL_WIDTH, m_surfaceFormat.frameWidth(),
+        EGL_HEIGHT, m_surfaceFormat.frameHeight(),
+        EGL_TEXTURE_FORMAT, hasAlpha ? EGL_TEXTURE_RGBA : EGL_TEXTURE_RGB,
+        EGL_TEXTURE_TARGET, EGL_TEXTURE_2D,
+        EGL_NONE
+    };
+
+    EGLSurface pbuffer = m_glResources->egl->createPbufferSurface(m_glResources->eglDisplay, eglConfig, attribs);
+
+    HANDLE share_handle = 0;
+    PFNEGLQUERYSURFACEPOINTERANGLEPROC eglQuerySurfacePointerANGLE =
+            reinterpret_cast<PFNEGLQUERYSURFACEPOINTERANGLEPROC>(m_glResources->egl->getProcAddress("eglQuerySurfacePointerANGLE"));
+    Q_ASSERT(eglQuerySurfacePointerANGLE);
+    eglQuerySurfacePointerANGLE(
+                m_glResources->eglDisplay,
+                pbuffer,
+                EGL_D3D_TEXTURE_2D_SHARE_HANDLE_ANGLE, &share_handle);
+
+
+    m_device->CreateTexture(m_surfaceFormat.frameWidth(), m_surfaceFormat.frameHeight(), 1,
+                            D3DUSAGE_RENDERTARGET,
+                            hasAlpha ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8,
+                            D3DPOOL_DEFAULT,
+                            &m_texture,
+                            &share_handle);
+
+    m_glResources->eglSurface = pbuffer;
+
+    QOpenGLContext::currentContext()->functions()->glBindTexture(GL_TEXTURE_2D, m_glResources->glTexture);
+    m_glResources->egl->bindTexImage(m_glResources->eglDisplay, m_glResources->eglSurface, EGL_BACK_BUFFER);
+
+    return m_texture != NULL;
 }
 
 bool D3DPresentEngine::updateTexture(IDirect3DSurface9 *src)
@@ -657,5 +636,3 @@ done:
 }
 
 #endif // MAYBE_ANGLE
-
-QT_END_NAMESPACE

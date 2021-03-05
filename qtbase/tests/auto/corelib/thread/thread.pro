@@ -6,6 +6,7 @@ SUBDIRS=\
     qresultstore \
     qfuture \
     qfuturesynchronizer \
+    qfuturewatcher \
     qmutex \
     qmutexlocker \
     qreadlocker \
@@ -17,8 +18,3 @@ SUBDIRS=\
     qthreadstorage \
     qwaitcondition \
     qwritelocker
-
-qtHaveModule(concurrent) {
-    SUBDIRS += \
-        qfuturewatcher
-}

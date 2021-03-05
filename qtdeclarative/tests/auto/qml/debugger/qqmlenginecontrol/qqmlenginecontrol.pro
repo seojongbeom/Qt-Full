@@ -1,6 +1,6 @@
 CONFIG += testcase
 TARGET = tst_qqmlenginecontrol
-osx:CONFIG -= app_bundle
+macx:CONFIG -= app_bundle
 
 SOURCES += tst_qqmlenginecontrol.cpp
 
@@ -10,7 +10,8 @@ include(../shared/debugutil.pri)
 
 TESTDATA = data/*
 
-QT += core qml testlib testlib-private gui-private core-private
+QT += core qml testlib gui-private core-private
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 
 OTHER_FILES += \
     data/test.qml \

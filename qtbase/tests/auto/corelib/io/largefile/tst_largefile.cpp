@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,15 +44,19 @@
 #include <cstdio>
 
 #ifdef Q_OS_WIN
-#  include <qt_windows.h>
-#  include <io.h>
-#  ifndef FSCTL_SET_SPARSE
-// MinGW doesn't define this.
-#    define FSCTL_SET_SPARSE (0x900C4)
-#  endif
-#endif // Q_OS_WIN
 
-#include "emulationdetector.h"
+#include <windows.h>
+
+#ifndef Q_OS_WINCE
+#include <io.h>
+#endif
+
+#ifndef FSCTL_SET_SPARSE
+// MinGW doesn't define this.
+#define FSCTL_SET_SPARSE (0x900C4)
+#endif
+
+#endif // Q_OS_WIN
 
 class tst_LargeFile
     : public QObject
@@ -70,10 +79,6 @@ public:
     #else
         maxSizeBits = 24; // 16 MiB
     #endif
-
-        // QEMU only supports < 4GB files
-        if (EmulationDetector::isRunningArmOnX86())
-            maxSizeBits = qMin(maxSizeBits, 28);
     }
 
 private:
@@ -228,7 +233,7 @@ QByteArray const &tst_LargeFile::getDataBlock(int index, qint64 position)
 void tst_LargeFile::initTestCase()
 {
     m_previousCurrent = QDir::currentPath();
-    m_tempDir = QSharedPointer<QTemporaryDir>::create();
+    m_tempDir = QSharedPointer<QTemporaryDir>(new QTemporaryDir);
     QVERIFY2(!m_tempDir.isNull(), qPrintable("Could not create temporary directory."));
     QVERIFY2(QDir::setCurrent(m_tempDir->path()), qPrintable("Could not switch current directory"));
 
@@ -508,42 +513,23 @@ void tst_LargeFile::mapFile()
 }
 
 //Mac: memory-mapping beyond EOF may succeed but it could generate bus error on access
-//FreeBSD: same
-//Linux: memory-mapping beyond EOF usually succeeds, but depends on the filesystem
-//  32-bit: limited to 44-bit offsets
-//Windows: memory-mapping beyond EOF is not allowed
 void tst_LargeFile::mapOffsetOverflow()
 {
-    enum {
-#ifdef Q_OS_WIN
-        Succeeds = false,
-        MaxOffset = 63
-#else
-        Succeeds = true,
-#  if (defined(Q_OS_LINUX) || defined(Q_OS_ANDROID)) && Q_PROCESSOR_WORDSIZE == 4
-        MaxOffset = 43
-#  else
-        MaxOffset = 63
-#  endif
-#endif
-    };
-
-    QByteArray zeroPage(blockSize, '\0');
-    for (int i = maxSizeBits + 1; i < 63; ++i) {
-        bool succeeds = Succeeds && (i <= MaxOffset);
+#ifndef Q_OS_MAC
+    // Out-of-range mappings should fail, and not silently clip the offset
+    for (int i = 50; i < 63; ++i) {
         uchar *address = 0;
-        qint64 offset = Q_INT64_C(1) << i;
 
-        if (succeeds)
-            QTest::ignoreMessage(QtWarningMsg, "QFSFileEngine::map: Mapping a file beyond its size is not portable");
-        address = largeFile.map(offset, blockSize);
-        QCOMPARE(!!address, succeeds);
+        address = largeFile.map(((qint64)1 << i), blockSize);
+#if defined(__x86_64__)
+        QEXPECT_FAIL("", "fails on 64-bit Linux (QTBUG-21175)", Abort);
+#endif
+        QVERIFY( !address );
 
-        if (succeeds)
-            QTest::ignoreMessage(QtWarningMsg, "QFSFileEngine::map: Mapping a file beyond its size is not portable");
-        address = largeFile.map(offset + blockSize, blockSize);
-        QCOMPARE(!!address, succeeds);
+        address = largeFile.map(((qint64)1 << i) + blockSize, blockSize);
+        QVERIFY( !address );
     }
+#endif
 }
 
 QTEST_APPLESS_MAIN(tst_LargeFile)

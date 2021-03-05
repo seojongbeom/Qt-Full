@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2012 BogDan Vatra <bogdan@kde.org>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -210,13 +204,13 @@ QJsonObject AndroidStyle::loadStyleData()
 
     QJsonParseError error;
     QJsonDocument document = QJsonDocument::fromJson(f.readAll(), &error);
-    if (Q_UNLIKELY(document.isNull())) {
+    if (document.isNull()) {
         qCritical() << error.errorString();
         return QJsonObject();
     }
 
-    if (Q_UNLIKELY(!document.isObject())) {
-        qCritical("Style.json does not contain a valid style.");
+    if (!document.isObject()) {
+        qCritical() << "Style.json does not contain a valid style.";
         return QJsonObject();
     }
     return document.object();
@@ -225,7 +219,7 @@ QJsonObject AndroidStyle::loadStyleData()
 static std::shared_ptr<AndroidStyle> loadAndroidStyle(QPalette *defaultPalette)
 {
     double pixelDensity = QHighDpiScaling::isActive() ? QtAndroid::pixelDensity() : 1.0;
-    std::shared_ptr<AndroidStyle> style = std::make_shared<AndroidStyle>();
+    std::shared_ptr<AndroidStyle> style(new AndroidStyle);
     style->m_styleData = AndroidStyle::loadStyleData();
     if (style->m_styleData.isEmpty())
         return std::shared_ptr<AndroidStyle>();
@@ -368,6 +362,9 @@ QAndroidPlatformTheme::QAndroidPlatformTheme(QAndroidPlatformNativeInterface *an
 
     // default in case the style has not set a font
     m_systemFont = QFont(QLatin1String("Roboto"), 14.0 * 100 / 72); // keep default size the same after changing from 100 dpi to 72 dpi
+
+    // by default use native menu bar
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeMenuBar, false);
 }
 
 QPlatformMenuBar *QAndroidPlatformTheme::createPlatformMenuBar() const
@@ -486,7 +483,7 @@ QVariant QAndroidPlatformTheme::themeHint(ThemeHint hint) const
             if (ret > 0)
                 return ret;
 
-            Q_FALLTHROUGH();
+            // fall through
     }
     default:
         return QPlatformTheme::themeHint(hint);

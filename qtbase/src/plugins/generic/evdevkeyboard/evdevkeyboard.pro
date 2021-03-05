@@ -1,6 +1,6 @@
 TARGET = qevdevkeyboardplugin
 
-QT += core-private gui-private input_support-private
+QT += core-private platformsupport-private gui-private
 
 SOURCES = main.cpp
 

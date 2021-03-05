@@ -11,11 +11,11 @@
 #ifndef LIBANGLE_BUFFER_H_
 #define LIBANGLE_BUFFER_H_
 
-#include "common/angleutils.h"
-#include "libANGLE/Debug.h"
 #include "libANGLE/Error.h"
-#include "libANGLE/IndexRangeCache.h"
 #include "libANGLE/RefCountObject.h"
+#include "libANGLE/renderer/IndexRangeCache.h"
+
+#include "common/angleutils.h"
 
 namespace rx
 {
@@ -25,34 +25,21 @@ class BufferImpl;
 namespace gl
 {
 
-class Buffer final : public RefCountObject, public LabeledObject
+class Buffer : public RefCountObject
 {
   public:
     Buffer(rx::BufferImpl *impl, GLuint id);
-    virtual ~Buffer();
 
-    void setLabel(const std::string &label) override;
-    const std::string &getLabel() const override;
+    virtual ~Buffer();
 
     Error bufferData(const void *data, GLsizeiptr size, GLenum usage);
     Error bufferSubData(const void *data, GLsizeiptr size, GLintptr offset);
     Error copyBufferSubData(Buffer* source, GLintptr sourceOffset, GLintptr destOffset, GLsizeiptr size);
-    Error map(GLenum access);
     Error mapRange(GLintptr offset, GLsizeiptr length, GLbitfield access);
-    Error unmap(GLboolean *result);
-
-    void onTransformFeedback();
-    void onPixelUnpack();
-
-    Error getIndexRange(GLenum type,
-                        size_t offset,
-                        size_t count,
-                        bool primitiveRestartEnabled,
-                        IndexRange *outRange) const;
+    Error unmap();
 
     GLenum getUsage() const { return mUsage; }
-    GLbitfield getAccessFlags() const { return mAccessFlags; }
-    GLenum getAccess() const { return mAccess; }
+    GLint getAccessFlags() const {  return mAccessFlags; }
     GLboolean isMapped() const { return mMapped; }
     GLvoid *getMapPointer() const { return mMapPointer; }
     GLint64 getMapOffset() const { return mMapOffset; }
@@ -61,21 +48,21 @@ class Buffer final : public RefCountObject, public LabeledObject
 
     rx::BufferImpl *getImplementation() const { return mBuffer; }
 
+    rx::IndexRangeCache *getIndexRangeCache() { return &mIndexRangeCache; }
+    const rx::IndexRangeCache *getIndexRangeCache() const { return &mIndexRangeCache; }
+
   private:
     rx::BufferImpl *mBuffer;
 
-    std::string mLabel;
-
     GLenum mUsage;
     GLint64 mSize;
-    GLbitfield mAccessFlags;
-    GLenum mAccess;
+    GLint mAccessFlags;
     GLboolean mMapped;
     GLvoid *mMapPointer;
     GLint64 mMapOffset;
     GLint64 mMapLength;
 
-    mutable IndexRangeCache mIndexRangeCache;
+    rx::IndexRangeCache mIndexRangeCache;
 };
 
 }

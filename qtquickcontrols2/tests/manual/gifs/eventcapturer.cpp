@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -57,8 +57,7 @@
     // interact with the view here, in order for the events to be captured
 
     qDebug() << "\n";
-    const auto capturedEvents = eventCapturer.capturedEvents();
-    for (CapturedEvent event : capturedEvents)
+    foreach (CapturedEvent event, eventCapturer.capturedEvents())
         qDebug().noquote() << event.cppCommand();
     \endcode
 
@@ -70,7 +69,7 @@
 
 EventCapturer::EventCapturer(QObject *parent) :
     QObject(parent),
-    mEventSource(nullptr),
+    mEventSource(Q_NULLPTR),
     mStopCaptureKey(Qt::Key_Escape),
     mMoveEventTrimFlags(TrimNone),
     mDuration(0),

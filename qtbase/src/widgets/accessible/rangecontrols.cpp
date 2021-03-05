@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,25 +33,17 @@
 
 #include "rangecontrols_p.h"
 
-#if QT_CONFIG(slider)
 #include <qslider.h>
-#endif
-#if QT_CONFIG(dial)
 #include <qdial.h>
-#endif
-#if QT_CONFIG(spinbox)
 #include <qspinbox.h>
-#endif
-#if QT_CONFIG(scrollbar)
 #include <qscrollbar.h>
-#endif
 #include <qstyle.h>
 #include <qstyleoption.h>
 #include <qdebug.h>
 #include <qglobal.h>
-#if QT_CONFIG(lineedit)
+#include <QDoubleSpinBox>
+#include <QDial>
 #include <QtWidgets/qlineedit.h>
-#endif
 #include <qmath.h>
 #include <private/qmath_p.h>
 
@@ -67,7 +53,7 @@ QT_BEGIN_NAMESPACE
 
 #ifndef QT_NO_ACCESSIBILITY
 
-#if QT_CONFIG(spinbox)
+#ifndef QT_NO_SPINBOX
 QAccessibleAbstractSpinBox::QAccessibleAbstractSpinBox(QWidget *w)
 : QAccessibleWidget(w, QAccessible::SpinBox), lineEdit(Q_NULLPTR)
 {
@@ -89,14 +75,10 @@ QAbstractSpinBox *QAccessibleAbstractSpinBox::abstractSpinBox() const
 
 QAccessibleInterface *QAccessibleAbstractSpinBox::lineEditIface() const
 {
-#if QT_CONFIG(lineedit)
     // QAccessibleLineEdit is only used to forward the text functions
     if (!lineEdit)
         lineEdit = new QAccessibleLineEdit(abstractSpinBox()->lineEdit());
     return lineEdit;
-#else
-    return nullptr;
-#endif
 }
 
 QString QAccessibleAbstractSpinBox::text(QAccessible::Text t) const
@@ -290,9 +272,9 @@ QString QAccessibleDoubleSpinBox::text(QAccessible::Text textType) const
     return QAccessibleWidget::text(textType);
 }
 
-#endif // QT_CONFIG(spinbox)
+#endif // QT_NO_SPINBOX
 
-#if QT_CONFIG(scrollbar)
+#ifndef QT_NO_SCROLLBAR
 /*!
   \class QAccessibleScrollBar
   \brief The QAccessibleScrollBar class implements the QAccessibleInterface for scroll bars.
@@ -325,9 +307,9 @@ QString QAccessibleScrollBar::text(QAccessible::Text t) const
     return QAccessibleAbstractSlider::text(t);
 }
 
-#endif // QT_CONFIG(scrollbar)
+#endif // QT_NO_SCROLLBAR
 
-#if QT_CONFIG(slider)
+#ifndef QT_NO_SLIDER
 /*!
   \class QAccessibleSlider
   \brief The QAccessibleSlider class implements the QAccessibleInterface for sliders.
@@ -404,9 +386,9 @@ QAbstractSlider *QAccessibleAbstractSlider::abstractSlider() const
     return static_cast<QAbstractSlider *>(object());
 }
 
-#endif // QT_CONFIG(slider)
+#endif // QT_NO_SLIDER
 
-#if QT_CONFIG(dial)
+#ifndef QT_NO_DIAL
 // ======================================= QAccessibleDial ======================================
 QAccessibleDial::QAccessibleDial(QWidget *widget)
     : QAccessibleAbstractSlider(widget, QAccessible::Dial)
@@ -427,7 +409,7 @@ QDial *QAccessibleDial::dial() const
 {
     return static_cast<QDial*>(object());
 }
-#endif // QT_CONFIG(dial)
+#endif // QT_NO_DIAL
 
 #endif // QT_NO_ACCESSIBILITY
 

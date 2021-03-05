@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -77,24 +71,24 @@ int Value::toUInt16() const
 
 bool Value::toBoolean() const
 {
-    if (isInteger() || isBoolean())
-        return static_cast<bool>(int_32());
-
-    if (isUndefined() || isNull())
+    switch (type()) {
+    case Value::Undefined_Type:
+    case Value::Null_Type:
         return false;
-
-    if (isManaged()) {
+    case Value::Boolean_Type:
+    case Value::Integer_Type:
+        return (bool)int_32();
+    case Value::Managed_Type:
 #ifdef V4_BOOTSTRAP
         Q_UNIMPLEMENTED();
 #else
-        if (String *s = stringValue())
-            return s->toQString().length() > 0;
+        if (isString())
+            return stringValue()->toQString().length() > 0;
 #endif
         return true;
+    default: // double
+        return doubleValue() && !std::isnan(doubleValue());
     }
-
-    // double
-    return doubleValue() && !std::isnan(doubleValue());
 }
 
 double Value::toInteger() const
@@ -113,10 +107,9 @@ double Value::toNumberImpl() const
     case QV4::Value::Managed_Type:
 #ifdef V4_BOOTSTRAP
         Q_UNIMPLEMENTED();
-        Q_FALLTHROUGH();
 #else
-        if (String *s = stringValue())
-            return RuntimeHelpers::stringToNumber(s->toQString());
+        if (isString())
+            return RuntimeHelpers::stringToNumber(stringValue()->toQString());
     {
         Q_ASSERT(isObject());
         Scope scope(objectValue()->engine());
@@ -141,7 +134,6 @@ QString Value::toQStringNoThrow() const
     switch (type()) {
     case Value::Empty_Type:
         Q_ASSERT(!"empty Value encountered");
-        Q_UNREACHABLE();
     case Value::Undefined_Type:
         return QStringLiteral("undefined");
     case Value::Null_Type:
@@ -152,8 +144,8 @@ QString Value::toQStringNoThrow() const
         else
             return QStringLiteral("false");
     case Value::Managed_Type:
-        if (String *s = stringValue())
-            return s->toQString();
+        if (isString())
+            return stringValue()->toQString();
         {
             Q_ASSERT(isObject());
             Scope scope(objectValue()->engine());
@@ -195,7 +187,6 @@ QString Value::toQString() const
     switch (type()) {
     case Value::Empty_Type:
         Q_ASSERT(!"empty Value encountered");
-        Q_UNREACHABLE();
     case Value::Undefined_Type:
         return QStringLiteral("undefined");
     case Value::Null_Type:
@@ -206,8 +197,8 @@ QString Value::toQString() const
         else
             return QStringLiteral("false");
     case Value::Managed_Type:
-        if (String *s = stringValue())
-            return s->toQString();
+        if (isString())
+            return stringValue()->toQString();
         {
             Q_ASSERT(isObject());
             Scope scope(objectValue()->engine());
@@ -231,10 +222,8 @@ QString Value::toQString() const
 bool Value::sameValue(Value other) const {
     if (_val == other._val)
         return true;
-    String *s = stringValue();
-    String *os = other.stringValue();
-    if (s && os)
-        return s->isEqualTo(os);
+    if (isString() && other.isString())
+        return stringValue()->isEqualTo(other.stringValue());
     if (isInteger() && other.isDouble())
         return int_32() ? (double(int_32()) == other.doubleValue()) : (other._val == 0);
     if (isDouble() && other.isInteger())
@@ -303,15 +292,15 @@ double Primitive::toInteger(double number)
 #ifndef V4_BOOTSTRAP
 Heap::String *Value::toString(ExecutionEngine *e) const
 {
-    if (String *s = stringValue())
-        return s->d();
+    if (isString())
+        return stringValue()->d();
     return RuntimeHelpers::convertToString(e, *this);
 }
 
 Heap::Object *Value::toObject(ExecutionEngine *e) const
 {
-    if (Object *o = objectValue())
-        return o->d();
+    if (isObject())
+        return objectValue()->d();
     return RuntimeHelpers::convertToObject(e, *this);
 }
 
@@ -335,8 +324,8 @@ uint Value::asArrayLength(bool *ok) const
         }
         return idx;
     }
-    if (String *s = stringValue())
-        return s->toUInt(ok);
+    if (isString())
+        return stringValue()->toUInt(ok);
 
     uint idx = toUInt32();
     double d = toNumber();

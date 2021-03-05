@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,13 +41,11 @@
 #include "qlist.h"
 #include <private/qshortcutmap_p.h>
 #include <private/qapplication_p.h>
-#if QT_CONFIG(menu)
 #include <private/qmenu_p.h>
-#endif
 #include <private/qdebug_p.h>
 
 #define QAPP_CHECK(functionName) \
-    if (Q_UNLIKELY(!qApp)) { \
+    if (!qApp) { \
         qWarning("QAction: Initialize QApplication before calling '" functionName "'."); \
         return; \
     }
@@ -65,7 +57,7 @@ QT_BEGIN_NAMESPACE
  */
 static QString qt_strippedText(QString s)
 {
-    s.remove(QStringLiteral("..."));
+    s.remove( QString::fromLatin1("...") );
     for (int i = 0; i < s.size(); ++i) {
         if (s.at(i) == QLatin1Char('&'))
             s.remove(i, 1);
@@ -93,7 +85,7 @@ QActionPrivate::~QActionPrivate()
 
 bool QActionPrivate::showStatusText(QWidget *widget, const QString &str)
 {
-#if !QT_CONFIG(statustip)
+#ifdef QT_NO_STATUSTIP
     Q_UNUSED(widget);
     Q_UNUSED(str);
 #else
@@ -114,7 +106,7 @@ void QActionPrivate::sendDataChanged()
         QWidget *w = widgets.at(i);
         QApplication::sendEvent(w, &e);
     }
-#if QT_CONFIG(graphicsview)
+#ifndef QT_NO_GRAPHICSVIEW
     for (int i = 0; i < graphicsWidgets.size(); ++i) {
         QGraphicsWidget *w = graphicsWidgets.at(i);
         QApplication::sendEvent(w, &e);
@@ -279,12 +271,14 @@ void QActionPrivate::setShortcutEnabled(bool enable, QShortcutMap &map)
 /*!
     Constructs an action with \a parent. If \a parent is an action
     group the action will be automatically inserted into the group.
-
-    \note The \a parent argument is optional since Qt 5.7.
 */
 QAction::QAction(QObject* parent)
-    : QAction(*new QActionPrivate, parent)
+    : QObject(*(new QActionPrivate), parent)
 {
+    Q_D(QAction);
+    d->group = qobject_cast<QActionGroup *>(parent);
+    if (d->group)
+        d->group->addAction(this);
 }
 
 
@@ -302,10 +296,13 @@ QAction::QAction(QObject* parent)
 
 */
 QAction::QAction(const QString &text, QObject* parent)
-    : QAction(parent)
+    : QObject(*(new QActionPrivate), parent)
 {
     Q_D(QAction);
     d->text = text;
+    d->group = qobject_cast<QActionGroup *>(parent);
+    if (d->group)
+        d->group->addAction(this);
 }
 
 /*!
@@ -321,10 +318,14 @@ QAction::QAction(const QString &text, QObject* parent)
     setToolTip().
 */
 QAction::QAction(const QIcon &icon, const QString &text, QObject* parent)
-    : QAction(text, parent)
+    : QObject(*(new QActionPrivate), parent)
 {
     Q_D(QAction);
     d->icon = icon;
+    d->text = text;
+    d->group = qobject_cast<QActionGroup *>(parent);
+    if (d->group)
+        d->group->addAction(this);
 }
 
 /*!
@@ -362,7 +363,7 @@ QList<QWidget *> QAction::associatedWidgets() const
     return d->widgets;
 }
 
-#if QT_CONFIG(graphicsview)
+#ifndef QT_NO_GRAPHICSVIEW
 /*!
   \since 4.5
   Returns a list of widgets this action has been added to.
@@ -567,7 +568,7 @@ QAction::~QAction()
         QWidget *w = d->widgets.at(i);
         w->removeAction(this);
     }
-#if QT_CONFIG(graphicsview)
+#ifndef QT_NO_GRAPHICSVIEW
     for (int i = d->graphicsWidgets.size()-1; i >= 0; --i) {
         QGraphicsWidget *w = d->graphicsWidgets.at(i);
         w->removeAction(this);
@@ -605,7 +606,6 @@ void QAction::setActionGroup(QActionGroup *group)
     d->group = group;
     if(group)
         group->addAction(this);
-    d->sendDataChanged();
 }
 
 /*!
@@ -629,7 +629,7 @@ QActionGroup *QAction::actionGroup() const
     it is displayed to the left of the menu text. There is no default
     icon.
 
-    If a null icon (QIcon::isNull()) is passed into this function,
+    If a null icon (QIcon::isNull() is passed into this function,
     the icon of the action is cleared.
 */
 void QAction::setIcon(const QIcon &icon)
@@ -645,7 +645,7 @@ QIcon QAction::icon() const
     return d->icon;
 }
 
-#if QT_CONFIG(menu)
+#ifndef QT_NO_MENU
 /*!
   Returns the menu contained by this action. Actions that contain
   menus can be used to create menu items with submenus, or inserted
@@ -672,7 +672,7 @@ void QAction::setMenu(QMenu *menu)
         menu->d_func()->setOverrideMenuAction(this);
     d->sendDataChanged();
 }
-#endif // QT_CONFIG(menu)
+#endif // QT_NO_MENU
 
 /*!
   If \a b is true then this action will be considered a separator.
@@ -1118,8 +1118,6 @@ void
 QAction::setData(const QVariant &data)
 {
     Q_D(QAction);
-    if (d->userData == data)
-        return;
     d->userData = data;
     d->sendDataChanged();
 }
@@ -1310,10 +1308,8 @@ Q_WIDGETS_EXPORT QDebug operator<<(QDebug d, const QAction *action)
             d << " toolTip=" << action->toolTip();
         if (action->isCheckable())
             d << " checked=" << action->isChecked();
-#ifndef QT_NO_SHORTCUT
         if (!action->shortcut().isEmpty())
             d << " shortcut=" << action->shortcut();
-#endif
         d << " menuRole=";
         QtDebugUtils::formatQEnum(d, action->menuRole());
         d << " visible=" << action->isVisible();

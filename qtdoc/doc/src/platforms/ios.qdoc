@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -32,11 +32,80 @@
     \ingroup supportedplatform
 
     Qt's iOS port allows you to run Qt applications on iOS devices,
-    such as iPhones, iPads, and iPod Touches.
+    such as iPhones and iPads.
 
-    \include apple-getting-started.qdocinc getting started
+    \section1 Getting Started
 
-    \section1 Examples for iOS
+    Development and deployment is done using Xcode. The supported
+    workflow is to maintain a \c .pro file based project, which
+    generates an Xcode project. Building and deploying can be done
+    using either Xcode or Qt Creator. We will look at that in more
+    detail in the next section.
+
+    The minimum deployment target for Qt applications is specified in
+    \l {Supported Platforms}. Qt then supports the following device types
+    (iOS might need to be upgraded on some devices).
+
+    \list
+        \li iPhone
+        \li iPod Touch
+        \li iPad
+    \endlist
+
+    \section2 Setting Up the Development Environment
+
+    You can download the Qt 5 installers from the \l Downloads page.
+    For more information, see \l{Getting Started with Qt}.
+
+    Before installing Qt, you first need to install
+    Xcode. You will find it in the Mac App Store \l{Xcode}{here}.
+
+    \note As \l{Xcode5Req}{required by Apple}, you should always use the latest
+    Xcode version when building your applications for the App Store.
+    In practice this means you also need the latest version of \macos to develop
+    iOS apps with Qt, due to Xcode's system requirements.
+
+    For running Qt applications in the simulator that comes with Xcode,
+    this is all you need. However, for running applications on a
+    device and publishing your applications in the App Store, you must
+    join the iOS Developer Program (see
+    \l{https://developer.apple.com/programs/ios/}), and set up
+    developer certificates and provisioning profiles. The easiest
+    solution is to use a profile that takes any App ID (a \c *).
+
+    Before building any Qt applications, you should test that Xcode
+    is set up correctly, for example, by running one of the standard
+    Xcode application templates on your device.
+
+    \section2 Building Applications From the Command Line
+
+    As mentioned previously, the development workflow on iOS consists
+    of maintaining a normal \c .pro file project and export it to
+    Xcode.
+
+    Here is how to build a project with Xcode:
+
+    \list
+        \li run qmake (if you have not done so previously)
+        \li open the resulting \c .xcodeproject file in Xcode
+        \li build the application in Xcode
+    \endlist
+
+    Note that you must re-import the project if its setup changes, for
+    example, when adding or removing source files.
+
+    \section1 Building Applications with Qt Creator
+
+    You can find information on how to set up and run iOS applications
+    in Qt Creator's manual:
+
+    \list
+        \li \l{Qt Creator: Connecting iOS devices}{Connecting iOS Devices}.
+    \endlist
+
+    As mentioned previously, you must have Xcode installed.
+
+    \section2 Examples for iOS
 
     In Qt Creator, tested examples on iOS can be looked up. Use the \c ios
     keyword to search for examples in the Qt Creator Welcome mode. Note that
@@ -44,6 +113,20 @@
 
     For a list of examples known to work on iOS devices, visit
     \l{Qt for iOS Examples}.
+
+    \section1 Using Objective-C Code in Qt Applications
+
+    Clang, the compiler used for iOS applications, allows mixing C++
+    and Objective-C code. To enable this mode, suffix your source
+    files with \.c mm, and add them to \c OBJECTIVE_SOURCES instead of
+    \c SOURCES in the \c .pro file. This makes it possible to use
+    frameworks from Apple's iOS Developer Library in Qt applications.
+    Most useful is perhaps the possibility for adding In-App
+    Purchasing with the StoreKit framework.
+
+    We currently have one example mixing Objective-C and C++ code. You
+    find it
+    \l{http://wiki.qt.io/Mixing_C_and_ObjectiveC_Code}{here}.
 
     \section1 Related Topics
 
@@ -228,19 +311,22 @@
 
     \badcode
     ios {
-        fontFiles.files = $$files(fonts/*.ttf)
+        fontFiles.files = fonts/*.ttf
         fontFiles.path = fonts
         QMAKE_BUNDLE_DATA += fontFiles
     }
     \endcode
 
-    For image resources, an alternative way is to make use of \l {Create asset catalogs and sets}
+    For image resources, an alternative way is to make use of \l {https://developer.apple.com/library/ios/recipes/xcode_help-image_catalog-1.0/Recipe.html}
     {asset catalogs} in Xcode, which can be added in a similar way:
     \badcode
     ios {
-        QMAKE_ASSET_CATALOGS += ios/Assets.xcassets
+        assets_catalogs.files = $$files($$PWD/*.xcassets)
+        QMAKE_BUNDLE_DATA += assets_catalogs
     }
     \endcode
+    Important: resources are compiled only if the .path variable is not set.
+    It is possible to recursively copy and compile directories though.
 
     \section2 Icons
 
@@ -249,10 +335,10 @@
     to set them in the .pro file.
 
     To support all resolutions and devices, several images should be created.
-    A detailed list of what is required is available at \l {App Icons on iPhone, iPad and Apple Watch}{Icon files}.
+    A detailed list of what is required is available at \l {https://developer.apple.com/library/ios/qa/qa1686/_index.html}{Icon files}.
     The filename is not important, but the actual pixel size is.
-    Just a few icons are required.
-    However, to support both iPhone and iPad, the following images
+    Just a few icons are required, especially if one does not support iOS 6.1 or earlier.
+    However, to support both iPhone and iPad, and iOS 6.1 or earlier, the following images
     are required:
 
     \list
@@ -467,10 +553,6 @@
     This allows you to produce universal applications with valid LaunchImages as required by the Apple App Store.
     \important \c "launch_images" is used internally by Qt, so it will be overwritten if used in your .pro file.
 
-    \section2 Expressing Supported iOS Versions
-
-    \include expressing-apple-os-versions.qdocinc expressing os versions
-
     \section1 Publishing to Apple App Store
 
     Verifying that your Qt for iOS application is ready for publishing to App Store can be done
@@ -478,10 +560,8 @@
     To submit the application, you can use Xcode, or the Application Loader (installed with Xcode).
     Qt Creator does not provide an interface for managing all of the settings in an Xcode project configuration.
 
-    The application should be tested on the iOS versions and devices that it is
-    targeted to support. The minimum deployment target for Qt applications
-    varies by Qt version. For more information, see
-    \l{Supported Platforms and Configurations}.
+    The application should be tested on a variety of iOS versions and devices, depending on what
+    it's targeted to support. The minimum deployment target for Qt applications is iOS 5.0.
 
     The actual publishing process involves creating a distribution certificate and a provision profile,
     creating a signed archive of your application, and running a set of validation tests on it.

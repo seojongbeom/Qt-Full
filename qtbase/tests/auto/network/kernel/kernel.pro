@@ -7,7 +7,6 @@ SUBDIRS=\
    qauthenticator \
    qnetworkproxy \
    qnetworkinterface \
-   qnetworkdatagram \
    qnetworkaddressentry \
    qhostaddress \
 
@@ -18,7 +17,7 @@ winrt: SUBDIRS -= \
 osx: SUBDIRS -= \ # QTBUG-41847
     qhostinfo \
 
-!qtConfig(private_tests): SUBDIRS -= \
+!contains(QT_CONFIG, private_tests): SUBDIRS -= \
     qauthenticator \
     qhostinfo \
 

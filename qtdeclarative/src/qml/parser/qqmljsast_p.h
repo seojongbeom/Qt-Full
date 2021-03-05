@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -253,7 +247,7 @@ class QML_PARSER_EXPORT ExpressionNode: public Node
 public:
     ExpressionNode() {}
 
-    ExpressionNode *expressionCast() override;
+    virtual ExpressionNode *expressionCast();
 };
 
 class QML_PARSER_EXPORT Statement: public Node
@@ -261,7 +255,7 @@ class QML_PARSER_EXPORT Statement: public Node
 public:
     Statement() {}
 
-    Statement *statementCast() override;
+    virtual Statement *statementCast();
 };
 
 class QML_PARSER_EXPORT NestedExpression: public ExpressionNode
@@ -273,12 +267,12 @@ public:
         : expression(expression)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return lparenToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rparenToken; }
 
 // attributes
@@ -294,12 +288,12 @@ public:
 
     ThisExpression() { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return thisToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return thisToken; }
 
 // attributes
@@ -314,12 +308,12 @@ public:
     IdentifierExpression(const QStringRef &n):
         name (n) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return identifierToken; }
 
 // attributes
@@ -334,12 +328,12 @@ public:
 
     NullExpression() { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return nullToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return nullToken; }
 
 // attributes
@@ -353,12 +347,12 @@ public:
 
     TrueLiteral() { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return trueToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return trueToken; }
 
 // attributes
@@ -372,12 +366,12 @@ public:
 
     FalseLiteral() { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return falseToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return falseToken; }
 
 // attributes
@@ -392,12 +386,12 @@ public:
     NumericLiteral(double v):
         value(v) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return literalToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return literalToken; }
 
 // attributes:
@@ -413,12 +407,12 @@ public:
     StringLiteral(const QStringRef &v):
         value (v) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return literalToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return literalToken; }
 
 // attributes:
@@ -434,12 +428,12 @@ public:
     RegExpLiteral(const QStringRef &p, int f):
         pattern (p), flags (f) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return literalToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return literalToken; }
 
 // attributes:
@@ -465,12 +459,12 @@ public:
         elements (elts), elision (e)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return lbracketToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbracketToken; }
 
 // attributes
@@ -492,12 +486,12 @@ public:
     ObjectLiteral(PropertyAssignmentList *plist):
         properties (plist) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return lbraceToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbraceToken; }
 
 // attributes
@@ -521,12 +515,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return commaToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : commaToken; }
 
     inline Elision *finish ()
@@ -565,16 +559,16 @@ public:
         return front;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     {
         if (elision)
             return elision->firstSourceLocation();
         return expression->firstSourceLocation();
     }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
         if (next)
             return next->lastSourceLocation();
@@ -595,10 +589,10 @@ public:
 
     PropertyName() { kind = K; }
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return propertyNameToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return propertyNameToken; }
 
     virtual QString asString() const = 0;
@@ -642,12 +636,12 @@ public:
         return front;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return assignment->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : assignment->lastSourceLocation(); }
 
 // attributes
@@ -665,12 +659,12 @@ public:
         : PropertyAssignment(n), value(v)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return name->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return value->lastSourceLocation(); }
 
 // attributes
@@ -697,12 +691,12 @@ public:
         : PropertyAssignment(n), type(Setter), formals(f), functionBody (b)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return getSetToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbraceToken; }
 
 // attributes
@@ -724,9 +718,9 @@ public:
     IdentifierPropertyName(const QStringRef &n):
         id (n) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    QString asString() const override { return id.toString(); }
+    virtual QString asString() const { return id.toString(); }
 
 // attributes
     QStringRef id;
@@ -740,9 +734,9 @@ public:
     StringLiteralPropertyName(const QStringRef &n):
         id (n) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    QString asString() const override { return id.toString(); }
+    virtual QString asString() const { return id.toString(); }
 
 // attributes
     QStringRef id;
@@ -756,9 +750,9 @@ public:
     NumericLiteralPropertyName(double n):
         id (n) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    QString asString() const override { return QString::number(id, 'g', 16); }
+    virtual QString asString() const { return QString::number(id, 'g', 16); }
 
 // attributes
     double id;
@@ -773,12 +767,12 @@ public:
         base (b), expression (e)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return base->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbracketToken; }
 
 // attributes
@@ -797,12 +791,12 @@ public:
         base (b), name (n)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return base->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return identifierToken; }
 
     // attributes
@@ -821,12 +815,12 @@ public:
         base (b), arguments (a)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return newToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rparenToken; }
 
     // attributes
@@ -845,12 +839,12 @@ public:
     NewExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return newToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -867,12 +861,12 @@ public:
         base (b), arguments (a)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return base->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rparenToken; }
 
 // attributes
@@ -899,12 +893,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return expression->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
         if (next)
             return next->lastSourceLocation();
@@ -932,12 +926,12 @@ public:
     PostIncrementExpression(ExpressionNode *b):
         base (b) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return base->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return incrementToken; }
 
 // attributes
@@ -953,12 +947,12 @@ public:
     PostDecrementExpression(ExpressionNode *b):
         base (b) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return base->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return decrementToken; }
 
 // attributes
@@ -974,12 +968,12 @@ public:
     DeleteExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return deleteToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -995,12 +989,12 @@ public:
     VoidExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return voidToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1016,12 +1010,12 @@ public:
     TypeOfExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return typeofToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1037,12 +1031,12 @@ public:
     PreIncrementExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return incrementToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1058,12 +1052,12 @@ public:
     PreDecrementExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return decrementToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1079,12 +1073,12 @@ public:
     UnaryPlusExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return plusToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1100,12 +1094,12 @@ public:
     UnaryMinusExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return minusToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1121,12 +1115,12 @@ public:
     TildeExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return tildeToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1142,12 +1136,12 @@ public:
     NotExpression(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return notToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression->lastSourceLocation(); }
 
 // attributes
@@ -1164,14 +1158,14 @@ public:
         left (l), op (o), right (r)
         { kind = K; }
 
-    BinaryExpression *binaryExpressionCast() override;
+    virtual BinaryExpression *binaryExpressionCast();
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return left->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return right->lastSourceLocation(); }
 
 // attributes
@@ -1190,12 +1184,12 @@ public:
         expression (e), ok (t), ko (f)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return expression->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return ko->lastSourceLocation(); }
 
 // attributes
@@ -1214,12 +1208,12 @@ public:
     Expression(ExpressionNode *l, ExpressionNode *r):
         left (l), right (r) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return left->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return right->lastSourceLocation(); }
 
 // attributes
@@ -1236,12 +1230,12 @@ public:
     Block(StatementList *slist):
         statements (slist) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return lbraceToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbraceToken; }
 
     // attributes
@@ -1267,12 +1261,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return statement->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : statement->lastSourceLocation(); }
 
     inline StatementList *finish ()
@@ -1296,12 +1290,12 @@ public:
         declarations (vlist)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return declarationKindToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -1319,12 +1313,12 @@ public:
         name (n), expression (e), readOnly(false)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return expression ? expression->lastSourceLocation() : identifierToken; }
 
 // attributes
@@ -1351,12 +1345,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return declaration->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
         if (next)
             return next->lastSourceLocation();
@@ -1388,12 +1382,12 @@ public:
 
     EmptyStatement() { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return semicolonToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -1408,12 +1402,12 @@ public:
     ExpressionStatement(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return expression->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -1430,12 +1424,12 @@ public:
         expression (e), ok (t), ko (f)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return ifToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
         if (ko)
             return ko->lastSourceLocation();
@@ -1462,12 +1456,12 @@ public:
         statement (stmt), expression (e)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return doToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -1489,12 +1483,12 @@ public:
         expression (e), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return whileToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1514,12 +1508,12 @@ public:
         initialiser (i), condition (c), expression (e), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return forToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1543,12 +1537,12 @@ public:
         declarations (vlist), condition (c), expression (e), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return forToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1573,12 +1567,12 @@ public:
         initialiser (i), expression (e), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return forToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1600,12 +1594,12 @@ public:
         declaration (v), expression (e), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return forToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1627,12 +1621,12 @@ public:
     ContinueStatement(const QStringRef &l = QStringRef()):
         label (l) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return continueToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -1650,12 +1644,12 @@ public:
     BreakStatement(const QStringRef &l):
         label (l) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return breakToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
     // attributes
@@ -1673,12 +1667,12 @@ public:
     ReturnStatement(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return returnToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -1696,12 +1690,12 @@ public:
         expression (e), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return withToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1721,12 +1715,12 @@ public:
         clauses (c), defaultClause (d), moreClauses (r)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return lbraceToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbraceToken; }
 
 // attributes
@@ -1746,12 +1740,12 @@ public:
         expression (e), block (b)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return switchToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return block->rbraceToken; }
 
 // attributes
@@ -1771,12 +1765,12 @@ public:
         expression (e), statements (slist)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return caseToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statements ? statements->lastSourceLocation() : colonToken; }
 
 // attributes
@@ -1803,12 +1797,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return clause->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : clause->lastSourceLocation(); }
 
     inline CaseClauses *finish ()
@@ -1832,12 +1826,12 @@ public:
         statements (slist)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return defaultToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statements ? statements->lastSourceLocation() : colonToken; }
 
 // attributes
@@ -1855,12 +1849,12 @@ public:
         label (l), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1878,12 +1872,12 @@ public:
     ThrowStatement(ExpressionNode *e):
         expression (e) { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return throwToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
     // attributes
@@ -1901,12 +1895,12 @@ public:
         name (n), statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return catchToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -1927,12 +1921,12 @@ public:
         statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return finallyToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement ? statement->lastSourceLocation() : finallyToken; }
 
 // attributes
@@ -1957,12 +1951,12 @@ public:
         statement (stmt), catchExpression (c), finallyExpression (0)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return tryToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
         if (finallyExpression)
             return finallyExpression->statement->rbraceToken;
@@ -1988,12 +1982,12 @@ public:
         name (n), formals (f), body (b)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return functionToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbraceToken; }
 
 // attributes
@@ -2017,7 +2011,7 @@ public:
         FunctionExpression(n, f, b)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 };
 
 class QML_PARSER_EXPORT FormalParameterList: public Node
@@ -2037,12 +2031,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : identifierToken; }
 
     inline FormalParameterList *finish ()
@@ -2085,12 +2079,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return element->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : element->lastSourceLocation(); }
 
     inline SourceElements *finish ()
@@ -2114,12 +2108,12 @@ public:
         elements (elts)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return elements ? elements->firstSourceLocation() : SourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return elements ? elements->lastSourceLocation() : SourceLocation(); }
 
 // attributes
@@ -2135,12 +2129,12 @@ public:
         elements (elts)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return elements ? elements->firstSourceLocation() : SourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return elements ? elements->lastSourceLocation() : SourceLocation(); }
 
 // attributes
@@ -2156,12 +2150,12 @@ public:
         declaration (f)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return declaration->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return declaration->lastSourceLocation(); }
 
 // attributes
@@ -2177,12 +2171,12 @@ public:
         statement (stmt)
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return statement->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
 // attributes
@@ -2197,12 +2191,12 @@ public:
     DebuggerStatement()
         { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return debuggerToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -2234,12 +2228,12 @@ public:
         return head;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : identifierToken; }
 
 // attributes
@@ -2261,12 +2255,12 @@ public:
         : importUri(uri)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return importToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -2284,10 +2278,10 @@ public:
 class QML_PARSER_EXPORT UiObjectMember: public Node
 {
 public:
-    SourceLocation firstSourceLocation() const override = 0;
-    SourceLocation lastSourceLocation() const override = 0;
+    virtual SourceLocation firstSourceLocation() const = 0;
+    virtual SourceLocation lastSourceLocation() const = 0;
 
-    UiObjectMember *uiObjectMemberCast() override;
+    virtual UiObjectMember *uiObjectMemberCast();
 };
 
 class QML_PARSER_EXPORT UiObjectMemberList: public Node
@@ -2307,12 +2301,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return member->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : member->lastSourceLocation(); }
 
     UiObjectMemberList *finish()
@@ -2351,12 +2345,12 @@ public:
         return head;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : identifierToken; }
 
 // attributes
@@ -2374,12 +2368,12 @@ public:
         : pragmaType(type)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return pragmaToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return semicolonToken; }
 
 // attributes
@@ -2424,12 +2418,12 @@ public:
         return head;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return headerItem->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : headerItem->lastSourceLocation(); }
 
 // attributes
@@ -2446,9 +2440,9 @@ public:
         : headers(headers), members(members)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     {
         if (headers)
             return headers->firstSourceLocation();
@@ -2457,7 +2451,7 @@ public:
         return SourceLocation();
     }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
         if (members)
             return members->lastSourceLocation();
@@ -2488,12 +2482,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return member->firstSourceLocation(); }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : member->lastSourceLocation(); }
 
     UiArrayMemberList *finish()
@@ -2518,12 +2512,12 @@ public:
         : members(members)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return lbraceToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbraceToken; }
 
 // attributes
@@ -2537,11 +2531,11 @@ class QML_PARSER_EXPORT UiParameterList: public Node
 public:
     QQMLJS_DECLARE_AST_NODE(UiParameterList)
 
-    UiParameterList(UiQualifiedId *t, const QStringRef &n):
+    UiParameterList(const QStringRef &t, const QStringRef &n):
         type (t), name (n), next (this)
         { kind = K; }
 
-    UiParameterList(UiParameterList *previous, UiQualifiedId *t, const QStringRef &n):
+    UiParameterList(UiParameterList *previous, const QStringRef &t, const QStringRef &n):
         type (t), name (n)
     {
         kind = K;
@@ -2549,12 +2543,12 @@ public:
         previous->next = this;
     }
 
-    void accept0(Visitor *) override;
+    virtual void accept0(Visitor *);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return propertyTypeToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return next ? next->lastSourceLocation() : identifierToken; }
 
     inline UiParameterList *finish ()
@@ -2565,7 +2559,7 @@ public:
     }
 
 // attributes
-    UiQualifiedId *type;
+    QStringRef type;
     QStringRef name;
     UiParameterList *next;
     SourceLocation commaToken;
@@ -2578,20 +2572,20 @@ class QML_PARSER_EXPORT UiPublicMember: public UiObjectMember
 public:
     QQMLJS_DECLARE_AST_NODE(UiPublicMember)
 
-    UiPublicMember(UiQualifiedId *memberType,
+    UiPublicMember(const QStringRef &memberType,
                    const QStringRef &name)
         : type(Property), memberType(memberType), name(name), statement(0), binding(0), isDefaultMember(false), isReadonlyMember(false), parameters(0)
     { kind = K; }
 
-    UiPublicMember(UiQualifiedId *memberType,
+    UiPublicMember(const QStringRef &memberType,
                    const QStringRef &name,
                    Statement *statement)
         : type(Property), memberType(memberType), name(name), statement(statement), binding(0), isDefaultMember(false), isReadonlyMember(false), parameters(0)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     {
       if (defaultToken.isValid())
         return defaultToken;
@@ -2601,7 +2595,7 @@ public:
       return propertyToken;
     }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
       if (binding)
           return binding->lastSourceLocation();
@@ -2614,7 +2608,7 @@ public:
 // attributes
     enum { Signal, Property } type;
     QStringRef typeModifier;
-    UiQualifiedId *memberType;
+    QStringRef memberType;
     QStringRef name;
     Statement *statement; // initialized with a JS expression
     UiObjectMember *binding; // initialized with a QML object or array.
@@ -2641,12 +2635,12 @@ public:
         : qualifiedTypeNameId(qualifiedTypeNameId), initializer(initializer)
     { kind = K; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return qualifiedTypeNameId->identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return initializer->rbraceToken; }
 
 // attributes
@@ -2663,7 +2657,7 @@ public:
         : sourceElement(sourceElement)
     { kind = K; }
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     {
       if (FunctionDeclaration *funDecl = cast<FunctionDeclaration *>(sourceElement))
         return funDecl->firstSourceLocation();
@@ -2673,7 +2667,7 @@ public:
       return SourceLocation();
     }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     {
       if (FunctionDeclaration *funDecl = cast<FunctionDeclaration *>(sourceElement))
         return funDecl->lastSourceLocation();
@@ -2683,7 +2677,7 @@ public:
       return SourceLocation();
     }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
 
 // attributes
@@ -2704,7 +2698,7 @@ public:
           hasOnToken(false)
     { kind = K; }
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     {
         if (hasOnToken && qualifiedTypeNameId)
             return qualifiedTypeNameId->identifierToken;
@@ -2712,10 +2706,10 @@ public:
         return qualifiedId->identifierToken;
     }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return initializer->rbraceToken; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
 
 // attributes
@@ -2737,13 +2731,13 @@ public:
           statement(statement)
     { kind = K; }
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return qualifiedId->identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return statement->lastSourceLocation(); }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
 // attributes
     UiQualifiedId *qualifiedId;
@@ -2762,13 +2756,13 @@ public:
           members(members)
     { kind = K; }
 
-    SourceLocation firstSourceLocation() const override
+    virtual SourceLocation firstSourceLocation() const
     { return qualifiedId->identifierToken; }
 
-    SourceLocation lastSourceLocation() const override
+    virtual SourceLocation lastSourceLocation() const
     { return rbracketToken; }
 
-    void accept0(Visitor *visitor) override;
+    virtual void accept0(Visitor *visitor);
 
 // attributes
     UiQualifiedId *qualifiedId;

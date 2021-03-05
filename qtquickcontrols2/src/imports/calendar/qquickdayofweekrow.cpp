@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Labs Calendar module of the Qt Toolkit.
@@ -37,7 +37,7 @@
 #include "qquickdayofweekrow_p.h"
 #include "qquickdayofweekmodel_p.h"
 
-#include <QtQuickTemplates2/private/qquickcontrol_p_p.h>
+#include <QtLabsTemplates/private/qquickcontrol_p_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -72,7 +72,7 @@ QT_BEGIN_NAMESPACE
 class QQuickDayOfWeekRowPrivate : public QQuickControlPrivate
 {
 public:
-    QQuickDayOfWeekRowPrivate() : delegate(nullptr), model(nullptr) { }
+    QQuickDayOfWeekRowPrivate() : delegate(Q_NULLPTR), model(Q_NULLPTR) { }
 
     void resizeItems();
 
@@ -90,8 +90,7 @@ void QQuickDayOfWeekRowPrivate::resizeItems()
     itemSize.setWidth((contentItem->width() - 6 * spacing) / 7);
     itemSize.setHeight(contentItem->height());
 
-    const auto childItems = contentItem->childItems();
-    for (QQuickItem *item : childItems)
+    foreach (QQuickItem *item, contentItem->childItems())
         item->setSize(itemSize);
 }
 

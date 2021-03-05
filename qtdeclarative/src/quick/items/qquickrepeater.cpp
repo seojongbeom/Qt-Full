@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -314,11 +308,7 @@ void QQuickRepeater::setDelegate(QQmlComponent *delegate)
 /*!
     \qmlproperty int QtQuick::Repeater::count
 
-    This property holds the number of items in the model.
-
-    \note The number of items in the model as reported by count may differ from
-    the number of created delegates if the Repeater is in the process of
-    instantiating delegates or is incorrectly set up.
+    This property holds the number of items in the repeater.
 */
 int QQuickRepeater::count() const
 {
@@ -374,11 +364,8 @@ void QQuickRepeater::clear()
                 if (complete)
                     emit itemRemoved(i, item);
                 d->model->release(item);
-            }
-        }
-        for (QQuickItem *item : qAsConst(d->deletables)) {
-            if (item)
                 item->setParentItem(0);
+            }
         }
     }
     d->deletables.clear();
@@ -404,7 +391,7 @@ void QQuickRepeater::regenerate()
 void QQuickRepeaterPrivate::requestItems()
 {
     for (int i = 0; i < itemCount; i++) {
-        QObject *object = model->object(i, QQmlIncubator::AsynchronousIfNested);
+        QObject *object = model->object(i, false);
         if (object)
             model->release(object);
     }
@@ -413,7 +400,7 @@ void QQuickRepeaterPrivate::requestItems()
 void QQuickRepeater::createdItem(int index, QObject *)
 {
     Q_D(QQuickRepeater);
-    QObject *object = d->model->object(index, QQmlIncubator::AsynchronousIfNested);
+    QObject *object = d->model->object(index, false);
     QQuickItem *item = qmlobject_cast<QQuickItem*>(object);
     emit itemAdded(index, item);
 }
@@ -430,7 +417,7 @@ void QQuickRepeater::initItem(int index, QObject *object)
                 if (!d->delegateValidated) {
                     d->delegateValidated = true;
                     QObject* delegate = this->delegate();
-                    qmlWarning(delegate ? delegate : this) << QQuickRepeater::tr("Delegate must be of Item type");
+                    qmlInfo(delegate ? delegate : this) << QQuickRepeater::tr("Delegate must be of Item type");
                 }
             }
             return;
@@ -468,7 +455,7 @@ void QQuickRepeater::modelUpdated(const QQmlChangeSet &changeSet, bool reset)
 
     int difference = 0;
     QHash<int, QVector<QPointer<QQuickItem> > > moved;
-    for (const QQmlChangeSet::Change &remove : changeSet.removes()) {
+    foreach (const QQmlChangeSet::Change &remove, changeSet.removes()) {
         int index = qMin(remove.index, d->deletables.count());
         int count = qMin(remove.index + remove.count, d->deletables.count()) - index;
         if (remove.isMove()) {
@@ -490,7 +477,7 @@ void QQuickRepeater::modelUpdated(const QQmlChangeSet &changeSet, bool reset)
         difference -= remove.count;
     }
 
-    for (const QQmlChangeSet::Change &insert : changeSet.inserts()) {
+    foreach (const QQmlChangeSet::Change &insert, changeSet.inserts()) {
         int index = qMin(insert.index, d->deletables.count());
         if (insert.isMove()) {
             QVector<QPointer<QQuickItem> > items = moved.value(insert.moveId);
@@ -498,20 +485,13 @@ void QQuickRepeater::modelUpdated(const QQmlChangeSet &changeSet, bool reset)
             QQuickItem *stackBefore = index + items.count() < d->deletables.count()
                     ? d->deletables.at(index + items.count())
                     : this;
-            if (stackBefore) {
-                for (int i = index; i < index + items.count(); ++i) {
-                    if (i < d->deletables.count()) {
-                        QPointer<QQuickItem> item = d->deletables.at(i);
-                        if (item)
-                            item->stackBefore(stackBefore);
-                    }
-                }
-            }
+            for (int i = index; i < index + items.count(); ++i)
+                d->deletables.at(i)->stackBefore(stackBefore);
         } else for (int i = 0; i < insert.count; ++i) {
             int modelIndex = index + i;
             ++d->itemCount;
             d->deletables.insert(modelIndex, 0);
-            QObject *object = d->model->object(modelIndex, QQmlIncubator::AsynchronousIfNested);
+            QObject *object = d->model->object(modelIndex, false);
             if (object)
                 d->model->release(object);
         }
@@ -523,5 +503,3 @@ void QQuickRepeater::modelUpdated(const QQmlChangeSet &changeSet, bool reset)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qquickrepeater_p.cpp"

@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -60,9 +50,14 @@ TestCase {
     when: windowShown
     name: "ToolButton"
 
-    Component {
-        id: signalSpy
-        SignalSpy { }
+    SignalSpy {
+        id: pressedSpy
+        signalName: "pressedChanged"
+    }
+
+    SignalSpy {
+        id: clickedSpy
+        signalName: "clicked"
     }
 
     Component {
@@ -70,8 +65,22 @@ TestCase {
         ToolButton { }
     }
 
+    function init() {
+        verify(!pressedSpy.target)
+        verify(!clickedSpy.target)
+        compare(pressedSpy.count, 0)
+        compare(clickedSpy.count, 0)
+    }
+
+    function cleanup() {
+        pressedSpy.target = null
+        clickedSpy.target = null
+        pressedSpy.clear()
+        clickedSpy.clear()
+    }
+
     function test_text() {
-        var control = createTemporaryObject(toolButton, testCase)
+        var control = toolButton.createObject(testCase)
         verify(control)
 
         compare(control.text, "")
@@ -79,82 +88,65 @@ TestCase {
         compare(control.text, "ToolButton")
         control.text = ""
         compare(control.text, "")
+
+        control.destroy()
     }
 
     function test_mouse() {
-        var control = createTemporaryObject(toolButton, testCase)
+        var control = toolButton.createObject(testCase)
         verify(control)
 
-        var pressedSpy = signalSpy.createObject(control, {target: control, signalName: "pressedChanged"})
+        pressedSpy.target = control
+        clickedSpy.target = control
         verify(pressedSpy.valid)
-
-        var downSpy = signalSpy.createObject(control, {target: control, signalName: "downChanged"})
-        verify(downSpy.valid)
-
-        var clickedSpy = signalSpy.createObject(control, {target: control, signalName: "clicked"})
         verify(clickedSpy.valid)
 
         // check
-        mousePress(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mousePress(control, control.width / 2, control.height / 2, Qt.LeftToolButton)
         compare(pressedSpy.count, 1)
-        compare(downSpy.count, 1)
         compare(control.pressed, true)
-        compare(control.down, true)
-        mouseRelease(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mouseRelease(control, control.width / 2, control.height / 2, Qt.LeftToolButton)
         compare(clickedSpy.count, 1)
         compare(pressedSpy.count, 2)
-        compare(downSpy.count, 2)
         compare(control.pressed, false)
-        compare(control.down, false)
 
         // uncheck
-        mousePress(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mousePress(control, control.width / 2, control.height / 2, Qt.LeftToolButton)
         compare(pressedSpy.count, 3)
-        compare(downSpy.count, 3)
         compare(control.pressed, true)
-        compare(control.down, true)
-        mouseRelease(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mouseRelease(control, control.width / 2, control.height / 2, Qt.LeftToolButton)
         compare(clickedSpy.count, 2)
         compare(pressedSpy.count, 4)
-        compare(downSpy.count, 4)
         compare(control.pressed, false)
-        compare(control.down, false)
 
         // release outside
-        mousePress(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mousePress(control, control.width / 2, control.height / 2, Qt.LeftToolButton)
         compare(pressedSpy.count, 5)
-        compare(downSpy.count, 5)
         compare(control.pressed, true)
-        compare(control.down, true)
-        mouseMove(control, control.width * 2, control.height * 2)
+        mouseMove(control, control.width * 2, control.height * 2, 0, Qt.LeftToolButton)
         compare(control.pressed, false)
-        compare(control.down, false)
-        mouseRelease(control, control.width * 2, control.height * 2, Qt.LeftButton)
+        mouseRelease(control, control.width * 2, control.height * 2, Qt.LeftToolButton)
         compare(clickedSpy.count, 2)
         compare(pressedSpy.count, 6)
-        compare(downSpy.count, 6)
         compare(control.pressed, false)
-        compare(control.down, false)
 
         // right button
         mousePress(control, control.width / 2, control.height / 2, Qt.RightButton)
         compare(pressedSpy.count, 6)
-        compare(downSpy.count, 6)
         compare(control.pressed, false)
-        compare(control.down, false)
         mouseRelease(control, control.width / 2, control.height / 2, Qt.RightButton)
         compare(clickedSpy.count, 2)
         compare(pressedSpy.count, 6)
-        compare(downSpy.count, 6)
         compare(control.pressed, false)
-        compare(control.down, false)
+
+        control.destroy()
     }
 
     function test_keys() {
-        var control = createTemporaryObject(toolButton, testCase)
+        var control = toolButton.createObject(testCase)
         verify(control)
 
-        var clickedSpy = signalSpy.createObject(control, {target: control, signalName: "clicked"})
+        clickedSpy.target = control
         verify(clickedSpy.valid)
 
         control.forceActiveFocus()
@@ -174,11 +166,14 @@ TestCase {
             keyClick(keys[i])
             compare(clickedSpy.count, 2)
         }
+
+        control.destroy()
     }
 
     function test_baseline() {
-        var control = createTemporaryObject(toolButton, testCase)
+        var control = toolButton.createObject(testCase)
         verify(control)
-        compare(control.baselineOffset, control.contentItem.y + control.contentItem.baselineOffset)
+        compare(control.baselineOffset, control.label.y + control.label.baselineOffset)
+        control.destroy()
     }
 }

@@ -10,4 +10,4 @@ MOC_DIR=tmp
 
 QT = core-private network-private testlib
 
-requires(qtConfig(private_tests))
+requires(contains(QT_CONFIG,private_tests))

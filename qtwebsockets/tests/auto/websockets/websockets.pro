@@ -3,7 +3,7 @@ TEMPLATE = subdirs
 SUBDIRS = \
     qwebsocketcorsauthenticator
 
-qtConfig(private_tests): SUBDIRS += \
+contains(QT_CONFIG, private_tests): SUBDIRS += \
    websocketprotocol \
    dataprocessor \
    websocketframe \
@@ -14,6 +14,3 @@ qtConfig(private_tests): SUBDIRS += \
 SUBDIRS += \
     qwebsocket \
     qwebsocketserver
-
-# QTBUG-60268
-boot2qt: SUBDIRS -= qwebsocketserver

@@ -1,10 +1,9 @@
 HEADERS += \
-    $$PWD/qevdevtablethandler_p.h \
-    $$PWD/qevdevtabletmanager_p.h
+    $$PWD/qevdevtablet_p.h
 
 SOURCES += \
-    $$PWD/qevdevtablethandler.cpp \
-    $$PWD/qevdevtabletmanager.cpp
+    $$PWD/qevdevtablet.cpp
 
-qtConfig(libudev): \
-    QMAKE_USE_PRIVATE += libudev
+contains(QT_CONFIG, libudev) {
+    LIBS_PRIVATE += $$QMAKE_LIBS_LIBUDEV
+}

@@ -2,9 +2,18 @@
 TYPE = $$basename(_PRO_FILE_PWD_)
 dn = $$dirname(_PRO_FILE_PWD_)
 FORCE = $$basename(dn)
-suffix = $$TYPE
 
-CONFIG += testcase
+equals(FORCE, no-cxx11) {
+    suffix = NoCxx11_$$TYPE
+    DEFINES += QT_ATOMIC_FORCE_NO_CXX11
+} else: equals(FORCE, gcc) {
+    suffix = Gcc_$$TYPE
+    DEFINES += QT_ATOMIC_FORCE_GCC
+} else {
+    suffix = $$TYPE
+}
+
+CONFIG += testcase parallel_test
 QT = core testlib
 TARGET = tst_qatomicinteger_$$lower($$suffix)
 SOURCES = $$PWD/tst_qatomicinteger.cpp

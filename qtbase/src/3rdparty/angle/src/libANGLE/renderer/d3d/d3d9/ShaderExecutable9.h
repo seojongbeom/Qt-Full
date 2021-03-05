@@ -22,6 +22,8 @@ class ShaderExecutable9 : public ShaderExecutableD3D
     ShaderExecutable9(const void *function, size_t length, IDirect3DVertexShader9 *executable);
     virtual ~ShaderExecutable9();
 
+    static ShaderExecutable9 *makeShaderExecutable9(ShaderExecutableD3D *executable);
+
     IDirect3DPixelShader9 *getPixelShader() const;
     IDirect3DVertexShader9 *getVertexShader() const;
 

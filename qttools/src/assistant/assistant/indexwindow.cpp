@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -58,24 +63,24 @@ IndexWindow::IndexWindow(QWidget *parent)
     layout->addWidget(l);
 
     l->setBuddy(m_searchLineEdit);
-    connect(m_searchLineEdit, &QLineEdit::textChanged,
-            this, &IndexWindow::filterIndices);
+    connect(m_searchLineEdit, SIGNAL(textChanged(QString)), this,
+        SLOT(filterIndices(QString)));
     m_searchLineEdit->installEventFilter(this);
     layout->setMargin(4);
     layout->addWidget(m_searchLineEdit);
 
     HelpEngineWrapper &helpEngine = HelpEngineWrapper::instance();
     m_indexWidget->installEventFilter(this);
-    connect(helpEngine.indexModel(), &QHelpIndexModel::indexCreationStarted,
-            this, &IndexWindow::disableSearchLineEdit);
-    connect(helpEngine.indexModel(), &QHelpIndexModel::indexCreated,
-            this, &IndexWindow::enableSearchLineEdit);
-    connect(m_indexWidget, &QHelpIndexWidget::linkActivated,
-            this, &IndexWindow::linkActivated);
-    connect(m_indexWidget, &QHelpIndexWidget::linksActivated,
-            this, &IndexWindow::linksActivated);
-    connect(m_searchLineEdit, &QLineEdit::returnPressed,
-            m_indexWidget, &QHelpIndexWidget::activateCurrentItem);
+    connect(helpEngine.indexModel(), SIGNAL(indexCreationStarted()), this,
+        SLOT(disableSearchLineEdit()));
+    connect(helpEngine.indexModel(), SIGNAL(indexCreated()), this,
+        SLOT(enableSearchLineEdit()));
+    connect(m_indexWidget, SIGNAL(linkActivated(QUrl,QString)), this,
+        SIGNAL(linkActivated(QUrl)));
+    connect(m_indexWidget, SIGNAL(linksActivated(QMap<QString,QUrl>,QString)),
+        this, SIGNAL(linksActivated(QMap<QString,QUrl>,QString)));
+    connect(m_searchLineEdit, SIGNAL(returnPressed()), m_indexWidget,
+        SLOT(activateCurrentItem()));
     layout->addWidget(m_indexWidget);
 
     m_indexWidget->viewport()->installEventFilter(this);
@@ -111,7 +116,7 @@ bool IndexWindow::eventFilter(QObject *obj, QEvent *e)
             }
             break;
         case Qt::Key_Down:
-            idx = m_indexWidget->model()->index(idx.row() + 1,
+            idx = m_indexWidget->model()->index(idx.row()+1,
                 idx.column(), idx.parent());
             if (idx.isValid()) {
                 m_indexWidget->setCurrentIndex(idx);
@@ -194,16 +199,16 @@ void IndexWindow::open(QHelpIndexWidget* indexWidget, const QModelIndex &index)
     TRACE_OBJ
     QHelpIndexModel *model = qobject_cast<QHelpIndexModel*>(indexWidget->model());
     if (model) {
-        const QString keyword = model->data(index, Qt::DisplayRole).toString();
-        const QMap<QString, QUrl> links = model->linksForKeyword(keyword);
+        QString keyword = model->data(index, Qt::DisplayRole).toString();
+        QMap<QString, QUrl> links = model->linksForKeyword(keyword);
 
         QUrl url;
         if (links.count() > 1) {
             TopicChooser tc(this, keyword, links);
             if (tc.exec() == QDialog::Accepted)
                 url = tc.link();
-        } else if (!links.isEmpty()) {
-            url = links.first();
+        } else if (links.count() == 1) {
+            url = links.constBegin().value();
         } else {
             return;
         }

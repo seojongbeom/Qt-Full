@@ -1,11 +1,11 @@
 /****************************************************************************
 **
 ** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Windows main function of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:BSD$
+** $QT_BEGIN_LICENSE:BSD-NEW$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
@@ -53,7 +53,9 @@
 #include "qstring.h"
 #include "qvector.h"
 
-#include <shlobj.h>
+#ifndef Q_OS_WINCE
+#  include <shlobj.h>
+#endif
 
 /*
   This file contains the code in the qtmain library for Windows.
@@ -61,8 +63,19 @@
   linking to the Qt DLL.
 
   When a Windows application starts, the WinMain function is
-  invoked.
+  invoked. WinMain calls qWinMain in the Qt DLL/library, which
+  initializes Qt.
 */
+
+QT_BEGIN_NAMESPACE
+
+#if defined(Q_OS_WINCE)
+extern void __cdecl qWinMain(HINSTANCE, HINSTANCE, LPSTR, int, int &, QVector<char *> &);
+#else
+extern void qWinMain(HINSTANCE, HINSTANCE, LPSTR, int, int &, QVector<char *> &);
+#endif
+
+QT_END_NAMESPACE
 
 QT_USE_NAMESPACE
 
@@ -71,7 +84,11 @@ QT_USE_NAMESPACE
 int qMain(int, char **);
 #define main qMain
 #else
+#ifdef Q_OS_WINCE
+extern "C" int __cdecl main(int, char **);
+#else
 extern "C" int main(int, char **);
+#endif
 #endif
 
 /*
@@ -79,6 +96,8 @@ extern "C" int main(int, char **);
   NOTE: WinMain() won't be called if the application was linked as a "console"
   application.
 */
+
+#ifndef Q_OS_WINCE
 
 // Convert a wchar_t to char string, equivalent to QString::toLocal8Bit()
 // when passed CP_ACP.
@@ -107,3 +126,48 @@ extern "C" int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR /*cmdParamarg*/, int
     delete [] argv;
     return exitCode;
 }
+
+#else // !Q_OS_WINCE
+
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR /*wCmdParam*/, int cmdShow)
+{
+    QByteArray cmdParam = QString::fromWCharArray(GetCommandLine()).toLocal8Bit();
+
+    wchar_t appName[MAX_PATH];
+    GetModuleFileName(0, appName, MAX_PATH);
+    cmdParam.prepend(QString(QLatin1String("\"%1\" ")).arg(QString::fromWCharArray(appName)).toLocal8Bit());
+
+    int argc = 0;
+    QVector<char *> argv(8);
+    qWinMain(instance, prevInstance, cmdParam.data(), cmdShow, argc, argv);
+
+    wchar_t uniqueAppID[MAX_PATH];
+    GetModuleFileName(0, uniqueAppID, MAX_PATH);
+    QString uid = QString::fromWCharArray(uniqueAppID).toLower().replace(QLatin1String("\\"), QLatin1String("_"));
+
+    // If there exists an other instance of this application
+    // it will be the owner of a mutex with the unique ID.
+    HANDLE mutex = CreateMutex(NULL, TRUE, (LPCWSTR)uid.utf16());
+    if (mutex && ERROR_ALREADY_EXISTS == GetLastError()) {
+        CloseHandle(mutex);
+
+        // The app is already running, so we use the unique
+        // ID to create a unique messageNo, which is used
+        // as the registered class name for the windows
+        // created. Set the first instance's window to the
+        // foreground, else just terminate.
+        // Use bitwise 0x01 OR to reactivate window state if
+        // it was hidden
+        UINT msgNo = RegisterWindowMessage((LPCWSTR)uid.utf16());
+        HWND aHwnd = FindWindow((LPCWSTR)QString::number(msgNo).utf16(), 0);
+        if (aHwnd)
+            SetForegroundWindow((HWND)(((ULONG)aHwnd) | 0x01));
+        return 0;
+    }
+
+    int result = main(argc, argv.data());
+    CloseHandle(mutex);
+    return result;
+}
+
+#endif // Q_OS_WINCE

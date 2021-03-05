@@ -1,6 +1,6 @@
-import QtQml 2.0
+import QtQuick 2.0
 
-QtObject {
+Item {
     Timer {
         running: true
         interval: 1

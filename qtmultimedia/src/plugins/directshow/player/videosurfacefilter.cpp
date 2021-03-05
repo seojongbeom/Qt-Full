@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,222 +35,226 @@
 
 #include "directshoweventloop.h"
 #include "directshowglobal.h"
-#include "directshowvideobuffer.h"
+#include "directshowpinenum.h"
+#include "mediasamplevideobuffer.h"
 
+#include <QtCore/qcoreapplication.h>
+#include <QtCore/qcoreevent.h>
 #include <QtCore/qthread.h>
-#include <QtCore/qloggingcategory.h>
 #include <qabstractvideosurface.h>
 
 #include <initguid.h>
-
-QT_BEGIN_NAMESPACE
-
-Q_LOGGING_CATEGORY(qLcRenderFilter, "qt.multimedia.plugins.directshow.renderfilter")
 
 // { e23cad72-153d-406c-bf3f-4c4b523d96f2 }
 DEFINE_GUID(CLSID_VideoSurfaceFilter,
 0xe23cad72, 0x153d, 0x406c, 0xbf, 0x3f, 0x4c, 0x4b, 0x52, 0x3d, 0x96, 0xf2);
 
-class VideoSurfaceInputPin : public DirectShowInputPin
-{
-    DIRECTSHOW_OBJECT
-
-public:
-    VideoSurfaceInputPin(VideoSurfaceFilter *filter);
-
-    // DirectShowPin
-    bool isMediaTypeSupported(const AM_MEDIA_TYPE *type) override;
-    bool setMediaType(const AM_MEDIA_TYPE *type) override;
-
-    HRESULT completeConnection(IPin *pin);
-    HRESULT connectionEnded();
-
-    // IPin
-    STDMETHODIMP ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt);
-    STDMETHODIMP Disconnect();
-    STDMETHODIMP EndOfStream();
-    STDMETHODIMP BeginFlush();
-    STDMETHODIMP EndFlush();
-
-    // IMemInputPin
-    STDMETHODIMP GetAllocatorRequirements(ALLOCATOR_PROPERTIES *pProps);
-    STDMETHODIMP Receive(IMediaSample *pMediaSample);
-
-private:
-    VideoSurfaceFilter *m_videoSurfaceFilter;
-};
-
-VideoSurfaceInputPin::VideoSurfaceInputPin(VideoSurfaceFilter *filter)
-    : DirectShowInputPin(filter, QStringLiteral("Input"))
-    , m_videoSurfaceFilter(filter)
-{
-}
-
-bool VideoSurfaceInputPin::isMediaTypeSupported(const AM_MEDIA_TYPE *type)
-{
-    return m_videoSurfaceFilter->isMediaTypeSupported(type);
-}
-
-bool VideoSurfaceInputPin::setMediaType(const AM_MEDIA_TYPE *type)
-{
-    if (!DirectShowInputPin::setMediaType(type))
-        return false;
-
-    return m_videoSurfaceFilter->setMediaType(type);
-}
-
-HRESULT VideoSurfaceInputPin::completeConnection(IPin *pin)
-{
-    HRESULT hr = DirectShowInputPin::completeConnection(pin);
-    if (FAILED(hr))
-        return hr;
-
-    return m_videoSurfaceFilter->completeConnection(pin);
-}
-
-HRESULT VideoSurfaceInputPin::connectionEnded()
-{
-    HRESULT hr = DirectShowInputPin::connectionEnded();
-    if (FAILED(hr))
-        return hr;
-
-    return m_videoSurfaceFilter->connectionEnded();
-}
-
-HRESULT VideoSurfaceInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt)
-{
-    QMutexLocker lock(&m_videoSurfaceFilter->m_mutex);
-    return DirectShowInputPin::ReceiveConnection(pConnector, pmt);
-}
-
-HRESULT VideoSurfaceInputPin::Disconnect()
-{
-    QMutexLocker lock(&m_videoSurfaceFilter->m_mutex);
-    return DirectShowInputPin::Disconnect();
-}
-
-HRESULT VideoSurfaceInputPin::EndOfStream()
-{
-    QMutexLocker lock(&m_videoSurfaceFilter->m_mutex);
-    QMutexLocker renderLock(&m_videoSurfaceFilter->m_renderMutex);
-
-    HRESULT hr = DirectShowInputPin::EndOfStream();
-    if (hr != S_OK)
-        return hr;
-
-    return m_videoSurfaceFilter->EndOfStream();
-}
-
-HRESULT VideoSurfaceInputPin::BeginFlush()
-{
-    QMutexLocker lock(&m_videoSurfaceFilter->m_mutex);
-    {
-        QMutexLocker renderLock(&m_videoSurfaceFilter->m_renderMutex);
-        DirectShowInputPin::BeginFlush();
-        m_videoSurfaceFilter->BeginFlush();
-    }
-    m_videoSurfaceFilter->resetEOS();
-
-    return S_OK;
-}
-
-HRESULT VideoSurfaceInputPin::EndFlush()
-{
-    QMutexLocker lock(&m_videoSurfaceFilter->m_mutex);
-    QMutexLocker renderLock(&m_videoSurfaceFilter->m_renderMutex);
-
-    HRESULT hr = m_videoSurfaceFilter->EndFlush();
-    if (SUCCEEDED(hr))
-        hr = DirectShowInputPin::EndFlush();
-    return hr;
-}
-
-HRESULT VideoSurfaceInputPin::GetAllocatorRequirements(ALLOCATOR_PROPERTIES *pProps)
-{
-    if (!pProps)
-        return E_POINTER;
-
-    // We need at least two allocated buffers, one for holding the frame currently being
-    // rendered and another one to decode the following frame at the same time.
-    pProps->cBuffers = 2;
-
-    return S_OK;
-}
-
-HRESULT VideoSurfaceInputPin::Receive(IMediaSample *pMediaSample)
-{
-    HRESULT hr = m_videoSurfaceFilter->Receive(pMediaSample);
-    if (FAILED(hr)) {
-        QMutexLocker locker(&m_videoSurfaceFilter->m_mutex);
-        if (m_videoSurfaceFilter->state() != State_Stopped && !m_flushing && !m_inErrorState) {
-            m_videoSurfaceFilter->NotifyEvent(EC_ERRORABORT, hr, 0);
-            {
-                QMutexLocker renderLocker(&m_videoSurfaceFilter->m_renderMutex);
-                if (m_videoSurfaceFilter->m_running && !m_videoSurfaceFilter->m_EOSDelivered)
-                    m_videoSurfaceFilter->notifyEOS();
-            }
-            m_inErrorState = true;
-        }
-    }
-
-    return hr;
-}
-
-
-VideoSurfaceFilter::VideoSurfaceFilter(QAbstractVideoSurface *surface, DirectShowEventLoop *loop, QObject *parent)
+VideoSurfaceFilter::VideoSurfaceFilter(
+        QAbstractVideoSurface *surface, DirectShowEventLoop *loop, QObject *parent)
     : QObject(parent)
-    , m_loop(loop)
-    , m_pin(NULL)
+    , m_ref(1)
+    , m_state(State_Stopped)
     , m_surface(surface)
+    , m_loop(loop)
+    , m_graph(0)
+    , m_peerPin(0)
     , m_bytesPerLine(0)
-    , m_surfaceStarted(false)
-    , m_renderMutex(QMutex::Recursive)
-    , m_running(false)
-    , m_pendingSample(NULL)
-    , m_pendingSampleEndTime(0)
-    , m_renderEvent(CreateEvent(NULL, FALSE, FALSE, NULL))
-    , m_flushEvent(CreateEvent(NULL, TRUE, FALSE, NULL))
-    , m_adviseCookie(0)
-    , m_EOS(false)
-    , m_EOSDelivered(false)
-    , m_EOSTimer(0)
+    , m_startResult(S_OK)
+    , m_pinId(QString::fromLatin1("reference"))
+    , m_sampleScheduler(static_cast<IPin *>(this))
 {
-    supportedFormatsChanged();
-    connect(surface, &QAbstractVideoSurface::supportedFormatsChanged,
-            this, &VideoSurfaceFilter::supportedFormatsChanged);
+    connect(surface, SIGNAL(supportedFormatsChanged()), this, SLOT(supportedFormatsChanged()));
+    connect(&m_sampleScheduler, SIGNAL(sampleReady()), this, SLOT(sampleReady()));
 }
 
 VideoSurfaceFilter::~VideoSurfaceFilter()
 {
-    clearPendingSample();
-
-    if (m_pin)
-        m_pin->Release();
-
-    CloseHandle(m_flushEvent);
-    CloseHandle(m_renderEvent);
+    Q_ASSERT(m_ref == 0);
 }
 
-HRESULT VideoSurfaceFilter::getInterface(const IID &riid, void **ppvObject)
+HRESULT VideoSurfaceFilter::QueryInterface(REFIID riid, void **ppvObject)
 {
-    if (riid == IID_IAMFilterMiscFlags)
-        return GetInterface(static_cast<IAMFilterMiscFlags*>(this), ppvObject);
-    else
-        return DirectShowBaseFilter::getInterface(riid, ppvObject);
+    // 2dd74950-a890-11d1-abe8-00a0c905f375
+    static const GUID iid_IAmFilterMiscFlags = {
+        0x2dd74950, 0xa890, 0x11d1, {0xab, 0xe8, 0x00, 0xa0, 0xc9, 0x05, 0xf3, 0x75} };
+
+    if (!ppvObject) {
+        return E_POINTER;
+    } else if (riid == IID_IUnknown
+            || riid == IID_IPersist
+            || riid == IID_IMediaFilter
+            || riid == IID_IBaseFilter) {
+        *ppvObject = static_cast<IBaseFilter *>(this);
+    } else if (riid == iid_IAmFilterMiscFlags) {
+        *ppvObject = static_cast<IAMFilterMiscFlags *>(this);
+    } else if (riid == IID_IPin) {
+        *ppvObject = static_cast<IPin *>(this);
+    } else if (riid == IID_IMemInputPin) {
+        *ppvObject = static_cast<IMemInputPin *>(&m_sampleScheduler);
+    } else {
+        *ppvObject = 0;
+
+        return E_NOINTERFACE;
+    }
+
+    AddRef();
+
+    return S_OK;
 }
 
-QList<DirectShowPin *> VideoSurfaceFilter::pins()
+ULONG VideoSurfaceFilter::AddRef()
 {
-    if (!m_pin)
-        m_pin = new VideoSurfaceInputPin(this);
+    return InterlockedIncrement(&m_ref);
+}
 
-    return QList<DirectShowPin *>() << m_pin;
+ULONG VideoSurfaceFilter::Release()
+{
+    ULONG ref = InterlockedDecrement(&m_ref);
+    if (ref == 0)
+        delete this;
+
+    return ref;
 }
 
 HRESULT VideoSurfaceFilter::GetClassID(CLSID *pClassID)
 {
     *pClassID = CLSID_VideoSurfaceFilter;
+
     return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::Run(REFERENCE_TIME tStart)
+{
+    m_state = State_Running;
+
+    m_sampleScheduler.run(tStart);
+
+    return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::Pause()
+{
+    m_state = State_Paused;
+
+    m_sampleScheduler.pause();
+
+    return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::Stop()
+{
+    m_state = State_Stopped;
+
+    m_sampleScheduler.stop();
+
+    if (thread() == QThread::currentThread()) {
+        flush();
+    } else {
+        QMutexLocker locker(&m_mutex);
+        m_loop->postEvent(this, new QEvent(QEvent::Type(FlushSurface)));
+        m_wait.wait(&m_mutex);
+    }
+
+    return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::GetState(DWORD dwMilliSecsTimeout, FILTER_STATE *pState)
+{
+    Q_UNUSED(dwMilliSecsTimeout)
+    if (!pState)
+        return E_POINTER;
+
+    *pState = m_state;
+
+    return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::SetSyncSource(IReferenceClock *pClock)
+{
+
+    m_sampleScheduler.setClock(pClock);
+
+    return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::GetSyncSource(IReferenceClock **ppClock)
+{
+    if (!ppClock) {
+        return E_POINTER;
+    } else {
+        *ppClock = m_sampleScheduler.clock();
+
+        if (*ppClock) {
+            (*ppClock)->AddRef();
+
+            return S_OK;
+        } else {
+            return S_FALSE;
+        }
+    }
+}
+
+HRESULT VideoSurfaceFilter::EnumPins(IEnumPins **ppEnum)
+{
+    if (ppEnum) {
+        *ppEnum = new DirectShowPinEnum(QList<IPin *>() << this);
+
+        return S_OK;
+    } else {
+        return E_POINTER;
+    }
+}
+
+HRESULT VideoSurfaceFilter::FindPin(LPCWSTR pId, IPin **ppPin)
+{
+    if (!ppPin || !pId) {
+        return E_POINTER;
+    } else if (QString::fromWCharArray(pId) == m_pinId) {
+        AddRef();
+
+        *ppPin = this;
+
+        return S_OK;
+    } else {
+        return VFW_E_NOT_FOUND;
+    }
+}
+
+HRESULT VideoSurfaceFilter::JoinFilterGraph(IFilterGraph *pGraph, LPCWSTR pName)
+{
+    m_graph = pGraph;
+    m_name = QString::fromWCharArray(pName);
+
+    return S_OK;
+}
+
+HRESULT VideoSurfaceFilter::QueryFilterInfo(FILTER_INFO *pInfo)
+{
+    if (pInfo) {
+        QString name = m_name;
+
+        if (name.length() >= MAX_FILTER_NAME)
+            name.truncate(MAX_FILTER_NAME - 1);
+
+        int length = name.toWCharArray(pInfo->achName);
+        pInfo->achName[length] = '\0';
+
+        if (m_graph)
+            m_graph->AddRef();
+
+        pInfo->pGraph = m_graph;
+
+        return S_OK;
+    } else {
+        return E_POINTER;
+    }
+}
+
+HRESULT VideoSurfaceFilter::QueryVendorInfo(LPWSTR *pVendorInfo)
+{
+    Q_UNUSED(pVendorInfo);
+
+    return E_NOTIMPL;
 }
 
 ULONG VideoSurfaceFilter::GetMiscFlags()
@@ -264,529 +262,388 @@ ULONG VideoSurfaceFilter::GetMiscFlags()
     return AM_FILTER_MISC_FLAGS_IS_RENDERER;
 }
 
-void VideoSurfaceFilter::supportedFormatsChanged()
+
+HRESULT VideoSurfaceFilter::Connect(IPin *pReceivePin, const AM_MEDIA_TYPE *pmt)
 {
-    QWriteLocker writeLocker(&m_typesLock);
+    Q_UNUSED(pReceivePin)
+    Q_UNUSED(pmt)
+    // This is an input pin, you shouldn't be calling Connect on it.
+    return E_POINTER;
+}
 
-    qCDebug(qLcRenderFilter, "supportedFormatChanged");
+HRESULT VideoSurfaceFilter::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt)
+{
+    if (!pConnector) {
+        return E_POINTER;
+    } else if (!pmt) {
+        return E_POINTER;
+    } else {
+        HRESULT hr;
+        QMutexLocker locker(&m_mutex);
 
-    m_supportedTypes.clear();
+        if (m_peerPin) {
+            hr = VFW_E_ALREADY_CONNECTED;
+        } else if (pmt->majortype != MEDIATYPE_Video) {
+            hr = VFW_E_TYPE_NOT_ACCEPTED;
+        } else {
+            m_surfaceFormat = DirectShowMediaType::formatFromType(*pmt);
+            m_bytesPerLine = DirectShowMediaType::bytesPerLine(m_surfaceFormat);
 
-    const QList<QVideoFrame::PixelFormat> formats = m_surface->supportedPixelFormats();
-    m_supportedTypes.reserve(formats.count());
+            if (thread() == QThread::currentThread()) {
+                hr = start();
+            } else {
+                m_loop->postEvent(this, new QEvent(QEvent::Type(StartSurface)));
 
-    for (QVideoFrame::PixelFormat format : formats) {
-        GUID subtype = DirectShowMediaType::convertPixelFormat(format);
-        if (!IsEqualGUID(subtype, MEDIASUBTYPE_None)) {
-            qCDebug(qLcRenderFilter) << "  " << format;
-            m_supportedTypes.append(subtype);
+                m_wait.wait(&m_mutex);
+
+                hr = m_startResult;
+            }
+        }
+        if (hr == S_OK) {
+           m_peerPin = pConnector;
+           m_peerPin->AddRef();
+
+           DirectShowMediaType::copy(&m_mediaType, *pmt);
+        }
+        return hr;
+    }
+}
+
+HRESULT VideoSurfaceFilter::start()
+{
+    if (!m_surface->isFormatSupported(m_surfaceFormat)) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
+    }
+    if (!m_surface->start(m_surfaceFormat)) {
+        return VFW_E_TYPE_NOT_ACCEPTED;
+    } else {
+        return S_OK;
+    }
+}
+
+HRESULT VideoSurfaceFilter::Disconnect()
+{
+    QMutexLocker locker(&m_mutex);
+
+    if (!m_peerPin)
+        return S_FALSE;
+
+    if (thread() == QThread::currentThread()) {
+        stop();
+    } else {
+        m_loop->postEvent(this, new QEvent(QEvent::Type(StopSurface)));
+
+        m_wait.wait(&m_mutex);
+    }
+
+    m_mediaType.clear();
+
+    m_sampleScheduler.NotifyAllocator(0, FALSE);
+
+    m_peerPin->Release();
+    m_peerPin = 0;
+
+    return S_OK;
+}
+
+void VideoSurfaceFilter::stop()
+{
+    m_surface->stop();
+}
+
+HRESULT VideoSurfaceFilter::ConnectedTo(IPin **ppPin)
+{
+    if (!ppPin) {
+        return E_POINTER;
+    } else {
+        QMutexLocker locker(&m_mutex);
+
+        if (!m_peerPin) {
+            return VFW_E_NOT_CONNECTED;
+        } else {
+            m_peerPin->AddRef();
+
+            *ppPin = m_peerPin;
+
+            return S_OK;
         }
     }
 }
 
-bool VideoSurfaceFilter::isMediaTypeSupported(const AM_MEDIA_TYPE *type)
+HRESULT VideoSurfaceFilter::ConnectionMediaType(AM_MEDIA_TYPE *pmt)
 {
-    if (type->majortype != MEDIATYPE_Video || type->bFixedSizeSamples == FALSE)
-        return false;
-
-    QReadLocker readLocker(&m_typesLock);
-
-    for (const GUID &supportedType : m_supportedTypes) {
-        if (IsEqualGUID(supportedType, type->subtype))
-            return true;
-    }
-
-    return false;
-}
-
-bool VideoSurfaceFilter::setMediaType(const AM_MEDIA_TYPE *type)
-{
-    if (!type) {
-        qCDebug(qLcRenderFilter, "clear media type");
-        m_surfaceFormat = QVideoSurfaceFormat();
-        m_bytesPerLine = 0;
-        return true;
+    if (!pmt) {
+        return E_POINTER;
     } else {
-        m_surfaceFormat = DirectShowMediaType::videoFormatFromType(type);
-        m_bytesPerLine = DirectShowMediaType::bytesPerLine(m_surfaceFormat);
-        qCDebug(qLcRenderFilter) << "setMediaType -->" << m_surfaceFormat;
-        return m_surfaceFormat.isValid();
+        QMutexLocker locker(&m_mutex);
+
+        if (!m_peerPin) {
+            return VFW_E_NOT_CONNECTED;
+        } else {
+            DirectShowMediaType::copy(pmt, m_mediaType);
+
+            return S_OK;
+        }
     }
 }
 
-HRESULT VideoSurfaceFilter::completeConnection(IPin *pin)
+HRESULT VideoSurfaceFilter::QueryPinInfo(PIN_INFO *pInfo)
 {
-    Q_UNUSED(pin);
+    if (!pInfo) {
+        return E_POINTER;
+    } else {
+        AddRef();
 
-    qCDebug(qLcRenderFilter, "completeConnection");
+        pInfo->pFilter = this;
+        pInfo->dir = PINDIR_INPUT;
 
-    if (!startSurface())
-        return VFW_E_TYPE_NOT_ACCEPTED;
-    else
+        const int bytes = qMin(MAX_FILTER_NAME, (m_pinId.length() + 1) * 2);
+
+        ::memcpy(pInfo->achName, m_pinId.utf16(), bytes);
+
         return S_OK;
-}
-
-HRESULT VideoSurfaceFilter::connectionEnded()
-{
-    qCDebug(qLcRenderFilter, "connectionEnded");
-
-    stopSurface();
-
-    return S_OK;
-}
-
-HRESULT VideoSurfaceFilter::Run(REFERENCE_TIME tStart)
-{
-    QMutexLocker locker(&m_mutex);
-
-    if (m_state == State_Running)
-        return S_OK;
-
-    qCDebug(qLcRenderFilter, "Run (start=%lli)", tStart);
-
-    HRESULT hr = DirectShowBaseFilter::Run(tStart);
-    if (FAILED(hr))
-        return hr;
-
-    ResetEvent(m_flushEvent);
-
-    IMemAllocator *allocator;
-    if (SUCCEEDED(m_pin->GetAllocator(&allocator))) {
-        allocator->Commit();
-        allocator->Release();
     }
-
-    QMutexLocker renderLocker(&m_renderMutex);
-
-    m_running = true;
-
-    if (!m_pendingSample)
-        checkEOS();
-    else if (!scheduleSample(m_pendingSample))
-        SetEvent(m_renderEvent); // render immediately
-
-    return S_OK;
 }
 
-HRESULT VideoSurfaceFilter::Pause()
+HRESULT VideoSurfaceFilter::QueryId(LPWSTR *Id)
 {
-    QMutexLocker locker(&m_mutex);
+    if (!Id) {
+        return E_POINTER;
+    } else {
+        const int bytes = (m_pinId.length() + 1) * 2;
 
-    if (m_state == State_Paused)
+        *Id = static_cast<LPWSTR>(::CoTaskMemAlloc(bytes));
+
+        ::memcpy(*Id, m_pinId.utf16(), bytes);
+
         return S_OK;
-
-    qCDebug(qLcRenderFilter, "Pause");
-
-    HRESULT hr = DirectShowBaseFilter::Pause();
-    if (FAILED(hr))
-        return hr;
-
-    m_renderMutex.lock();
-    m_EOSDelivered = false;
-    m_running = false;
-    m_renderMutex.unlock();
-
-    resetEOSTimer();
-    ResetEvent(m_flushEvent);
-    unscheduleSample();
-
-    IMemAllocator *allocator;
-    if (SUCCEEDED(m_pin->GetAllocator(&allocator))) {
-        allocator->Commit();
-        allocator->Release();
     }
-
-    return S_OK;
 }
 
-HRESULT VideoSurfaceFilter::Stop()
+HRESULT VideoSurfaceFilter::QueryAccept(const AM_MEDIA_TYPE *pmt)
 {
-    QMutexLocker locker(&m_mutex);
+    return !m_surface->isFormatSupported(DirectShowMediaType::formatFromType(*pmt))
+            ? S_OK
+            : S_FALSE;
+}
 
-    if (m_state == State_Stopped)
+HRESULT VideoSurfaceFilter::EnumMediaTypes(IEnumMediaTypes **ppEnum)
+{
+    if (!ppEnum) {
+        return E_POINTER;
+    } else {
+        QMutexLocker locker(&m_mutex);
+
+        *ppEnum = createMediaTypeEnum();
+
         return S_OK;
-
-    qCDebug(qLcRenderFilter, "Stop");
-
-    DirectShowBaseFilter::Stop();
-
-    clearPendingSample();
-
-    m_renderMutex.lock();
-    m_EOSDelivered = false;
-    m_running = false;
-    m_renderMutex.unlock();
-
-    SetEvent(m_flushEvent);
-    resetEOS();
-    unscheduleSample();
-    flushSurface();
-
-    IMemAllocator *allocator;
-    if (SUCCEEDED(m_pin->GetAllocator(&allocator))) {
-        allocator->Decommit();
-        allocator->Release();
     }
+}
 
-    return S_OK;
+HRESULT VideoSurfaceFilter::QueryInternalConnections(IPin **apPin, ULONG *nPin)
+{
+    Q_UNUSED(apPin);
+    Q_UNUSED(nPin);
+
+    return E_NOTIMPL;
 }
 
 HRESULT VideoSurfaceFilter::EndOfStream()
 {
-    QMutexLocker renderLocker(&m_renderMutex);
+    QMutexLocker locker(&m_mutex);
 
-    qCDebug(qLcRenderFilter, "EndOfStream");
-
-    m_EOS = true;
-
-    if (!m_pendingSample && m_running)
-        checkEOS();
+    if (!m_sampleScheduler.scheduleEndOfStream()) {
+        if (IMediaEventSink *sink = com_cast<IMediaEventSink>(m_graph, IID_IMediaEventSink)) {
+            sink->Notify(
+                    EC_COMPLETE,
+                    S_OK,
+                    reinterpret_cast<LONG_PTR>(static_cast<IBaseFilter *>(this)));
+            sink->Release();
+        }
+    }
 
     return S_OK;
 }
 
 HRESULT VideoSurfaceFilter::BeginFlush()
 {
-    qCDebug(qLcRenderFilter, "BeginFlush");
+    QMutexLocker locker(&m_mutex);
 
-    SetEvent(m_flushEvent);
-    unscheduleSample();
-    clearPendingSample();
+    m_sampleScheduler.setFlushing(true);
+
+    if (thread() == QThread::currentThread()) {
+        flush();
+    } else {
+        m_loop->postEvent(this, new QEvent(QEvent::Type(FlushSurface)));
+
+        m_wait.wait(&m_mutex);
+    }
 
     return S_OK;
 }
 
 HRESULT VideoSurfaceFilter::EndFlush()
 {
-    qCDebug(qLcRenderFilter, "EndFlush");
-
-    ResetEvent(m_flushEvent);
-    return S_OK;
-}
-
-HRESULT VideoSurfaceFilter::Receive(IMediaSample *pMediaSample)
-{
-    {
-        QMutexLocker locker(&m_mutex);
-
-        qCDebug(qLcRenderFilter, "Receive (sample=%p)", pMediaSample);
-
-        HRESULT hr = m_pin->DirectShowInputPin::Receive(pMediaSample);
-        if (hr != S_OK) {
-            qCDebug(qLcRenderFilter, "  can't receive sample (error %X)", uint(hr));
-            return E_FAIL;
-        }
-
-        // If the format dynamically changed, the sample contains information about the new format.
-        // We need to reset the format and restart the QAbstractVideoSurface.
-        if (m_pin->currentSampleProperties()->pMediaType
-                && (!m_pin->setMediaType(m_pin->currentSampleProperties()->pMediaType)
-                    || !restartSurface())) {
-                qCWarning(qLcRenderFilter, "  dynamic format change failed, aborting rendering");
-                NotifyEvent(EC_ERRORABORT, VFW_E_TYPE_NOT_ACCEPTED, 0);
-                return VFW_E_INVALIDMEDIATYPE;
-        }
-
-        {
-            QMutexLocker locker(&m_renderMutex);
-
-            if (m_pendingSample || m_EOS)
-                return E_UNEXPECTED;
-
-            if (m_running && !scheduleSample(pMediaSample)) {
-                qCWarning(qLcRenderFilter, "  sample can't be scheduled, discarding it");
-                return S_OK;
-            }
-
-            m_pendingSample = pMediaSample;
-            m_pendingSample->AddRef();
-            m_pendingSampleEndTime = m_pin->currentSampleProperties()->tStop;
-        }
-
-        if (m_state == State_Paused) // Render immediately
-            renderPendingSample();
-    }
-
-    qCDebug(qLcRenderFilter, "  waiting for render time");
-
-    // Wait for render time. The clock will wake us up whenever the time comes.
-    // It can also be interrupted by a flush, pause or stop.
-    HANDLE waitObjects[] = { m_flushEvent, m_renderEvent };
-    DWORD result = WAIT_TIMEOUT;
-    while (result == WAIT_TIMEOUT)
-        result = WaitForMultipleObjects(2, waitObjects, FALSE, INFINITE);
-
-    if (result == WAIT_OBJECT_0) {
-        // render interrupted (flush, pause, stop)
-        qCDebug(qLcRenderFilter, " rendering of sample %p interrupted", pMediaSample);
-        return S_OK;
-    }
-
-    m_adviseCookie = 0;
-
     QMutexLocker locker(&m_mutex);
 
-    // State might have changed just before the lock
-    if (m_state == State_Stopped) {
-        qCDebug(qLcRenderFilter, "  state changed to Stopped, discarding sample (%p)", pMediaSample);
-        return S_OK;
-    }
-
-    QMutexLocker renderLock(&m_renderMutex);
-
-    // Flush or pause might have happened just before the lock
-    if (m_pendingSample && m_running) {
-        renderLock.unlock();
-        renderPendingSample();
-        renderLock.relock();
-    } else {
-        qCDebug(qLcRenderFilter, "  discarding sample (%p)", pMediaSample);
-    }
-
-    clearPendingSample();
-    checkEOS();
-    ResetEvent(m_renderEvent);
+    m_sampleScheduler.setFlushing(false);
 
     return S_OK;
 }
 
-bool VideoSurfaceFilter::scheduleSample(IMediaSample *sample)
+void VideoSurfaceFilter::flush()
 {
-    if (!sample)
-        return false;
+    m_surface->present(QVideoFrame());
 
-    qCDebug(qLcRenderFilter, "scheduleSample (sample=%p)", sample);
-
-    REFERENCE_TIME sampleStart, sampleEnd;
-    if (FAILED(sample->GetTime(&sampleStart, &sampleEnd)) || !m_clock) {
-        qCDebug(qLcRenderFilter, "  render now");
-        SetEvent(m_renderEvent); // Render immediately
-        return true;
-    }
-
-    if (sampleEnd < sampleStart) { // incorrect times
-        qCWarning(qLcRenderFilter, "  invalid sample times (start=%lli, end=%lli)", sampleStart, sampleEnd);
-        return false;
-    }
-
-    HRESULT hr = m_clock->AdviseTime(m_startTime, sampleStart, (HEVENT)m_renderEvent, &m_adviseCookie);
-    if (FAILED(hr)) {
-        qCWarning(qLcRenderFilter, "  clock failed to advise time (error=%X)", uint(hr));
-        return false;
-    }
-
-    return true;
+    m_wait.wakeAll();
 }
 
-void VideoSurfaceFilter::unscheduleSample()
+HRESULT VideoSurfaceFilter::NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate)
 {
-    if (m_adviseCookie) {
-        qCDebug(qLcRenderFilter, "unscheduleSample");
-        m_clock->Unadvise(m_adviseCookie);
-        m_adviseCookie = 0;
-    }
+    Q_UNUSED(tStart);
+    Q_UNUSED(tStop);
+    Q_UNUSED(dRate);
 
-    ResetEvent(m_renderEvent);
+    return S_OK;
 }
 
-void VideoSurfaceFilter::clearPendingSample()
+HRESULT VideoSurfaceFilter::QueryDirection(PIN_DIRECTION *pPinDir)
 {
-    QMutexLocker locker(&m_renderMutex);
-    if (m_pendingSample) {
-        qCDebug(qLcRenderFilter, "clearPendingSample");
-        m_pendingSample->Release();
-        m_pendingSample = NULL;
-    }
-}
-
-void QT_WIN_CALLBACK EOSTimerCallback(UINT, UINT, DWORD_PTR dwUser, DWORD_PTR, DWORD_PTR)
-{
-    VideoSurfaceFilter *that = reinterpret_cast<VideoSurfaceFilter *>(dwUser);
-    that->onEOSTimerTimeout();
-}
-
-void VideoSurfaceFilter::onEOSTimerTimeout()
-{
-    QMutexLocker locker(&m_renderMutex);
-
-    if (m_EOSTimer) {
-        m_EOSTimer = 0;
-        checkEOS();
-    }
-}
-
-void VideoSurfaceFilter::checkEOS()
-{
-    QMutexLocker locker(&m_renderMutex);
-
-    if (!m_EOS || m_EOSDelivered || m_EOSTimer)
-        return;
-
-    if (!m_clock) {
-        notifyEOS();
-        return;
-    }
-
-    REFERENCE_TIME eosTime = m_startTime + m_pendingSampleEndTime;
-    REFERENCE_TIME currentTime;
-    m_clock->GetTime(&currentTime);
-    LONG delay = LONG((eosTime - currentTime) / 10000);
-
-    if (delay < 1) {
-        notifyEOS();
+    if (!pPinDir) {
+        return E_POINTER;
     } else {
-        qCDebug(qLcRenderFilter, "will trigger EOS in %li", delay);
+        *pPinDir = PINDIR_INPUT;
 
-        m_EOSTimer = timeSetEvent(delay,
-                                  1,
-                                  EOSTimerCallback,
-                                  reinterpret_cast<DWORD_PTR>(this),
-                                  TIME_ONESHOT | TIME_CALLBACK_FUNCTION | TIME_KILL_SYNCHRONOUS);
+        return S_OK;
+    }
+}
 
-        if (!m_EOSTimer) {
-            qDebug("Error with timer");
-            notifyEOS();
+int VideoSurfaceFilter::currentMediaTypeToken()
+{
+    QMutexLocker locker(&m_mutex);
+
+    return DirectShowMediaTypeList::currentMediaTypeToken();
+}
+
+HRESULT VideoSurfaceFilter::nextMediaType(
+        int token, int *index, ULONG count, AM_MEDIA_TYPE **types, ULONG *fetchedCount)
+{
+    QMutexLocker locker(&m_mutex);
+
+    return DirectShowMediaTypeList::nextMediaType(token, index, count, types, fetchedCount);
+
+}
+
+HRESULT VideoSurfaceFilter::skipMediaType(int token, int *index, ULONG count)
+{
+    QMutexLocker locker(&m_mutex);
+
+    return DirectShowMediaTypeList::skipMediaType(token, index, count);
+}
+
+HRESULT VideoSurfaceFilter::cloneMediaType(int token, int index, IEnumMediaTypes **enumeration)
+{
+    QMutexLocker locker(&m_mutex);
+
+    return DirectShowMediaTypeList::cloneMediaType(token, index, enumeration);
+}
+
+void VideoSurfaceFilter::customEvent(QEvent *event)
+{
+    const int type = event->type();
+    if (type == StartSurface) {
+        QMutexLocker locker(&m_mutex);
+
+        m_startResult = start();
+
+        m_wait.wakeAll();
+    } else if (type == StopSurface) {
+        QMutexLocker locker(&m_mutex);
+
+        stop();
+
+        m_wait.wakeAll();
+    } else if (type == FlushSurface) {
+        QMutexLocker locker(&m_mutex);
+
+        flush();
+
+        m_wait.wakeAll();
+    } else {
+       QObject::customEvent(event);
+    }
+}
+
+void VideoSurfaceFilter::supportedFormatsChanged()
+{
+    QMutexLocker locker(&m_mutex);
+
+    // MEDIASUBTYPE_None;
+    static const GUID none = {
+        0xe436eb8e, 0x524f, 0x11ce, {0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70} };
+
+    QList<QVideoFrame::PixelFormat> formats = m_surface->supportedPixelFormats();
+
+    QVector<AM_MEDIA_TYPE> mediaTypes;
+    mediaTypes.reserve(formats.count());
+
+    AM_MEDIA_TYPE type;
+    type.majortype = MEDIATYPE_Video;
+    type.bFixedSizeSamples = TRUE;
+    type.bTemporalCompression = FALSE;
+    type.lSampleSize = 0;
+    type.formattype = GUID_NULL;
+    type.pUnk = 0;
+    type.cbFormat = 0;
+    type.pbFormat = 0;
+
+    foreach (QVideoFrame::PixelFormat format, formats) {
+        type.subtype = DirectShowMediaType::convertPixelFormat(format);
+
+        if (type.subtype != none)
+            mediaTypes.append(type);
+    }
+
+    setMediaTypes(mediaTypes);
+}
+
+void VideoSurfaceFilter::sampleReady()
+{
+    bool eos = false;
+
+    IMediaSample *sample = m_sampleScheduler.takeSample(&eos);
+
+    if (sample) {
+        QVideoFrame frame(new MediaSampleVideoBuffer(sample, m_bytesPerLine),
+                          m_surfaceFormat.frameSize(),
+                          m_surfaceFormat.pixelFormat());
+
+        if (IMediaSeeking *seeking = com_cast<IMediaSeeking>(m_graph, IID_IMediaSeeking)) {
+            LONGLONG position = 0;
+            seeking->GetCurrentPosition(&position);
+            seeking->Release();
+
+            frame.setStartTime(position * 0.1);
+
+            REFERENCE_TIME startTime = -1;
+            REFERENCE_TIME endTime = -1;
+            if (sample->GetTime(&startTime, &endTime) == S_OK)
+                frame.setEndTime(frame.startTime() + (endTime - startTime) * 0.1);
+        }
+
+        m_surface->present(frame);
+
+        sample->Release();
+
+        if (eos) {
+            if (IMediaEventSink *sink = com_cast<IMediaEventSink>(m_graph, IID_IMediaEventSink)) {
+                sink->Notify(
+                        EC_COMPLETE,
+                        S_OK,
+                        reinterpret_cast<LONG_PTR>(static_cast<IBaseFilter *>(this)));
+                sink->Release();
+            }
         }
     }
 }
 
-void VideoSurfaceFilter::notifyEOS()
-{
-    QMutexLocker locker(&m_renderMutex);
-
-    if (!m_running)
-        return;
-
-    qCDebug(qLcRenderFilter, "notifyEOS, delivering EC_COMPLETE event");
-
-    m_EOSTimer = 0;
-    m_EOSDelivered = true;
-    NotifyEvent(EC_COMPLETE, S_OK, (LONG_PTR)(IBaseFilter *)this);
-}
-
-void VideoSurfaceFilter::resetEOS()
-{
-    resetEOSTimer();
-
-    QMutexLocker locker(&m_renderMutex);
-
-    if (m_EOS)
-        qCDebug(qLcRenderFilter, "resetEOS (delivered=%s)", m_EOSDelivered ? "true" : "false");
-
-    m_EOS = false;
-    m_EOSDelivered = false;
-    m_pendingSampleEndTime = 0;
-}
-
-void VideoSurfaceFilter::resetEOSTimer()
-{
-    if (m_EOSTimer) {
-        timeKillEvent(m_EOSTimer);
-        m_EOSTimer = 0;
-    }
-}
-
-bool VideoSurfaceFilter::startSurface()
-{
-    if (QThread::currentThread() != thread()) {
-        m_loop->postEvent(this, new QEvent(QEvent::Type(StartSurface)));
-        m_waitSurface.wait(&m_mutex);
-        return m_surfaceStarted;
-    } else {
-        m_surfaceStarted = m_surface->start(m_surfaceFormat);
-        qCDebug(qLcRenderFilter, "startSurface %s", m_surfaceStarted ? "succeeded" : "failed");
-        return m_surfaceStarted;
-    }
-}
-
-void VideoSurfaceFilter::stopSurface()
-{
-    if (!m_surfaceStarted)
-        return;
-
-    if (QThread::currentThread() != thread()) {
-        m_loop->postEvent(this, new QEvent(QEvent::Type(StopSurface)));
-        m_waitSurface.wait(&m_mutex);
-    } else {
-        qCDebug(qLcRenderFilter, "stopSurface");
-        m_surface->stop();
-        m_surfaceStarted = false;
-    }
-}
-
-bool VideoSurfaceFilter::restartSurface()
-{
-    if (QThread::currentThread() != thread()) {
-        m_loop->postEvent(this, new QEvent(QEvent::Type(RestartSurface)));
-        m_waitSurface.wait(&m_mutex);
-        return m_surfaceStarted;
-    } else {
-        m_surface->stop();
-        m_surfaceStarted = m_surface->start(m_surfaceFormat);
-        qCDebug(qLcRenderFilter, "restartSurface %s", m_surfaceStarted ? "succeeded" : "failed");
-        return m_surfaceStarted;
-    }
-}
-
-void VideoSurfaceFilter::flushSurface()
-{
-    if (QThread::currentThread() != thread()) {
-        m_loop->postEvent(this, new QEvent(QEvent::Type(FlushSurface)));
-        m_waitSurface.wait(&m_mutex);
-    } else {
-        qCDebug(qLcRenderFilter, "flushSurface");
-        m_surface->present(QVideoFrame());
-    }
-}
-
-void VideoSurfaceFilter::renderPendingSample()
-{
-    if (QThread::currentThread() != thread()) {
-        m_loop->postEvent(this, new QEvent(QEvent::Type(RenderSample)));
-        m_waitSurface.wait(&m_mutex);
-    } else {
-        QMutexLocker locker(&m_renderMutex);
-        if (!m_pendingSample)
-            return;
-
-        qCDebug(qLcRenderFilter, "presentSample (sample=%p)", m_pendingSample);
-
-        m_surface->present(QVideoFrame(new DirectShowVideoBuffer(m_pendingSample, m_bytesPerLine),
-                                       m_surfaceFormat.frameSize(),
-                                       m_surfaceFormat.pixelFormat()));
-    }
-}
-
-bool VideoSurfaceFilter::event(QEvent *e)
-{
-    if (e->type() == QEvent::Type(StartSurface)) {
-        QMutexLocker locker(&m_mutex);
-        startSurface();
-        m_waitSurface.wakeAll();
-        return true;
-    } else if (e->type() == QEvent::Type(StopSurface)) {
-        QMutexLocker locker(&m_mutex);
-        stopSurface();
-        m_waitSurface.wakeAll();
-        return true;
-    } else if (e->type() == QEvent::Type(RestartSurface)) {
-        QMutexLocker locker(&m_mutex);
-        restartSurface();
-        m_waitSurface.wakeAll();
-        return true;
-    } else if (e->type() == QEvent::Type(FlushSurface)) {
-        QMutexLocker locker(&m_mutex);
-        flushSurface();
-        m_waitSurface.wakeAll();
-        return true;
-    } else if (e->type() == QEvent::Type(RenderSample)) {
-        QMutexLocker locker(&m_mutex);
-        renderPendingSample();
-        m_waitSurface.wakeAll();
-        return true;
-    }
-
-    return QObject::event(e);
-}
-
-QT_END_NAMESPACE

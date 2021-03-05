@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt SVG module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -177,17 +171,17 @@ class Q_SVG_PRIVATE_EXPORT QSvgFillStyleProperty : public QSvgStyleProperty
 {
 public:
     virtual QBrush brush(QPainter *p, QSvgExtraStates &states) = 0;
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
 };
 
 class Q_SVG_PRIVATE_EXPORT QSvgQualityStyle : public QSvgStyleProperty
 {
 public:
     QSvgQualityStyle(int color);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 private:
     // color-render ing v 	v 	'auto' | 'optimizeSpeed' |
     //                                  'optimizeQuality' | 'inherit'
@@ -217,9 +211,9 @@ class Q_SVG_PRIVATE_EXPORT QSvgOpacityStyle : public QSvgStyleProperty
 {
 public:
     QSvgOpacityStyle(qreal opacity);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 private:
     qreal m_opacity;
     qreal m_oldOpacity;
@@ -229,9 +223,9 @@ class Q_SVG_PRIVATE_EXPORT QSvgFillStyle : public QSvgStyleProperty
 {
 public:
     QSvgFillStyle();
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 
     void setFillRule(Qt::FillRule f);
     void setFillOpacity(qreal opacity);
@@ -302,9 +296,9 @@ class Q_SVG_PRIVATE_EXPORT QSvgViewportFillStyle : public QSvgStyleProperty
 {
 public:
     QSvgViewportFillStyle(const QBrush &brush);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 
     const QBrush & qbrush() const
     {
@@ -326,9 +320,9 @@ public:
 
     QSvgFontStyle(QSvgFont *font, QSvgTinyDocument *doc);
     QSvgFontStyle();
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 
     void setSize(qreal size)
     {
@@ -406,9 +400,9 @@ class Q_SVG_PRIVATE_EXPORT QSvgStrokeStyle : public QSvgStyleProperty
 {
 public:
     QSvgStrokeStyle();
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 
     void setStroke(QBrush brush)
     {
@@ -546,14 +540,14 @@ class Q_SVG_PRIVATE_EXPORT QSvgSolidColorStyle : public QSvgFillStyleProperty
 {
 public:
     QSvgSolidColorStyle(const QColor &color);
-    Type type() const override;
+    virtual Type type() const;
 
     const QColor & qcolor() const
     {
         return m_solidColor;
     }
 
-    QBrush brush(QPainter *, QSvgExtraStates &) override
+    QBrush brush(QPainter *, QSvgExtraStates &)
     {
         return m_solidColor;
     }
@@ -572,7 +566,7 @@ class Q_SVG_PRIVATE_EXPORT QSvgGradientStyle : public QSvgFillStyleProperty
 public:
     QSvgGradientStyle(QGradient *grad);
     ~QSvgGradientStyle() { delete m_gradient; }
-    Type type() const override;
+    virtual Type type() const;
 
     void setStopLink(const QString &link, QSvgTinyDocument *doc);
     QString stopLink() const { return m_link; }
@@ -599,7 +593,7 @@ public:
         m_gradientStopsSet = set;
     }
 
-    QBrush brush(QPainter *, QSvgExtraStates &) override;
+    QBrush brush(QPainter *, QSvgExtraStates &);
 private:
     QGradient      *m_gradient;
     QMatrix m_matrix;
@@ -613,9 +607,9 @@ class Q_SVG_PRIVATE_EXPORT QSvgTransformStyle : public QSvgStyleProperty
 {
 public:
     QSvgTransformStyle(const QTransform &transform);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 
     const QTransform & qtransform() const
     {
@@ -650,9 +644,9 @@ public:
     void setArgs(TransformType type, Additive additive, const QVector<qreal> &args);
     void setFreeze(bool freeze);
     void setRepeatCount(qreal repeatCount);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
     QSvgAnimateTransform::Additive additiveType() const
     {
         return m_additive;
@@ -708,9 +702,9 @@ public:
     void setArgs(bool fill, const QList<QColor> &colors);
     void setFreeze(bool freeze);
     void setRepeatCount(qreal repeatCount);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 private:
     qreal m_from;
     qreal m_totalRunningTime;
@@ -728,9 +722,9 @@ class Q_SVG_PRIVATE_EXPORT QSvgCompOpStyle : public QSvgStyleProperty
 {
 public:
     QSvgCompOpStyle(QPainter::CompositionMode mode);
-    void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states) override;
-    void revert(QPainter *p, QSvgExtraStates &states) override;
-    Type type() const override;
+    virtual void apply(QPainter *p, const QSvgNode *node, QSvgExtraStates &states);
+    virtual void revert(QPainter *p, QSvgExtraStates &states);
+    virtual Type type() const;
 
     const QPainter::CompositionMode & compOp() const
     {

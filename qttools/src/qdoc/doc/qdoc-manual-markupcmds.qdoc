@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -39,9 +39,8 @@
     \list
     \li \l {a-command} {\\a}
     \li \l {annotatedlist-command} {\\annotatedlist}
-    \li \l {b-command} {\\b}
-    \li \l {badcode-command} {\\badcode}
-    \li \l {b-command} {\\bold} (deprecated, use \\b)
+    \li \l {b-command} {\\b} \span {class="newStuff"}
+    \li \l {b-command} {\\bold} {(deprecated, use \\b)}
     \li \l {brief-command} {\\brief}
     \li \l {c-command} {\\c}
     \li \l {caption-command} {\\caption}
@@ -50,13 +49,13 @@
     \li \l {codeline-command} {\\codeline}
     \li \l {div-command} {\\div}
     \li \l {dots-command} {\\dots}
-    \li \l {e-command} {\\e}
+    \li \l {e-command} {\\e} \span {class="newStuff"}
     \li \l {else-command} {\\else}
     \li \l {endif-command} {\\endif}
     \li \l {footnote-command} {\\footnote}
     \li \l {generatelist-command} {\\generatelist}
     \li \l {header-command} {\\header}
-    \li \l {e-command} {\\i} (deprecated, use \\e)
+    \li \l {e-command} {\\i} \span {class="newStuff"} {(deprecated, use \\e)}
     \li \l {if-command} {\\if}
     \li \l {image-command} {\\image}
     \li \l {include-command} {\\include}
@@ -65,12 +64,12 @@
     \li \l {keyword-command} {\\keyword}
     \li \l {l-command} {\\l}
     \li \l {legalese-command} {\\legalese}
-    \li \l {li-command} {\\li}
+    \li \l {li-command} {\\li} \span {class="newStuff"}
     \li \l {list-command} {\\list}
     \li \l {meta-command} {\\meta}
     \li \l {noautolist-command} {\\noautolist}
     \li \l {newcode-command} {\\newcode}
-    \li \l {li-command} {\\o} (deprecated, use \\li)
+    \li \l {li-command} {\\o} \span {class="newStuff"} {(deprecated, use \\li)}
     \li \l {note-command} {\\note}
     \li \l {oldcode-command} {\\oldcode}
     \li \l {omit-command} {\\omit}
@@ -78,7 +77,6 @@
     \li \l {printline-command} {\\printline}
     \li \l {printto-command} {\\printto}
     \li \l {printuntil-command} {\\printuntil}
-    \li \l {qml-command}{\\qml}
     \li \l {quotation-command} {\\quotation}
     \li \l {quotefile-command} {\\quotefile}
     \li \l {quotefromfile-command} {\\quotefromfile}
@@ -100,7 +98,7 @@
     \li \l {tableofcontents-command} {\\tableofcontents}
     \li \l {target-command} {\\target}
     \li \l {tt-command} {\\tt}
-    \li \l {uicontrol-command} {\\uicontrol}
+    \li \l {uicontrol-command} {\\uicontrol} {(new 25/3/2012)}
     \li \l {underline-command} {\\underline}
     \li \l {raw-command} {\\unicode}
     \li \l {warning-command} {\\warning}
@@ -485,10 +483,10 @@
     \endquotation
 
     \target e-command
-    \section1 \\e (emphasis, italics)
+    \section1 \\e (emphasis, italics) \span {class="newStuff"} {(new 5/3/2012)}
 
     The \\e command renders its argument in a special font, normally italics. This
-    command used to be called \\i, which is now deprecated.
+    command used to be called \\i, which is now deprecated. Use \e for italics.
 
     If the argument contains spaces or other punctuation, enclose the
     argument in curly brackets.
@@ -974,18 +972,14 @@
     \note The \l {c-command} {\\c} command can be used for short code
     fragments within a sentence. The \\code command is for longer code
     snippets. It renders the code verbatim in a separate paragraph in
-    a html <pre> element, and parses the enclosed snippet, creating links
-    to any known types in the code.
-
-    For documenting command-line instructions, shell scripts, or any
-    content that is not in a Qt language recognized by QDoc, use
-    \l {badcode-command}{\\badcode} instead.
+    the code font.
 
     When processing any of the \\code, \l {newcode-command} {\\newcode} or \l
     {oldcode-command} {\\oldcode} commands, QDoc removes all
     indentation that is common for the verbatim code blocks within a
     \c{/}\c{*!} ... \c{*}\c{/} comment before it adds the standard
-    indentation.
+    indentation. For that reason the recommended style is to use 8
+    spaces for the verbatim code contained within these commands
 
     \note This doesn't apply to externally quoted code using the \l
     {quotefromfile-command} {\\quotefromfile} or \l
@@ -1027,22 +1021,10 @@
     \l{07-0-qdoc-commands-includingexternalcode.html#codeline-command}
     {\\codeline} commands.
 
-    See also \l {c-command} {\\c}, \l {badcode-command} {\\badcode}, \l
+    See also \l {c-command} {\\c}, \l
     {07-0-qdoc-commands-includingexternalcode.html#quotefromfile-command}
     {\\quotefromfile}, \l{newcode-command} {\\newcode}, and \l {oldcode-command}
     {\\oldcode}.
-
-    \target badcode-command
-    \section1 \\badcode
-
-    Similar to \l {code-command}{\\code}, \\badcode and \\endcode commands
-    enclose content that is rendered verbatim in a separate paragraph, but no
-    parsing or automatic link creation is performed. Instead, the content is
-    treated as plain text.
-
-    Substitute \\code with this command when documenting command-line
-    instructions, shell scripts or any other content that is not in a Qt
-    language, but should still be styled similarly to a \\code paragraph.
 
     \target newcode-command
     \section1 \\newcode
@@ -1103,12 +1085,13 @@
     \section1 \\qml
 
     The \\qml and \\endqml commands enclose a snippet of QML source
-    code.
+    code. Currently, QDoc handles \\qml and \\endqml in exactly the same
+    way as \\code and \\endcode.
 
     \code
     / *!
         \qml
-            import QtQuick 2.0
+            import QtQuick 1.0
 
             Row {
                 Rectangle {
@@ -1129,7 +1112,7 @@
     QDoc renders this as:
 
     \qml
-        import QtQuick 2.0
+        import QtQuick 1.0
 
         Row {
             Rectangle {
@@ -3430,18 +3413,6 @@
     navigation.landingpage configuration variable. The \e landingpage
     variable is used as a title for a header that precedes each table.
 
-    \section2 \c annotatedattributions
-
-    The \c annotatedattributions argument provides a complete list of all
-    attributions as a set of tables containing the titles of all the
-    attributions, and a description of each attribution. Each title is a
-    link to the attribution's page.
-
-    A separate table for each module (that has attributions)
-    is generated, provided that the module has defined a
-    navigation.landingpage configuration variable. The \e landingpage
-    variable is used as a title for a header that precedes each table.
-
     \target list example
     \section2 \c {classes <prefix>}
 
@@ -3590,11 +3561,6 @@
         \generatelist overviews
     * /
     \endcode
-
-    \section2 \c attributions
-
-    The \c attributions argument is used to tell QDoc to generate a list
-    of attributions in the documentation.
 
     \section2 \c related
 
@@ -3785,20 +3751,17 @@
 
     The \\include command sends all or part of the file specified by
     its first argument to the QDoc input stream to be processed as a
-    QDoc comment snippet.
+    QDoc comment snippet. This command is often assigned the alias,
+    \e {input}, in the QDoc configuration file, for example \e {alias.include
+    = input}.
 
-    The command is useful when some snippet of commands or text is to
-    be used in multiple places in the documentation. Use the \\include
-    command wherever you want to insert a snippet into the documentation.
-    The file containing the snippet to include must be located under the
-    path(s) listed in the \l{sourcedirs-variable}{sourcedirs} QDoc
-    configuration variable. It can be either any source file parsed
-    by QDoc (or even the same one where \\include command is used), or
-    any other text file. To store snippets in a separate file that is
-    not meant to be parsed by QDoc, use a file extension that is not
-    listed in \l {sources.fileextensions-variable}{sources.fileextensions};
-    for example, \c .qdocinc.
-
+    The command is useful when some snippet of commands and text is to
+    be used in multiple places in the documentation. In that case,
+    move the snippet into a separate file and use the \\include
+    command wherever you want to insert the snippet into the
+    documentation. To prevent QDoc from reading the file as a
+    stand-alone page of documentation, we recommend that you use the
+    \c .qdocinc extension for these \e {include} files.
 
     The command can have either one or two arguments. The first
     argument is always a file name. The contents of the file must be
@@ -3822,7 +3785,7 @@
 
     QDoc renders this page \l{corefeatures.html} {as shown here}.
 
-    \target 2-argument-form
+    \target 2-argument-form}
     \section2 \\include filename snippet-identifier
 
     It is a waste of time to make a separate \c .qdocinc file for every
@@ -3854,12 +3817,8 @@
 
     It works as expected. The sequence of QDoc commands and text found
     between the two tags with the same name as the second argument is
-    sent to the QDoc input stream. You can even have nested snippets.
-
-    \note Snippet identifiers work also within documentation comment
-    (\beginqdoc .. \endqdoc) blocks, so it's not necessary to use a
-    separate \c .qdocinc file. When processing a comment block, QDoc
-    removes any \c {//!} comment lines from the generated output.
+    sent to the QDoc input stream. You can even nest these snippets,
+    although it's not clear why you would want to do that.
 
     \target meta-command
     \section1 \\meta
@@ -3882,6 +3841,7 @@
 
         \meta {technology} {User Interface}
         \meta {platform} {macOS 10.6}
+        \meta {platform} {Symbian}
         \meta {platform} {MeeGo}
         \meta {audience} {user}
         \meta {audience} {programmer}
@@ -3904,7 +3864,7 @@
            <author>Qt Development Frameworks</author>
            <publisher>Qt Project</publisher>
            <copyright>
-               <copyryear year="2018"/>
+               <copyryear year="2017"/>
                <copyrholder>Qt Project</copyrholder>
            </copyright>
            <permissions view="all"/>
@@ -3921,6 +3881,7 @@
                    <component>QtGui</component>
                </prodinfo>
                <othermeta name="platform" content="MeeGo"/>
+               <othermeta name="platform" content="Symbian"/>
                <othermeta name="platform" content="macOS 10.6"/>
                <othermeta name="technology" content="User Interface"/>
            </metadata>
@@ -4002,7 +3963,7 @@
             \endraw
 
     \target raw-command
-    \section1 \\raw (avoid)
+    \section1 \\raw \span {class="newStuff"} {(avoid)}
 
     The \\raw command and the corresponding
     \\endraw command delimit a block of raw mark-up language code.

@@ -23,116 +23,116 @@
     <name>BbCameraAudioEncoderSettingsControl</name>
     <message>
         <source>No compression</source>
-        <translation type="vanished">Sense compressió</translation>
+        <translation>Sense compressió</translation>
     </message>
     <message>
         <source>AAC compression</source>
-        <translation type="vanished">Compressió AAC</translation>
+        <translation>Compressió AAC</translation>
     </message>
     <message>
         <source>PCM uncompressed</source>
-        <translation type="vanished">PCM sense comprimir</translation>
+        <translation>PCM sense comprimir</translation>
     </message>
 </context>
 <context>
     <name>BbCameraMediaRecorderControl</name>
     <message>
         <source>Unable to retrieve mute status</source>
-        <translation type="vanished">No s&apos;ha pogut recuperar l&apos;estat de silenci</translation>
+        <translation>No s&apos;ha pogut recuperar l&apos;estat de silenci</translation>
     </message>
     <message>
         <source>Unable to retrieve audio input volume</source>
-        <translation type="vanished">No s&apos;ha pogut recuperar el volum de l&apos;entrada d&apos;àudio</translation>
+        <translation>No s&apos;ha pogut recuperar el volum de l&apos;entrada d&apos;àudio</translation>
     </message>
     <message>
         <source>Unable to set mute status</source>
-        <translation type="vanished">No s&apos;ha pogut establir l&apos;estat de silenci</translation>
+        <translation>No s&apos;ha pogut establir l&apos;estat de silenci</translation>
     </message>
     <message>
         <source>Unable to set audio input volume</source>
-        <translation type="vanished">No s&apos;ha pogut establir el volum de l&apos;entrada d&apos;àudio</translation>
+        <translation>No s&apos;ha pogut establir el volum de l&apos;entrada d&apos;àudio</translation>
     </message>
 </context>
 <context>
     <name>BbCameraSession</name>
     <message>
         <source>Camera provides image in unsupported format</source>
-        <translation type="vanished">La càmera proporciona una imatge en un format no acceptat</translation>
+        <translation>La càmera proporciona una imatge en un format no acceptat</translation>
     </message>
     <message>
         <source>Could not load JPEG data from frame</source>
-        <translation type="vanished">No s&apos;han pogut carregar les dades JPEG des del marc</translation>
+        <translation>No s&apos;han pogut carregar les dades JPEG des del marc</translation>
     </message>
     <message>
         <source>Camera not ready</source>
-        <translation type="vanished">La càmera no està preparada</translation>
+        <translation>La càmera no està preparada</translation>
     </message>
     <message>
         <source>Unable to apply video settings</source>
-        <translation type="vanished">No s&apos;han pogut aplicar els ajustaments al vídeo</translation>
+        <translation>No s&apos;han pogut aplicar els ajustaments al vídeo</translation>
     </message>
     <message>
         <source>Could not open destination file:
 %1</source>
-        <translation type="vanished">No s&apos;ha pogut obrir el fitxer de destinació:
+        <translation>No s&apos;ha pogut obrir el fitxer de destinació:
 %1</translation>
     </message>
     <message>
         <source>Unable to open camera</source>
-        <translation type="vanished">No s&apos;ha pogut obrir la càmera</translation>
+        <translation>No s&apos;ha pogut obrir la càmera</translation>
     </message>
     <message>
         <source>Unable to retrieve native camera orientation</source>
-        <translation type="vanished">No s&apos;ha pogut recuperar l&apos;orientació nativa de la càmera</translation>
+        <translation>No s&apos;ha pogut recuperar l&apos;orientació nativa de la càmera</translation>
     </message>
     <message>
         <source>Unable to close camera</source>
-        <translation type="vanished">No s&apos;ha pogut tancar la càmera</translation>
+        <translation>No s&apos;ha pogut tancar la càmera</translation>
     </message>
     <message>
         <source>Unable to start video recording</source>
-        <translation type="vanished">No s&apos;ha pogut iniciar la gravació de vídeo</translation>
+        <translation>No s&apos;ha pogut iniciar la gravació de vídeo</translation>
     </message>
     <message>
         <source>Unable to stop video recording</source>
-        <translation type="vanished">No s&apos;ha pogut aturar la gravació de vídeo</translation>
+        <translation>No s&apos;ha pogut aturar la gravació de vídeo</translation>
     </message>
 </context>
 <context>
     <name>BbCameraVideoEncoderSettingsControl</name>
     <message>
         <source>No compression</source>
-        <translation type="vanished">Sense compressió</translation>
+        <translation>Sense compressió</translation>
     </message>
     <message>
         <source>AVC1 compression</source>
-        <translation type="vanished">Compressió AVC1</translation>
+        <translation>Compressió AVC1</translation>
     </message>
     <message>
         <source>H264 compression</source>
-        <translation type="vanished">Compressió H264</translation>
+        <translation>Compressió H264</translation>
     </message>
 </context>
 <context>
     <name>BbImageEncoderControl</name>
     <message>
         <source>JPEG image</source>
-        <translation type="vanished">Imatge JPEG</translation>
+        <translation>Imatge JPEG</translation>
     </message>
 </context>
 <context>
     <name>BbVideoDeviceSelectorControl</name>
     <message>
         <source>Front Camera</source>
-        <translation type="vanished">Davant de la càmera</translation>
+        <translation>Davant de la càmera</translation>
     </message>
     <message>
         <source>Rear Camera</source>
-        <translation type="vanished">Darrera de la càmera</translation>
+        <translation>Darrera de la càmera</translation>
     </message>
     <message>
         <source>Desktop Camera</source>
-        <translation type="vanished">Escriptori de la càmera</translation>
+        <translation>Escriptori de la càmera</translation>
     </message>
 </context>
 <context>
@@ -411,7 +411,7 @@
     <name>QGstreamerAudioEncode</name>
     <message>
         <source>Raw PCM audio</source>
-        <translation type="vanished">Àudio PCM en RAW</translation>
+        <translation>Àudio PCM en RAW</translation>
     </message>
 </context>
 <context>
@@ -476,7 +476,7 @@
     </message>
     <message>
         <source>Media is loaded as a playlist</source>
-        <translation type="vanished">El suport s&apos;ha carregat com una llista de reproducció</translation>
+        <translation>El suport s&apos;ha carregat com una llista de reproducció</translation>
     </message>
 </context>
 <context>
@@ -586,10 +586,6 @@
     <message>
         <source>invalid line in playlist file</source>
         <translation>línia no vàlida al fitxer de la llista de reproducció</translation>
-    </message>
-    <message>
-        <source>Invalid stream</source>
-        <translation>Flux no vàlid</translation>
     </message>
     <message>
         <source>Empty file provided</source>

@@ -1,4 +1,3 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += widgets-private
 
-qtHaveModule(widgets):qtConfig(gtk3): SUBDIRS += gtk3
+contains(QT_CONFIG, gtk2): SUBDIRS += gtk2

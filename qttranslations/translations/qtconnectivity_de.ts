@@ -8,28 +8,12 @@
         <translation>Ungültige Bluetooth-Geräteadresse</translation>
     </message>
     <message>
-        <source>One or more device discovery methods are not supported on this platform</source>
-        <translation>Eine oder mehrere Gerätesuchmethoden werden auf dieser Plattform nicht unterstützt</translation>
-    </message>
-    <message>
         <source>Device does not support Bluetooth</source>
         <translation>Das Gerät unterstützt kein Bluetooth</translation>
     </message>
     <message>
         <source>Passed address is not a local device.</source>
         <translation>Übergebene Adresse gehört zu keinem lokalen Gerät.</translation>
-    </message>
-    <message>
-        <source>Missing Location permission. Search is not possible</source>
-        <translation>Die Berechtigung zur Positionsbestimmung fehlt. Es ist keine Suche möglich</translation>
-    </message>
-    <message>
-        <source>Classic Discovery cannot be started</source>
-        <translation>Standardsuche kann nicht gestartet werden</translation>
-    </message>
-    <message>
-        <source>Low Energy Discovery not supported</source>
-        <translation>Low Energy-Suche wird nicht unterstützt</translation>
     </message>
     <message>
         <source>Device is powered off</source>
@@ -50,6 +34,10 @@
     <message>
         <source>Cannot start low energy device inquiry</source>
         <translation>Kann keine Bluetooth LE-Suche starten</translation>
+    </message>
+    <message>
+        <source>Discovery cannot be started</source>
+        <translation>Suche kann nicht gestartet werden</translation>
     </message>
     <message>
         <source>Discovery cannot be stopped</source>
@@ -73,7 +61,7 @@
     </message>
     <message>
         <source>Device discovery not supported on this platform</source>
-        <translation>Gerätesuchlauf wird auf dieser Plattform nicht unterstützt</translation>
+        <translation>Gerätesuchlauf wird auf dieser Platform nicht unterstützt</translation>
     </message>
 </context>
 <context>
@@ -88,7 +76,7 @@
     </message>
     <message>
         <source>Platform does not support Bluetooth</source>
-        <translation>Die Plattform unterstützt kein Bluetooth</translation>
+        <translation>Die Platform unterstützt kein Bluetooth</translation>
     </message>
     <message>
         <source>Android API below v15 does not support SDP discovery</source>
@@ -1293,26 +1281,6 @@
         <source>Cannot set connection security level</source>
         <translation>Die Sicherheitsstufe der Verbindung konnte nicht eingestellt werden</translation>
     </message>
-    <message>
-        <source>Network Error: %1</source>
-        <translation>Netzwerkfehler: %1</translation>
-    </message>
-    <message>
-        <source>Network error</source>
-        <translation>Netzwerkfehler</translation>
-    </message>
-    <message>
-        <source>Connection timed out</source>
-        <translation>Bei der Verbindung ist eine Zeitüberschreitung aufgetreten</translation>
-    </message>
-    <message>
-        <source>Host not reachable</source>
-        <translation>Zielrechner ist nicht erreichbar</translation>
-    </message>
-    <message>
-        <source>Host refused connection</source>
-        <translation>Der Zielrechner hat die Verbindung verweigert</translation>
-    </message>
 </context>
 <context>
     <name>QBluetoothTransferReply</name>
@@ -1397,26 +1365,6 @@
     <message>
         <source>Error occurred trying to connect to remote device.</source>
         <translation>Beim Aufbau der Verbindung zum Gerät trat ein Fehler auf.</translation>
-    </message>
-    <message>
-        <source>Error occurred trying to start advertising</source>
-        <translation>Bei der Ankündigung trat ein Fehler auf</translation>
-    </message>
-    <message>
-        <source>Advertisement data is larger than 31 bytes</source>
-        <translation>Advertisement-Daten sind größer als 31 bytes</translation>
-    </message>
-    <message>
-        <source>Advertisement feature not supported on the platform</source>
-        <translation>Das Advertisement-Feature ist auf dieser Plattform nicht unterstützt</translation>
-    </message>
-    <message>
-        <source>Failed due to too many advertisers</source>
-        <translation>Fehlschlag aufgrund zu vieler Advertisers</translation>
-    </message>
-    <message>
-        <source>Unknown advertisement error</source>
-        <translation>Unbekannter Fehler bei Advertisement</translation>
     </message>
 </context>
 </TS>

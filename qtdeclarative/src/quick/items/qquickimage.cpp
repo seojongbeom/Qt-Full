@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,7 +38,6 @@
 
 #include <QtQuick/private/qsgcontext_p.h>
 #include <private/qsgadaptationlayer_p.h>
-#include <private/qnumeric_p.h>
 
 #include <QtCore/qmath.h>
 #include <QtGui/qpainter.h>
@@ -69,7 +62,7 @@ public:
         emit textureChanged();
     }
 
-    QSGTexture *texture() const override {
+    QSGTexture *texture() const {
         if (m_texture) {
             m_texture->setFiltering(m_smooth ? QSGTexture::Linear : QSGTexture::Nearest);
             m_texture->setMipmapFiltering(m_mipmap ? QSGTexture::Linear : QSGTexture::None);
@@ -87,7 +80,6 @@ public:
 };
 
 #include "qquickimage.moc"
-#include "moc_qquickimage_p.cpp"
 
 QQuickImagePrivate::QQuickImagePrivate()
     : fillMode(QQuickImage::Stretch)
@@ -305,15 +297,6 @@ void QQuickImage::setFillMode(FillMode mode)
     if (d->fillMode == mode)
         return;
     d->fillMode = mode;
-    if ((mode == PreserveAspectCrop) != d->providerOptions.preserveAspectRatioCrop()) {
-        d->providerOptions.setPreserveAspectRatioCrop(mode == PreserveAspectCrop);
-        if (isComponentComplete())
-            load();
-    } else if ((mode == PreserveAspectFit) != d->providerOptions.preserveAspectRatioFit()) {
-        d->providerOptions.setPreserveAspectRatioFit(mode == PreserveAspectFit);
-        if (isComponentComplete())
-            load();
-    }
     update();
     updatePaintedGeometry();
     emit fillModeChanged();
@@ -433,9 +416,7 @@ qreal QQuickImage::paintedHeight() const
     (The \l fillMode is independent of this.)
 
     If both the sourceSize.width and sourceSize.height are set the image will be scaled
-    down to fit within the specified size (unless PreserveAspectCrop or PreserveAspectFit
-    are used, then it will be scaled to match the optimal size for cropping/fitting),
-    maintaining the image's aspect ratio.  The actual
+    down to fit within the specified size, maintaining the image's aspect ratio.  The actual
     size of the image after scaling is available via \l Item::implicitWidth and \l Item::implicitHeight.
 
     If the source is an intrinsically scalable image (eg. SVG), this property
@@ -626,10 +607,10 @@ QSGNode *QQuickImage::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
         return 0;
     }
 
-    QSGInternalImageNode *node = static_cast<QSGInternalImageNode *>(oldNode);
+    QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
     if (!node) {
         d->pixmapChanged = true;
-        node = d->sceneGraphContext()->createInternalImageNode();
+        node = d->sceneGraphContext()->createImageNode();
     }
 
     QRectF targetRect;
@@ -727,9 +708,9 @@ QSGNode *QQuickImage::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
                   sourceRect.height() / nsHeight);
 
     if (targetRect.isEmpty()
-        || !qt_is_finite(targetRect.width()) || !qt_is_finite(targetRect.height())
+        || !qIsFinite(targetRect.width()) || !qIsFinite(targetRect.height())
         || nsrect.isEmpty()
-        || !qt_is_finite(nsrect.width()) || !qt_is_finite(nsrect.height())) {
+        || !qIsFinite(nsrect.width()) || !qIsFinite(nsrect.height())) {
         delete node;
         return 0;
     }

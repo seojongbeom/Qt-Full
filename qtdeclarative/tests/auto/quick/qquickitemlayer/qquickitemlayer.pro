@@ -8,6 +8,7 @@ TESTDATA = data/*
 
 include(../../shared/util.pri)
 
+CONFIG += parallel_test
 QT += core-private gui-private  qml-private quick-private testlib
 
 OTHER_FILES += \
@@ -26,3 +27,4 @@ OTHER_FILES += \
     data/ItemEffect.qml \
     data/RectangleEffect.qml \
     data/TextureMirroring.qml
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

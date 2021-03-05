@@ -1,7 +1,7 @@
+load(qt_app)
+
 CONFIG += console
 QT += core-private gui-private
-
-qtHaveModule(widgets): QT += widgets
 
 qtHaveModule(network) {
     QT += network
@@ -10,5 +10,3 @@ qtHaveModule(network) {
 
 SOURCES += main.cpp qtdiag.cpp
 HEADERS += qtdiag.h
-
-load(qt_app)

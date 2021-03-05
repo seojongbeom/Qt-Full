@@ -8,3 +8,4 @@ macx:CONFIG -= app_bundle
 DEFINES += SRCDIR=\\\"$$PWD\\\"
 
 QT += quickparticles-private testlib
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

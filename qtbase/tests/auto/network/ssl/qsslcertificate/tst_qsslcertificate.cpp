@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -418,15 +423,15 @@ void tst_QSslCertificate::subjectAlternativeNames()
     QMapIterator<QSsl::AlternativeNameEntryType, QString> it(altSubjectNames);
     while (it.hasNext()) {
         it.next();
-        QByteArray type;
+        QString type;
         if (it.key() == QSsl::EmailEntry)
-            type = "email";
+            type = QLatin1String("email");
         else if (it.key() == QSsl::DnsEntry)
-            type = "DNS";
+            type = QLatin1String("DNS");
         else
             QFAIL("unsupported alternative name type");
-        const QByteArray entry = type + ':' + it.value().toLatin1();
-        QVERIFY(fileContents.contains(entry));
+        QString entry = QString("%1:%2").arg(type).arg(it.value());
+        QVERIFY(fileContents.contains(entry.toLatin1()));
     }
 
     // verify that each entry in fileContents is present in subjAltNames
@@ -839,7 +844,7 @@ void tst_QSslCertificate::nulInCN()
     QVERIFY(!cert.isNull());
 
     QString cn = cert.subjectInfo(QSslCertificate::CommonName)[0];
-    QVERIFY(cn != QLatin1String("www.bank.com"));
+    QVERIFY(cn != "www.bank.com");
 
     static const char realCN[] = "www.bank.com\0.badguy.com";
     QCOMPARE(cn, QString::fromLatin1(realCN, sizeof realCN - 1));
@@ -1059,7 +1064,7 @@ QString tst_QSslCertificate::toString(const QList<QSslError>& errors)
     QStringList errorStrings;
 
     foreach (const QSslError& error, errors) {
-        errorStrings.append(QLatin1Char('"') + error.errorString() + QLatin1Char('"'));
+        errorStrings.append(QLatin1String("\"") + error.errorString() + QLatin1String("\""));
     }
 
     return QLatin1String("[ ") + errorStrings.join(QLatin1String(", ")) + QLatin1String(" ]");
@@ -1308,7 +1313,6 @@ void tst_QSslCertificate::version()
 
 void tst_QSslCertificate::pkcs12()
 {
-    // See pkcs12/README for how to generate the PKCS12 files used here.
     if (!QSslSocket::supportsSsl()) {
         qWarning("SSL not supported, skipping test");
         return;
@@ -1350,15 +1354,6 @@ void tst_QSslCertificate::pkcs12()
     QVERIFY(!caCerts.isEmpty());
     QCOMPARE(caCerts.first(), caCert.first());
     QCOMPARE(caCerts, caCert);
-
-    // QTBUG-62335 - Fail (found no private key) but don't crash:
-    QFile nocert(testDataDir + QLatin1String("/pkcs12/leaf-nokey.p12"));
-    ok = nocert.open(QIODevice::ReadOnly);
-    QVERIFY(ok);
-    QTest::ignoreMessage(QtWarningMsg, "Unable to convert private key");
-    ok = QSslCertificate::importPkcs12(&nocert, &key, &cert, &caCerts);
-    QVERIFY(!ok);
-    nocert.close();
 }
 
 #endif // QT_NO_SSL

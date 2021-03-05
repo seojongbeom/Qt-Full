@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -78,10 +68,10 @@ MainWindow::MainWindow(const QString &artistTable, const QString &albumTable,
     uniqueAlbumId = model->rowCount();
     uniqueArtistId = artistView->count();
 
-    connect(model, &QSqlRelationalTableModel::rowsInserted,
-            this, &MainWindow::updateHeader);
-    connect(model, &QSqlRelationalTableModel::rowsRemoved,
-            this, &MainWindow::updateHeader);
+    connect(model, SIGNAL(rowsInserted(QModelIndex,int,int)),
+            this, SLOT(updateHeader(QModelIndex,int,int)));
+    connect(model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+            this, SLOT(updateHeader(QModelIndex,int,int)));
 
     QGridLayout *layout = new QGridLayout;
     layout->addWidget(artists, 0, 0);
@@ -145,7 +135,7 @@ void MainWindow::showAlbumDetails(QModelIndex index)
     titleLabel->show();
 
     QDomNodeList albums = albumData.elementsByTagName("album");
-    for (int i = 0; i < albums.count(); ++i) {
+    for (int i = 0; i < albums.count(); i++) {
         QDomNode album = albums.item(i);
         if (album.toElement().attribute("id") == albumId) {
             getTrackList(album.toElement());
@@ -164,9 +154,9 @@ void MainWindow::getTrackList(QDomNode album)
     QDomNode track;
     QString trackNumber;
 
-    for (int i = 0; i < tracks.count(); ++i) {
+    for (int j = 0; j < tracks.count(); j++) {
 
-        track = tracks.item(i);
+        track = tracks.item(j);
         trackNumber = track.toElement().attribute("number");
 
         QListWidgetItem *item = new QListWidgetItem(trackList);
@@ -222,7 +212,7 @@ void MainWindow::removeAlbumFromFile(int id)
 
     QDomNodeList albums = albumData.elementsByTagName("album");
 
-    for (int i = 0; i < albums.count(); ++i) {
+    for (int i = 0; i < albums.count(); i++) {
         QDomNode node = albums.item(i);
         if (node.toElement().attribute("id").toInt() == id) {
             albumData.elementsByTagName("archive").item(0).removeChild(node);
@@ -283,8 +273,8 @@ QGroupBox* MainWindow::createArtistGroupBox()
     artistView->setModel(model->relationModel(2));
     artistView->setModelColumn(1);
 
-    connect(artistView, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &MainWindow::changeArtist);
+    connect(artistView, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(changeArtist(int)));
 
     QGroupBox *box = new QGroupBox(tr("Artist"));
 
@@ -314,10 +304,10 @@ QGroupBox* MainWindow::createAlbumGroupBox()
     locale.setNumberOptions(QLocale::OmitGroupSeparator);
     albumView->setLocale(locale);
 
-    connect(albumView, &QTableView::clicked,
-            this, &MainWindow::showAlbumDetails);
-    connect(albumView, &QTableView::activated,
-            this, &MainWindow::showAlbumDetails);
+    connect(albumView, SIGNAL(clicked(QModelIndex)),
+            this, SLOT(showAlbumDetails(QModelIndex)));
+    connect(albumView, SIGNAL(activated(QModelIndex)),
+            this, SLOT(showAlbumDetails(QModelIndex)));
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(albumView, 0, 0);
@@ -383,16 +373,11 @@ void MainWindow::createMenuBar()
     helpMenu->addAction(aboutAction);
     helpMenu->addAction(aboutQtAction);
 
-    connect(addAction, &QAction::triggered,
-            this, &MainWindow::addAlbum);
-    connect(deleteAction, &QAction::triggered,
-            this, &MainWindow::deleteAlbum);
-    connect(quitAction, &QAction::triggered,
-            this, &MainWindow::close);
-    connect(aboutAction, &QAction::triggered,
-            this, &MainWindow::about);
-    connect(aboutQtAction, &QAction::triggered,
-            qApp, &QApplication::aboutQt);
+    connect(addAction, SIGNAL(triggered(bool)), this, SLOT(addAlbum()));
+    connect(deleteAction, SIGNAL(triggered(bool)), this, SLOT(deleteAlbum()));
+    connect(quitAction, SIGNAL(triggered(bool)), this, SLOT(close()));
+    connect(aboutAction, SIGNAL(triggered(bool)), this, SLOT(about()));
+    connect(aboutQtAction, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt()));
 }
 
 void MainWindow::showImageLabel()

@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
 SUBDIRS = defaultoptimize forceoptimize
-qtConfig(private_tests): SUBDIRS += alwaysoptimize
+contains(QT_CONFIG,private_tests):SUBDIRS += alwaysoptimize

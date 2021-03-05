@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -52,139 +42,66 @@
 #include "ui_notepad.h"
 
 //! [0]
-#include <QFile>
 #include <QFileDialog>
-#include <QTextStream>
+#include <QFile>
 #include <QMessageBox>
-#include <QprintDev>
-#include <QPrintDialog>
-#include <QFont>
-#include <QFontDialog>
+#include <QTextStream>
 //! [0]
 
-//! [1]
 Notepad::Notepad(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Notepad)
 {
     ui->setupUi(this);
-    this->setCentralWidget(ui->textEdit);
 }
-//! [1]
 
 Notepad::~Notepad()
 {
     delete ui;
 }
 
-//! [2]
-void Notepad::on_actionNew_triggered()
-{
-    currentFile = "";
-    ui->textEdit->setText("");
-}
-//! [2]
-
-//! [3]
-void Notepad::on_actionOpen_triggered()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, "Open the file");
-    QFile file(fileName);
-    currentFile = fileName;
-    if (!file.open(QIODevice::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this,"..","File not opened.");
-        return;
-    }
-    QTextStream in(&file);
-    QString text = in.readAll();
-    ui->textEdit->setText(text);
-    file.close();
-}
-//! [3]
-
-//! [4]
-void Notepad::on_actionSave_triggered()
-{
-    QFile file(currentFile);
-    if (!file.open(QIODevice::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this,"..","No file opened. Use Save As");
-        return;
-    }
-    QTextStream out(&file);
-    QString text = ui->textEdit->toPlainText();
-    out << text;
-    file.flush();
-    file.close();
-}
-//! [4]
-
-//! [5]
-void Notepad::on_actionSave_as_triggered()
-{
-    QString fileName = QFileDialog::getSaveFileName(this, "Save as");
-    QFile file(fileName);
-    currentFile = fileName;
-    if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this,"..","File not opened.");
-        return;
-    }
-    QTextStream out(&file);
-    QString text = ui->textEdit->toPlainText();
-    out << text;
-    file.flush();
-    file.close();
-}
-//! [5]
-
-//! [6]
-void Notepad::on_actionPrint_triggered()
-{
-    QprintDev printDev;
-    QPrintDialog dialog(&printDev, this);
-    if (dialog.exec() == QDialog::Rejected) {
-        return;
-        }
-    ui->textEdit->print(&printDev);
-}
-//! [6]
-
-void Notepad::on_actionExit_triggered()
+//! [1]
+void Notepad::on_quitButton_clicked()
 {
     QCoreApplication::quit();
 }
+//! [1]
 
-void Notepad::on_actionCopy_triggered()
+//! [2]
+void Notepad::on_actionOpen_triggered()
 {
-    ui->textEdit->copy();
-}
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), QString(),
+            tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
 
-void Notepad::on_actionCut_triggered()
-{
-    ui->textEdit->cut();
-}
-
-void Notepad::on_actionPaste_triggered()
-{
-    ui->textEdit->paste();
-}
-
-void Notepad::on_actionUndo_triggered()
-{
-     ui->textEdit->undo();
-}
-
-void Notepad::on_actionRedo_triggered()
-{
-        ui->textEdit->redo();
-}
-
-//! [7]
-void Notepad::on_actionFont_triggered()
-{
-    bool fontSelected;
-    QFont font = QFontDialog::getFont(&fontSelected, this);
-    if (fontSelected) {
-        ui->textEdit->setFont(font);
+    if (!fileName.isEmpty()) {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
+            return;
+        }
+        QTextStream in(&file);
+        ui->textEdit->setText(in.readAll());
+        file.close();
     }
 }
-//! [7]
+//! [2]
+
+//! [3]
+void Notepad::on_actionSave_triggered()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), QString(),
+            tr("Text Files (*.txt);;C++ Files (*.cpp *.h)"));
+
+    if (!fileName.isEmpty()) {
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly)) {
+            // error message
+        } else {
+            QTextStream stream(&file);
+            stream << ui->textEdit->toPlainText();
+            stream.flush();
+            file.close();
+        }
+    }
+}
+//! [3]

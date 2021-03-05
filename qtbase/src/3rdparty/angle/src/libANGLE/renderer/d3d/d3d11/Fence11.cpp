@@ -76,22 +76,23 @@ FenceNV11::~FenceNV11()
     SafeRelease(mQuery);
 }
 
-gl::Error FenceNV11::set(GLenum condition)
+gl::Error FenceNV11::set()
 {
     return FenceSetHelper(this);
 }
 
-gl::Error FenceNV11::test(GLboolean *outFinished)
+gl::Error FenceNV11::test(bool flushCommandBuffer, GLboolean *outFinished)
 {
-    return FenceTestHelper(this, true, outFinished);
+    return FenceTestHelper(this, flushCommandBuffer, outFinished);
 }
 
-gl::Error FenceNV11::finish()
+gl::Error FenceNV11::finishFence(GLboolean *outFinished)
 {
-    GLboolean finished = GL_FALSE;
-    while (finished != GL_TRUE)
+    ASSERT(outFinished);
+
+    while (*outFinished != GL_TRUE)
     {
-        gl::Error error = FenceTestHelper(this, true, &finished);
+        gl::Error error = test(true, outFinished);
         if (error.isError())
         {
             return error;
@@ -123,7 +124,7 @@ FenceSync11::FenceSync11(Renderer11 *renderer)
       mRenderer(renderer),
       mQuery(NULL)
 {
-    LARGE_INTEGER counterFreqency = {};
+    LARGE_INTEGER counterFreqency = { 0 };
     BOOL success = QueryPerformanceFrequency(&counterFreqency);
     UNUSED_ASSERTION_VARIABLE(success);
     ASSERT(success);
@@ -136,9 +137,8 @@ FenceSync11::~FenceSync11()
     SafeRelease(mQuery);
 }
 
-gl::Error FenceSync11::set(GLenum condition, GLbitfield flags)
+gl::Error FenceSync11::set()
 {
-    ASSERT(condition == GL_SYNC_GPU_COMMANDS_COMPLETE && flags == 0);
     return FenceSetHelper(this);
 }
 
@@ -168,7 +168,7 @@ gl::Error FenceSync11::clientWait(GLbitfield flags, GLuint64 timeout, GLenum *ou
         return gl::Error(GL_NO_ERROR);
     }
 
-    LARGE_INTEGER currentCounter = {};
+    LARGE_INTEGER currentCounter = { 0 };
     BOOL success = QueryPerformanceCounter(&currentCounter);
     UNUSED_ASSERTION_VARIABLE(success);
     ASSERT(success);

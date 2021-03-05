@@ -9,6 +9,8 @@
 #ifndef LIBANGLE_RENDERER_SHADERIMPL_H_
 #define LIBANGLE_RENDERER_SHADERIMPL_H_
 
+#include <vector>
+
 #include "common/angleutils.h"
 #include "libANGLE/Shader.h"
 
@@ -18,21 +20,36 @@ namespace rx
 class ShaderImpl : angle::NonCopyable
 {
   public:
-    ShaderImpl(const gl::Shader::Data &data) : mData(data) {}
+    ShaderImpl() { }
     virtual ~ShaderImpl() { }
 
-    // Returns additional ShCompile options.
-    virtual int prepareSourceAndReturnOptions(std::stringstream *sourceStream,
-                                              std::string *sourcePath) = 0;
-    // Returns success for compiling on the driver. Returns success.
-    virtual bool postTranslateCompile(gl::Compiler *compiler, std::string *infoLog) = 0;
-
+    virtual bool compile(gl::Compiler *compiler, const std::string &source) = 0;
     virtual std::string getDebugInfo() const = 0;
 
-    const gl::Shader::Data &getData() const { return mData; }
+    virtual const std::string &getInfoLog() const { return mInfoLog; }
+    virtual const std::string &getTranslatedSource() const { return mTranslatedSource; }
+
+    const std::vector<gl::PackedVarying> &getVaryings() const { return mVaryings; }
+    const std::vector<sh::Uniform> &getUniforms() const { return mUniforms; }
+    const std::vector<sh::InterfaceBlock> &getInterfaceBlocks() const  { return mInterfaceBlocks; }
+    const std::vector<sh::Attribute> &getActiveAttributes() const { return mActiveAttributes; }
+    const std::vector<sh::Attribute> &getActiveOutputVariables() const { return mActiveOutputVariables; }
+
+    std::vector<gl::PackedVarying> &getVaryings() { return mVaryings; }
+    std::vector<sh::Uniform> &getUniforms() { return mUniforms; }
+    std::vector<sh::InterfaceBlock> &getInterfaceBlocks() { return mInterfaceBlocks; }
+    std::vector<sh::Attribute> &getActiveAttributes() { return mActiveAttributes; }
+    std::vector<sh::Attribute> &getActiveOutputVariables() { return mActiveOutputVariables; }
 
   protected:
-    const gl::Shader::Data &mData;
+    std::string mInfoLog;
+    std::string mTranslatedSource;
+
+    std::vector<gl::PackedVarying> mVaryings;
+    std::vector<sh::Uniform> mUniforms;
+    std::vector<sh::InterfaceBlock> mInterfaceBlocks;
+    std::vector<sh::Attribute> mActiveAttributes;
+    std::vector<sh::Attribute> mActiveOutputVariables;
 };
 
 }

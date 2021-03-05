@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd and/or its subsidiary(-ies).
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd and/or its subsidiary(-ies).
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,12 +39,10 @@
 #include "qwinrtvideodeviceselectorcontrol.h"
 #include "qwinrtcameraimagecapturecontrol.h"
 #include "qwinrtimageencodercontrol.h"
-#include "qwinrtcameraflashcontrol.h"
 #include "qwinrtcamerafocuscontrol.h"
 #include "qwinrtcameralockscontrol.h"
 
 #include <QtCore/qfunctions_winrt.h>
-#include <QtCore/QMutex>
 #include <QtCore/QPointer>
 #include <QtGui/QGuiApplication>
 #include <private/qeventdispatcher_winrt_p.h>
@@ -228,6 +223,8 @@ public:
     {
         Q_ASSERT(m_videoRenderer);
 
+        InitializeCriticalSectionEx(&m_mutex, 0, 0);
+
         HRESULT hr;
         hr = MFCreateEventQueue(&m_eventQueue);
         Q_ASSERT_SUCCEEDED(hr);
@@ -237,8 +234,9 @@ public:
 
     ~MediaStream()
     {
-        QMutexLocker locker(&m_mutex);
+        CriticalSectionLocker locker(&m_mutex);
         m_eventQueue->Shutdown();
+        DeleteCriticalSection(&m_mutex);
     }
 
     HRESULT RequestSample()
@@ -252,30 +250,30 @@ public:
 
     HRESULT __stdcall GetEvent(DWORD flags, IMFMediaEvent **event) Q_DECL_OVERRIDE
     {
-        QMutexLocker locker(&m_mutex);
+        EnterCriticalSection(&m_mutex);
         // Create an extra reference to avoid deadlock
         ComPtr<IMFMediaEventQueue> eventQueue = m_eventQueue;
-        locker.unlock();
+        LeaveCriticalSection(&m_mutex);
 
         return eventQueue->GetEvent(flags, event);
     }
 
     HRESULT __stdcall BeginGetEvent(IMFAsyncCallback *callback, IUnknown *state) Q_DECL_OVERRIDE
     {
-        QMutexLocker locker(&m_mutex);
+        CriticalSectionLocker locker(&m_mutex);
         HRESULT hr = m_eventQueue->BeginGetEvent(callback, state);
         return hr;
     }
 
     HRESULT __stdcall EndGetEvent(IMFAsyncResult *result, IMFMediaEvent **event) Q_DECL_OVERRIDE
     {
-        QMutexLocker locker(&m_mutex);
+        CriticalSectionLocker locker(&m_mutex);
         return m_eventQueue->EndGetEvent(result, event);
     }
 
     HRESULT __stdcall QueueEvent(MediaEventType eventType, const GUID &extendedType, HRESULT status, const PROPVARIANT *value) Q_DECL_OVERRIDE
     {
-        QMutexLocker locker(&m_mutex);
+        CriticalSectionLocker locker(&m_mutex);
         return m_eventQueue->QueueEventParamVar(eventType, extendedType, status, value);
     }
 
@@ -370,7 +368,7 @@ public:
     }
 
 private:
-    QMutex m_mutex;
+    CRITICAL_SECTION m_mutex;
     ComPtr<IMFMediaType> m_type;
     IMFMediaSink *m_sink;
     ComPtr<IMFMediaEventQueue> m_eventQueue;
@@ -553,15 +551,10 @@ public:
     QPointer<QWinRTVideoDeviceSelectorControl> videoDeviceSelector;
     QPointer<QWinRTCameraImageCaptureControl> imageCaptureControl;
     QPointer<QWinRTImageEncoderControl> imageEncoderControl;
-    QPointer<QWinRTCameraFlashControl> cameraFlashControl;
     QPointer<QWinRTCameraFocusControl> cameraFocusControl;
     QPointer<QWinRTCameraLocksControl> cameraLocksControl;
     QAtomicInt framesMapped;
     QEventLoop *delayClose;
-
-    bool initializing = false;
-    bool initialized = false;
-    HANDLE initializationCompleteEvent;
 };
 
 QWinRTCameraControl::QWinRTCameraControl(QObject *parent)
@@ -582,11 +575,8 @@ QWinRTCameraControl::QWinRTCameraControl(QObject *parent)
     d->videoDeviceSelector = new QWinRTVideoDeviceSelectorControl(this);
     d->imageCaptureControl = new QWinRTCameraImageCaptureControl(this);
     d->imageEncoderControl = new QWinRTImageEncoderControl(this);
-    d->cameraFlashControl = new QWinRTCameraFlashControl(this);
     d->cameraFocusControl = new QWinRTCameraFocusControl(this);
     d->cameraLocksControl = new QWinRTCameraLocksControl(this);
-
-    d->initializationCompleteEvent = CreateEvent(NULL, false, false, NULL);
 
     if (qGuiApp) {
         connect(qGuiApp, &QGuiApplication::applicationStateChanged,
@@ -618,23 +608,8 @@ void QWinRTCameraControl::setState(QCamera::State state)
     case QCamera::ActiveState: {
         // Capture has not been created or initialized
         if (d->state == QCamera::UnloadedState) {
-            if (!d->initialized) {
-                if (!d->initializing) {
-                    hr = initialize();
-                    RETURN_VOID_AND_EMIT_ERROR("Failed to initialize media capture");
-                }
-                DWORD waitResult = WaitForSingleObjectEx(d->initializationCompleteEvent, 30000, FALSE);
-                if (waitResult != WAIT_OBJECT_0) {
-                    RETURN_VOID_AND_EMIT_ERROR("Failed to initialize camera control.");
-                    return;
-                }
-            }
-
-            d->state = QCamera::LoadedState;
-            emit stateChanged(d->state);
-
-            d->status = QCamera::LoadedStatus;
-            emit statusChanged(d->status);
+            hr = initialize();
+            RETURN_VOID_AND_EMIT_ERROR("Failed to initialize media capture");
         }
         Q_ASSERT(d->state == QCamera::LoadedState);
 
@@ -673,23 +648,8 @@ void QWinRTCameraControl::setState(QCamera::State state)
     case QCamera::LoadedState: {
         // If moving from unloaded, initialize the camera
         if (d->state == QCamera::UnloadedState) {
-            if (!d->initialized) {
-                if (!d->initializing) {
-                    hr = initialize();
-                    RETURN_VOID_AND_EMIT_ERROR("Failed to initialize media capture");
-                }
-                DWORD waitResult = WaitForSingleObjectEx(d->initializationCompleteEvent, 30000, FALSE);
-                if (waitResult != WAIT_OBJECT_0) {
-                    RETURN_VOID_AND_EMIT_ERROR("Failed to initialize camera control.");
-                    return;
-                }
-            }
-
-            d->state = QCamera::LoadedState;
-            emit stateChanged(d->state);
-
-            d->status = QCamera::LoadedStatus;
-            emit statusChanged(d->status);
+            hr = initialize();
+            RETURN_VOID_AND_EMIT_ERROR("Failed to initialize media capture");
         }
         // fall through
     }
@@ -779,7 +739,6 @@ void QWinRTCameraControl::setState(QCamera::State state)
                 d->status = QCamera::UnloadedStatus;
                 emit statusChanged(d->status);
             }
-            d->initialized = false;
         }
         break;
     }
@@ -851,12 +810,6 @@ QImageEncoderControl *QWinRTCameraControl::imageEncoderControl() const
 {
     Q_D(const QWinRTCameraControl);
     return d->imageEncoderControl;
-}
-
-QCameraFlashControl *QWinRTCameraControl::cameraFlashControl() const
-{
-    Q_D(const QWinRTCameraControl);
-    return d->cameraFlashControl;
 }
 
 QCameraFocusControl *QWinRTCameraControl::cameraFocusControl() const
@@ -950,7 +903,8 @@ HRESULT QWinRTCameraControl::initialize()
         }
 
         const QCamera::Position position = d->videoDeviceSelector->cameraPosition(deviceName);
-        d->videoRenderer->setScanLineDirection(QVideoSurfaceFormat::TopToBottom);
+        d->videoRenderer->setScanLineDirection(position == QCamera::BackFace ? QVideoSurfaceFormat::TopToBottom
+                                                                             : QVideoSurfaceFormat::BottomToTop);
         ComPtr<IMediaCaptureInitializationSettings> settings;
         hr = RoActivateInstance(HString::MakeReference(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings).Get(),
                                 &settings);
@@ -968,11 +922,118 @@ HRESULT QWinRTCameraControl::initialize()
         ComPtr<IAsyncAction> op;
         hr = d->capture->InitializeWithSettingsAsync(settings.Get(), &op);
         RETURN_HR_IF_FAILED("Failed to begin initialization of media capture manager");
-        hr = op.Get()->put_Completed(Callback<IAsyncActionCompletedHandler>(
-                                         this, &QWinRTCameraControl::onInitializationCompleted).Get());
-        RETURN_HR_IF_FAILED("Failed to register initialization callback");
+        hr = QWinRTFunctions::await(op, QWinRTFunctions::ProcessThreadEvents);
+        if (hr == E_ACCESSDENIED) {
+            qWarning("Access denied when initializing the media capture manager. "
+                     "Check your manifest settings for microphone and webcam access.");
+        }
+        RETURN_HR_IF_FAILED("Failed to initialize media capture manager");
+
+        ComPtr<IVideoDeviceController> videoDeviceController;
+        hr = d->capture->get_VideoDeviceController(&videoDeviceController);
+        ComPtr<IAdvancedVideoCaptureDeviceController2> advancedVideoDeviceController;
+        hr = videoDeviceController.As(&advancedVideoDeviceController);
+        Q_ASSERT_SUCCEEDED(hr);
+        hr = advancedVideoDeviceController->get_FocusControl(&d->focusControl);
+        Q_ASSERT_SUCCEEDED(hr);
+
+        boolean isFocusSupported;
+        hr = d->focusControl->get_Supported(&isFocusSupported);
+        Q_ASSERT_SUCCEEDED(hr);
+        if (isFocusSupported) {
+            hr = advancedVideoDeviceController->get_RegionsOfInterestControl(&d->regionsOfInterestControl);
+            if (FAILED(hr))
+                qCDebug(lcMMCamera) << "Focus supported, but no control for regions of interest available";
+            hr = initializeFocus();
+            Q_ASSERT_SUCCEEDED(hr);
+        } else {
+            d->cameraFocusControl->setSupportedFocusMode(0);
+            d->cameraFocusControl->setSupportedFocusPointMode(QSet<QCameraFocus::FocusPointMode>());
+        }
+        d->cameraLocksControl->initialize();
+
+        Q_ASSERT_SUCCEEDED(hr);
+        ComPtr<IMediaDeviceController> deviceController;
+        hr = videoDeviceController.As(&deviceController);
+        Q_ASSERT_SUCCEEDED(hr);
+
+        // Get preview stream properties.
+        ComPtr<IVectorView<IMediaEncodingProperties *>> previewPropertiesList;
+        QVector<QSize> previewResolutions;
+        hr = getMediaStreamResolutions(deviceController.Get(),
+                                       MediaStreamType_VideoPreview,
+                                       &previewPropertiesList,
+                                       &previewResolutions);
+        RETURN_HR_IF_FAILED("Failed to find a suitable video format");
+
+        MediaStreamType mediaStreamType =
+                d->captureMode == QCamera::CaptureVideo ? MediaStreamType_VideoRecord : MediaStreamType_Photo;
+
+        // Get capture stream properties.
+        ComPtr<IVectorView<IMediaEncodingProperties *>> capturePropertiesList;
+        QVector<QSize> captureResolutions;
+        hr = getMediaStreamResolutions(deviceController.Get(),
+                                       mediaStreamType,
+                                       &capturePropertiesList,
+                                       &captureResolutions);
+        RETURN_HR_IF_FAILED("Failed to find a suitable video format");
+
+        // Set capture resolutions.
+        d->imageEncoderControl->setSupportedResolutionsList(captureResolutions.toList());
+        const QSize captureResolution = d->imageEncoderControl->imageSettings().resolution();
+        const quint32 captureResolutionIndex = captureResolutions.indexOf(captureResolution);
+        ComPtr<IMediaEncodingProperties> captureProperties;
+        hr = capturePropertiesList->GetAt(captureResolutionIndex, &captureProperties);
+        Q_ASSERT_SUCCEEDED(hr);
+        hr = deviceController->SetMediaStreamPropertiesAsync(mediaStreamType, captureProperties.Get(), &op);
+        Q_ASSERT_SUCCEEDED(hr);
+        hr = QWinRTFunctions::await(op);
+        Q_ASSERT_SUCCEEDED(hr);
+
+        // Set preview resolution.
+        QVector<QSize> filtered;
+        const float captureAspectRatio = float(captureResolution.width()) / captureResolution.height();
+        foreach (const QSize &resolution, previewResolutions) {
+            const float aspectRatio = float(resolution.width()) / resolution.height();
+            if (qAbs(aspectRatio - captureAspectRatio) <= ASPECTRATIO_EPSILON)
+                filtered.append(resolution);
+        }
+        qSort(filtered.begin(),
+              filtered.end(),
+              [](QSize size1, QSize size2) { return size1.width() * size1.height() < size2.width() * size2.height(); });
+
+        const QSize &viewfinderResolution = filtered.first();
+        const quint32 viewfinderResolutionIndex = previewResolutions.indexOf(viewfinderResolution);
+        hr = RoActivateInstance(HString::MakeReference(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile).Get(),
+                                &d->encodingProfile);
+        Q_ASSERT_SUCCEEDED(hr);
+        ComPtr<IMediaEncodingProperties> previewProperties;
+        hr = previewPropertiesList->GetAt(viewfinderResolutionIndex, &previewProperties);
+        Q_ASSERT_SUCCEEDED(hr);
+        hr = deviceController->SetMediaStreamPropertiesAsync(MediaStreamType_VideoPreview, previewProperties.Get(), &op);
+        Q_ASSERT_SUCCEEDED(hr);
+        hr = QWinRTFunctions::await(op);
+        Q_ASSERT_SUCCEEDED(hr);
+        ComPtr<IVideoEncodingProperties> videoPreviewProperties;
+        hr = previewProperties.As(&videoPreviewProperties);
+        Q_ASSERT_SUCCEEDED(hr);
+        hr = d->encodingProfile->put_Video(videoPreviewProperties.Get());
+        Q_ASSERT_SUCCEEDED(hr);
+
+        if (d->videoRenderer)
+            d->videoRenderer->setSize(viewfinderResolution);
+
         return S_OK;
     });
+
+    if (SUCCEEDED(hr) && d->state != QCamera::LoadedState) {
+        d->state = QCamera::LoadedState;
+        emit stateChanged(d->state);
+    }
+    if (SUCCEEDED(hr) && d->status != QCamera::LoadedStatus) {
+        d->status = QCamera::LoadedStatus;
+        emit statusChanged(d->status);
+    }
     return hr;
 }
 
@@ -1164,34 +1225,30 @@ bool QWinRTCameraControl::focus()
 {
     Q_D(QWinRTCameraControl);
     HRESULT hr;
-    if (!d->focusControl)
+    AsyncStatus status = AsyncStatus::Completed;
+    if (d->focusOperation) {
+        ComPtr<IAsyncInfo> info;
+        hr = d->focusOperation.As(&info);
+        Q_ASSERT_SUCCEEDED(hr);
+        info->get_Status(&status);
+    }
+
+    if (!d->focusControl || status == AsyncStatus::Started)
         return false;
 
     QEventDispatcherWinRT::runOnXamlThread([&d, &hr]() {
-        if (d->focusOperation) {
-            ComPtr<IAsyncInfo> info;
-            hr = d->focusOperation.As(&info);
-            Q_ASSERT_SUCCEEDED(hr);
-
-            AsyncStatus status = AsyncStatus::Completed;
-            hr = info->get_Status(&status);
-            Q_ASSERT_SUCCEEDED(hr);
-            if (status == AsyncStatus::Started)
-                return E_ASYNC_OPERATION_NOT_STARTED;
-        }
-
         hr = d->focusControl->FocusAsync(&d->focusOperation);
-        Q_ASSERT_SUCCEEDED(hr);
-
-        const long errorCode = HRESULT_CODE(hr);
-        if (errorCode == ERROR_OPERATION_IN_PROGRESS
-                || errorCode == ERROR_WRITE_PROTECT) {
-            return E_ASYNC_OPERATION_NOT_STARTED;
-        }
         Q_ASSERT_SUCCEEDED(hr);
         return S_OK;
     });
-
+    const long errorCode = HRESULT_CODE(hr);
+    if (errorCode == ERROR_OPERATION_IN_PROGRESS
+        || errorCode == ERROR_WRITE_PROTECT) {
+        return false;
+    }
+    Q_ASSERT_SUCCEEDED(hr);
+    hr = QWinRTFunctions::await(d->focusOperation, QWinRTFunctions::ProcessThreadEvents);
+    Q_ASSERT_SUCCEEDED(hr);
     return hr == S_OK;
 }
 
@@ -1212,22 +1269,15 @@ bool QWinRTCameraControl::lockFocus()
     Q_D(QWinRTCameraControl);
     if (!d->focusControl)
         return false;
-
-    bool result = false;
+    ComPtr<IFocusControl2> focusControl2;
+    HRESULT hr = d->focusControl.As(&focusControl2);
+    Q_ASSERT_SUCCEEDED(hr);
     ComPtr<IAsyncAction> op;
-    HRESULT hr;
-    hr = QEventDispatcherWinRT::runOnXamlThread([d, &result, &op]() {
-        ComPtr<IFocusControl2> focusControl2;
-        HRESULT hr = d->focusControl.As(&focusControl2);
-        Q_ASSERT_SUCCEEDED(hr);
-        hr = focusControl2->LockAsync(&op);
-        if (HRESULT_CODE(hr) == ERROR_WRITE_PROTECT)
-            return S_OK;
-        Q_ASSERT_SUCCEEDED(hr);
-        result = true;
-        return hr;
-    });
-    return result ? (QWinRTFunctions::await(op) == S_OK) : false;
+    hr = focusControl2->LockAsync(&op);
+    if (HRESULT_CODE(hr) == ERROR_WRITE_PROTECT)
+        return false;
+    Q_ASSERT_SUCCEEDED(hr);
+    return QWinRTFunctions::await(op) == S_OK;
 }
 
 bool QWinRTCameraControl::unlockFocus()
@@ -1235,22 +1285,15 @@ bool QWinRTCameraControl::unlockFocus()
     Q_D(QWinRTCameraControl);
     if (!d->focusControl)
         return false;
-
-    bool result = false;
+    ComPtr<IFocusControl2> focusControl2;
+    HRESULT hr = d->focusControl.As(&focusControl2);
+    Q_ASSERT_SUCCEEDED(hr);
     ComPtr<IAsyncAction> op;
-    HRESULT hr;
-    hr = QEventDispatcherWinRT::runOnXamlThread([d, &result, &op]() {
-        ComPtr<IFocusControl2> focusControl2;
-        HRESULT hr = d->focusControl.As(&focusControl2);
-        Q_ASSERT_SUCCEEDED(hr);
-        hr = focusControl2->UnlockAsync(&op);
-        if (HRESULT_CODE(hr) == ERROR_WRITE_PROTECT)
-            return S_OK;
-        Q_ASSERT_SUCCEEDED(hr);
-        result = true;
-        return hr;
-    });
-    return result ? (QWinRTFunctions::await(op) == S_OK) : false;
+    hr = focusControl2->UnlockAsync(&op);
+    if (HRESULT_CODE(hr) == ERROR_WRITE_PROTECT)
+        return false;
+    Q_ASSERT_SUCCEEDED(hr);
+    return QWinRTFunctions::await(op) == S_OK;
 }
 
 #else // !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
@@ -1333,122 +1376,6 @@ HRESULT QWinRTCameraControl::onRecordLimitationExceeded(IMediaCapture *)
     qCDebug(lcMMCamera) << __FUNCTION__;
     emit error(QCamera::CameraError, QStringLiteral("Recording limit exceeded."));
     setState(QCamera::LoadedState);
-    return S_OK;
-}
-
-HRESULT QWinRTCameraControl::onInitializationCompleted(IAsyncAction *, AsyncStatus status)
-{
-    qCDebug(lcMMCamera) << __FUNCTION__;
-    Q_D(QWinRTCameraControl);
-
-    if (status != Completed) {
-        d->initializing = false;
-        d->initialized = true;
-        return S_OK;
-    }
-
-    ComPtr<IVideoDeviceController> videoDeviceController;
-    HRESULT hr = d->capture->get_VideoDeviceController(&videoDeviceController);
-    ComPtr<IAdvancedVideoCaptureDeviceController2> advancedVideoDeviceController;
-    hr = videoDeviceController.As(&advancedVideoDeviceController);
-    Q_ASSERT_SUCCEEDED(hr);
-    hr = advancedVideoDeviceController->get_FocusControl(&d->focusControl);
-    Q_ASSERT_SUCCEEDED(hr);
-
-    d->cameraFlashControl->initialize(advancedVideoDeviceController);
-
-    boolean isFocusSupported;
-    hr = d->focusControl->get_Supported(&isFocusSupported);
-    Q_ASSERT_SUCCEEDED(hr);
-    if (isFocusSupported) {
-        hr = advancedVideoDeviceController->get_RegionsOfInterestControl(&d->regionsOfInterestControl);
-        if (FAILED(hr))
-            qCDebug(lcMMCamera) << "Focus supported, but no control for regions of interest available";
-        hr = initializeFocus();
-        Q_ASSERT_SUCCEEDED(hr);
-    }
-
-    Q_ASSERT_SUCCEEDED(hr);
-    ComPtr<IMediaDeviceController> deviceController;
-    hr = videoDeviceController.As(&deviceController);
-    Q_ASSERT_SUCCEEDED(hr);
-
-    // Get preview stream properties.
-    ComPtr<IVectorView<IMediaEncodingProperties *>> previewPropertiesList;
-    QVector<QSize> previewResolutions;
-    hr = getMediaStreamResolutions(deviceController.Get(),
-                                   MediaStreamType_VideoPreview,
-                                   &previewPropertiesList,
-                                   &previewResolutions);
-    RETURN_HR_IF_FAILED("Failed to find a suitable video format");
-
-    MediaStreamType mediaStreamType =
-            d->captureMode == QCamera::CaptureVideo ? MediaStreamType_VideoRecord : MediaStreamType_Photo;
-
-    // Get capture stream properties.
-    ComPtr<IVectorView<IMediaEncodingProperties *>> capturePropertiesList;
-    QVector<QSize> captureResolutions;
-    hr = getMediaStreamResolutions(deviceController.Get(),
-                                   mediaStreamType,
-                                   &capturePropertiesList,
-                                   &captureResolutions);
-    RETURN_HR_IF_FAILED("Failed to find a suitable video format");
-
-    // Set capture resolutions.
-    d->imageEncoderControl->setSupportedResolutionsList(captureResolutions.toList());
-    const QSize captureResolution = d->imageEncoderControl->imageSettings().resolution();
-    const quint32 captureResolutionIndex = captureResolutions.indexOf(captureResolution);
-    ComPtr<IMediaEncodingProperties> captureProperties;
-    hr = capturePropertiesList->GetAt(captureResolutionIndex, &captureProperties);
-    Q_ASSERT_SUCCEEDED(hr);
-    ComPtr<IAsyncAction> op;
-    hr = deviceController->SetMediaStreamPropertiesAsync(mediaStreamType, captureProperties.Get(), &op);
-    Q_ASSERT_SUCCEEDED(hr);
-    hr = QWinRTFunctions::await(op);
-    Q_ASSERT_SUCCEEDED(hr);
-
-    // Set preview resolution.
-    QVector<QSize> filtered;
-    const float captureAspectRatio = float(captureResolution.width()) / captureResolution.height();
-    for (const QSize &resolution : qAsConst(previewResolutions)) {
-        const float aspectRatio = float(resolution.width()) / resolution.height();
-        if (qAbs(aspectRatio - captureAspectRatio) <= ASPECTRATIO_EPSILON)
-            filtered.append(resolution);
-    }
-    qSort(filtered.begin(),
-          filtered.end(),
-          [](QSize size1, QSize size2) { return size1.width() * size1.height() < size2.width() * size2.height(); });
-
-    const QSize &viewfinderResolution = filtered.first();
-    const quint32 viewfinderResolutionIndex = previewResolutions.indexOf(viewfinderResolution);
-    hr = RoActivateInstance(HString::MakeReference(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile).Get(),
-                            &d->encodingProfile);
-    Q_ASSERT_SUCCEEDED(hr);
-    ComPtr<IMediaEncodingProperties> previewProperties;
-    hr = previewPropertiesList->GetAt(viewfinderResolutionIndex, &previewProperties);
-    Q_ASSERT_SUCCEEDED(hr);
-    hr = deviceController->SetMediaStreamPropertiesAsync(MediaStreamType_VideoPreview, previewProperties.Get(), &op);
-    Q_ASSERT_SUCCEEDED(hr);
-    hr = QWinRTFunctions::await(op);
-    Q_ASSERT_SUCCEEDED(hr);
-    ComPtr<IVideoEncodingProperties> videoPreviewProperties;
-    hr = previewProperties.As(&videoPreviewProperties);
-    Q_ASSERT_SUCCEEDED(hr);
-    hr = d->encodingProfile->put_Video(videoPreviewProperties.Get());
-    Q_ASSERT_SUCCEEDED(hr);
-
-    if (d->videoRenderer)
-        d->videoRenderer->setSize(viewfinderResolution);
-
-    if (!isFocusSupported) {
-        d->cameraFocusControl->setSupportedFocusMode(0);
-        d->cameraFocusControl->setSupportedFocusPointMode(QSet<QCameraFocus::FocusPointMode>());
-    }
-    d->cameraLocksControl->initialize();
-
-    d->initializing = false;
-    d->initialized = true;
-    SetEvent(d->initializationCompleteEvent);
     return S_OK;
 }
 

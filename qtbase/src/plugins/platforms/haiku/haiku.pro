@@ -1,6 +1,6 @@
 TARGET = qhaiku
 
-QT += core-private gui-private eventdistpatcher_support-private
+QT += platformsupport-private core-private gui-private
 
 SOURCES = \
     main.cpp \
@@ -35,6 +35,8 @@ HEADERS = \
 LIBS += -lbe
 
 OTHER_FILES += haiku.json
+
+include (../../../platformsupport/fontdatabases/fontdatabases.pri)
 
 PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = QHaikuIntegrationPlugin

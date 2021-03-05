@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -66,49 +56,47 @@ VideoSettings::VideoSettings(QMediaRecorder *mediaRecorder, QWidget *parent) :
 
     //audio codecs
     ui->audioCodecBox->addItem(tr("Default audio codec"), QVariant(QString()));
-    const QStringList supportedAudioCodecs =  mediaRecorder->supportedAudioCodecs();
-    for (const QString &codecName : supportedAudioCodecs) {
+    foreach (const QString &codecName, mediaRecorder->supportedAudioCodecs()) {
         QString description = mediaRecorder->audioCodecDescription(codecName);
-        ui->audioCodecBox->addItem(codecName + ": " + description, QVariant(codecName));
+        ui->audioCodecBox->addItem(codecName+": "+description, QVariant(codecName));
     }
 
     //sample rate:
-    const QList<int>supportedAudioSampleRates = mediaRecorder->supportedAudioSampleRates();
-    for (int sampleRate : supportedAudioSampleRates)
+    foreach (int sampleRate, mediaRecorder->supportedAudioSampleRates()) {
         ui->audioSampleRateBox->addItem(QString::number(sampleRate), QVariant(sampleRate));
+    }
 
     ui->audioQualitySlider->setRange(0, int(QMultimedia::VeryHighQuality));
 
     //video codecs
     ui->videoCodecBox->addItem(tr("Default video codec"), QVariant(QString()));
-    const QStringList supportedVideoCodecs = mediaRecorder->supportedVideoCodecs();
-    for (const QString &codecName : supportedVideoCodecs) {
+    foreach (const QString &codecName, mediaRecorder->supportedVideoCodecs()) {
         QString description = mediaRecorder->videoCodecDescription(codecName);
-        ui->videoCodecBox->addItem(codecName + ": " + description, QVariant(codecName));
+        ui->videoCodecBox->addItem(codecName+": "+description, QVariant(codecName));
     }
 
     ui->videoQualitySlider->setRange(0, int(QMultimedia::VeryHighQuality));
 
 
     ui->videoResolutionBox->addItem(tr("Default"));
-    const QList<QSize> supportedResolutions = mediaRecorder->supportedResolutions();
-    for (const QSize &resolution : supportedResolutions) {
+    QList<QSize> supportedResolutions = mediaRecorder->supportedResolutions();
+    foreach (const QSize &resolution, supportedResolutions) {
         ui->videoResolutionBox->addItem(QString("%1x%2").arg(resolution.width()).arg(resolution.height()),
                                         QVariant(resolution));
     }
 
     ui->videoFramerateBox->addItem(tr("Default"));
-    const QList<qreal> supportedFrameRates = mediaRecorder->supportedFrameRates();
-    for (qreal rate : supportedFrameRates) {
+    QList<qreal> supportedFrameRates = mediaRecorder->supportedFrameRates();
+    qreal rate;
+    foreach (rate, supportedFrameRates) {
         QString rateString = QString("%1").arg(rate, 0, 'f', 2);
         ui->videoFramerateBox->addItem(rateString, QVariant(rate));
     }
 
     //containers
     ui->containerFormatBox->addItem(tr("Default container"), QVariant(QString()));
-    const QStringList formats = mediaRecorder->supportedContainers();
-    for (const QString &format : formats) {
-        ui->containerFormatBox->addItem(format + ": " + mediaRecorder->containerDescription(format),
+    foreach (const QString &format, mediaRecorder->supportedContainers()) {
+        ui->containerFormatBox->addItem(format+":"+mediaRecorder->containerDescription(format),
                                         QVariant(format));
     }
 }

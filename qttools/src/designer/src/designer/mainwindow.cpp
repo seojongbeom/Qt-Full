@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -60,7 +65,9 @@ typedef QList<QAction *> ActionList;
 
 static void addActionsToToolBar(const ActionList &actions, QToolBar *t)
 {
-    for (QAction *action : actions) {
+    const ActionList::const_iterator cend = actions.constEnd();
+    for (ActionList::const_iterator it = actions.constBegin(); it != cend; ++it) {
+        QAction *action = *it;
         if (action->property(QDesignerActions::defaultToolbarPropertyName).toBool())
             t->addAction(action);
     }
@@ -195,8 +202,9 @@ bool DockedMdiArea::event(QEvent *event)
 
 static void addActionsToToolBarManager(const ActionList &al, const QString &title, QtToolBarManager *tbm)
 {
-    for (QAction *action : al)
-        tbm->addAction(action, title);
+    const ActionList::const_iterator cend = al.constEnd();
+    for (ActionList::const_iterator it = al.constBegin(); it != cend; ++it)
+        tbm->addAction(*it, title);
 }
 
 ToolBarManager::ToolBarManager(QMainWindow *configureableMainWindow,
@@ -219,7 +227,7 @@ ToolBarManager::ToolBarManager(QMainWindow *configureableMainWindow,
 
     m_manager->setMainWindow(configureableMainWindow);
 
-    for (QToolBar *tb : qAsConst(m_toolbars)) {
+    foreach(QToolBar *tb, m_toolbars) {
         const QString title = tb->windowTitle();
         m_manager->addToolBar(tb, title);
         addActionsToToolBarManager(tb->actions(), title, m_manager);
@@ -236,15 +244,26 @@ ToolBarManager::ToolBarManager(QMainWindow *configureableMainWindow,
     addActionsToToolBarManager(previewActions, tr("Style"), m_manager);
 
     const QString dockTitle = tr("Dock views");
-    for (QDesignerToolWindow *tw : toolWindows) {
+    foreach (QDesignerToolWindow *tw, toolWindows) {
         if (QAction *action = tw->action())
             m_manager->addAction(action, dockTitle);
     }
 
-    addActionsToToolBarManager(actions->fileActions()->actions(), tr("File"), m_manager);
-    addActionsToToolBarManager(actions->editActions()->actions(), tr("Edit"), m_manager);
-    addActionsToToolBarManager(actions->toolActions()->actions(), tr("Tools"), m_manager);
-    addActionsToToolBarManager(actions->formActions()->actions(), tr("Form"), m_manager);
+    QString category(tr("File"));
+    foreach(QAction *action, actions->fileActions()->actions())
+        m_manager->addAction(action, category);
+
+    category = tr("Edit");
+    foreach(QAction *action, actions->editActions()->actions())
+        m_manager->addAction(action, category);
+
+    category = tr("Tools");
+    foreach(QAction *action, actions->toolActions()->actions())
+        m_manager->addAction(action, category);
+
+    category = tr("Form");
+    foreach(QAction *action, actions->formActions()->actions())
+        m_manager->addAction(action, category);
 
     m_manager->addAction(m_configureAction, tr("Toolbars"));
     updateToolBarMenu();
@@ -263,7 +282,7 @@ void ToolBarManager::updateToolBarMenu()
     qStableSort(m_toolbars.begin(), m_toolbars.end(), toolBarTitleLessThan);
     // add to menu
     m_toolBarMenu->clear();
-    for (QToolBar *tb : qAsConst(m_toolbars))
+    foreach (QToolBar *tb,  m_toolbars)
         m_toolBarMenu->addAction(tb->toggleViewAction());
     m_toolBarMenu->addAction(m_configureAction);
 }
@@ -298,7 +317,7 @@ DockedMainWindow::DockedMainWindow(QDesignerWorkbench *wb,
     setWindowTitle(mainWindowTitle());
 
     const QList<QToolBar *> toolbars = createToolBars(wb->actionManager(), false);
-    for (QToolBar *tb : toolbars)
+    foreach (QToolBar *tb, toolbars)
         addToolBar(tb);
     DockedMdiArea *dma = new DockedMdiArea(wb->actionManager()->uiExtension());
     connect(dma, &DockedMdiArea::fileDropped,
@@ -353,7 +372,7 @@ QMdiSubWindow *DockedMainWindow::createMdiSubWindow(QWidget *fw, Qt::WindowFlags
 DockedMainWindow::DockWidgetList DockedMainWindow::addToolWindows(const DesignerToolWindowList &tls)
 {
     DockWidgetList rc;
-    for (QDesignerToolWindow *tw : tls) {
+    foreach (QDesignerToolWindow *tw, tls) {
         QDockWidget *dockWidget = new QDockWidget;
         dockWidget->setObjectName(tw->objectName() + QStringLiteral("_dock"));
         dockWidget->setWindowTitle(tw->windowTitle());

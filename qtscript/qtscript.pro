@@ -1,3 +1,3 @@
-requires(!integrity:!vxworks:!winrt)
+requires(!winrt)
 
 load(qt_parts)

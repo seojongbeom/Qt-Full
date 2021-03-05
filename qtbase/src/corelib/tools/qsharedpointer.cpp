@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -442,20 +435,15 @@
 */
 
 /*!
-    \fn QSharedPointer::QSharedPointer(X *ptr)
+    \fn QSharedPointer::QSharedPointer(T *ptr)
 
     Creates a QSharedPointer that points to \a ptr. The pointer \a ptr
     becomes managed by this QSharedPointer and must not be passed to
     another QSharedPointer object or deleted outside this object.
-
-    Since Qt 5.8, when the last reference to this QSharedPointer gets
-    destroyed, \a ptr will be deleted by calling \c X's destructor (even if \c
-    X is not the same as QSharedPointer's template parameter \c T). Previously,
-    the destructor for \c T was called.
 */
 
 /*!
-    \fn QSharedPointer::QSharedPointer(X *ptr, Deleter deleter)
+    \fn QSharedPointer::QSharedPointer(T *ptr, Deleter deleter)
 
     Creates a QSharedPointer that points to \a ptr. The pointer \a ptr
     becomes managed by this QSharedPointer and must not be passed to
@@ -482,9 +470,6 @@
     }
     \endcode
 
-    Note that the custom deleter function will be called with a pointer to type
-    \c X, even if the QSharedPointer template parameter \c T is not the same.
-
     It is also possible to specify a member function directly, as in:
     \code
         QSharedPointer<MyObject> obj =
@@ -492,22 +477,6 @@
     \endcode
 
     \sa clear()
-*/
-
-/*!
-    \fn QSharedPointer::QSharedPointer(std::nullptr_t)
-    \since 5.8
-
-    Creates a QSharedPointer that is null. This is equivalent to the
-    QSharedPointer default constructor.
-*/
-
-/*!
-    \fn QSharedPointer::QSharedPointer(std::nullptr_t, Deleter)
-    \since 5.8
-
-    Creates a QSharedPointer that is null. This is equivalent to the
-    QSharedPointer default constructor.
 */
 
 /*!
@@ -1148,90 +1117,6 @@
 */
 
 /*!
-    \fn bool operator==(const QSharedPointer<T> &lhs, std::nullptr_t)
-    \relates QSharedPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a lhs is a null pointer.
-
-    \sa QSharedPointer::isNull()
-*/
-
-/*!
-    \fn bool operator==(std::nullptr_t, const QSharedPointer<T> &rhs)
-    \relates QSharedPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a rhs is a null pointer.
-
-    \sa QSharedPointer::isNull()
-*/
-
-/*!
-    \fn bool operator!=(const QSharedPointer<T> &lhs, std::nullptr_t)
-    \relates QSharedPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a lhs is a valid (i.e.
-    non-null) pointer.
-
-    \sa QSharedPointer::isNull()
-*/
-
-/*!
-    \fn bool operator!=(std::nullptr_t, const QSharedPointer<T> &rhs)
-    \relates QSharedPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a rhs is a valid (i.e.
-    non-null) pointer.
-
-    \sa QSharedPointer::isNull()
-*/
-
-/*!
-    \fn bool operator==(const QWeakPointer<T> &lhs, std::nullptr_t)
-    \relates QWeakPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a lhs is a null pointer.
-
-    \sa QWeakPointer::isNull()
-*/
-
-/*!
-    \fn bool operator==(std::nullptr_t, const QWeakPointer<T> &rhs)
-    \relates QWeakPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a rhs is a null pointer.
-
-    \sa QWeakPointer::isNull()
-*/
-
-/*!
-    \fn bool operator!=(const QWeakPointer<T> &lhs, std::nullptr_t)
-    \relates QWeakPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a lhs is a valid (i.e.
-    non-null) pointer.
-
-    \sa QWeakPointer::isNull()
-*/
-
-/*!
-    \fn bool operator!=(std::nullptr_t, const QWeakPointer<T> &rhs)
-    \relates QWeakPointer
-    \since 5.8
-
-    Returns \c true if the pointer referenced by \a rhs is a valid (i.e.
-    non-null) pointer.
-
-    \sa QWeakPointer::isNull()
-*/
-
-/*!
     \fn bool operator!=(const QWeakPointer<T> &ptr1, const QSharedPointer<X> &ptr2)
     \relates QWeakPointer
 
@@ -1453,9 +1338,6 @@ QtSharedPointer::ExternalRefCountData *QtSharedPointer::ExternalRefCountData::ge
     x->strongref.store(-1);
     x->weakref.store(2);  // the QWeakPointer that called us plus the QObject itself
     if (!d->sharedRefcount.testAndSetRelease(0, x)) {
-        // ~ExternalRefCountData has a Q_ASSERT, so we use this trick to
-        // only execute this if Q_ASSERTs are enabled
-        Q_ASSERT((x->weakref.store(0), true));
         delete x;
         x = d->sharedRefcount.loadAcquire();
         x->weakref.ref();
@@ -1615,7 +1497,7 @@ void QtSharedPointer::internalSafetyCheckAdd(const void *d_ptr, const volatile v
     //qDebug("Adding d=%p value=%p", d_ptr, ptr);
 
     const void *other_d_ptr = kp->dataPointers.value(ptr, 0);
-    if (Q_UNLIKELY(other_d_ptr)) {
+    if (other_d_ptr) {
 #  ifdef BACKTRACE_SUPPORTED
         printBacktrace(knownPointers()->dPointers.value(other_d_ptr).backtrace);
 #  endif
@@ -1645,15 +1527,15 @@ void QtSharedPointer::internalSafetyCheckRemove(const void *d_ptr)
 
     QMutexLocker lock(&kp->mutex);
 
-    const auto it = kp->dPointers.constFind(d_ptr);
-    if (Q_UNLIKELY(it == kp->dPointers.cend())) {
+    QHash<const void *, Data>::iterator it = kp->dPointers.find(d_ptr);
+    if (it == kp->dPointers.end()) {
         qFatal("QSharedPointer: internal self-check inconsistency: pointer %p was not tracked. "
                "To use QT_SHAREDPOINTER_TRACK_POINTERS, you have to enable it throughout "
                "in your code.", d_ptr);
     }
 
-    const auto it2 = kp->dataPointers.constFind(it->pointer);
-    Q_ASSERT(it2 != kp->dataPointers.cend());
+    QHash<const volatile void *, const void *>::iterator it2 = kp->dataPointers.find(it->pointer);
+    Q_ASSERT(it2 != kp->dataPointers.end());
 
     //qDebug("Removing d=%p value=%p", d_ptr, it->pointer);
 
@@ -1673,10 +1555,10 @@ void QtSharedPointer::internalSafetyCheckCleanCheck()
     KnownPointers *const kp = knownPointers();
     Q_ASSERT_X(kp, "internalSafetyCheckSelfCheck()", "Called after global statics deletion!");
 
-    if (Q_UNLIKELY(kp->dPointers.size() != kp->dataPointers.size()))
+    if (kp->dPointers.size() != kp->dataPointers.size())
         qFatal("Internal consistency error: the number of pointers is not equal!");
 
-    if (Q_UNLIKELY(!kp->dPointers.isEmpty()))
+    if (!kp->dPointers.isEmpty())
         qFatal("Pointer cleaning failed: %d entries remaining", kp->dPointers.size());
 #  endif
 }

@@ -13,7 +13,7 @@ namespace
 TIntermSelection *UnfoldOR(TIntermTyped *x, TIntermTyped *y)
 {
     const TType boolType(EbtBool, EbpUndefined);
-    TConstantUnion *u = new TConstantUnion;
+    ConstantUnion *u = new ConstantUnion;
     u->setBConst(true);
     TIntermConstantUnion *trueNode = new TIntermConstantUnion(
         u, TType(EbtBool, EbpUndefined, EvqConst, 1));
@@ -24,7 +24,7 @@ TIntermSelection *UnfoldOR(TIntermTyped *x, TIntermTyped *y)
 TIntermSelection *UnfoldAND(TIntermTyped *x, TIntermTyped *y)
 {
     const TType boolType(EbtBool, EbpUndefined);
-    TConstantUnion *u = new TConstantUnion;
+    ConstantUnion *u = new ConstantUnion;
     u->setBConst(false);
     TIntermConstantUnion *falseNode = new TIntermConstantUnion(
         u, TType(EbtBool, EbpUndefined, EvqConst, 1));

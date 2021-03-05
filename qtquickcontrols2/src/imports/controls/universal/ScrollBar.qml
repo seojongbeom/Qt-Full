@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,58 +34,65 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.ScrollBar {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            handle.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
-
-    visible: control.policy !== T.ScrollBar.AlwaysOff
+                             handle.implicitHeight + topPadding + bottomPadding)
 
     // TODO: arrows
 
-    contentItem: Rectangle {
-        implicitWidth: control.interactive ? 12 : 6
-        implicitHeight: control.interactive ? 12: 6
+    //! [handle]
+    handle: Rectangle {
+        implicitWidth: 12
+        implicitHeight: 12
 
-        color: control.pressed ? control.Universal.baseMediumColor :
-               control.interactive && control.hovered ? control.Universal.baseMediumLowColor : control.Universal.chromeHighColor
+        color: control.pressed ? control.Universal.baseMediumColor : control.Universal.chromeHighColor
+        visible: control.size < 1.0
         opacity: 0.0
-    }
 
+        readonly property bool horizontal: control.orientation === Qt.Horizontal
+        x: control.leftPadding + (horizontal ? control.position * control.availableWidth : 0)
+        y: control.topPadding + (horizontal ? 0 : control.position * control.availableHeight)
+        width: horizontal ? control.size * control.availableWidth : implicitWidth
+        height: horizontal ? implicitHeight : control.size * control.availableHeight
+    }
+    //! [handle]
+
+    //! [background]
     background: Rectangle {
-        implicitWidth: control.interactive ? 12 : 6
-        implicitHeight: control.interactive ? 12: 6
+        implicitWidth: 12
+        implicitHeight: 12
 
         color: control.Universal.chromeLowColor
         visible: control.size < 1.0
         opacity: 0.0
     }
+    //! [background]
 
     states: [
         State {
             name: "active"
-            when: control.policy === T.ScrollBar.AlwaysOn || (control.active && control.size < 1.0)
+            when: control.active
         }
     ]
 
     transitions: [
         Transition {
             to: "active"
-            NumberAnimation { targets: [contentItem, background]; property: "opacity"; to: 1.0 }
+            NumberAnimation { targets: [handle, background]; property: "opacity"; to: 1.0 }
         },
         Transition {
             from: "active"
             SequentialAnimation {
-                PropertyAction{ targets: [contentItem, background]; property: "opacity"; value: 1.0 }
                 PauseAnimation { duration: 3000 }
-                NumberAnimation { targets: [contentItem, background]; property: "opacity"; to: 0.0 }
+                NumberAnimation { targets: [handle, background]; property: "opacity"; to: 0.0 }
             }
         }
     ]

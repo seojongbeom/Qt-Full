@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -129,10 +119,7 @@ Item {
 
             compare(calendar.minimumDate, new Date(1, 0, 1));
             compare(calendar.maximumDate, new Date(4000, 0, 1));
-            var expectedDate = new Date();
-            compare(calendar.selectedDate.getFullYear(), expectedDate.getFullYear());
-            compare(calendar.selectedDate.getMonth(), expectedDate.getMonth());
-            compare(calendar.selectedDate.getDate(), expectedDate.getDate());
+            compare(calendar.selectedDate, new Date(new Date().setHours(0, 0, 0, 0)));
             compare(calendar.frameVisible, true);
             compare(calendar.dayOfWeekFormat, Locale.ShortFormat);
             compare(calendar.__locale, Qt.locale());
@@ -409,9 +396,7 @@ Item {
                     expectedDate.setDate(expectedDate.getDate() + cellIndex);
 
                     mousePress(calendar, toPixelsX(day), toPixelsY(week), Qt.LeftButton);
-                    compare(calendar.selectedDate.getFullYear(), expectedDate.getFullYear());
-                    compare(calendar.selectedDate.getMonth(), expectedDate.getMonth());
-                    compare(calendar.selectedDate.getDate(), expectedDate.getDate());
+                    compare(calendar.selectedDate, expectedDate);
                     compare(calendar.__panel.pressedCellIndex, cellIndex);
                     compare(pressedSignalSpy.count, 1);
                     compare(releasedSignalSpy.count, 0);
@@ -439,9 +424,7 @@ Item {
             // Ensure released event does not trigger date selection.
             calendar.selectedDate = startDate;
             mousePress(calendar, toPixelsX(1), toPixelsY(0), Qt.LeftButton);
-            compare(calendar.selectedDate.getFullYear(), 2012);
-            compare(calendar.selectedDate.getMonth(), 11);
-            compare(calendar.selectedDate.getDate(), 31);
+            compare(calendar.selectedDate, new Date(2012, 11, 31));
             compare(calendar.__panel.pressedCellIndex, 1);
             compare(pressedSignalSpy.count, 1);
             compare(releasedSignalSpy.count, 0);
@@ -452,9 +435,7 @@ Item {
             clickedSignalSpy.clear();
 
             mouseRelease(calendar, toPixelsX(1), toPixelsY(0), Qt.LeftButton);
-            compare(calendar.selectedDate.getFullYear(), 2012);
-            compare(calendar.selectedDate.getMonth(), 11);
-            compare(calendar.selectedDate.getDate(), 31);
+            compare(calendar.selectedDate, new Date(2012, 11, 31));
             compare(calendar.__panel.pressedCellIndex, -1);
             compare(pressedSignalSpy.count, 0);
             compare(releasedSignalSpy.count, 1);
@@ -543,9 +524,7 @@ Item {
             calendar.__locale = Qt.locale("en_GB");
             calendar.selectedDate = new Date(2014, 11, 1);
             mousePress(calendar, toPixelsX(0), toPixelsY(0), Qt.LeftButton);
-            compare(calendar.selectedDate.getFullYear(), 2014);
-            compare(calendar.selectedDate.getMonth(), 10);
-            compare(calendar.selectedDate.getDate(), 24);
+            compare(calendar.selectedDate, new Date(2014, 10, 24));
             mouseRelease(calendar, toPixelsX(0), toPixelsY(0), Qt.LeftButton);
         }
 
@@ -596,9 +575,7 @@ Item {
 
         function dragTo(cellX, cellY, expectedCellIndex, expectedDate) {
             mouseMove(calendar, toPixelsX(cellX), toPixelsY(cellY));
-            compare(calendar.selectedDate.getFullYear(), expectedDate.getFullYear());
-            compare(calendar.selectedDate.getMonth(), expectedDate.getMonth());
-            compare(calendar.selectedDate.getDate(), expectedDate.getDate());
+            compare(calendar.selectedDate, expectedDate);
             compare(calendar.__panel.pressedCellIndex, expectedCellIndex);
             compare(hoveredSignalSpy.count, 1);
             compare(pressedSignalSpy.count, 1);
@@ -616,6 +593,9 @@ Item {
             calendar.selectedDate = new Date(2014, 1, 28);
             calendar.maximumDate = new Date(2014, 2, 31);
             calendar.__locale = Qt.locale("en_GB");
+
+            hoveredSignalSpy.target = calendar;
+            hoveredSignalSpy.signalName = "hovered";
 
             pressedSignalSpy.target = calendar;
             pressedSignalSpy.signalName = "pressed";
@@ -640,17 +620,14 @@ Item {
                  3   4   5   6   7   8   9            3   4   5   6   7   8   9 */
 
             mousePress(calendar, toPixelsX(5), toPixelsY(0), Qt.LeftButton);
-            compare(calendar.selectedDate.getFullYear(), 2014);
-            compare(calendar.selectedDate.getMonth(), 1);
-            compare(calendar.selectedDate.getDate(), 1);
+            compare(calendar.selectedDate, new Date(2014, 1, 1));
             compare(calendar.__panel.pressedCellIndex, 5);
+            compare(hoveredSignalSpy.count, 1);
             compare(pressedSignalSpy.count, 1);
             compare(releasedSignalSpy.count, 0);
             compare(clickedSignalSpy.count, 0);
 
-            hoveredSignalSpy.target = calendar;
-            hoveredSignalSpy.signalName = "hovered";
-
+            hoveredSignalSpy.clear();
             pressedSignalSpy.clear();
             releasedSignalSpy.clear();
             clickedSignalSpy.clear();

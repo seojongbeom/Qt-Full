@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,12 +49,12 @@ QT_BEGIN_NAMESPACE
 class QUrl;
 class QPlatformMenuItem;
 class QQuickItem;
-class QQuickAction1;
+class QQuickAction;
 class QQuickExclusiveGroup1;
 class QQuickMenu1;
-class QQuickMenuItemContainer1;
+class QQuickMenuItemContainer;
 
-class QQuickMenuItemType1
+class QQuickMenuItemType
 {
     Q_GADGET
     Q_ENUMS(MenuItemType)
@@ -71,11 +68,11 @@ public:
     };
 };
 
-class QQuickMenuBase1: public QObject
+class QQuickMenuBase: public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool visible READ visible WRITE setVisible NOTIFY visibleChanged)
-    Q_PROPERTY(QQuickMenuItemType1::MenuItemType type READ type CONSTANT)
+    Q_PROPERTY(QQuickMenuItemType::MenuItemType type READ type CONSTANT)
 
     Q_PROPERTY(QObject *__parentMenu READ parentMenuOrMenuBar CONSTANT)
     Q_PROPERTY(bool __isNative READ isNative CONSTANT)
@@ -85,8 +82,8 @@ Q_SIGNALS:
     void visibleChanged();
 
 public:
-    QQuickMenuBase1(QObject *parent, int type);
-    ~QQuickMenuBase1();
+    QQuickMenuBase(QObject *parent, int type);
+    ~QQuickMenuBase();
 
     bool visible() const { return m_visible; }
     virtual void setVisible(bool);
@@ -95,8 +92,8 @@ public:
     QObject *parentMenuOrMenuBar() const;
     virtual void setParentMenu(QQuickMenu1 *parentMenu);
 
-    QQuickMenuItemContainer1 *container() const;
-    void setContainer(QQuickMenuItemContainer1 *);
+    QQuickMenuItemContainer *container() const;
+    void setContainer(QQuickMenuItemContainer *);
 
     inline QPlatformMenuItem *platformItem() { return m_platformItem; }
     void syncWithPlatformMenu();
@@ -104,26 +101,26 @@ public:
     QQuickItem *visualItem() const;
     void setVisualItem(QQuickItem *item);
 
-    QQuickMenuItemType1::MenuItemType type() { return m_type; }
+    QQuickMenuItemType::MenuItemType type() { return m_type; }
     virtual bool isNative() { return m_platformItem != 0; }
 
 private:
     bool m_visible;
-    QQuickMenuItemType1::MenuItemType m_type;
+    QQuickMenuItemType::MenuItemType m_type;
     QQuickMenu1 *m_parentMenu;
-    QQuickMenuItemContainer1 *m_container;
+    QQuickMenuItemContainer *m_container;
     QPlatformMenuItem *m_platformItem;
     QPointer<QQuickItem> m_visualItem;
 };
 
-class QQuickMenuSeparator1 : public QQuickMenuBase1
+class QQuickMenuSeparator : public QQuickMenuBase
 {
     Q_OBJECT
 public:
-    QQuickMenuSeparator1(QObject *parent = 0);
+    QQuickMenuSeparator(QObject *parent = 0);
 };
 
-class QQuickMenuText1 : public QQuickMenuBase1
+class QQuickMenuText : public QQuickMenuBase
 {
     Q_OBJECT
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
@@ -141,8 +138,8 @@ Q_SIGNALS:
     void __iconChanged();
 
 public:
-    QQuickMenuText1(QObject *parent, QQuickMenuItemType1::MenuItemType type);
-    ~QQuickMenuText1();
+    QQuickMenuText(QObject *parent, QQuickMenuItemType::MenuItemType type);
+    ~QQuickMenuText();
 
     bool enabled() const;
     virtual void setEnabled(bool enabled);
@@ -159,7 +156,7 @@ public:
 
 protected:
     virtual QIcon icon() const;
-    virtual QQuickAction1 *action() const { return m_action; }
+    virtual QQuickAction *action() const { return m_action; }
 
 protected Q_SLOTS:
     virtual void updateText();
@@ -167,10 +164,10 @@ protected Q_SLOTS:
     void updateIcon();
 
 private:
-    QQuickAction1 *m_action;
+    QQuickAction *m_action;
 };
 
-class QQuickMenuItem1 : public QQuickMenuText1
+class QQuickMenuItem1 : public QQuickMenuText
 {
     Q_OBJECT
     Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
@@ -178,7 +175,7 @@ class QQuickMenuItem1 : public QQuickMenuText1
     Q_PROPERTY(bool checked READ checked WRITE setChecked NOTIFY toggled)
     Q_PROPERTY(QQuickExclusiveGroup1 *exclusiveGroup READ exclusiveGroup WRITE setExclusiveGroup NOTIFY exclusiveGroupChanged)
     Q_PROPERTY(QVariant shortcut READ shortcut WRITE setShortcut NOTIFY shortcutChanged)
-    Q_PROPERTY(QQuickAction1 *action READ boundAction WRITE setBoundAction NOTIFY actionChanged)
+    Q_PROPERTY(QQuickAction *action READ boundAction WRITE setBoundAction NOTIFY actionChanged)
 
 public Q_SLOTS:
     void trigger();
@@ -204,8 +201,8 @@ public:
     QUrl iconSource() const;
     QString iconName() const;
 
-    QQuickAction1 *boundAction() { return m_boundAction; }
-    void setBoundAction(QQuickAction1 *a);
+    QQuickAction *boundAction() { return m_boundAction; }
+    void setBoundAction(QQuickAction *a);
 
     QVariant shortcut() const;
     void setShortcut(const QVariant &shortcut);
@@ -225,15 +222,15 @@ protected Q_SLOTS:
     void updateShortcut();
     void updateCheckable();
     void updateChecked();
-    void bindToAction(QQuickAction1 *action);
+    void bindToAction(QQuickAction *action);
     void unbindFromAction(QObject *action);
 
 protected:
     QIcon icon() const;
-    QQuickAction1 *action() const;
+    QQuickAction *action() const;
 
 private:
-    QQuickAction1 *m_boundAction;
+    QQuickAction *m_boundAction;
 };
 
 QT_END_NAMESPACE

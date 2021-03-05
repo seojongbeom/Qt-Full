@@ -16,7 +16,7 @@
 #include "common/angleutils.h"
 
 #if !defined(TRACE_OUTPUT_FILE)
-#define TRACE_OUTPUT_FILE "angle_debug.txt"
+#define TRACE_OUTPUT_FILE "debug.txt"
 #endif
 
 namespace gl
@@ -47,9 +47,9 @@ class DebugAnnotator : angle::NonCopyable
   public:
     DebugAnnotator() { };
     virtual ~DebugAnnotator() { };
-    virtual void beginEvent(const wchar_t *eventName) = 0;
+    virtual void beginEvent(const std::wstring &eventName) = 0;
     virtual void endEvent() = 0;
-    virtual void setMarker(const wchar_t *markerName) = 0;
+    virtual void setMarker(const std::wstring &markerName) = 0;
     virtual bool getStatus() = 0;
 };
 
@@ -62,8 +62,6 @@ bool DebugAnnotationsActive();
 #if defined(ANGLE_ENABLE_DEBUG_TRACE) || defined(ANGLE_ENABLE_DEBUG_ANNOTATIONS)
 #define ANGLE_TRACE_ENABLED
 #endif
-
-#define ANGLE_EMPTY_STATEMENT for (;;) break
 
 // A macro to output a trace of a function call and its arguments to the debugging log
 #if defined(ANGLE_TRACE_ENABLED)
@@ -91,7 +89,7 @@ bool DebugAnnotationsActive();
 #if defined(_MSC_VER)
 #define EVENT(message, ...) gl::ScopedPerfEventHelper scopedPerfEventHelper ## __LINE__("%s" message "\n", __FUNCTION__, __VA_ARGS__);
 #else
-#define EVENT(message, ...) gl::ScopedPerfEventHelper scopedPerfEventHelper("%s" message "\n", __FUNCTION__, ##__VA_ARGS__);
+#define EVENT(message, ...) gl::ScopedPerfEventHelper scopedPerfEventHelper(message "\n", ##__VA_ARGS__);
 #endif // _MSC_VER
 #else
 #define EVENT(message, ...) (void(0))
@@ -103,18 +101,22 @@ bool DebugAnnotationsActive();
 
 // A macro asserting a condition and outputting failures to the debug log
 #if !defined(NDEBUG)
-#define ASSERT(expression) { \
+#define ASSERT(expression) do { \
     if(!(expression)) \
-        ERR("\t! Assert failed in %s(%d): %s\n", __FUNCTION__, __LINE__, #expression); \
+        ERR("\t! Assert failed in %s(%d): "#expression"\n", __FUNCTION__, __LINE__); \
         assert(expression); \
-    } ANGLE_EMPTY_STATEMENT
+    } while(0)
 #define UNUSED_ASSERTION_VARIABLE(variable)
 #else
 #define ASSERT(expression) (void(0))
 #define UNUSED_ASSERTION_VARIABLE(variable) ((void)variable)
 #endif
 
-#define UNUSED_VARIABLE(variable) ((void)variable)
+#ifndef ANGLE_ENABLE_DEBUG_TRACE
+#define UNUSED_TRACE_VARIABLE(variable) ((void)variable)
+#else
+#define UNUSED_TRACE_VARIABLE(variable)
+#endif
 
 // A macro to indicate unimplemented functionality
 
@@ -129,22 +131,29 @@ bool DebugAnnotationsActive();
 #endif
 
 #if !defined(NDEBUG)
-#define UNIMPLEMENTED() { \
+#define UNIMPLEMENTED() do { \
     FIXME("\t! Unimplemented: %s(%d)\n", __FUNCTION__, __LINE__); \
     assert(NOASSERT_UNIMPLEMENTED); \
-    } ANGLE_EMPTY_STATEMENT
+    } while(0)
 #else
     #define UNIMPLEMENTED() FIXME("\t! Unimplemented: %s(%d)\n", __FUNCTION__, __LINE__)
 #endif
 
 // A macro for code which is not expected to be reached under valid assumptions
 #if !defined(NDEBUG)
-#define UNREACHABLE() { \
+#define UNREACHABLE() do { \
     ERR("\t! Unreachable reached: %s(%d)\n", __FUNCTION__, __LINE__); \
     assert(false); \
-    } ANGLE_EMPTY_STATEMENT
+    } while(0)
 #else
     #define UNREACHABLE() ERR("\t! Unreachable reached: %s(%d)\n", __FUNCTION__, __LINE__)
+#endif
+
+// A macro that determines whether an object has a given runtime type.
+#if !defined(NDEBUG) && (!defined(_MSC_VER) || defined(_CPPRTTI)) && (!defined(__GNUC__) || __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 3) || defined(__GXX_RTTI))
+#define HAS_DYNAMIC_TYPE(type, obj) (dynamic_cast<type >(obj) != NULL)
+#else
+#define HAS_DYNAMIC_TYPE(type, obj) true
 #endif
 
 #endif   // COMMON_DEBUG_H_

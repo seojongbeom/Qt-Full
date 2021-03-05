@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,6 +33,7 @@
 
 #include "qtablewidget.h"
 
+#ifndef QT_NO_TABLEWIDGET
 #include <qitemdelegate.h>
 #include <qpainter.h>
 #include <private/qtablewidget_p.h>
@@ -1365,9 +1360,6 @@ QTableWidgetItem *QTableWidgetItem::clone() const
 /*!
     Sets the item's data for the given \a role to the specified \a value.
 
-    \note The default implementation treats Qt::EditRole and Qt::DisplayRole as
-    referring to the same data.
-
     \sa Qt::ItemDataRole, data()
 */
 void QTableWidgetItem::setData(int role, const QVariant &value)
@@ -1396,10 +1388,9 @@ void QTableWidgetItem::setData(int role, const QVariant &value)
 QVariant QTableWidgetItem::data(int role) const
 {
     role = (role == Qt::EditRole ? Qt::DisplayRole : role);
-    for (const auto &value : values) {
-        if (value.role == role)
-            return value.value;
-    }
+    for (int i = 0; i < values.count(); ++i)
+        if (values.at(i).role == role)
+            return values.at(i).value;
     return QVariant();
 }
 
@@ -1506,8 +1497,6 @@ QTableWidgetItem &QTableWidgetItem::operator=(const QTableWidgetItem &other)
     \ingroup model-view
     \inmodule QtWidgets
 
-    \image windows-tableview.png
-
     Table widgets provide standard table display facilities for applications.
     The items in a QTableWidget are provided by QTableWidgetItem.
 
@@ -1548,6 +1537,15 @@ QTableWidgetItem &QTableWidgetItem::operator=(const QTableWidgetItem &other)
     The number of rows in the table can be found with rowCount(), and the
     number of columns with columnCount(). The table can be cleared with the
     clear() function.
+
+    \table 100%
+    \row \li \inlineimage windowsvista-tableview.png Screenshot of a Windows Vista style table widget
+         \li \inlineimage macintosh-tableview.png Screenshot of a Macintosh style table widget
+         \li \inlineimage fusion-tableview.png Screenshot of a Fusion style table widget
+    \row \li A \l{Windows Vista Style Widget Gallery}{Windows Vista style} table widget.
+         \li A \l{Macintosh Style Widget Gallery}{Macintosh style} table widget.
+         \li A \l{Fusion Style Widget Gallery}{Fusion style} table widget.
+    \endtable
 
     \sa QTableWidgetItem, QTableView, {Model/View Programming}
 */
@@ -1960,7 +1958,7 @@ void QTableWidget::setItem(int row, int column, QTableWidgetItem *item)
 {
     Q_D(QTableWidget);
     if (item) {
-        if (Q_UNLIKELY(item->view)) {
+        if (item->view != 0) {
             qWarning("QTableWidget: cannot insert an item that is already owned by another QTableWidget");
         } else {
             item->view = this;
@@ -2361,9 +2359,10 @@ QList<QTableWidgetSelectionRange> QTableWidget::selectedRanges() const
 QList<QTableWidgetItem*> QTableWidget::selectedItems() const
 {
     Q_D(const QTableWidget);
-    const QModelIndexList indexes = selectionModel()->selectedIndexes();
+    QModelIndexList indexes = selectionModel()->selectedIndexes();
     QList<QTableWidgetItem*> items;
-    for (const auto &index : indexes) {
+    for (int i = 0; i < indexes.count(); ++i) {
+        QModelIndex index = indexes.at(i);
         if (isIndexHidden(index))
             continue;
         QTableWidgetItem *item = d->tableModel()->item(index);
@@ -2640,7 +2639,7 @@ QList<QTableWidgetItem*> QTableWidget::items(const QMimeData *data) const
 }
 
 /*!
-  Returns the QModelIndex associated with the given \a item.
+  Returns the QModelIndex assocated with the given \a item.
 */
 
 QModelIndex QTableWidget::indexFromItem(QTableWidgetItem *item) const
@@ -2650,7 +2649,7 @@ QModelIndex QTableWidget::indexFromItem(QTableWidgetItem *item) const
 }
 
 /*!
-  Returns a pointer to the QTableWidgetItem associated with the given \a index.
+  Returns a pointer to the QTableWidgetItem assocated with the given \a index.
 */
 
 QTableWidgetItem *QTableWidget::itemFromIndex(const QModelIndex &index) const
@@ -2683,21 +2682,22 @@ void QTableWidget::dropEvent(QDropEvent *event) {
         int col = -1;
         int row = -1;
         if (d->dropOn(event, &row, &col, &topIndex)) {
-            const QModelIndexList indexes = selectedIndexes();
+            QModelIndexList indexes = selectedIndexes();
             int top = INT_MAX;
             int left = INT_MAX;
-            for (const auto &index : indexes) {
-                top = qMin(index.row(), top);
-                left = qMin(index.column(), left);
+            for (int i = 0; i < indexes.count(); ++i) {
+                top = qMin(indexes.at(i).row(), top);
+                left = qMin(indexes.at(i).column(), left);
             }
 
             QList<QTableWidgetItem *> taken;
             const int indexesCount = indexes.count();
             taken.reserve(indexesCount);
-            for (const auto &index : indexes)
-                taken.append(takeItem(index.row(), index.column()));
+            for (int i = 0; i < indexesCount; ++i)
+                taken.append(takeItem(indexes.at(i).row(), indexes.at(i).column()));
 
-            for (const auto &index : indexes) {
+            for (int i = 0; i < indexes.count(); ++i) {
+                QModelIndex index = indexes.at(i);
                 int r = index.row() - top + topIndex.row();
                 int c = index.column() - left + topIndex.column();
                 setItem(r, c, taken.takeFirst());
@@ -2717,3 +2717,5 @@ QT_END_NAMESPACE
 
 #include "moc_qtablewidget.cpp"
 #include "moc_qtablewidget_p.cpp"
+
+#endif // QT_NO_TABLEWIDGET

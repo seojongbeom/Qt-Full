@@ -1,3 +1,3 @@
 TEMPLATE=subdirs
-qtHaveModule(network):qtHaveModule(xml): SUBDIRS= \
+qtHaveModule(network): SUBDIRS= \
     qxmlstream

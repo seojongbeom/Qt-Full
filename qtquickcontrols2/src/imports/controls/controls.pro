@@ -1,36 +1,31 @@
-TARGET = qtquickcontrols2plugin
-TARGETPATH = QtQuick/Controls.2
-IMPORT_VERSION = 2.2
+TARGET = qtlabscontrolsplugin
+TARGETPATH = Qt/labs/controls
+IMPORT_VERSION = 1.0
 
 QT += qml quick
-QT_PRIVATE += core-private gui-private qml-private quick-private quicktemplates2-private quickcontrols2-private
+QT_PRIVATE += core-private gui-private qml-private quick-private labstemplates-private labscontrols-private
 
 DEFINES += QT_NO_CAST_TO_ASCII QT_NO_CAST_FROM_ASCII
 
-include(controls.pri)
+QMAKE_DOCS = $$PWD/doc/qtlabscontrols.qdocconf
 
 OTHER_FILES += \
-    qmldir \
-    $$QML_CONTROLS
+    qmldir
+
+HEADERS += \
+    $$PWD/qquickbusyindicatorring_p.h \
+    $$PWD/qquickprogressstrip_p.h
 
 SOURCES += \
-    $$PWD/qtquickcontrols2plugin.cpp
+    $$PWD/qtlabscontrolsplugin.cpp \
+    $$PWD/qquickbusyindicatorring.cpp \
+    $$PWD/qquickprogressstrip.cpp
 
 RESOURCES += \
-    $$PWD/qtquickcontrols2plugin.qrc
+    $$PWD/qtlabscontrolsplugin.qrc
 
-!static: qtConfig(quick-designer): include(designer/designer.pri)
-include(doc/doc.pri)
-
-qtquickcompiler {
-    qmlfiles.prefix = /qt-project.org/imports/QtQuick/Controls.2
-    qmlfiles.files += $$QML_CONTROLS
-    RESOURCES += qmlfiles
-} else:!static {
-    CONFIG += qmlcache
-}
+include(controls.pri)
+!static: include(designer/designer.pri)
 
 CONFIG += no_cxx_module
 load(qml_plugin)
-
-requires(qtConfig(quickcontrols2-default))

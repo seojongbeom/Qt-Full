@@ -3,7 +3,8 @@
 ############################################################
 
 CONFIG += testcase
+CONFIG += parallel_test
 TARGET = tst_qnetworkproxyfactory
-QT = core network-private testlib
+QT = core network testlib
 
 SOURCES += tst_qnetworkproxyfactory.cpp

@@ -1,27 +1,21 @@
 TARGET = qmirclient
 
-QT += \
-    core-private gui-private dbus \
-    theme_support-private eventdispatcher_support-private \
-    fontdatabase_support-private egl_support-private
+QT += core-private gui-private platformsupport-private dbus
 
-qtHaveModule(linuxaccessibility_support-private): \
-    QT += linuxaccessibility_support-private
+CONFIG += qpa/genericunixfontdatabase
 
 DEFINES += MESA_EGL_NO_X11_HEADERS
 # CONFIG += c++11 # only enables C++0x
 QMAKE_CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden -std=c++11 -Werror -Wall
 QMAKE_LFLAGS += -std=c++11 -Wl,-no-undefined
 
-QMAKE_USE_PRIVATE += mirclient
+CONFIG += link_pkgconfig
+PKGCONFIG += egl mirclient ubuntu-platform-api
 
 SOURCES = \
-    qmirclientappstatecontroller.cpp \
     qmirclientbackingstore.cpp \
     qmirclientclipboard.cpp \
     qmirclientcursor.cpp \
-    qmirclientdebugextension.cpp \
-    qmirclientdesktopwindow.cpp \
     qmirclientglcontext.cpp \
     qmirclientinput.cpp \
     qmirclientintegration.cpp \
@@ -29,17 +23,13 @@ SOURCES = \
     qmirclientplatformservices.cpp \
     qmirclientplugin.cpp \
     qmirclientscreen.cpp \
-    qmirclientscreenobserver.cpp \
     qmirclienttheme.cpp \
     qmirclientwindow.cpp
 
 HEADERS = \
-    qmirclientappstatecontroller.h \
     qmirclientbackingstore.h \
     qmirclientclipboard.h \
     qmirclientcursor.h \
-    qmirclientdebugextension.h \
-    qmirclientdesktopwindow.h \
     qmirclientglcontext.h \
     qmirclientinput.h \
     qmirclientintegration.h \
@@ -49,16 +39,8 @@ HEADERS = \
     qmirclientplatformservices.h \
     qmirclientplugin.h \
     qmirclientscreen.h \
-    qmirclientscreenobserver.h \
     qmirclienttheme.h \
     qmirclientwindow.h
-
-# libxkbcommon
-!qtConfig(xkbcommon-system) {
-    include(../../../3rdparty/xkbcommon.pri)
-} else {
-    QMAKE_USE += xkbcommon
-}
 
 PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = MirServerIntegrationPlugin

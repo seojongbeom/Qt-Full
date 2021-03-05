@@ -921,7 +921,7 @@ static void shapedString(const HB_UChar16 *uc, hb_uint32 stringLength, hb_uint32
 
     for (i = 0; i < len; i++) {
         hb_uint8 r = *ch >> 8;
-        const int gpos = int(data - shapeBuffer);
+        int gpos = data - shapeBuffer;
 
         if (r != 0x06) {
             if (r == 0x20) {
@@ -981,7 +981,7 @@ static void shapedString(const HB_UChar16 *uc, hb_uint32 stringLength, hb_uint32
 /*             qDebug("glyph %d (char %d) is mark!", gpos, i); */
         } else {
             attributes[gpos].mark = FALSE;
-            clusterStart = int(data - shapeBuffer);
+            clusterStart = data - shapeBuffer;
         }
         attributes[gpos].clusterStart = !attributes[gpos].mark;
         attributes[gpos].combiningClass = HB_GetUnicodeCharCombiningClass(*ch);
@@ -992,7 +992,7 @@ static void shapedString(const HB_UChar16 *uc, hb_uint32 stringLength, hb_uint32
         ch++;
         logClusters[i] = clusterStart;
     }
-    *shapedLength = int(data - shapeBuffer);
+    *shapedLength = data - shapeBuffer;
 
     HB_FREE_STACKARRAY(props);
 }

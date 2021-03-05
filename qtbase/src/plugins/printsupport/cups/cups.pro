@@ -3,7 +3,7 @@ MODULE = cupsprintersupport
 
 QT += core-private gui-private printsupport printsupport-private
 
-QMAKE_USE_PRIVATE += cups
+LIBS_PRIVATE += -lcups
 
 INCLUDEPATH += ../../../printsupport/kernel
 

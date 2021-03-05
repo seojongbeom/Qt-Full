@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -106,27 +96,37 @@ void FortuneThread::run()
             emit error(socket.error(), socket.errorString());
             return;
         }
-//! [8] //! [11]
+//! [8] //! [9]
 
-        QDataStream in(&socket);
-        in.setVersion(QDataStream::Qt_4_0);
-        QString fortune;
-//! [11] //! [12]
-
-        do {
+        while (socket.bytesAvailable() < (int)sizeof(quint16)) {
             if (!socket.waitForReadyRead(Timeout)) {
                 emit error(socket.error(), socket.errorString());
                 return;
             }
+//! [9] //! [10]
+        }
+//! [10] //! [11]
 
-            in.startTransaction();
-            in >> fortune;
-        } while (!in.commitTransaction());
-//! [12] //! [15]
+        quint16 blockSize;
+        QDataStream in(&socket);
+        in.setVersion(QDataStream::Qt_4_0);
+        in >> blockSize;
+//! [11] //! [12]
+
+        while (socket.bytesAvailable() < blockSize) {
+            if (!socket.waitForReadyRead(Timeout)) {
+                emit error(socket.error(), socket.errorString());
+                return;
+            }
+//! [12] //! [13]
+        }
+//! [13] //! [14]
 
         mutex.lock();
+        QString fortune;
+        in >> fortune;
         emit newFortune(fortune);
-//! [7]
+//! [7] //! [14] //! [15]
 
         cond.wait(&mutex);
         serverName = hostName;

@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -55,7 +45,6 @@
 #include <QStyle>
 #include <QToolButton>
 #include <QComboBox>
-#include <QAudio>
 
 PlayerControls::PlayerControls(QWidget *parent)
     : QWidget(parent)
@@ -98,7 +87,7 @@ PlayerControls::PlayerControls(QWidget *parent)
     volumeSlider = new QSlider(Qt::Horizontal, this);
     volumeSlider->setRange(0, 100);
 
-    connect(volumeSlider, SIGNAL(valueChanged(int)), this, SLOT(onVolumeSliderValueChanged()));
+    connect(volumeSlider, SIGNAL(sliderMoved(int)), this, SIGNAL(changeVolume(int)));
 
     rateBox = new QComboBox(this);
     rateBox->addItem("0.5x", QVariant(0.5));
@@ -149,20 +138,13 @@ void PlayerControls::setState(QMediaPlayer::State state)
 
 int PlayerControls::volume() const
 {
-    qreal linearVolume =  QAudio::convertVolume(volumeSlider->value() / qreal(100),
-                                                QAudio::LogarithmicVolumeScale,
-                                                QAudio::LinearVolumeScale);
-
-    return qRound(linearVolume * 100);
+    return volumeSlider ? volumeSlider->value() : 0;
 }
 
 void PlayerControls::setVolume(int volume)
 {
-    qreal logarithmicVolume = QAudio::convertVolume(volume / qreal(100),
-                                                    QAudio::LinearVolumeScale,
-                                                    QAudio::LogarithmicVolumeScale);
-
-    volumeSlider->setValue(qRound(logarithmicVolume * 100));
+    if (volumeSlider)
+        volumeSlider->setValue(volume);
 }
 
 bool PlayerControls::isMuted() const
@@ -220,9 +202,4 @@ void PlayerControls::setPlaybackRate(float rate)
 void PlayerControls::updateRate()
 {
     emit changeRate(playbackRate());
-}
-
-void PlayerControls::onVolumeSliderValueChanged()
-{
-    emit changeVolume(volume());
 }

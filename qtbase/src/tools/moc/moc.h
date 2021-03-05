@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -59,7 +64,6 @@ struct Type
     Token firstToken;
     ReferenceType referenceType;
 };
-Q_DECLARE_TYPEINFO(Type, Q_MOVABLE_TYPE);
 
 struct EnumDef
 {
@@ -68,7 +72,6 @@ struct EnumDef
     bool isEnumClass; // c++11 enum class
     EnumDef() : isEnumClass(false) {}
 };
-Q_DECLARE_TYPEINFO(EnumDef, Q_MOVABLE_TYPE);
 
 struct ArgumentDef
 {
@@ -78,7 +81,6 @@ struct ArgumentDef
     QByteArray typeNameForCast; // type name to be used in cast from void * in metacall
     bool isDefault;
 };
-Q_DECLARE_TYPEINFO(ArgumentDef, Q_MOVABLE_TYPE);
 
 struct FunctionDef
 {
@@ -92,7 +94,7 @@ struct FunctionDef
     QByteArray name;
     bool returnTypeIsVolatile;
 
-    QVector<ArgumentDef> arguments;
+    QList<ArgumentDef> arguments;
 
     enum Access { Private, Protected, Public };
     Access access;
@@ -115,7 +117,6 @@ struct FunctionDef
 
     int revision;
 };
-Q_DECLARE_TYPEINFO(FunctionDef, Q_MOVABLE_TYPE);
 
 struct PropertyDef
 {
@@ -134,7 +135,6 @@ struct PropertyDef
     }
     int revision;
 };
-Q_DECLARE_TYPEINFO(PropertyDef, Q_MOVABLE_TYPE);
 
 
 struct ClassInfoDef
@@ -142,34 +142,26 @@ struct ClassInfoDef
     QByteArray name;
     QByteArray value;
 };
-Q_DECLARE_TYPEINFO(ClassInfoDef, Q_MOVABLE_TYPE);
 
-struct BaseDef {
+struct ClassDef {
+    ClassDef():
+        hasQObject(false), hasQGadget(false), notifyableProperties(0)
+        , revisionedMethods(0), revisionedProperties(0), begin(0), end(0){}
     QByteArray classname;
     QByteArray qualified;
-    QVector<ClassInfoDef> classInfoList;
-    QMap<QByteArray, bool> enumDeclarations;
-    QVector<EnumDef> enumList;
-    QMap<QByteArray, QByteArray> flagAliases;
-    int begin = 0;
-    int end = 0;
-};
-
-struct ClassDef : BaseDef {
-    QVector<QPair<QByteArray, FunctionDef::Access> > superclassList;
+    QList<QPair<QByteArray, FunctionDef::Access> > superclassList;
 
     struct Interface
     {
-        Interface() {} // for QVector, don't use
         inline explicit Interface(const QByteArray &_className)
             : className(_className) {}
         QByteArray className;
         QByteArray interfaceId;
     };
-    QVector<QVector<Interface> >interfaceList;
+    QList<QList<Interface> >interfaceList;
 
-    bool hasQObject = false;
-    bool hasQGadget = false;
+    bool hasQObject;
+    bool hasQGadget;
 
     struct PluginData {
         QByteArray iid;
@@ -177,21 +169,26 @@ struct ClassDef : BaseDef {
         QJsonDocument metaData;
     } pluginData;
 
-    QVector<FunctionDef> constructorList;
-    QVector<FunctionDef> signalList, slotList, methodList, publicList;
-    int notifyableProperties = 0;
-    QVector<PropertyDef> propertyList;
-    int revisionedMethods = 0;
-    int revisionedProperties = 0;
+    QList<FunctionDef> constructorList;
+    QList<FunctionDef> signalList, slotList, methodList, publicList;
+    int notifyableProperties;
+    QList<PropertyDef> propertyList;
+    QList<ClassInfoDef> classInfoList;
+    QMap<QByteArray, bool> enumDeclarations;
+    QList<EnumDef> enumList;
+    QMap<QByteArray, QByteArray> flagAliases;
+    int revisionedMethods;
+    int revisionedProperties;
 
+    int begin;
+    int end;
 };
-Q_DECLARE_TYPEINFO(ClassDef, Q_MOVABLE_TYPE);
-Q_DECLARE_TYPEINFO(ClassDef::Interface, Q_MOVABLE_TYPE);
 
-struct NamespaceDef : BaseDef {
-    bool hasQNamespace = false;
+struct NamespaceDef {
+    QByteArray name;
+    int begin;
+    int end;
 };
-Q_DECLARE_TYPEINFO(NamespaceDef, Q_MOVABLE_TYPE);
 
 class Moc : public Parser
 {
@@ -206,7 +203,7 @@ public:
     bool mustIncludeQPluginH;
     QByteArray includePath;
     QList<QByteArray> includeFiles;
-    QVector<ClassDef> classList;
+    QList<ClassDef> classList;
     QMap<QByteArray, QByteArray> interface2IdMap;
     QList<QByteArray> metaTypes;
     // map from class name to fully qualified name
@@ -238,9 +235,9 @@ public:
     void parseProperty(ClassDef *def);
     void parsePluginData(ClassDef *def);
     void createPropertyDef(PropertyDef &def);
-    void parseEnumOrFlag(BaseDef *def, bool isFlag);
-    void parseFlag(BaseDef *def);
-    void parseClassInfo(BaseDef *def);
+    void parseEnumOrFlag(ClassDef *def, bool isFlag);
+    void parseFlag(ClassDef *def);
+    void parseClassInfo(ClassDef *def);
     void parseInterfaces(ClassDef *def);
     void parseDeclareInterface();
     void parseDeclareMetatype();

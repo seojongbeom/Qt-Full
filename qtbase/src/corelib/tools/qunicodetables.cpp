@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -6083,9 +6077,9 @@ static const Properties uc_properties[] = {
     { 18, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 7, 8, 13, 7 },
     { 25, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 8, 8, 12, 7 },
     { 25, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 12, 0, 12, 7 },
-    { 10, 5, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 3, 4, 4, 12, 8 },
-    { 10, 5, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 3, 4, 4, 12, 8 },
-    { 10, 5, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 3, 4, 4, 12, 2 },
+    { 10, 5, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 3, 4, 4, 12, 8 },
+    { 10, 5, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 3, 4, 4, 12, 8 },
+    { 10, 5, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 3, 4, 4, 12, 2 },
     { 26, 10, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 12, 8 },
     { 26, 13, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 12, 8 },
     { 25, 4, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 8 },
@@ -6146,7 +6140,7 @@ static const Properties uc_properties[] = {
     { 18, 13, 0, 3, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 8, 8, 12, 8 },
     { 25, 13, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 12, 6, 8 },
     { 0, 17, 230, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 4, 4, 21, 8 },
-    { 10, 5, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 4, 4, 12, 2 },
+    { 10, 5, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 4, 4, 12, 2 },
     { 29, 10, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 12, 8 },
     { 0, 17, 220, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 4, 4, 21, 8 },
     { 17, 13, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 8, 8, 12, 8 },
@@ -6749,7 +6743,7 @@ static const Properties uc_properties[] = {
     { 25, 10, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 12, 6, 33 },
     { 25, 10, 0, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 12, 33 },
     { 0, 17, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 4, 4, 21, 33 },
-    { 10, 18, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 3, 4, 4, 4, 33 },
+    { 10, 18, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 3, 4, 4, 4, 33 },
     { 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 14, 9, 11, 33 },
     { 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 14, 9, 11, 33 },
     { 3, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 14, 9, 11, 33 },
@@ -7058,7 +7052,7 @@ static const Properties uc_properties[] = {
     { 6, 9, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 80, 0, 0, 5, 17, 2 },
     { 6, 9, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 80, 0, 0, 5, 4, 2 },
     { 10, 18, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 0, 4, 20, 2 },
-    { 10, 18, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 4, 4, 21, 1 },
+    { 10, 18, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 4, 4, 21, 1 },
     { 10, 18, 0, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 4, 4, 21, 1 },
     { 10, 0, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 4, 4, 21, 2 },
     { 10, 1, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 4, 4, 21, 2 },
@@ -7108,10 +7102,10 @@ static const Properties uc_properties[] = {
     { 10, 18, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 3, 4, 4, 12, 2 },
     { 10, 18, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 3, 4, 4, 12, 2 },
     { 13, 18, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 12, 0 },
-    { 10, 19, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
-    { 10, 20, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
-    { 10, 21, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
-    { 10, 22, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
+    { 10, 19, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
+    { 10, 20, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
+    { 10, 21, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
+    { 10, 22, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 3, 4, 4, 21, 2 },
     { 10, 18, 0, 5, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 4, 4, 21, 2 },
     { 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 80, 0, 0, 0, 12, 2 },
     { 17, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 80, 0, 8, 6, 12, 3 },

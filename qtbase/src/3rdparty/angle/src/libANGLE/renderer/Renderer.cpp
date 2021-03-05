@@ -14,7 +14,10 @@
 
 namespace rx
 {
-Renderer::Renderer() : mCapsInitialized(false)
+
+Renderer::Renderer()
+    : mCapsInitialized(false),
+      mWorkaroundsInitialized(false)
 {
 }
 
@@ -22,41 +25,48 @@ Renderer::~Renderer()
 {
 }
 
-void Renderer::ensureCapsInitialized() const
+const gl::Caps &Renderer::getRendererCaps() const
 {
     if (!mCapsInitialized)
     {
-        generateCaps(&mCaps, &mTextureCaps, &mExtensions, &mLimitations);
+        generateCaps(&mCaps, &mTextureCaps, &mExtensions);
         mCapsInitialized = true;
     }
-}
-
-const gl::Caps &Renderer::getRendererCaps() const
-{
-    ensureCapsInitialized();
 
     return mCaps;
 }
 
 const gl::TextureCapsMap &Renderer::getRendererTextureCaps() const
 {
-    ensureCapsInitialized();
+    if (!mCapsInitialized)
+    {
+        generateCaps(&mCaps, &mTextureCaps, &mExtensions);
+        mCapsInitialized = true;
+    }
 
     return mTextureCaps;
 }
 
 const gl::Extensions &Renderer::getRendererExtensions() const
 {
-    ensureCapsInitialized();
+    if (!mCapsInitialized)
+    {
+        generateCaps(&mCaps, &mTextureCaps, &mExtensions);
+        mCapsInitialized = true;
+    }
 
     return mExtensions;
 }
 
-const gl::Limitations &Renderer::getRendererLimitations() const
+const Workarounds &Renderer::getWorkarounds() const
 {
-    ensureCapsInitialized();
+    if (!mWorkaroundsInitialized)
+    {
+        mWorkarounds = generateWorkarounds();
+        mWorkaroundsInitialized = true;
+    }
 
-    return mLimitations;
+    return mWorkarounds;
 }
 
 }

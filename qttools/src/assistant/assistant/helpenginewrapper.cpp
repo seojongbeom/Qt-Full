@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -107,7 +112,7 @@ private:
 const QString HelpEngineWrapper::TrUnfiltered()
 {
     static QString s;
-    if (s.isEmpty())
+    if (s.isNull())
         s = HelpEngineWrapper::tr("Unfiltered");
     return s;
 }
@@ -121,7 +126,7 @@ HelpEngineWrapper &HelpEngineWrapper::instance(const QString &collectionFile)
      * Note that this Singleton cannot be static, because it has to be
      * deleted before the QApplication.
      */
-    if (!helpEngineWrapper)
+    if (helpEngineWrapper == 0)
         helpEngineWrapper = new HelpEngineWrapper(collectionFile);
     return *helpEngineWrapper;
 }
@@ -146,24 +151,24 @@ HelpEngineWrapper::HelpEngineWrapper(const QString &collectionFile)
      * This call is reverted by initialDocSetupDone(), which must be
      * called after the new docs have been installed.
      */
-    disconnect(d->m_helpEngine, &QHelpEngineCore::setupFinished,
-            searchEngine(), &QHelpSearchEngine::scheduleIndexDocumentation);
+    disconnect(d->m_helpEngine, SIGNAL(setupFinished()),
+            searchEngine(), SLOT(indexDocumentation()));
 
-    connect(d, &HelpEngineWrapperPrivate::documentationRemoved,
-            this, &HelpEngineWrapper::documentationRemoved);
-    connect(d, &HelpEngineWrapperPrivate::documentationUpdated,
-            this, &HelpEngineWrapper::documentationUpdated);
-    connect(d->m_helpEngine, &QHelpEngineCore::currentFilterChanged,
-            this, &HelpEngineWrapper::handleCurrentFilterChanged);
-    connect(d->m_helpEngine, &QHelpEngineCore::setupFinished,
-            this, &HelpEngineWrapper::setupFinished);
+    connect(d, SIGNAL(documentationRemoved(QString)),
+            this, SIGNAL(documentationRemoved(QString)));
+    connect(d, SIGNAL(documentationUpdated(QString)),
+            this, SIGNAL(documentationUpdated(QString)));
+    connect(d->m_helpEngine, SIGNAL(currentFilterChanged(QString)),
+            this, SLOT(handleCurrentFilterChanged(QString)));
+    connect(d->m_helpEngine, SIGNAL(setupFinished()),
+            this, SIGNAL(setupFinished()));
 }
 
 HelpEngineWrapper::~HelpEngineWrapper()
 {
     TRACE_OBJ
     const QStringList &namespaces = d->m_helpEngine->registeredDocumentations();
-    for (const QString &nameSpace : namespaces) {
+    foreach (const QString &nameSpace, namespaces) {
         const QString &docFile
             = d->m_helpEngine->documentationFileName(nameSpace);
         d->m_qchWatcher->removePath(docFile);
@@ -175,8 +180,8 @@ HelpEngineWrapper::~HelpEngineWrapper()
 void HelpEngineWrapper::initialDocSetupDone()
 {
     TRACE_OBJ
-    connect(d->m_helpEngine, &QHelpEngineCore::setupFinished,
-            searchEngine(), &QHelpSearchEngine::scheduleIndexDocumentation);
+    connect(d->m_helpEngine, SIGNAL(setupFinished()),
+            searchEngine(), SLOT(indexDocumentation()));
     setupData();
 }
 
@@ -214,12 +219,6 @@ const QStringList HelpEngineWrapper::registeredDocumentations() const
 {
     TRACE_OBJ
     return d->m_helpEngine->registeredDocumentations();
-}
-
-QString HelpEngineWrapper::documentationFileName(const QString &namespaceName) const
-{
-    TRACE_OBJ
-    return d->m_helpEngine->documentationFileName(namespaceName);
 }
 
 const QString HelpEngineWrapper::collectionFile() const
@@ -759,11 +758,11 @@ HelpEngineWrapperPrivate::HelpEngineWrapperPrivate(const QString &collectionFile
 void HelpEngineWrapperPrivate::initFileSystemWatchers()
 {
     TRACE_OBJ
-    for (const QString &ns : m_helpEngine->registeredDocumentations()) {
+    foreach(const QString &ns, m_helpEngine->registeredDocumentations()) {
         const QString &docFile = m_helpEngine->documentationFileName(ns);
         m_qchWatcher->addPath(docFile);
-        connect(m_qchWatcher, &QFileSystemWatcher::fileChanged, this,
-                QOverload<const QString &>::of(&HelpEngineWrapperPrivate::qchFileChanged));
+        connect(m_qchWatcher, SIGNAL(fileChanged(QString)),
+                this, SLOT(qchFileChanged(QString)));
     }
     checkDocFilesWatched();
 }
@@ -795,7 +794,7 @@ void HelpEngineWrapperPrivate::qchFileChanged(const QString &fileName,
      * may not exist anymore or contain a different namespace.
      */
     QString ns;
-    for (const QString &curNs : m_helpEngine->registeredDocumentations()) {
+    foreach (const QString &curNs, m_helpEngine->registeredDocumentations()) {
         if (m_helpEngine->documentationFileName(curNs) == fileName) {
             ns = curNs;
             break;
@@ -817,15 +816,14 @@ void HelpEngineWrapperPrivate::qchFileChanged(const QString &fileName,
      * was sent.
      */
 
-    const auto &it = m_recentQchUpdates.find(fileName);
+    QMap<QString, RecentSignal>::Iterator it = m_recentQchUpdates.find(fileName);
     const QDateTime &now = QDateTime::currentDateTime();
 
      // Case 1: This is the first recent signal for the file.
     if (it == m_recentQchUpdates.end()) {
         QSharedPointer<TimeoutForwarder> forwarder(new TimeoutForwarder(fileName));
         m_recentQchUpdates.insert(fileName, RecentSignal(now, forwarder));
-        QTimer::singleShot(UpdateGracePeriod, forwarder.data(),
-                           &TimeoutForwarder::forward);
+        QTimer::singleShot(UpdateGracePeriod, forwarder.data(), SLOT(forward()));
         return;
     }
 
@@ -835,7 +833,7 @@ void HelpEngineWrapperPrivate::qchFileChanged(const QString &fileName,
             it.value().first = now;
         else
             QTimer::singleShot(UpdateGracePeriod, it.value().second.data(),
-                               &TimeoutForwarder::forward);
+                               SLOT(forward()));
         return;
     }
 

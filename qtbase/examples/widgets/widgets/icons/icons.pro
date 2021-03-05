@@ -17,3 +17,14 @@ EXAMPLE_FILES = images/*
 # install
 target.path = $$[QT_INSTALL_EXAMPLES]/widgets/widgets/icons
 INSTALLS += target
+
+
+wince {
+    imageFiles.files = images/*
+    wincewm*: {
+        imageFiles.path = "/My Documents/My Pictures"
+    } else {
+        imageFiles.path    = images
+    }
+    INSTALLS += imageFiles
+}

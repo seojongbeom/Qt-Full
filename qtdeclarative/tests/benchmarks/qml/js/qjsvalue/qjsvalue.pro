@@ -5,4 +5,5 @@ TARGET = tst_bench_qjsvalue
 SOURCES += tst_qjsvalue.cpp
 
 QT += qml testlib
-macos:CONFIG -= app_bundle
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
+macx:CONFIG -= app_bundle

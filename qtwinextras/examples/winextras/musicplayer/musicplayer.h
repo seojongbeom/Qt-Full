@@ -6,17 +6,7 @@
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -68,25 +58,20 @@ class MusicPlayer : public QWidget
 {
     Q_OBJECT
 public:
-    explicit MusicPlayer(QWidget *parent = nullptr);
-
-    static QStringList supportedMimeTypes();
-    static QStringList supportedSuffixes();
+    MusicPlayer(QWidget *parent = 0);
 
 public slots:
     void openFile();
-    void playUrl(const QUrl& url);
+    void playFile(const QString& filePath);
     void togglePlayback();
     void seekForward();
     void seekBackward();
 
 protected:
-    bool event(QEvent *event) override;
-    void dragEnterEvent(QDragEnterEvent *event) override;
-    void dropEvent(QDropEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
+    bool event(QEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
 
 private slots:
     void stylize();
@@ -107,21 +92,20 @@ private:
     void createTaskbar();
     void createThumbnailToolBar();
 
-    QWinTaskbarButton *taskbarButton = nullptr;
-    QWinTaskbarProgress *taskbarProgress = nullptr;
-    QWinThumbnailToolBar *thumbnailToolBar = nullptr;
-    QWinThumbnailToolButton *playToolButton = nullptr;
-    QWinThumbnailToolButton *forwardToolButton = nullptr;
-    QWinThumbnailToolButton *backwardToolButton = nullptr;
+    QWinTaskbarButton* taskbarButton;
+    QWinTaskbarProgress* taskbarProgress;
+    QWinThumbnailToolBar* thumbnailToolBar;
+    QWinThumbnailToolButton *playToolButton;
+    QWinThumbnailToolButton *forwardToolButton;
+    QWinThumbnailToolButton *backwardToolButton;
 
     QMediaPlayer mediaPlayer;
-    QAbstractButton *playButton = nullptr;
-    VolumeButton *volumeButton = nullptr;
-    QSlider *positionSlider = nullptr;
-    QLabel *positionLabel = nullptr;
-    QLabel *infoLabel = nullptr;
+    QAbstractButton *playButton;
+    VolumeButton *volumeButton;
+    QSlider *positionSlider;
+    QLabel *positionLabel;
+    QLabel *infoLabel;
     QPoint offset;
-    QString fileName;
 };
 
 #endif // MUSICPLAYER_H

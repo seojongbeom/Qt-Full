@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,9 +34,7 @@
 #include "qquickdesignersupport_p.h"
 #include <private/qquickitem_p.h>
 
-#if QT_CONFIG(quick_shadereffect)
 #include <QtQuick/private/qquickshadereffectsource_p.h>
-#endif
 #include <QtQuick/private/qquickrectangle_p.h>
 #include <QtQml/private/qabstractanimationjob_p.h>
 #include <private/qqmlengine_p.h>
@@ -53,7 +45,6 @@
 #include <private/qqmlvme_p.h>
 #include <private/qqmlcomponentattached_p.h>
 #include <private/qqmldata_p.h>
-#include <private/qsgadaptationlayer_p.h>
 
 #include "qquickdesignerwindowmanager_p.h"
 
@@ -95,7 +86,6 @@ void QQuickDesignerSupport::refFromEffectItem(QQuickItem *referencedItem, bool h
         texture->setRect(referencedItem->boundingRect());
         texture->setSize(referencedItem->boundingRect().size().toSize());
         texture->setRecursive(true);
-#if QT_CONFIG(opengl)
 #ifndef QT_OPENGL_ES
         if (QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGL)
             texture->setFormat(GL_RGBA8);
@@ -103,7 +93,6 @@ void QQuickDesignerSupport::refFromEffectItem(QQuickItem *referencedItem, bool h
             texture->setFormat(GL_RGBA);
 #else
         texture->setFormat(GL_RGBA);
-#endif
 #endif
         texture->setHasMipmaps(false);
 
@@ -192,17 +181,17 @@ QTransform QQuickDesignerSupport::parentTransform(QQuickItem *referencedItem)
     return parentTransform;
 }
 
-QString propertyNameForAnchorLine(const QQuickAnchors::Anchor &anchorLine)
+QString propertyNameForAnchorLine(const QQuickAnchorLine::AnchorLine &anchorLine)
 {
     switch (anchorLine) {
-        case QQuickAnchors::LeftAnchor: return QLatin1String("left");
-        case QQuickAnchors::RightAnchor: return QLatin1String("right");
-        case QQuickAnchors::TopAnchor: return QLatin1String("top");
-        case QQuickAnchors::BottomAnchor: return QLatin1String("bottom");
-        case QQuickAnchors::HCenterAnchor: return QLatin1String("horizontalCenter");
-        case QQuickAnchors::VCenterAnchor: return QLatin1String("verticalCenter");
-        case QQuickAnchors::BaselineAnchor: return QLatin1String("baseline");
-        case QQuickAnchors::InvalidAnchor: // fallthrough:
+        case QQuickAnchorLine::Left: return QLatin1String("left");
+        case QQuickAnchorLine::Right: return QLatin1String("right");
+        case QQuickAnchorLine::Top: return QLatin1String("top");
+        case QQuickAnchorLine::Bottom: return QLatin1String("bottom");
+        case QQuickAnchorLine::HCenter: return QLatin1String("horizontalCenter");
+        case QQuickAnchorLine::VCenter: return QLatin1String("verticalCenter");
+        case QQuickAnchorLine::Baseline: return QLatin1String("baseline");
+        case QQuickAnchorLine::Invalid:
         default: return QString();
     }
 }
@@ -239,8 +228,7 @@ bool QQuickDesignerSupport::isAnchoredTo(QQuickItem *fromItem, QQuickItem *toIte
 
 bool QQuickDesignerSupport::areChildrenAnchoredTo(QQuickItem *fromItem, QQuickItem *toItem)
 {
-    const auto childItems = fromItem->childItems();
-    for (QQuickItem *childItem : childItems) {
+    Q_FOREACH (QQuickItem *childItem, fromItem->childItems()) {
         if (childItem) {
             if (isAnchoredTo(childItem, toItem))
                 return true;
@@ -349,7 +337,7 @@ QPair<QString, QObject*> QQuickDesignerSupport::anchorLineTarget(QQuickItem *ite
             return QPair<QString, QObject*>();
 
         QQuickAnchorLine anchorLine = metaProperty.read().value<QQuickAnchorLine>();
-        if (anchorLine.anchorLine != QQuickAnchors::InvalidAnchor) {
+        if (anchorLine.anchorLine != QQuickAnchorLine::Invalid) {
             targetObject = anchorLine.item;
             targetName = propertyNameForAnchorLine(anchorLine.anchorLine);
         }
@@ -396,10 +384,10 @@ void QQuickDesignerSupport::emitComponentCompleteSignalForAttachedProperty(QQuic
 QList<QObject*> QQuickDesignerSupport::statesForItem(QQuickItem *item)
 {
     QList<QObject*> objectList;
-    const QList<QQuickState *> stateList = QQuickItemPrivate::get(item)->_states()->states();
+    QList<QQuickState *> stateList = QQuickItemPrivate::get(item)->_states()->states();
 
     objectList.reserve(stateList.size());
-    for (QQuickState* state : stateList)
+    Q_FOREACH (QQuickState* state, stateList)
         objectList.append(state);
 
     return objectList;

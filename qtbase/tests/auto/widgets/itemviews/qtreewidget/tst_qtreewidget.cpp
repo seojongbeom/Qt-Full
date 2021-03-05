@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -194,7 +199,7 @@ void tst_QTreeWidget::getSetCheck()
     QCOMPARE(obj1.headerItem(), var2);
 
     obj1.setHeaderItem((QTreeWidgetItem *)0);
-//    QCOMPARE(obj1.headerItem(), nullptr);
+//    QCOMPARE(obj1.headerItem(), (QTreeWidgetItem *)0);
 
     // QTreeWidgetItem * QTreeWidget::currentItem()
     // void QTreeWidget::setCurrentItem(QTreeWidgetItem *)
@@ -203,7 +208,7 @@ void tst_QTreeWidget::getSetCheck()
     QCOMPARE(obj1.currentItem(), var3);
 
     obj1.setCurrentItem((QTreeWidgetItem *)0);
-    QCOMPARE(obj1.currentItem(), nullptr);
+    QCOMPARE(obj1.currentItem(), (QTreeWidgetItem *)0);
 }
 
 typedef QList<int> IntList;
@@ -285,9 +290,9 @@ void tst_QTreeWidget::addTopLevelItem()
         tree.addTopLevelItem(ti);
         QCOMPARE(tree.topLevelItemCount(), i+1);
         QCOMPARE(tree.topLevelItem(i), ti);
-        QCOMPARE(tree.topLevelItem(-1), nullptr);
+        QCOMPARE(tree.topLevelItem(-1), static_cast<TreeItem*>(0));
         QCOMPARE(tree.indexOfTopLevelItem(ti), i);
-        QCOMPARE(ti->parent(), nullptr);
+        QCOMPARE(ti->parent(), static_cast<TreeItem*>(0));
         tree.addTopLevelItem(ti);
         QCOMPARE(tree.topLevelItemCount(), i+1);
         tops.append(ti);
@@ -315,7 +320,7 @@ void tst_QTreeWidget::addTopLevelItem()
         for (int i = 0; i < 100; i += count) {
             tops.clear();
             for (int j = 0; j < count; ++j)
-                tops << new TreeItem(QStringList(QString::number(j)));
+                tops << new TreeItem(QStringList() << QString("%0").arg(j));
             tree.addTopLevelItems(tops);
             QCOMPARE(tree.topLevelItemCount(), count + i);
             for (int j = 0; j < count; ++j)
@@ -419,7 +424,7 @@ void tst_QTreeWidget::currentItem()
 
     // can't set the headerItem to be the current item
     tree.setCurrentItem(tree.headerItem());
-    QCOMPARE(tree.currentItem(), nullptr);
+    QCOMPARE(tree.currentItem(), static_cast<TreeItem*>(0));
 }
 
 void tst_QTreeWidget::editItem_data()
@@ -506,10 +511,10 @@ void tst_QTreeWidget::takeItem()
 
     for (int i=0; i<3; ++i) {
         QTreeWidgetItem *top = new QTreeWidgetItem(testWidget);
-        top->setText(0, QStringLiteral("top") + QString::number(i));
+        top->setText(0, QString("top%1").arg(i));
         for (int j=0; j<3; ++j) {
             QTreeWidgetItem *child = new QTreeWidgetItem(top);
-            child->setText(0, QStringLiteral("child") + QString::number(j));
+            child->setText(0, QString("child%1").arg(j));
         }
     }
 
@@ -520,10 +525,10 @@ void tst_QTreeWidget::takeItem()
         int count = testWidget->topLevelItemCount();
         QTreeWidgetItem *item = testWidget->takeTopLevelItem(index);
         if (outOfBounds) {
-            QCOMPARE(item, nullptr);
+            QCOMPARE(item, (QTreeWidgetItem *)0);
             QCOMPARE(count, testWidget->topLevelItemCount());
         } else {
-            QCOMPARE(item->text(0), QStringLiteral("top") + QString::number(index));
+            QCOMPARE(item->text(0), QString("top%1").arg(index));
             QCOMPARE(count-1, testWidget->topLevelItemCount());
             delete item;
         }
@@ -531,10 +536,10 @@ void tst_QTreeWidget::takeItem()
         int count = testWidget->topLevelItem(0)->childCount();
         QTreeWidgetItem *item = testWidget->topLevelItem(0)->takeChild(index);
         if (outOfBounds) {
-            QCOMPARE(item, nullptr);
+            QCOMPARE(item, (QTreeWidgetItem *)0);
             QCOMPARE(count, testWidget->topLevelItem(0)->childCount());
         } else {
-            QCOMPARE(item->text(0), QStringLiteral("child") + QString::number(index));
+            QCOMPARE(item->text(0), QString("child%1").arg(index));
             QCOMPARE(count-1, testWidget->topLevelItem(0)->childCount());
             delete item;
         }
@@ -554,16 +559,16 @@ void tst_QTreeWidget::removeChild()
     QFETCH(int, childCount);
     QFETCH(int, removeAt);
 
-    const QScopedPointer<QTreeWidgetItem> root(new QTreeWidgetItem);
+    QTreeWidgetItem *root = new QTreeWidgetItem;
     for (int i = 0; i < childCount; ++i)
-        new QTreeWidgetItem(root.data(), QStringList(QString::number(i)));
+        new QTreeWidgetItem(root, QStringList(QString::number(i)));
 
     QCOMPARE(root->childCount(), childCount);
     for (int j = 0; j < childCount; ++j)
         QCOMPARE(root->child(j)->text(0), QString::number(j));
 
-    const QScopedPointer<QTreeWidgetItem> remove(root->child(removeAt));
-    root->removeChild(remove.data());
+    QTreeWidgetItem *remove = root->child(removeAt);
+    root->removeChild(remove);
 
     QCOMPARE(root->childCount(), childCount - 1);
     for (int k = 0; k < childCount; ++k) {
@@ -574,6 +579,7 @@ void tst_QTreeWidget::removeChild()
         else if (k > removeAt)
             QCOMPARE(root->child(k - 1)->text(0), QString::number(k));
     }
+    delete root;
 }
 
 void tst_QTreeWidget::setItemHidden()
@@ -788,11 +794,10 @@ void tst_QTreeWidget::selectedItems()
     // create items
     for (int t=0; t<topLevel; ++t) {
         QTreeWidgetItem *top = new QTreeWidgetItem(testWidget);
-        const QString topS = QLatin1String("top") + QString::number(t);
-        top->setText(0, topS);
+        top->setText(0, QString("top%1").arg(t));
         for (int c=0; c<children; ++c) {
             QTreeWidgetItem *child = new QTreeWidgetItem(top);
-            child->setText(0, topS + QLatin1String("child") + QString::number(c));
+            child->setText(0, QString("top%1child%2").arg(t).arg(c));
         }
     }
 
@@ -1437,10 +1442,11 @@ static void fillTreeWidget(QTreeWidgetItem *parent, int rows)
 {
     const int columns = parent->treeWidget()->columnCount();
     for (int r = 0; r < rows; ++r) {
-        const QString prefix = QLatin1String("[r:") + QString::number(r) + QLatin1String(",c:");
         QTreeWidgetItem *w = new QTreeWidgetItem(parent);
-        for (int c = 0; c < columns; ++c)
-            w->setText(c, prefix + QString::number(c) + QLatin1Char(']'));
+        for ( int c = 0; c < columns; ++c ) {
+            QString s = QString("[r:%1,c:%2]").arg(r).arg(c);
+            w->setText(c, s);
+        }
         fillTreeWidget(w, rows - r - 1);
     }
 }
@@ -1449,9 +1455,10 @@ static void fillTreeWidget(QTreeWidget *tree, int rows)
 {
     for (int r = 0; r < rows; ++r) {
         QTreeWidgetItem *w = new QTreeWidgetItem();
-        const QString prefix = QLatin1String("[r:") + QString::number(r) + QLatin1String(",c:");
-        for (int c = 0; c < tree->columnCount(); ++c)
-            w->setText(c, prefix + QString::number(c) + QLatin1Char(']'));
+        for ( int c = 0; c < tree->columnCount(); ++c ) {
+            QString s = QString("[r:%1,c:%2]").arg(r).arg(c);
+            w->setText(c, s);
+        }
         tree->insertTopLevelItem(r, w);
         fillTreeWidget(w, rows - r - 1);
     }
@@ -1548,7 +1555,7 @@ void tst_QTreeWidget::keyboardNavigation()
         }
 
         QTreeWidgetItem *current = testWidget->currentItem();
-        QCOMPARE(current->text(0), QLatin1String("[r:") + QString::number(row) + QLatin1String(",c:0]"));
+        QCOMPARE(current->text(0), QString("[r:%1,c:0]").arg(row));
         if (current->parent())
             QCOMPARE(current->parent()->indexOfChild(current), row);
         else
@@ -1560,9 +1567,10 @@ void tst_QTreeWidget::scrollToItem()
 {
     // Check if all parent nodes of the item found are expanded.
     // Reported in task #78761
-    QTreeWidgetItem *search = nullptr;
+    QTreeWidgetItem *bar;
+    QTreeWidgetItem *search;
     for (int i=0; i<2; ++i) {
-        QTreeWidgetItem *bar = new QTreeWidgetItem(testWidget);
+        bar = new QTreeWidgetItem(testWidget);
         bar->setText(0, QString::number(i));
 
         for (int j=0; j<2; ++j) {
@@ -1570,8 +1578,9 @@ void tst_QTreeWidget::scrollToItem()
             foo->setText(0, bar->text(0) + QString::number(j));
 
             for (int k=0; k<2; ++k) {
-                search = new QTreeWidgetItem(foo);
-                search->setText(0, foo->text(0) + QString::number(k));
+                QTreeWidgetItem *yo = new QTreeWidgetItem(foo);
+                yo->setText(0, foo->text(0) + QString::number(k));
+                search = yo;
             }
         }
     }
@@ -1580,10 +1589,10 @@ void tst_QTreeWidget::scrollToItem()
     testWidget->scrollToItem(search);
     QCOMPARE(search->text(0), QLatin1String("111"));
 
-    QTreeWidgetItem *par = search->parent();
-    QVERIFY(testWidget->isItemExpanded(par));
-    par = par->parent();
-    QVERIFY(testWidget->isItemExpanded(par));
+    bar = search->parent();
+    QVERIFY(testWidget->isItemExpanded(bar));
+    bar = bar->parent();
+    QVERIFY(testWidget->isItemExpanded(bar));
 }
 
 // From task #85413
@@ -1661,8 +1670,8 @@ void tst_QTreeWidget::addChild()
         QCOMPARE(taken, children);
         QCOMPARE(item->childCount(), 0);
         for (int i = 0; i < taken.count(); ++i) {
-            QCOMPARE(taken.at(i)->parent(), nullptr);
-            QCOMPARE(taken.at(i)->treeWidget(), nullptr);
+            QCOMPARE(taken.at(i)->parent(), static_cast<QTreeWidgetItem*>(0));
+            QCOMPARE(taken.at(i)->treeWidget(), static_cast<QTreeWidget*>(0));
             item->addChild(taken.at(i)); // re-add
         }
 
@@ -1687,7 +1696,7 @@ void tst_QTreeWidget::addChild()
         for (int i = 0; i < 100; i += count) {
             QList<QTreeWidgetItem*> list;
             for (int j = 0; j < count; ++j)
-                list << new QTreeWidgetItem(QStringList(QString::number(j)));
+                list << new QTreeWidgetItem(QStringList() << QString("%0").arg(j));
             item->addChildren(list);
             QCOMPARE(item->childCount(), count + i);
             for (int j = 0; j < count; ++j) {
@@ -1734,8 +1743,7 @@ void tst_QTreeWidget::setData()
             for (int i = 1; i <= 2; ++i) {
                 for (int j = 0; j < 5; ++j) {
                     QVariantList args;
-                    const QString iS = QString::number(i);
-                    const QString text = QLatin1String("text ") + iS;
+                    QString text = QString("text %0").arg(i);
                     item->setText(j, text);
                     QCOMPARE(item->text(j), text);
                     QCOMPARE(itemChangedSpy.count(), 1);
@@ -1757,7 +1765,7 @@ void tst_QTreeWidget::setData()
                     item->setIcon(j, icon);
                     QCOMPARE(itemChangedSpy.count(), 0);
 
-                    const QString toolTip = QLatin1String("toolTip ") + iS;
+                    QString toolTip = QString("toolTip %0").arg(i);
                     item->setToolTip(j, toolTip);
                     QCOMPARE(item->toolTip(j), toolTip);
                     QCOMPARE(itemChangedSpy.count(), 1);
@@ -1767,7 +1775,7 @@ void tst_QTreeWidget::setData()
                     item->setToolTip(j, toolTip);
                     QCOMPARE(itemChangedSpy.count(), 0);
 
-                    const QString statusTip = QLatin1String("statusTip ") + iS;
+                    QString statusTip = QString("statusTip %0").arg(i);
                     item->setStatusTip(j, statusTip);
                     QCOMPARE(item->statusTip(j), statusTip);
                     QCOMPARE(itemChangedSpy.count(), 1);
@@ -1777,7 +1785,7 @@ void tst_QTreeWidget::setData()
                     item->setStatusTip(j, statusTip);
                     QCOMPARE(itemChangedSpy.count(), 0);
 
-                    const QString whatsThis = QLatin1String("whatsThis ") + iS;
+                    QString whatsThis = QString("whatsThis %0").arg(i);
                     item->setWhatsThis(j, whatsThis);
                     QCOMPARE(item->whatsThis(j), whatsThis);
                     QCOMPARE(itemChangedSpy.count(), 1);
@@ -1951,9 +1959,9 @@ void tst_QTreeWidget::itemData()
 
 void tst_QTreeWidget::enableDisable()
 {
-    const QScopedPointer<QTreeWidgetItem> itm(new QTreeWidgetItem);
+    QTreeWidgetItem *itm = new QTreeWidgetItem();
     for (int i = 0; i < 10; ++i)
-        new QTreeWidgetItem(itm.data());
+        new QTreeWidgetItem(itm);
 
     // make sure all items are enabled
     QVERIFY(itm->flags() & Qt::ItemIsEnabled);
@@ -1999,7 +2007,7 @@ void tst_QTreeWidget::columnCount()
 
 void tst_QTreeWidget::setHeaderLabels()
 {
-    QStringList list = QString("a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z").split(QLatin1Char(','));
+    QStringList list = QString("a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z").split(",");
     testWidget->setHeaderLabels(list);
     QCOMPARE(testWidget->header()->count(), list.count());
 }
@@ -2139,8 +2147,8 @@ void tst_QTreeWidget::insertItemsWithSorting_data()
         QStringList ascendingItems;
         QStringList reverseItems;
         for (int i = 'a'; i <= 'z'; ++i) {
-            ascendingItems << QString(1, QLatin1Char(i));
-            reverseItems << QString(1, QLatin1Char('z' - i + 'a'));
+            ascendingItems << QString("%0").arg(QLatin1Char(i));
+            reverseItems << QString("%0").arg(QLatin1Char('z' - i + 'a'));
             ascendingRows << i - 'a';
             reverseRows << 'z' - i + 'a';
         }
@@ -2661,11 +2669,11 @@ void tst_QTreeWidget::expandAndCallapse()
 {
     QTreeWidget tw;
     QTreeWidgetItem *top = new QTreeWidgetItem(&tw, QStringList() << "top");
-    QTreeWidgetItem *p = nullptr;
+    QTreeWidgetItem *p;
     for (int i = 0; i < 10; ++i) {
-        p = new QTreeWidgetItem(top, QStringList(QString::number(i)));
+        p = new QTreeWidgetItem(top, QStringList() << QString("%1").arg(i));
         for (int j = 0; j < 10; ++j)
-            new QTreeWidgetItem(p, QStringList(QString::number(j)));
+            new QTreeWidgetItem(p, QStringList() << QString("%1").arg(j));
     }
     QSignalSpy spy0(&tw, SIGNAL(itemExpanded(QTreeWidgetItem*)));
     QSignalSpy spy1(&tw, SIGNAL(itemCollapsed(QTreeWidgetItem*)));
@@ -2717,10 +2725,7 @@ void tst_QTreeWidget::setDisabled()
     children.append(new QTreeWidgetItem());
     children.append(new QTreeWidgetItem());
     children.append(new QTreeWidgetItem());
-    {
-        const QScopedPointer<QTreeWidgetItem> taken(top->takeChild(0));
-        QCOMPARE(taken.data(), i1);
-    }
+    i1 = top->takeChild(0);
 
     top->addChildren(children);
     QCOMPARE(top->child(0)->isDisabled(), false);
@@ -2732,21 +2737,16 @@ void tst_QTreeWidget::setDisabled()
     QCOMPARE(top->child(1)->isDisabled(), true);
     QCOMPARE(top->child(1)->isDisabled(), true);
 
-    struct Deleter {
-        QList<QTreeWidgetItem *> items;
-        explicit Deleter(QList<QTreeWidgetItem *> items) : items(std::move(items)) {}
-        ~Deleter() { qDeleteAll(items); }
-    };
+    children = top->takeChildren();
+    QCOMPARE(children.at(0)->isDisabled(), false);
+    QCOMPARE(children.at(1)->isDisabled(), false);
+    QCOMPARE(children.at(1)->isDisabled(), false);
 
-    const Deleter takenChildren(top->takeChildren());
-    QCOMPARE(takenChildren.items[0]->isDisabled(), false);
-    QCOMPARE(takenChildren.items[1]->isDisabled(), false);
-    QCOMPARE(takenChildren.items[1]->isDisabled(), false);
 }
 
 void tst_QTreeWidget::removeSelectedItem()
 {
-    const QScopedPointer <QTreeWidget> w(new QTreeWidget);
+    QTreeWidget *w = new QTreeWidget();
     w->setSortingEnabled(true);
 
     QTreeWidgetItem *first = new QTreeWidgetItem();
@@ -2772,13 +2772,15 @@ void tst_QTreeWidget::removeSelectedItem()
     QCOMPARE(selModel->hasSelection(), true);
     QCOMPARE(selModel->selectedRows().count(), 1);
 
-    const QScopedPointer<QTreeWidgetItem> taken(w->takeTopLevelItem(2));
+    QTreeWidgetItem *taken = w->takeTopLevelItem(2);
     QCOMPARE(taken->text(0), QLatin1String("C"));
 
     QCOMPARE(selModel->hasSelection(), false);
     QCOMPARE(selModel->selectedRows().count(), 0);
     QItemSelection sel = selModel->selection();
     QCOMPARE(selModel->isSelected(w->model()->index(0,0)), false);
+
+    delete w;
 }
 
 class AnotherTreeWidget : public QTreeWidget
@@ -2937,11 +2939,11 @@ void tst_QTreeWidget::sortAndSelect()
 
 void tst_QTreeWidget::defaultRowSizes()
 {
-    const QScopedPointer<QTreeWidget> tw(new QTreeWidget);
+    QTreeWidget *tw = new QTreeWidget();
     tw->setIconSize(QSize(50, 50));
     tw->setColumnCount(6);
     for (int i=0; i<10; ++i) {
-        auto it = new QTreeWidgetItem(tw.data());
+        QTreeWidgetItem *it = new QTreeWidgetItem(tw);
         for (int j=0; j<tw->columnCount() - 1; ++j) {
             it->setText(j, "This is a test");
         }
@@ -3131,7 +3133,7 @@ void tst_QTreeWidget::selectionOrder()
     testWidget->setColumnCount(1);
     QList<QTreeWidgetItem *> items;
     for (int i = 0; i < 10; ++i)
-        items.append(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QLatin1String("item: ") + QString::number(i))));
+        items.append(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("item: %1").arg(i))));
     testWidget->insertTopLevelItems(0, items);
 
     QModelIndex idx = testWidget->indexFromItem(items[0]);

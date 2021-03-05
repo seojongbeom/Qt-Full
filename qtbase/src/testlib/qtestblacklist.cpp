@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtTest module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -54,7 +48,7 @@ QT_BEGIN_NAMESPACE
 /*
   The BLACKLIST file format is a grouped listing of keywords.
 
-  Blank lines and everything after # is simply ignored.  An initial #-line
+  Blank lines and lines starting with # are simply ignored.  An initial #-line
   referring to this documentation is kind to readers.  Comments can also be used
   to indicate the reasons for ignoring particular cases.
 
@@ -99,17 +93,11 @@ static QSet<QByteArray> keywords()
 #ifdef Q_OS_OSX
             << "osx"
 #endif
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#ifdef Q_OS_WIN
             << "windows"
 #endif
 #ifdef Q_OS_IOS
             << "ios"
-#endif
-#ifdef Q_OS_TVOS
-            << "tvos"
-#endif
-#ifdef Q_OS_WATCHOS
-            << "watchos"
 #endif
 #ifdef Q_OS_ANDROID
             << "android"
@@ -119,6 +107,9 @@ static QSet<QByteArray> keywords()
 #endif
 #ifdef Q_OS_WINRT
             << "winrt"
+#endif
+#ifdef Q_OS_WINCE
+            << "wince"
 #endif
 
 #if QT_POINTER_SIZE == 8
@@ -135,27 +126,20 @@ static QSet<QByteArray> keywords()
 #endif
 #ifdef Q_CC_MSVC
             << "msvc"
-#  if _MSC_VER <= 1600
-            << "msvc-2010"
-#  elif _MSC_VER <= 1700
-            << "msvc-2012"
-#  elif _MSC_VER <= 1800
-            << "msvc-2013"
-#  elif _MSC_VER <= 1900
+    #ifdef _MSC_VER
+        #if _MSC_VER == 1900
             << "msvc-2015"
-#  else
-            << "msvc-2017"
-#  endif
+        #elif _MSC_VER == 1800
+            << "msvc-2013"
+        #elif _MSC_VER == 1700
+            << "msvc-2012"
+        #elif _MSC_VER == 1600
+            << "msvc-2010"
+        #endif
+    #endif
 #endif
 
-#ifdef Q_PROCESSOR_X86
-            << "x86"
-#endif
-#ifdef Q_PROCESSOR_ARM
-            << "arm"
-#endif
-
-#ifdef QT_BUILD_INTERNAL
+#ifdef Q_AUTOTEST_EXPORT
             << "developer-build"
 #endif
             ;
@@ -187,7 +171,7 @@ static QSet<QByteArray> activeConditions()
     }
 
     if (qEnvironmentVariableIsSet("QTEST_ENVIRONMENT")) {
-        for (const QByteArray &k : qgetenv("QTEST_ENVIRONMENT").split(' '))
+        foreach (const QByteArray &k, qgetenv("QTEST_ENVIRONMENT").split(' '))
             result.insert(k);
     }
 
@@ -245,12 +229,8 @@ void parseBlackList()
     QByteArray function;
 
     while (!ignored.atEnd()) {
-        QByteArray line = ignored.readLine();
-        const int commentPosition = line.indexOf('#');
-        if (commentPosition >= 0)
-            line.truncate(commentPosition);
-        line = line.simplified();
-        if (line.isEmpty())
+        QByteArray line = ignored.readLine().simplified();
+        if (line.isEmpty() || line.startsWith('#'))
             continue;
         if (line.startsWith('[')) {
             function = line.mid(1, line.length() - 2);

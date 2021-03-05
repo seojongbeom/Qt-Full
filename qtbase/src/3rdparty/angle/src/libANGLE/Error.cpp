@@ -16,16 +16,9 @@
 namespace gl
 {
 
-Error::Error(GLenum errorCode, const char *msg, ...) : mCode(errorCode), mID(errorCode)
-{
-    va_list vararg;
-    va_start(vararg, msg);
-    createMessageString();
-    *mMessage = FormatString(msg, vararg);
-    va_end(vararg);
-}
-
-Error::Error(GLenum errorCode, GLuint id, const char *msg, ...) : mCode(errorCode), mID(id)
+Error::Error(GLenum errorCode, const char *msg, ...)
+    : mCode(errorCode),
+      mMessage(nullptr)
 {
     va_list vararg;
     va_start(vararg, msg);
@@ -36,9 +29,9 @@ Error::Error(GLenum errorCode, GLuint id, const char *msg, ...) : mCode(errorCod
 
 void Error::createMessageString() const
 {
-    if (!mMessage)
+    if (mMessage == nullptr)
     {
-        mMessage.reset(new std::string);
+        mMessage = new std::string();
     }
 }
 
@@ -48,28 +41,15 @@ const std::string &Error::getMessage() const
     return *mMessage;
 }
 
-bool Error::operator==(const Error &other) const
-{
-    if (mCode != other.mCode)
-        return false;
-
-    // TODO(jmadill): Compare extended error codes instead of strings.
-    if ((!mMessage || !other.mMessage) && (!mMessage != !other.mMessage))
-        return false;
-
-    return (*mMessage == *other.mMessage);
-}
-
-bool Error::operator!=(const Error &other) const
-{
-    return !(*this == other);
-}
 }
 
 namespace egl
 {
 
-Error::Error(EGLint errorCode, const char *msg, ...) : mCode(errorCode), mID(0)
+Error::Error(EGLint errorCode, const char *msg, ...)
+    : mCode(errorCode),
+      mID(0),
+      mMessage(nullptr)
 {
     va_list vararg;
     va_start(vararg, msg);
@@ -78,7 +58,10 @@ Error::Error(EGLint errorCode, const char *msg, ...) : mCode(errorCode), mID(0)
     va_end(vararg);
 }
 
-Error::Error(EGLint errorCode, EGLint id, const char *msg, ...) : mCode(errorCode), mID(id)
+Error::Error(EGLint errorCode, EGLint id, const char *msg, ...)
+    : mCode(errorCode),
+      mID(id),
+      mMessage(nullptr)
 {
     va_list vararg;
     va_start(vararg, msg);
@@ -86,12 +69,11 @@ Error::Error(EGLint errorCode, EGLint id, const char *msg, ...) : mCode(errorCod
     *mMessage = FormatString(msg, vararg);
     va_end(vararg);
 }
-
 void Error::createMessageString() const
 {
-    if (!mMessage)
+    if (mMessage == nullptr)
     {
-        mMessage.reset(new std::string);
+        mMessage = new std::string();
     }
 }
 

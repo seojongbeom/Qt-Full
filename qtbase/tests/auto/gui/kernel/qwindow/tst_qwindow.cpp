@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,7 +45,7 @@
 
 #if defined(Q_OS_QNX)
 #include <QOpenGLContext>
-#elif defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#elif defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
 #  include <QtCore/qt_windows.h>
 #endif
 
@@ -53,20 +58,12 @@ class tst_QWindow: public QObject
     Q_OBJECT
 
 private slots:
-    void create();
-    void setParent();
-    void setVisible();
-    void setVisibleFalseDoesNotCreateWindow();
     void eventOrderOnShow();
     void resizeEventAfterResize();
-    void exposeEventOnShrink_QTBUG54040();
     void mapGlobal();
     void positioning_data();
     void positioning();
     void positioningDuringMinimized();
-    void childWindowPositioning_data();
-    void childWindowPositioning();
-    void childWindowLevel();
     void platformSurface();
     void isExposed();
     void isActive();
@@ -103,14 +100,12 @@ private slots:
     void initTestCase();
     void stateChange_data();
     void stateChange();
-    void flags();
     void cleanup();
-    void testBlockingWindowShownAfterModalDialog();
 
 private:
     QPoint m_availableTopLeft;
     QSize m_testWindowSize;
-    QTouchDevice *touchDevice = QTest::createTouchDevice();
+    QTouchDevice *touchDevice;
 };
 
 void tst_QWindow::initTestCase()
@@ -124,126 +119,14 @@ void tst_QWindow::initTestCase()
     if (screenWidth > 2000)
         width = 100 * ((screenWidth + 500) / 1000);
     m_testWindowSize = QSize(width, width);
+    touchDevice = new QTouchDevice;
+    touchDevice->setType(QTouchDevice::TouchScreen);
+    QWindowSystemInterface::registerTouchDevice(touchDevice);
 }
 
 void tst_QWindow::cleanup()
 {
     QVERIFY(QGuiApplication::allWindows().isEmpty());
-}
-
-void tst_QWindow::create()
-{
-    QWindow a;
-    QVERIFY2(!a.handle(), "QWindow should lazy init the platform window");
-
-    a.create();
-    QVERIFY2(a.handle(), "Explicitly creating a platform window should never fail");
-
-    QWindow b;
-    QWindow c(&b);
-    b.create();
-    QVERIFY(b.handle());
-    QVERIFY2(!c.handle(), "Creating a parent window should not automatically create children");
-
-    QWindow d;
-    QWindow e(&d);
-    e.create();
-    QVERIFY(e.handle());
-    QVERIFY2(d.handle(), "Creating a child window should automatically create parents");
-
-    QWindow f;
-    QWindow g(&f);
-    f.create();
-    QVERIFY(f.handle());
-    QPlatformWindow *platformWindow = f.handle();
-    g.create();
-    QVERIFY(g.handle());
-    QVERIFY2(f.handle() == platformWindow, "Creating a child window should not affect parent if already created");
-}
-
-void tst_QWindow::setParent()
-{
-    QWindow a;
-    QWindow b(&a);
-    QVERIFY2(b.parent() == &a, "Setting parent at construction time should work");
-    QVERIFY2(a.children().contains(&b), "Parent should have child in list of children");
-
-    QWindow c;
-    QWindow d;
-    d.setParent(&c);
-    QVERIFY2(d.parent() == &c, "Setting parent after construction should work");
-    QVERIFY2(c.children().contains(&d), "Parent should have child in list of children");
-
-    a.create();
-    b.setParent(0);
-    QVERIFY2(!b.handle(), "Making window top level shouild not automatically create it");
-
-    QWindow e;
-    c.create();
-    e.setParent(&c);
-    QVERIFY2(!e.handle(), "Making window a child of a created window should not automatically create it");
-
-    QWindow f;
-    QWindow g;
-    g.create();
-    QVERIFY(g.handle());
-    g.setParent(&f);
-    QVERIFY2(f.handle(), "Making a created window a child of a non-created window should automatically create it");
-}
-
-void tst_QWindow::setVisible()
-{
-    QWindow a;
-    QWindow b(&a);
-    a.setVisible(true);
-    QVERIFY2(!b.handle(), "Making a top level window visible doesn't create its children");
-    QVERIFY2(!b.isVisible(), "Making a top level window visible doesn't make its children visible");
-    QVERIFY(QTest::qWaitForWindowExposed(&a));
-
-    QWindow c;
-    QWindow d(&c);
-    d.setVisible(true);
-    QVERIFY2(!c.handle(), "Making a child window visible doesn't create parent window if parent is hidden");
-    QVERIFY2(!c.isVisible(), "Making a child window visible doesn't make its parent visible");
-
-    QVERIFY2(!d.handle(), "Making a child window visible doesn't create platform window if parent is hidden");
-
-    c.create();
-    QVERIFY(c.handle());
-    QVERIFY2(d.handle(), "Creating a parent window should automatically create children if they are visible");
-    QVERIFY2(!c.isVisible(), "Creating a parent window should not make it visible just because it has visible children");
-
-    QWindow e;
-    QWindow f(&e);
-    f.setVisible(true);
-    QVERIFY(!f.handle());
-    QVERIFY(!e.handle());
-    f.setParent(0);
-    QVERIFY2(f.handle(), "Making a visible but not created child window top level should create it");
-    QVERIFY(QTest::qWaitForWindowExposed(&f));
-
-    QWindow g;
-    QWindow h;
-    QWindow i(&g);
-    i.setVisible(true);
-    h.setVisible(true);
-    QVERIFY(QTest::qWaitForWindowExposed(&h));
-    QVERIFY(!i.handle());
-    QVERIFY(!g.handle());
-    QVERIFY(h.handle());
-    i.setParent(&h);
-    QVERIFY2(i.handle(), "Making a visible but not created child window child of a created window should create it");
-    QVERIFY(QTest::qWaitForWindowExposed(&i));
-}
-
-void tst_QWindow::setVisibleFalseDoesNotCreateWindow()
-{
-    QWindow w;
-    QVERIFY(!w.handle());
-    w.setVisible(false);
-    QVERIFY2(!w.handle(), "Hiding a non-created window doesn't create it");
-    w.setVisible(true);
-    QVERIFY2(w.handle(), "Showing a non-created window creates it");
 }
 
 void tst_QWindow::mapGlobal()
@@ -334,19 +217,6 @@ private:
     QPlatformSurfaceEvent::SurfaceEventType m_surfaceventType;
 };
 
-class ColoredWindow : public QRasterWindow {
-public:
-    explicit ColoredWindow(const QColor &color, QWindow *parent = 0) : QRasterWindow(parent), m_color(color) {}
-    void paintEvent(QPaintEvent *) Q_DECL_OVERRIDE
-    {
-        QPainter p(this);
-        p.fillRect(QRect(QPoint(0, 0), size()), m_color);
-    }
-
-private:
-    const QColor m_color;
-};
-
 void tst_QWindow::eventOrderOnShow()
 {
     // Some platforms enforce minimum widths for windows, which can cause extra resize
@@ -382,29 +252,12 @@ void tst_QWindow::resizeEventAfterResize()
     // Make sure we get a resizeEvent after calling resize
     window.resize(m_testWindowSize);
 
+#if defined(Q_OS_BLACKBERRY) // "window" is the "root" window and will always be shown fullscreen
+                              // so we only expect one resize event
+    QTRY_COMPARE(window.received(QEvent::Resize), 1);
+#else
     QTRY_COMPARE(window.received(QEvent::Resize), 2);
-}
-
-void tst_QWindow::exposeEventOnShrink_QTBUG54040()
-{
-    Window window;
-    window.setGeometry(QRect(m_availableTopLeft + QPoint(80, 80), m_testWindowSize));
-    window.setTitle(QTest::currentTestFunction());
-    window.showNormal();
-
-    QVERIFY(QTest::qWaitForWindowExposed(&window));
-
-    int exposeCount = window.received(QEvent::Expose);
-    window.resize(window.width(), window.height() - 5);
-    QTRY_VERIFY(window.received(QEvent::Expose) > exposeCount);
-
-    exposeCount = window.received(QEvent::Expose);
-    window.resize(window.width() - 5, window.height());
-    QTRY_VERIFY(window.received(QEvent::Expose) > exposeCount);
-
-    exposeCount = window.received(QEvent::Expose);
-    window.resize(window.width() - 5, window.height() - 5);
-    QTRY_VERIFY(window.received(QEvent::Expose) > exposeCount);
+#endif
 }
 
 void tst_QWindow::positioning_data()
@@ -488,15 +341,21 @@ void tst_QWindow::positioning()
     window.reset();
     window.setWindowState(Qt::WindowFullScreen);
     QCoreApplication::processEvents();
-
+    // On BB10 the window is the root window and fullscreen, so nothing is resized.
+#if !defined(Q_OS_BLACKBERRY)
     QTRY_VERIFY(window.received(QEvent::Resize) > 0);
+#endif
+
     QTest::qWait(2000);
 
     window.reset();
     window.setWindowState(Qt::WindowNoState);
     QCoreApplication::processEvents();
-
+    // On BB10 the window is the root window and fullscreen, so nothing is resized.
+#if !defined(Q_OS_BLACKBERRY)
     QTRY_VERIFY(window.received(QEvent::Resize) > 0);
+#endif
+
     QTest::qWait(2000);
 
     QTRY_COMPARE(originalPos, window.position());
@@ -557,84 +416,6 @@ void tst_QWindow::positioningDuringMinimized()
     QTRY_COMPARE(window.geometry(), newGeometry);
     window.setWindowState(Qt::WindowNoState);
     QTRY_COMPARE(window.geometry(), newGeometry);
-}
-
-void tst_QWindow::childWindowPositioning_data()
-{
-    QTest::addColumn<bool>("showInsteadOfCreate");
-
-    QTest::newRow("create") << false;
-    QTest::newRow("show") << true;
-}
-
-void tst_QWindow::childWindowPositioning()
-{
-    const QPoint topLeftOrigin(0, 0);
-
-    ColoredWindow topLevelWindowFirst(Qt::green);
-    topLevelWindowFirst.setObjectName("topLevelWindowFirst");
-    ColoredWindow childWindowAfter(Qt::yellow, &topLevelWindowFirst);
-    childWindowAfter.setObjectName("childWindowAfter");
-
-    topLevelWindowFirst.setFramePosition(m_availableTopLeft);
-    childWindowAfter.setFramePosition(topLeftOrigin);
-
-    ColoredWindow topLevelWindowAfter(Qt::green);
-    topLevelWindowAfter.setObjectName("topLevelWindowAfter");
-    ColoredWindow childWindowFirst(Qt::yellow, &topLevelWindowAfter);
-    childWindowFirst.setObjectName("childWindowFirst");
-
-    topLevelWindowAfter.setFramePosition(m_availableTopLeft);
-    childWindowFirst.setFramePosition(topLeftOrigin);
-
-    QFETCH(bool, showInsteadOfCreate);
-
-    QWindow* windows[] = { &topLevelWindowFirst, &childWindowAfter, &childWindowFirst, &topLevelWindowAfter, 0 };
-    for (int i = 0; windows[i]; ++i) {
-        QWindow *window = windows[i];
-        if (showInsteadOfCreate) {
-            window->showNormal();
-        } else {
-            window->create();
-        }
-    }
-
-    if (showInsteadOfCreate) {
-        QVERIFY(QTest::qWaitForWindowExposed(&topLevelWindowFirst));
-        QVERIFY(QTest::qWaitForWindowExposed(&topLevelWindowAfter));
-    }
-
-    // Creation order shouldn't affect the geometry
-    // Use try compare since on X11 the window manager may still re-position the window after expose
-    QTRY_COMPARE(topLevelWindowFirst.geometry(), topLevelWindowAfter.geometry());
-    QTRY_COMPARE(childWindowAfter.geometry(), childWindowFirst.geometry());
-
-    // Creation order shouldn't affect the child ending up at 0,0
-    QCOMPARE(childWindowFirst.framePosition(), topLeftOrigin);
-    QCOMPARE(childWindowAfter.framePosition(), topLeftOrigin);
-}
-
-void tst_QWindow::childWindowLevel()
-{
-    ColoredWindow topLevel(Qt::green);
-    topLevel.setObjectName("topLevel");
-    ColoredWindow yellowChild(Qt::yellow, &topLevel);
-    yellowChild.setObjectName("yellowChild");
-    ColoredWindow redChild(Qt::red, &topLevel);
-    redChild.setObjectName("redChild");
-    ColoredWindow blueChild(Qt::blue, &topLevel);
-    blueChild.setObjectName("blueChild");
-
-    const QObjectList &siblings = topLevel.children();
-
-    QCOMPARE(siblings.constFirst(), &yellowChild);
-    QCOMPARE(siblings.constLast(), &blueChild);
-
-    yellowChild.raise();
-    QCOMPARE(siblings.constLast(), &yellowChild);
-
-    blueChild.lower();
-    QCOMPARE(siblings.constFirst(), &blueChild);
 }
 
 // QTBUG-49709: Verify that the normal geometry is correctly restored
@@ -1649,7 +1430,7 @@ void tst_QWindow::inputReentrancy()
     QCOMPARE(window.touchReleasedCount, 1);
 }
 
-#if QT_CONFIG(tabletevent)
+#ifndef QT_NO_TABLETEVENT
 class TabletTestWindow : public QWindow
 {
 public:
@@ -1677,7 +1458,7 @@ public:
 
 void tst_QWindow::tabletEvents()
 {
-#if QT_CONFIG(tabletevent)
+#ifndef QT_NO_TABLETEVENT
     TabletTestWindow window;
     window.setGeometry(QRect(m_availableTopLeft + QPoint(10, 10), m_testWindowSize));
     qGuiApp->installEventFilter(&window);
@@ -1820,7 +1601,12 @@ void tst_QWindow::initialSize()
     Window w;
     w.setWidth(m_testWindowSize.width());
     w.showNormal();
+#if defined(Q_OS_BLACKBERRY) // "window" is the "root" window and will always be shown fullscreen
+                              // so we only expect one resize event
+    QTRY_COMPARE(w.width(), qGuiApp->primaryScreen()->availableGeometry().width());
+#else
     QTRY_COMPARE(w.width(), m_testWindowSize.width());
+#endif
     QTRY_VERIFY(w.height() > 0);
     }
     {
@@ -1829,15 +1615,14 @@ void tst_QWindow::initialSize()
     w.resize(testSize);
     w.showNormal();
 
+#if defined(Q_OS_BLACKBERRY) // "window" is the "root" window and will always be shown fullscreen
+                              // so we only expect one resize event
+    const QSize expectedSize = QGuiApplication::primaryScreen()->availableGeometry().size();
+#else
     const QSize expectedSize = testSize;
+#endif
     QTRY_COMPARE(w.size(), expectedSize);
     }
-}
-
-static bool isPlatformOffscreenOrMinimal()
-{
-    return ((QGuiApplication::platformName() == QLatin1String("offscreen"))
-             || (QGuiApplication::platformName() == QLatin1String("minimal")));
 }
 
 void tst_QWindow::modalDialog()
@@ -1863,13 +1648,6 @@ void tst_QWindow::modalDialog()
 
     QGuiApplication::sync();
     QGuiApplication::processEvents();
-
-    if (isPlatformOffscreenOrMinimal()) {
-        QWARN("Focus stays in normalWindow on offscreen/minimal platforms");
-        QTRY_COMPARE(QGuiApplication::focusWindow(), &normalWindow);
-        return;
-    }
-
     QTRY_COMPARE(QGuiApplication::focusWindow(), &dialog);
 }
 
@@ -1908,13 +1686,6 @@ void tst_QWindow::modalDialogClosingOneOfTwoModal()
 
     QGuiApplication::sync();
     QGuiApplication::processEvents();
-
-    if (isPlatformOffscreenOrMinimal()) {
-        QWARN("Focus is lost when closing modal dialog on offscreen/minimal platforms");
-        QTRY_COMPARE(QGuiApplication::focusWindow(), nullptr);
-        return;
-    }
-
     QTRY_COMPARE(QGuiApplication::focusWindow(), &first_dialog);
 }
 
@@ -2000,8 +1771,8 @@ void tst_QWindow::modalWindowPosition()
 #ifndef QT_NO_CURSOR
 void tst_QWindow::modalWindowEnterEventOnHide_QTBUG35109()
 {
-    if (isPlatformOffscreenOrMinimal())
-        QSKIP("Can't test window focusing on offscreen/minimal");
+    if (QGuiApplication::platformName() == QLatin1String("cocoa"))
+        QSKIP("This test fails on OS X on CI");
 
     const QPoint center = QGuiApplication::primaryScreen()->availableGeometry().center();
 
@@ -2172,9 +1943,22 @@ void tst_QWindow::modalWindowEnterEventOnHide_QTBUG35109()
 }
 #endif
 
+class ColoredWindow : public QRasterWindow {
+public:
+    explicit ColoredWindow(const QColor &color, QWindow *parent = 0) : QRasterWindow(parent), m_color(color) {}
+    void paintEvent(QPaintEvent *) Q_DECL_OVERRIDE
+    {
+        QPainter p(this);
+        p.fillRect(QRect(QPoint(0, 0), size()), m_color);
+    }
+
+private:
+    const QColor m_color;
+};
+
 static bool isNativeWindowVisible(const QWindow *window)
 {
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     return IsWindowVisible(reinterpret_cast<HWND>(window->winId()));
 #else
     Q_UNIMPLEMENTED();
@@ -2229,59 +2013,6 @@ void tst_QWindow::requestUpdate()
 
     window.requestUpdate();
     QTRY_COMPARE(window.received(QEvent::UpdateRequest), 2);
-}
-
-void tst_QWindow::flags()
-{
-    Window window;
-    const auto baseFlags = window.flags();
-    window.setFlags(window.flags() | Qt::FramelessWindowHint);
-    QCOMPARE(window.flags(), baseFlags | Qt::FramelessWindowHint);
-    window.setFlag(Qt::WindowStaysOnTopHint, true);
-    QCOMPARE(window.flags(), baseFlags | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    window.setFlag(Qt::FramelessWindowHint, false);
-    QCOMPARE(window.flags(), baseFlags | Qt::WindowStaysOnTopHint);
-}
-
-class EventWindow : public QWindow
-{
-public:
-    EventWindow() : QWindow(), gotBlocked(false) {}
-    bool gotBlocked;
-protected:
-    bool event(QEvent *e)
-    {
-        if (e->type() == QEvent::WindowBlocked)
-            gotBlocked = true;
-        return QWindow::event(e);
-    }
-};
-
-void tst_QWindow::testBlockingWindowShownAfterModalDialog()
-{
-    EventWindow normalWindow;
-    normalWindow.setFramePosition(m_availableTopLeft + QPoint(80, 80));
-    normalWindow.resize(m_testWindowSize);
-    normalWindow.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&normalWindow));
-    QVERIFY(!normalWindow.gotBlocked);
-
-    QWindow dialog;
-    dialog.setFramePosition(m_availableTopLeft + QPoint(200, 200));
-    dialog.resize(m_testWindowSize);
-    dialog.setModality(Qt::ApplicationModal);
-    dialog.setFlags(Qt::Dialog);
-    dialog.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&dialog));
-    QVERIFY(normalWindow.gotBlocked);
-
-    EventWindow normalWindowAfter;
-    normalWindowAfter.setFramePosition(m_availableTopLeft + QPoint(80, 80));
-    normalWindowAfter.resize(m_testWindowSize);
-    QVERIFY(!normalWindowAfter.gotBlocked);
-    normalWindowAfter.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&normalWindowAfter));
-    QVERIFY(normalWindowAfter.gotBlocked);
 }
 
 #include <tst_qwindow.moc>

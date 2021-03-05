@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,9 +35,9 @@
 
 #include <QtQuick/qquickitem.h>
 #include <QtQuick/qquickwindow.h>
-#include <QtQuick/qquickrendercontrol.h>
-#include <QtQuick/private/qtquickglobal_p.h>
 #include <QtGui/private/qguiapplication_p.h>
+
+QT_BEGIN_NAMESPACE
 
 /*!
     \qmltype Shortcut
@@ -71,10 +65,7 @@
     }
     \endqml
 
-    It is also possible to set multiple shortcut \l sequences, so that the shortcut
-    can be \l activated via several different sequences of key presses.
-
-    \sa Keys, {Keys::}{shortcutOverride()}
+    \sa Keys
 */
 
 /*! \qmlsignal QtQuick::Shortcut::activated()
@@ -92,59 +83,14 @@
     The corresponding handler is \c onActivatedAmbiguously.
 */
 
-static bool qQuickShortcutContextMatcher(QObject *obj, Qt::ShortcutContext context)
-{
-    switch (context) {
-    case Qt::ApplicationShortcut:
-        return true;
-    case Qt::WindowShortcut:
-        while (obj && !obj->isWindowType()) {
-            obj = obj->parent();
-            if (QQuickItem *item = qobject_cast<QQuickItem *>(obj))
-                obj = item->window();
-        }
-        if (QWindow *renderWindow = QQuickRenderControl::renderWindowFor(qobject_cast<QQuickWindow *>(obj)))
-            obj = renderWindow;
-        return obj && obj == QGuiApplication::focusWindow();
-    default:
-        return false;
-    }
-}
-
-typedef bool (*ContextMatcher)(QObject *, Qt::ShortcutContext);
-
-Q_GLOBAL_STATIC_WITH_ARGS(ContextMatcher, ctxMatcher, (qQuickShortcutContextMatcher))
-
-Q_QUICK_PRIVATE_EXPORT ContextMatcher qt_quick_shortcut_context_matcher()
-{
-    return *ctxMatcher();
-}
-
-Q_QUICK_PRIVATE_EXPORT void qt_quick_set_shortcut_context_matcher(ContextMatcher matcher)
-{
-    if (!ctxMatcher.isDestroyed())
-        *ctxMatcher() = matcher;
-}
-
-QT_BEGIN_NAMESPACE
-
-static QKeySequence valueToKeySequence(const QVariant &value)
-{
-    if (value.type() == QVariant::Int)
-        return QKeySequence(static_cast<QKeySequence::StandardKey>(value.toInt()));
-    return QKeySequence::fromString(value.toString());
-}
-
-QQuickShortcut::QQuickShortcut(QObject *parent) : QObject(parent),
+QQuickShortcut::QQuickShortcut(QObject *parent) : QObject(parent), m_id(0),
     m_enabled(true), m_completed(false), m_autorepeat(true), m_context(Qt::WindowShortcut)
 {
 }
 
 QQuickShortcut::~QQuickShortcut()
 {
-    ungrabShortcut(m_shortcut);
-    for (Shortcut &shortcut : m_shortcuts)
-        ungrabShortcut(shortcut);
+    ungrabShortcut();
 }
 
 /*!
@@ -163,76 +109,28 @@ QQuickShortcut::~QQuickShortcut()
         onActivated: edit.wrapMode = TextEdit.Wrap
     }
     \endqml
-
-    \sa sequences
 */
 QVariant QQuickShortcut::sequence() const
 {
-    return m_shortcut.userValue;
+    return m_sequence;
 }
 
-void QQuickShortcut::setSequence(const QVariant &value)
+void QQuickShortcut::setSequence(const QVariant &sequence)
 {
-    if (value == m_shortcut.userValue)
+    if (sequence == m_sequence)
         return;
 
-    QKeySequence keySequence = valueToKeySequence(value);
+    QKeySequence shortcut;
+    if (sequence.type() == QVariant::Int)
+        shortcut = QKeySequence(static_cast<QKeySequence::StandardKey>(sequence.toInt()));
+    else
+        shortcut = QKeySequence::fromString(sequence.toString());
 
-    ungrabShortcut(m_shortcut);
-    m_shortcut.userValue = value;
-    m_shortcut.keySequence = keySequence;
-    grabShortcut(m_shortcut, m_context);
+    grabShortcut(shortcut, m_context);
+
+    m_sequence = sequence;
+    m_shortcut = shortcut;
     emit sequenceChanged();
-}
-
-/*!
-    \qmlproperty list<keysequence> QtQuick::Shortcut::sequences
-    \since 5.9
-
-    This property holds multiple key sequences for the shortcut. The key sequences
-    can be set to one of the \l{QKeySequence::StandardKey}{standard keyboard shortcuts},
-    or they can be described with strings containing sequences of up to four key
-    presses that are needed to \l{Shortcut::activated}{activate} the shortcut.
-
-    \qml
-    Shortcut {
-        sequences: [StandardKey.Cut, "Ctrl+X", "Shift+Del"]
-        onActivated: edit.cut()
-    }
-    \endqml
-*/
-QVariantList QQuickShortcut::sequences() const
-{
-    QVariantList values;
-    for (const Shortcut &shortcut : m_shortcuts)
-        values += shortcut.userValue;
-    return values;
-}
-
-void QQuickShortcut::setSequences(const QVariantList &values)
-{
-    QVector<Shortcut> remainder = m_shortcuts.mid(values.count());
-    m_shortcuts.resize(values.count());
-
-    bool changed = !remainder.isEmpty();
-    for (int i = 0; i < values.count(); ++i) {
-        QVariant value = values.at(i);
-        Shortcut& shortcut = m_shortcuts[i];
-        if (value == shortcut.userValue)
-            continue;
-
-        QKeySequence keySequence = valueToKeySequence(value);
-
-        ungrabShortcut(shortcut);
-        shortcut.userValue = value;
-        shortcut.keySequence = keySequence;
-        grabShortcut(shortcut, m_context);
-
-        changed = true;
-    }
-
-    if (changed)
-        emit sequencesChanged();
 }
 
 /*!
@@ -248,7 +146,7 @@ void QQuickShortcut::setSequences(const QVariantList &values)
 */
 QString QQuickShortcut::nativeText() const
 {
-    return m_shortcut.keySequence.toString(QKeySequence::NativeText);
+    return m_shortcut.toString(QKeySequence::NativeText);
 }
 
 /*!
@@ -263,7 +161,7 @@ QString QQuickShortcut::nativeText() const
 */
 QString QQuickShortcut::portableText() const
 {
-    return m_shortcut.keySequence.toString(QKeySequence::PortableText);
+    return m_shortcut.toString(QKeySequence::PortableText);
 }
 
 /*!
@@ -283,9 +181,8 @@ void QQuickShortcut::setEnabled(bool enabled)
     if (enabled == m_enabled)
         return;
 
-    setEnabled(m_shortcut, enabled);
-    for (Shortcut &shortcut : m_shortcuts)
-        setEnabled(shortcut, enabled);
+    if (m_id)
+        QGuiApplicationPrivate::instance()->shortcutMap.setShortcutEnabled(enabled, m_id, this);
 
     m_enabled = enabled;
     emit enabledChanged();
@@ -308,9 +205,8 @@ void QQuickShortcut::setAutoRepeat(bool repeat)
     if (repeat == m_autorepeat)
         return;
 
-    setAutoRepeat(m_shortcut, repeat);
-    for (Shortcut &shortcut : m_shortcuts)
-        setAutoRepeat(shortcut, repeat);
+    if (m_id)
+        QGuiApplicationPrivate::instance()->shortcutMap.setShortcutAutoRepeat(repeat, m_id, this);
 
     m_autorepeat = repeat;
     emit autoRepeatChanged();
@@ -345,9 +241,9 @@ void QQuickShortcut::setContext(Qt::ShortcutContext context)
     if (context == m_context)
         return;
 
-    ungrabShortcut(m_shortcut);
-    m_context = context;
     grabShortcut(m_shortcut, context);
+
+    m_context = context;
     emit contextChanged();
 }
 
@@ -359,19 +255,13 @@ void QQuickShortcut::componentComplete()
 {
     m_completed = true;
     grabShortcut(m_shortcut, m_context);
-    for (Shortcut &shortcut : m_shortcuts)
-        grabShortcut(shortcut, m_context);
 }
 
 bool QQuickShortcut::event(QEvent *event)
 {
     if (m_enabled && event->type() == QEvent::Shortcut) {
         QShortcutEvent *se = static_cast<QShortcutEvent *>(event);
-        bool match = m_shortcut.matches(se);
-        int i = 0;
-        while (!match && i < m_shortcuts.count())
-            match |= m_shortcuts.at(i++).matches(se);
-        if (match) {
+        if (se->shortcutId() == m_id && se->key() == m_shortcut){
             if (se->isAmbiguous())
                 emit activatedAmbiguously();
             else
@@ -382,43 +272,43 @@ bool QQuickShortcut::event(QEvent *event)
     return false;
 }
 
-bool QQuickShortcut::Shortcut::matches(QShortcutEvent *event) const
+static bool qQuickShortcutContextMatcher(QObject *obj, Qt::ShortcutContext context)
 {
-    return event->shortcutId() == id && event->key() == keySequence;
-}
-
-void QQuickShortcut::setEnabled(QQuickShortcut::Shortcut &shortcut, bool enabled)
-{
-    if (shortcut.id)
-        QGuiApplicationPrivate::instance()->shortcutMap.setShortcutEnabled(enabled, shortcut.id, this);
-}
-
-void QQuickShortcut::setAutoRepeat(QQuickShortcut::Shortcut &shortcut, bool repeat)
-{
-    if (shortcut.id)
-        QGuiApplicationPrivate::instance()->shortcutMap.setShortcutAutoRepeat(repeat, shortcut.id, this);
-}
-
-void QQuickShortcut::grabShortcut(Shortcut &shortcut, Qt::ShortcutContext context)
-{
-    if (m_completed && !shortcut.keySequence.isEmpty()) {
-        QGuiApplicationPrivate *pApp = QGuiApplicationPrivate::instance();
-        shortcut.id = pApp->shortcutMap.addShortcut(this, shortcut.keySequence, context, *ctxMatcher());
-        if (!m_enabled)
-            pApp->shortcutMap.setShortcutEnabled(false, shortcut.id, this);
-        if (!m_autorepeat)
-            pApp->shortcutMap.setShortcutAutoRepeat(false, shortcut.id, this);
+    switch (context) {
+    case Qt::ApplicationShortcut:
+        return true;
+    case Qt::WindowShortcut:
+        while (obj && !obj->isWindowType()) {
+            obj = obj->parent();
+            if (QQuickItem *item = qobject_cast<QQuickItem *>(obj))
+                obj = item->window();
+        }
+        return obj && obj == QGuiApplication::focusWindow();
+    default:
+        return false;
     }
 }
 
-void QQuickShortcut::ungrabShortcut(Shortcut &shortcut)
+void QQuickShortcut::grabShortcut(const QKeySequence &sequence, Qt::ShortcutContext context)
 {
-    if (shortcut.id) {
-        QGuiApplicationPrivate::instance()->shortcutMap.removeShortcut(shortcut.id, this);
-        shortcut.id = 0;
+    ungrabShortcut();
+
+    if (m_completed && !sequence.isEmpty()) {
+        QGuiApplicationPrivate *pApp = QGuiApplicationPrivate::instance();
+        m_id = pApp->shortcutMap.addShortcut(this, sequence, context, qQuickShortcutContextMatcher);
+        if (!m_enabled)
+            pApp->shortcutMap.setShortcutEnabled(false, m_id, this);
+        if (!m_autorepeat)
+            pApp->shortcutMap.setShortcutAutoRepeat(false, m_id, this);
+    }
+}
+
+void QQuickShortcut::ungrabShortcut()
+{
+    if (m_id) {
+        QGuiApplicationPrivate::instance()->shortcutMap.removeShortcut(m_id, this);
+        m_id = 0;
     }
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qquickshortcut_p.cpp"

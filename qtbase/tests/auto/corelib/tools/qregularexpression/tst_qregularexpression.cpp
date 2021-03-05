@@ -2,26 +2,31 @@
 **
 ** Copyright (C) 2015 Giuseppe D'Angelo <dangelog@gmail.com>.
 ** Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Giuseppe D'Angelo <giuseppe.dangelo@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -61,9 +66,6 @@ struct Match
     QStringList captured;
     QHash<QString, QString> namedCaptured;
 };
-QT_BEGIN_NAMESPACE
-Q_DECLARE_TYPEINFO(Match, Q_MOVABLE_TYPE);
-QT_END_NAMESPACE
 
 Q_DECLARE_METATYPE(Match)
 
@@ -88,9 +90,9 @@ bool operator==(const QRegularExpressionMatch &rem, const Match &m)
             }
         }
 
-        for (auto it = m.namedCaptured.begin(), end = m.namedCaptured.end(); it != end; ++it) {
-            const QString remCaptured = rem.captured(it.key());
-            const QString mCaptured = it.value();
+        Q_FOREACH (const QString &name, m.namedCaptured.keys()) {
+            QString remCaptured = rem.captured(name);
+            QString mCaptured = m.namedCaptured.value(name);
             if (remCaptured != mCaptured
                 || remCaptured.isNull() != mCaptured.isNull()
                 || remCaptured.isEmpty() != mCaptured.isEmpty()) {
@@ -118,11 +120,12 @@ bool operator!=(const Match &m, const QRegularExpressionMatch &rem)
 }
 
 
-bool operator==(const QRegularExpressionMatchIterator &iterator, const QVector<Match> &expectedMatchList)
+bool operator==(const QRegularExpressionMatchIterator &iterator, const QList<Match> &expectedMatchList)
 {
     QRegularExpressionMatchIterator i = iterator;
 
-    for (const Match &expectedMatch : expectedMatchList) {
+    foreach (const Match &expectedMatch, expectedMatchList)
+    {
         if (!i.hasNext())
             return false;
 
@@ -137,17 +140,17 @@ bool operator==(const QRegularExpressionMatchIterator &iterator, const QVector<M
     return true;
 }
 
-bool operator==(const QVector<Match> &expectedMatchList, const QRegularExpressionMatchIterator &iterator)
+bool operator==(const QList<Match> &expectedMatchList, const QRegularExpressionMatchIterator &iterator)
 {
     return operator==(iterator, expectedMatchList);
 }
 
-bool operator!=(const QRegularExpressionMatchIterator &iterator, const QVector<Match> &expectedMatchList)
+bool operator!=(const QRegularExpressionMatchIterator &iterator, const QList<Match> &expectedMatchList)
 {
     return !operator==(iterator, expectedMatchList);
 }
 
-bool operator!=(const QVector<Match> &expectedMatchList, const QRegularExpressionMatchIterator &iterator)
+bool operator!=(const QList<Match> &expectedMatchList, const QRegularExpressionMatchIterator &iterator)
 {
     return !operator==(expectedMatchList, iterator);
 }
@@ -653,7 +656,7 @@ void tst_QRegularExpression::normalMatch_data()
     m.captured << "c123def" << "c12" << "3" << "def";
     offset = 2;
     for (int i = 0; i <= offset; ++i) {
-        QTest::newRow(("match06-offset" + QByteArray::number(i)).constData())
+        QTest::newRow(QStringLiteral("match06-offset%1").arg(i).toUtf8().constData())
                 << QRegularExpression("(\\w*)(\\d+)(\\w*)")
                 << QStringLiteral("abc123def").mid(offset - i)
                 << i
@@ -666,7 +669,7 @@ void tst_QRegularExpression::normalMatch_data()
     m.captured << QString("");
     offset = 9;
     for (int i = 0; i <= offset; ++i) {
-        QTest::newRow(("match07-offset" + QByteArray::number(i)).constData())
+        QTest::newRow(QStringLiteral("match07-offset%1").arg(i).toUtf8().constData())
                 << QRegularExpression("\\w*")
                 << QStringLiteral("abc123def").mid(offset - i)
                 << i
@@ -744,7 +747,7 @@ void tst_QRegularExpression::normalMatch_data()
     m.isValid = true;
     offset = 1;
     for (int i = 0; i <= offset; ++i) {
-        QTest::newRow(("nomatch02-offset" + QByteArray::number(i)).constData())
+        QTest::newRow(QStringLiteral("nomatch02-offset%1").arg(i).toUtf8().constData())
             << QRegularExpression("(\\w+) (\\w+)")
             << QStringLiteral("a string").mid(offset - i)
             << i
@@ -756,7 +759,7 @@ void tst_QRegularExpression::normalMatch_data()
     m.isValid = true;
     offset = 9;
     for (int i = 0; i <= offset; ++i) {
-        QTest::newRow(("nomatch03-offset" + QByteArray::number(i)).constData())
+        QTest::newRow(QStringLiteral("nomatch03-offset%1").arg(i).toUtf8().constData())
                 << QRegularExpression("\\w+")
                 << QStringLiteral("abc123def").mid(offset - i)
                 << i
@@ -927,7 +930,7 @@ void tst_QRegularExpression::partialMatch_data()
     m.captured << "def";
     offset = 1;
     for (int i = 0; i <= offset; ++i) {
-        QTest::newRow(("softmatch08-offset" + QByteArray::number(i)).constData())
+        QTest::newRow(QStringLiteral("softmatch08-offset%1").arg(i).toUtf8().constData())
                 << QRegularExpression("abc\\w+X|defY")
                 << QStringLiteral("abcdef").mid(offset - i)
                 << i
@@ -1013,7 +1016,7 @@ void tst_QRegularExpression::partialMatch_data()
     m.captured << "def";
     offset = 1;
     for (int i = 0; i <= offset; ++i) {
-        QTest::newRow(("hardmatch08-offset" + QByteArray::number(i)).constData())
+        QTest::newRow(QStringLiteral("hardmatch08-offset%1").arg(i).toUtf8().constData())
                 << QRegularExpression("abc\\w+X|defY")
                 << QStringLiteral("abcdef").mid(offset - i)
                 << i
@@ -1119,9 +1122,9 @@ void tst_QRegularExpression::globalMatch_data()
     QTest::addColumn<int>("offset");
     QTest::addColumn<QRegularExpression::MatchType>("matchType");
     QTest::addColumn<QRegularExpression::MatchOptions>("matchOptions");
-    QTest::addColumn<QVector<Match> >("matchList");
+    QTest::addColumn<QList<Match> >("matchList");
 
-    QVector<Match> matchList;
+    QList<Match> matchList;
     Match m;
 
     matchList.clear();
@@ -1377,7 +1380,7 @@ void tst_QRegularExpression::globalMatch()
     QFETCH(int, offset);
     QFETCH(QRegularExpression::MatchType, matchType);
     QFETCH(QRegularExpression::MatchOptions, matchOptions);
-    QFETCH(QVector<Match>, matchList);
+    QFETCH(QList<Match>, matchList);
 
     testMatch<QRegularExpressionMatchIterator>(regexp,
                                                static_cast<QREGlobalMatchStringPMF>(&QRegularExpression::globalMatch),

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Linguist of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,7 +52,7 @@ QT_BEGIN_NAMESPACE
 
 ProFileCache::~ProFileCache()
 {
-    for (const Entry &ent : qAsConst(parsed_files))
+    foreach (const Entry &ent, parsed_files)
         if (ent.pro)
             ent.pro->deref();
 }
@@ -165,7 +170,7 @@ QMakeParser::QMakeParser(ProFileCache *cache, QMakeVfs *vfs, QMakeParserHandler 
 ProFile *QMakeParser::parsedProFile(const QString &fileName, ParseFlags flags)
 {
     ProFile *pro;
-    if ((flags & (ParseUseCache|ParseOnlyCached)) && m_cache) {
+    if ((flags & ParseUseCache) && m_cache) {
         ProFileCache::Entry *ent;
 #ifdef PROPARSER_THREAD_SAFE
         QMutexLocker locker(&m_cache->mutex);
@@ -187,7 +192,7 @@ ProFile *QMakeParser::parsedProFile(const QString &fileName, ParseFlags flags)
 #endif
             if ((pro = ent->pro))
                 pro->ref();
-        } else if (!(flags & ParseOnlyCached)) {
+        } else {
             ent = &m_cache->parsed_files[fileName];
 #ifdef PROPARSER_THREAD_SAFE
             ent->locker = new ProFileCache::Entry::Locker;
@@ -212,23 +217,19 @@ ProFile *QMakeParser::parsedProFile(const QString &fileName, ParseFlags flags)
                 ent->locker = 0;
             }
 #endif
-        } else {
-            pro = 0;
         }
-    } else if (!(flags & ParseOnlyCached)) {
+    } else {
         pro = new ProFile(fileName);
         if (!read(pro, flags)) {
             delete pro;
             pro = 0;
         }
-    } else {
-        pro = 0;
     }
     return pro;
 }
 
 ProFile *QMakeParser::parsedProBlock(
-        const QStringRef &contents, const QString &name, int line, SubGrammar grammar)
+        const QString &contents, const QString &name, int line, SubGrammar grammar)
 {
     ProFile *pro = new ProFile(name);
     read(pro, contents, line, grammar);
@@ -251,7 +252,7 @@ bool QMakeParser::read(ProFile *pro, ParseFlags flags)
                                fL1S("Cannot read %1: %2").arg(pro->fileName(), errStr));
         return false;
     }
-    read(pro, QStringRef(&content), 1, FullGrammar);
+    read(pro, content, 1, FullGrammar);
     return true;
 }
 
@@ -293,7 +294,7 @@ void QMakeParser::finalizeHashStr(ushort *buf, uint len)
     buf[-2] = (ushort)(hash >> 16);
 }
 
-void QMakeParser::read(ProFile *pro, const QStringRef &in, int line, SubGrammar grammar)
+void QMakeParser::read(ProFile *pro, const QString &in, int line, SubGrammar grammar)
 {
     m_proFile = pro;
     m_lineNo = line;
@@ -341,8 +342,8 @@ void QMakeParser::read(ProFile *pro, const QStringRef &in, int line, SubGrammar 
     QStack<ParseCtx> xprStack;
     xprStack.reserve(10);
 
+    // We rely on QStrings being null-terminated, so don't maintain a global end pointer.
     const ushort *cur = (const ushort *)in.unicode();
-    const ushort *inend = cur + in.length();
     m_canElse = false;
   freshLine:
     m_state = StNew;
@@ -425,7 +426,7 @@ void QMakeParser::read(ProFile *pro, const QStringRef &in, int line, SubGrammar 
     int indent;
 
     if (context == CtxPureValue) {
-        end = inend;
+        end = (const ushort *)in.unicode() + in.length();
         cptr = 0;
         lineCont = false;
         indent = 0; // just gcc being stupid
@@ -437,30 +438,24 @@ void QMakeParser::read(ProFile *pro, const QStringRef &in, int line, SubGrammar 
 
         // First, skip leading whitespace
         for (indent = 0; ; ++cur, ++indent) {
-            if (cur == inend) {
-                cur = 0;
-                goto flushLine;
-            }
             c = *cur;
             if (c == '\n') {
                 ++cur;
                 goto flushLine;
-            }
-            if (c != ' ' && c != '\t' && c != '\r')
+            } else if (!c) {
+                cur = 0;
+                goto flushLine;
+            } else if (c != ' ' && c != '\t' && c != '\r') {
                 break;
+            }
         }
 
         // Then strip comments. Yep - no escaping is possible.
         for (cptr = cur;; ++cptr) {
-            if (cptr == inend) {
-                end = cptr;
-                break;
-            }
             c = *cptr;
             if (c == '#') {
-                end = cptr;
-                while (++cptr < inend) {
-                    if (*cptr == '\n') {
+                for (end = cptr; (c = *++cptr);) {
+                    if (c == '\n') {
                         ++cptr;
                         break;
                     }
@@ -471,6 +466,10 @@ void QMakeParser::read(ProFile *pro, const QStringRef &in, int line, SubGrammar 
                     // Qmake bizarreness: such lines do not affect line continuations
                     goto ignore;
                 }
+                break;
+            }
+            if (!c) {
+                end = cptr;
                 break;
             }
             if (c == '\n') {
@@ -1224,7 +1223,7 @@ void QMakeParser::finalizeCall(ushort *&tokPtr, ushort *uc, ushort *ptr, int arg
 bool QMakeParser::resolveVariable(ushort *xprPtr, int tlen, int needSep, ushort **ptr,
                                   ushort **buf, QString *xprBuff,
                                   ushort **tokPtr, QString *tokBuff,
-                                  const ushort *cur, const QStringRef &in)
+                                  const ushort *cur, const QString &in)
 {
     QString out;
     m_tmp.setRawData((const QChar *)xprPtr, tlen);

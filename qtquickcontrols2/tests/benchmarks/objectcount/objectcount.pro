@@ -3,7 +3,7 @@ TARGET = tst_objectcount
 
 QT += quick testlib core-private
 CONFIG += testcase
-macos:CONFIG -= app_bundle
+osx:CONFIG -= app_bundle
 
 DEFINES += QQC2_IMPORT_PATH=\\\"$$QQC2_SOURCE_TREE/src/imports\\\"
 

@@ -20,7 +20,7 @@ public:
     , mOldFunctionName(oldFunctionName)
     , mNewFunctionName(newFunctionName) {}
 
-    bool visitAggregate(Visit visit, TIntermAggregate *node) override
+    virtual bool visitAggregate(Visit visit, TIntermAggregate* node)
     {
         TOperator op = node->getOp();
         if ((op == EOpFunction || op == EOpFunctionCall) && node->getName() == mOldFunctionName)

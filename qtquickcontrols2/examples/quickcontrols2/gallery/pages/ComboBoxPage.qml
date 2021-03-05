@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -49,10 +39,10 @@
 ****************************************************************************/
 
 import QtQuick 2.6
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
-ScrollablePage {
-    id: page
+Pane {
+    id: pane
 
     Column {
         spacing: 40
@@ -62,35 +52,13 @@ ScrollablePage {
             width: parent.width
             wrapMode: Label.Wrap
             horizontalAlignment: Qt.AlignHCenter
-            text: "ComboBox is a combined button and popup list. It presents "
-                + "a list of options to the user that occupies minimal screen space."
+            text: "ComboBox is a combined button and popup list. It provides means of presenting a "
+                + "list of options to the user in a way that takes up the minimum amount of screen space."
         }
 
         ComboBox {
             model: ["First", "Second", "Third"]
-            anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        Label {
-            width: parent.width
-            wrapMode: Label.Wrap
-            horizontalAlignment: Qt.AlignHCenter
-            text: "ComboBox can be made \l editable. An editable combo box auto-"
-                + "completes its text based on what is available in the model."
-        }
-
-        ComboBox {
-            editable: true
-            model: ListModel {
-                id: model
-                ListElement { text: "Banana" }
-                ListElement { text: "Apple" }
-                ListElement { text: "Coconut" }
-            }
-            onAccepted: {
-                if (find(editText) === -1)
-                    model.append({text: editText})
-            }
+            width: Math.max(implicitWidth, Math.min(implicitWidth * 2, pane.availableWidth / 3))
             anchors.horizontalCenter: parent.horizontalCenter
         }
     }

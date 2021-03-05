@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,47 +47,50 @@ void BookmarkFilterModel::setSourceModel(QAbstractItemModel *_sourceModel)
     beginResetModel();
 
     if (sourceModel) {
-        disconnect(sourceModel, &QAbstractItemModel::dataChanged,
-                this, &BookmarkFilterModel::changed);
-        disconnect(sourceModel, &QAbstractItemModel::rowsInserted,
-                this, &BookmarkFilterModel::rowsInserted);
-        disconnect(sourceModel, &QAbstractItemModel::rowsAboutToBeRemoved,
-                this, &BookmarkFilterModel::rowsAboutToBeRemoved);
-        disconnect(sourceModel, &QAbstractItemModel::rowsRemoved,
-                this, &BookmarkFilterModel::rowsRemoved);
-        disconnect(sourceModel, &QAbstractItemModel::layoutAboutToBeChanged,
-                this, &BookmarkFilterModel::layoutAboutToBeChanged);
-        disconnect(sourceModel, &QAbstractItemModel::layoutChanged,
-                this, &BookmarkFilterModel::layoutChanged);
-        disconnect(sourceModel, &QAbstractItemModel::modelAboutToBeReset,
-                this, &BookmarkFilterModel::modelAboutToBeReset);
-        disconnect(sourceModel, &QAbstractItemModel::modelReset,
-                this, &BookmarkFilterModel::modelReset);
+        disconnect(sourceModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+            this, SLOT(changed(QModelIndex,QModelIndex)));
+        disconnect(sourceModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
+            this, SLOT(rowsInserted(QModelIndex,int,int)));
+        disconnect(sourceModel,
+            SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)), this,
+            SLOT(rowsAboutToBeRemoved(QModelIndex,int,int)));
+        disconnect(sourceModel, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+            this, SLOT(rowsRemoved(QModelIndex,int,int)));
+        disconnect(sourceModel, SIGNAL(layoutAboutToBeChanged()), this,
+            SLOT(layoutAboutToBeChanged()));
+        disconnect(sourceModel, SIGNAL(layoutChanged()), this,
+            SLOT(layoutChanged()));
+        disconnect(sourceModel, SIGNAL(modelAboutToBeReset()), this,
+            SLOT(modelAboutToBeReset()));
+        disconnect(sourceModel, SIGNAL(modelReset()), this, SLOT(modelReset()));
     }
 
-    sourceModel = qobject_cast<BookmarkModel*> (_sourceModel);
     QAbstractProxyModel::setSourceModel(sourceModel);
+    sourceModel = qobject_cast<BookmarkModel*> (_sourceModel);
 
-    if (sourceModel) {
-        connect(sourceModel, &QAbstractItemModel::dataChanged,
-                this, &BookmarkFilterModel::changed);
-        connect(sourceModel, &QAbstractItemModel::rowsInserted,
-                this, &BookmarkFilterModel::rowsInserted);
-        connect(sourceModel, &QAbstractItemModel::rowsAboutToBeRemoved,
-                this, &BookmarkFilterModel::rowsAboutToBeRemoved);
-        connect(sourceModel, &QAbstractItemModel::rowsRemoved,
-                this, &BookmarkFilterModel::rowsRemoved);
-        connect(sourceModel, &QAbstractItemModel::layoutAboutToBeChanged,
-                this, &BookmarkFilterModel::layoutAboutToBeChanged);
-        connect(sourceModel, &QAbstractItemModel::layoutChanged,
-                this, &BookmarkFilterModel::layoutChanged);
-        connect(sourceModel, &QAbstractItemModel::modelAboutToBeReset,
-                this, &BookmarkFilterModel::modelAboutToBeReset);
-        connect(sourceModel, &QAbstractItemModel::modelReset,
-                this, &BookmarkFilterModel::modelReset);
+    connect(sourceModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this,
+        SLOT(changed(QModelIndex,QModelIndex)));
 
+    connect(sourceModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
+        this, SLOT(rowsInserted(QModelIndex,int,int)));
+
+    connect(sourceModel, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+        this, SLOT(rowsAboutToBeRemoved(QModelIndex,int,int)));
+    connect(sourceModel, SIGNAL(rowsRemoved(QModelIndex,int,int)), this,
+        SLOT(rowsRemoved(QModelIndex,int,int)));
+
+    connect(sourceModel, SIGNAL(layoutAboutToBeChanged()), this,
+        SLOT(layoutAboutToBeChanged()));
+    connect(sourceModel, SIGNAL(layoutChanged()), this,
+        SLOT(layoutChanged()));
+
+    connect(sourceModel, SIGNAL(modelAboutToBeReset()), this,
+        SLOT(modelAboutToBeReset()));
+    connect(sourceModel, SIGNAL(modelReset()), this, SLOT(modelReset()));
+
+    if (sourceModel)
         setupCache(sourceModel->index(0, 0, QModelIndex()).parent());
-    }
+
     endResetModel();
 }
 

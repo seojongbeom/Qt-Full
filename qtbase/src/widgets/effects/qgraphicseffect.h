@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,16 +34,15 @@
 #ifndef QGRAPHICSEFFECT_H
 #define QGRAPHICSEFFECT_H
 
-#include <QtWidgets/qtwidgetsglobal.h>
 #include <QtCore/qobject.h>
 #include <QtCore/qpoint.h>
 #include <QtCore/qrect.h>
 #include <QtGui/qcolor.h>
 #include <QtGui/qbrush.h>
 
-QT_REQUIRE_CONFIG(graphicseffect);
-
+#ifndef QT_NO_GRAPHICSEFFECT
 QT_BEGIN_NAMESPACE
+
 
 class QGraphicsItem;
 class QStyleOption;
@@ -62,6 +55,7 @@ class QGraphicsEffectPrivate;
 class Q_WIDGETS_EXPORT QGraphicsEffect : public QObject
 {
     Q_OBJECT
+    Q_FLAGS(ChangeFlags)
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
 public:
     enum ChangeFlag {
@@ -71,7 +65,6 @@ public:
         SourceInvalidated = 0x8
     };
     Q_DECLARE_FLAGS(ChangeFlags, ChangeFlag)
-    Q_FLAG(ChangeFlags)
 
     enum PixmapPadMode {
         NoPad,
@@ -155,6 +148,7 @@ class QGraphicsBlurEffectPrivate;
 class Q_WIDGETS_EXPORT QGraphicsBlurEffect: public QGraphicsEffect
 {
     Q_OBJECT
+    Q_FLAGS(BlurHint BlurHints)
     Q_PROPERTY(qreal blurRadius READ blurRadius WRITE setBlurRadius NOTIFY blurRadiusChanged)
     Q_PROPERTY(BlurHints blurHints READ blurHints WRITE setBlurHints NOTIFY blurHintsChanged)
 public:
@@ -163,9 +157,7 @@ public:
         QualityHint = 0x01,
         AnimationHint = 0x02
     };
-    Q_FLAG(BlurHint)
     Q_DECLARE_FLAGS(BlurHints, BlurHint)
-    Q_FLAG(BlurHints)
 
     QGraphicsBlurEffect(QObject *parent = Q_NULLPTR);
     ~QGraphicsBlurEffect();
@@ -278,6 +270,8 @@ private:
 };
 
 QT_END_NAMESPACE
+
+#endif //QT_NO_GRAPHICSEFFECT
 
 #endif // QGRAPHICSEFFECT_H
 

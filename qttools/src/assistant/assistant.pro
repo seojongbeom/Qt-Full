@@ -1,12 +1,13 @@
 TEMPLATE = subdirs
 
-SUBDIRS += \
+SUBDIRS += clucene \
            help \
            assistant \
            qhelpgenerator \
            qcollectiongenerator \
            qhelpconverter
 
+help.depends = clucene
 assistant.depends = help
 qhelpgenerator.depends = help
 qcollectiongenerator.depends = help

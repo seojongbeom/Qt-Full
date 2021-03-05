@@ -1,4 +1,4 @@
 TEMPLATE      = subdirs
 SUBDIRS       = multipleinheritance
 
-SUBDIRS += textfinder
+!wince: SUBDIRS += textfinder

@@ -78,7 +78,3 @@ foreach(plugin ${Qt5Network_PLUGINS})
   message("Plugin ${plugin} is at location ${_loc}")
 endforeach()
 #! [5]
-
-#! [6]
-set(CMAKE_CXX_STANDARD 14)
-#! [6]

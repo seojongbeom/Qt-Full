@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -36,7 +41,6 @@
 #include <qtextlayout.h>
 #include <qdebug.h>
 #include <QStaticText>
-#include <private/qimage_p.h>
 
 #ifndef QT_NO_OPENGL
 #include <QOpenGLFramebufferObjectFormat>
@@ -166,16 +170,7 @@ const char *PaintCommands::imageFormatTable[] = {
     "Format_ARGB8555_Premultiplied",
     "Format_RGB888",
     "Format_RGB444",
-    "Format_ARGB4444_Premultiplied",
-    "Format_RGBX8888",
-    "Format_RGBA8888",
-    "Format_RGBA8888_Premultiplied",
-    "Format_BGR30",
-    "Format_A2BGR30_Premultiplied",
-    "Format_RGB30",
-    "Format_A2RGB30_Premultiplied",
-    "Alpha8",
-    "Grayscale8",
+    "Format_ARGB4444_Premultiplied"
 };
 
 int PaintCommands::translateEnum(const char *table[], const QString &pattern, int limit)
@@ -264,7 +259,7 @@ void PaintCommands::staticInit()
                       "path_setFillRule pathName Winding");
     DECL_PAINTCOMMAND("setBrush", command_setBrush,
                       "^setBrush\\s+(#?[\\w.:\\/]*)\\s*(\\w*)?$",
-                      "setBrush <imageFileName>\nsetBrush noBrush\nsetBrush <color> <brush style enum>",
+                      "setBrush <pixmapFileName>\nsetBrush noBrush\nsetBrush <color> <brush style enum>",
                       "setBrush white SolidPattern");
     DECL_PAINTCOMMAND("setBrushOrigin", command_setBrushOrigin,
                       "^setBrushOrigin\\s*(-?\\w*)\\s+(-?\\w*)$",
@@ -655,7 +650,7 @@ template <typename T> T PaintCommands::image_load(const QString &filepath)
         QDir dir = fi.absoluteDir();
         dir.cdUp();
         dir.cd("images");
-        QString fileName = dir.absolutePath() + QLatin1Char('/') + fi.fileName();
+        QString fileName = QString("%1/%2").arg(dir.absolutePath()).arg(fi.fileName());
         t = T(fileName);
         if (t.isNull() && !fileName.endsWith(".png")) {
             fileName.append(".png");
@@ -846,11 +841,10 @@ void PaintCommands::command_import(QRegExp re)
                qPrintable(fi.fileName()));
 
     QFileInfo fileinfo(*file);
-    m_commands[m_currentCommandIndex] = QLatin1String("# import file (") + fileinfo.fileName()
-        + QLatin1String(") start");
+    m_commands[m_currentCommandIndex] = QString("# import file (%1) start").arg(fileinfo.fileName());
     QString rawContent = QString::fromUtf8(file->readAll());
     QStringList importedData = rawContent.split('\n', QString::SkipEmptyParts);
-    importedData.append(QLatin1String("# import file (") + fileinfo.fileName() + QLatin1String(") end ---"));
+    importedData.append(QString("# import file (%1) end ---").arg(fileinfo.fileName()));
     insertAt(m_currentCommandIndex, importedData);
 
     if (m_verboseMode) {
@@ -868,13 +862,13 @@ void PaintCommands::command_begin_block(QRegExp re)
     if (m_verboseMode)
         printf(" -(lance) begin_block (%s)\n", qPrintable(blockName));
 
-    m_commands[m_currentCommandIndex] = QLatin1String("# begin block (") + blockName + QLatin1Char(')');
+    m_commands[m_currentCommandIndex] = QString("# begin block (%1)").arg(blockName);
     QStringList newBlock;
     int i = m_currentCommandIndex + 1;
     for (; i < m_commands.count(); ++i) {
         const QString &nextCmd = m_commands.at(i);
         if (nextCmd.startsWith("end_block")) {
-            m_commands[i] = QLatin1String("# end block (") + blockName + QLatin1Char(')');
+            m_commands[i] = QString("# end block (%1)").arg(blockName);
             break;
         }
         newBlock += nextCmd;
@@ -911,7 +905,7 @@ void PaintCommands::command_repeat_block(QRegExp re)
         return;
     }
 
-    m_commands[m_currentCommandIndex] = QLatin1String("# repeated block (") + blockName + QLatin1Char(')');
+    m_commands[m_currentCommandIndex] = QString("# repeated block (%1)").arg(blockName);
     insertAt(m_currentCommandIndex, block);
 }
 
@@ -952,7 +946,7 @@ void PaintCommands::command_drawPixmap(QRegExp re)
         QDir dir = fi.absoluteDir();
         dir.cdUp();
         dir.cd("images");
-        QString fileName = dir.absolutePath() + QLatin1Char('/') + re.cap(1);
+        QString fileName = QString("%1/%2").arg(dir.absolutePath()).arg(re.cap(1));
         pm = QPixmap(fileName);
         if (pm.isNull() && !fileName.endsWith(".png")) {
             fileName.append(".png");
@@ -1001,7 +995,7 @@ void PaintCommands::command_drawImage(QRegExp re)
         QDir dir = fi.absoluteDir();
         dir.cdUp();
         dir.cd("images");
-        QString fileName = dir.absolutePath() + QLatin1Char('/') + re.cap(1);
+        QString fileName = QString("%1/%2").arg(dir.absolutePath()).arg(re.cap(1));
         im = QImage(fileName);
         if (im.isNull() && !fileName.endsWith(".png")) {
             fileName.append(".png");
@@ -1047,7 +1041,7 @@ void PaintCommands::command_drawTiledPixmap(QRegExp re)
         QDir dir = fi.absoluteDir();
         dir.cdUp();
         dir.cd("images");
-        QString fileName = dir.absolutePath() + QLatin1Char('/') + re.cap(1);
+        QString fileName = QString("%1/%2").arg(dir.absolutePath()).arg(re.cap(1));
         pm = QPixmap(fileName);
         if (pm.isNull() && !fileName.endsWith(".png")) {
             fileName.append(".png");
@@ -1753,13 +1747,13 @@ void PaintCommands::command_setBrush(QRegExp re)
 {
     QStringList caps = re.capturedTexts();
 
-    QImage img = image_load<QImage>(caps.at(1));
-    if (!img.isNull()) { // Assume image brush
+    QPixmap pm = image_load<QPixmap>(caps.at(1));
+    if (!pm.isNull()) { // Assume pixmap
         if (m_verboseMode)
-            printf(" -(lance) setBrush(image=%s, width=%d, height=%d)\n",
-                   qPrintable(caps.at(1)), img.width(), img.height());
+            printf(" -(lance) setBrush(pixmap=%s, width=%d, height=%d)\n",
+                   qPrintable(caps.at(1)), pm.width(), pm.height());
 
-        m_painter->setBrush(QBrush(img));
+        m_painter->setBrush(QBrush(pm));
     } else if (caps.at(1).toLower() == "nobrush") {
         m_painter->setBrush(Qt::NoBrush);
         if (m_verboseMode)
@@ -2379,8 +2373,6 @@ void PaintCommands::command_surface_begin(QRegExp re)
 #ifndef QT_NO_OPENGL
         m_default_glcontext = QOpenGLContext::currentContext();
         m_surface_glcontext = new QOpenGLContext();
-        // Pick up the format from the current context; this is especially
-        // important in order to pick the right version/profile to test.
         m_surface_glcontext->setFormat(m_default_glcontext->format());
         m_surface_glcontext->create();
         m_surface_glcontext->makeCurrent(m_default_glcontext->surface());
@@ -2396,20 +2388,14 @@ void PaintCommands::command_surface_begin(QRegExp re)
         m_painter->fillRect(QRect(0, 0, qRound(w), qRound(h)), Qt::transparent);
         m_painter->restore();
 #endif
-#if 0 // Used to be included in Qt4 for Q_WS_X11
+#ifdef Q_DEAD_CODE_FROM_QT4_X11
     } else if (m_type == WidgetType) {
         m_surface_pixmap = QPixmap(qRound(w), qRound(h));
         m_surface_pixmap.fill(Qt::transparent);
         m_painter = new QPainter(&m_surface_pixmap);
 #endif
     } else {
-        QImage::Format surface_format;
-        if (QImage::toPixelFormat(m_format).alphaUsage() != QPixelFormat::UsesAlpha)
-            surface_format = qt_alphaVersion(m_format);
-        else
-            surface_format = m_format;
-
-        m_surface_image = QImage(qRound(w), qRound(h), surface_format);
+        m_surface_image = QImage(qRound(w), qRound(h), QImage::Format_ARGB32_Premultiplied);
         m_surface_image.fill(0);
         m_painter = new QPainter(&m_surface_image);
     }
@@ -2453,7 +2439,7 @@ void PaintCommands::command_surface_end(QRegExp)
         m_painter->beginNativePainting();
         m_painter->endNativePainting();
 #endif
-#if 0 // Used to be included in Qt4 for Q_WS_X11
+#ifdef Q_DEAD_CODE_FROM_QT4_X11
     } else if (m_type == WidgetType) {
         m_painter->drawPixmap(m_surface_rect.topLeft(), m_surface_pixmap);
         m_surface_pixmap = QPixmap();

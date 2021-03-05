@@ -1,5 +1,4 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += gui-private
-qtConfig(xcb) {
+contains(QT_CONFIG, xcb) {
   SUBDIRS += x11extras
 }

@@ -1,7 +1,6 @@
 # Qt core mimetype module
 
-qtConfig(mimetype) {
-    HEADERS += \
+HEADERS += \
         mimetypes/qmimedatabase.h \
         mimetypes/qmimetype.h \
         mimetypes/qmimemagicrulematcher_p.h \
@@ -12,7 +11,7 @@ qtConfig(mimetype) {
         mimetypes/qmimeglobpattern_p.h \
         mimetypes/qmimeprovider_p.h
 
-    SOURCES += \
+SOURCES += \
         mimetypes/qmimedatabase.cpp \
         mimetypes/qmimetype.cpp \
         mimetypes/qmimemagicrulematcher.cpp \
@@ -21,5 +20,6 @@ qtConfig(mimetype) {
         mimetypes/qmimeglobpattern.cpp \
         mimetypes/qmimeprovider.cpp
 
+!contains(DEFINES, QT_NO_MIMETYPE) {
     RESOURCES += mimetypes/mimetypes.qrc
 }

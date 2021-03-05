@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,14 +48,14 @@
 QT_BEGIN_NAMESPACE
 
 class QPlatformMenu;
-class QQuickMenuPopupWindow1;
-class QQuickMenuItemContainer1;
+class QQuickMenuPopupWindow;
+class QQuickMenuItemContainer;
 class QQuickWindow;
 class QQuickMenuBar1;
 
 typedef QQmlListProperty<QObject> QQuickMenuItems;
 
-class QQuickMenu1 : public QQuickMenuText1
+class QQuickMenu1 : public QQuickMenuText
 {
     Q_OBJECT
     Q_PROPERTY(QString title READ text WRITE setText NOTIFY titleChanged)
@@ -72,7 +69,7 @@ class QQuickMenu1 : public QQuickMenuText1
     Q_PROPERTY(QFont __font READ font WRITE setFont)
     Q_PROPERTY(qreal __xOffset READ xOffset WRITE setXOffset)
     Q_PROPERTY(qreal __yOffset READ yOffset WRITE setYOffset)
-    Q_PROPERTY(QQuickAction1 *__action READ action CONSTANT)
+    Q_PROPERTY(QQuickAction *__action READ action CONSTANT)
     Q_PROPERTY(QRect __popupGeometry READ popupGeometry NOTIFY __popupGeometryChanged)
     Q_PROPERTY(bool __isProxy READ isProxy WRITE setProxy NOTIFY __proxyChanged)
     Q_ENUMS(MenuType)
@@ -87,8 +84,8 @@ public:
     Q_INVOKABLE void addSeparator();
     Q_INVOKABLE void insertSeparator(int);
 
-    Q_INVOKABLE void insertItem(int, QQuickMenuBase1 *);
-    Q_INVOKABLE void removeItem(QQuickMenuBase1 *);
+    Q_INVOKABLE void insertItem(int, QQuickMenuBase *);
+    Q_INVOKABLE void removeItem(QQuickMenuBase *);
     Q_INVOKABLE void clear();
 
     Q_INVOKABLE void __popup(const QRectF &targetRect, int atItemIndex = -1, MenuType menuType = DefaultMenu);
@@ -124,9 +121,9 @@ public:
     void setSelectedIndex(int index);
 
     QQuickMenuItems menuItems();
-    QQuickMenuBase1 *menuItemAtIndex(int index) const;
-    bool contains(QQuickMenuBase1 *);
-    int indexOfMenuItem(QQuickMenuBase1 *) const;
+    QQuickMenuBase *menuItemAtIndex(int index) const;
+    bool contains(QQuickMenuBase *);
+    int indexOfMenuItem(QQuickMenuBase *) const;
 
     QPlatformMenu *platformMenu() const { return m_platformMenu; }
 
@@ -173,7 +170,7 @@ protected Q_SLOTS:
 private:
     QQuickWindow *findParentWindow();
     void syncParentMenuBar();
-    QQuickMenuPopupWindow1 *topMenuPopup() const;
+    QQuickMenuPopupWindow *topMenuPopup() const;
 
     int itemIndexForListIndex(int listIndex) const;
     void itemIndexToListIndex(int, int *, int *) const;
@@ -184,23 +181,23 @@ private:
         int index, containerIndex;
     };
 
-    QQuickMenuBase1 *nextMenuItem(MenuItemIterator *) const;
+    QQuickMenuBase *nextMenuItem(MenuItemIterator *) const;
 
     static void append_menuItems(QQuickMenuItems *list, QObject *o);
     static int count_menuItems(QQuickMenuItems *list);
     static QObject *at_menuItems(QQuickMenuItems *list, int index);
     static void clear_menuItems(QQuickMenuItems *list);
-    void setupMenuItem(QQuickMenuBase1 *item, int platformIndex = -1);
+    void setupMenuItem(QQuickMenuBase *item, int platformIndex = -1);
 
     QPlatformMenu *m_platformMenu;
-    QList<QQuickMenuBase1 *> m_menuItems;
-    QHash<QObject *, QQuickMenuItemContainer1 *> m_containers;
+    QList<QQuickMenuBase *> m_menuItems;
+    QHash<QObject *, QQuickMenuItemContainer *> m_containers;
     int m_itemsCount;
     int m_selectedIndex;
     int m_highlightedIndex;
     QQuickWindow *m_parentWindow;
     int m_minimumWidth;
-    QQuickMenuPopupWindow1 *m_popupWindow;
+    QQuickMenuPopupWindow *m_popupWindow;
     QQuickItem * m_menuContentItem;
     bool m_popupVisible;
     int m_containersCount;

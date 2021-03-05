@@ -9,3 +9,4 @@ testDataFiles.path = .
 DEPLOYMENT += testDataFiles
 
 QT += quickparticles-private testlib
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

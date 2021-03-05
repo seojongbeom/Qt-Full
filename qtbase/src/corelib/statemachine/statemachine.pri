@@ -1,5 +1,3 @@
-!qtConfig(statemachine): return()
-
 HEADERS += $$PWD/qstatemachine.h \
 	   $$PWD/qstatemachine_p.h \
 	   $$PWD/qsignaleventgenerator_p.h \
@@ -24,10 +22,8 @@ SOURCES += $$PWD/qstatemachine.cpp \
 	   $$PWD/qabstracttransition.cpp \
 	   $$PWD/qsignaltransition.cpp
 
-qtConfig(qeventtransition) {
-    HEADERS += \
-        $$PWD/qeventtransition.h \
-        $$PWD/qeventtransition_p.h
-    SOURCES += \
-        $$PWD/qeventtransition.cpp
+!contains(DEFINES, QT_NO_STATEMACHINE_EVENTFILTER) {
+HEADERS += $$PWD/qeventtransition.h \
+	   $$PWD/qeventtransition_p.h
+SOURCES += $$PWD/qeventtransition.cpp
 }

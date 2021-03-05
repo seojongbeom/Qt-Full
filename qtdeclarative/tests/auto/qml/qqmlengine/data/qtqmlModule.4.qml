@@ -1,4 +1,4 @@
-import QtQml 2.50
+import QtQml 2.5
 
 QtObject {
 }

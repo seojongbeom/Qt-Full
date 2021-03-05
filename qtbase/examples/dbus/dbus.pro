@@ -2,9 +2,8 @@ requires(qtHaveModule(dbus))
 
 TEMPLATE = subdirs
 SUBDIRS = listnames \
-    pingpong
-
-qtConfig(process): SUBDIRS += complexpingpong
+	  pingpong \
+	  complexpingpong
 
 qtHaveModule(widgets) {
     SUBDIRS += chat \

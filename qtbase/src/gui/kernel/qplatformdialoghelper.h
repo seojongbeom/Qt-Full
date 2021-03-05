@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,7 +43,6 @@
 // source and binary incompatible with future versions of Qt.
 //
 
-#include <QtGui/qtguiglobal.h>
 #include <QtCore/QtGlobal>
 #include <QtCore/QObject>
 #include <QtCore/QList>
@@ -72,8 +65,6 @@ class QColorDialogOptionsPrivate;
 class QFontDialogOptionsPrivate;
 class QFileDialogOptionsPrivate;
 class QMessageDialogOptionsPrivate;
-
-#define QPLATFORMDIALOGHELPERS_HAS_CREATE
 
 class Q_GUI_EXPORT QPlatformDialogHelper : public QObject
 {
@@ -179,10 +170,6 @@ QT_BEGIN_NAMESPACE
 class Q_GUI_EXPORT QColorDialogOptions
 {
     Q_GADGET
-    Q_DISABLE_COPY(QColorDialogOptions)
-protected:
-    explicit QColorDialogOptions(QColorDialogOptionsPrivate *dd);
-    ~QColorDialogOptions();
 public:
     enum ColorDialogOption {
         ShowAlphaChannel    = 0x00000001,
@@ -193,8 +180,12 @@ public:
     Q_DECLARE_FLAGS(ColorDialogOptions, ColorDialogOption)
     Q_FLAG(ColorDialogOptions)
 
-    static QSharedPointer<QColorDialogOptions> create();
-    QSharedPointer<QColorDialogOptions> clone() const;
+    QColorDialogOptions();
+    QColorDialogOptions(const QColorDialogOptions &rhs);
+    QColorDialogOptions &operator=(const QColorDialogOptions &rhs);
+    ~QColorDialogOptions();
+
+    void swap(QColorDialogOptions &other) { qSwap(d, other.d); }
 
     QString windowTitle() const;
     void setWindowTitle(const QString &);
@@ -214,8 +205,10 @@ public:
     static void setStandardColor(int index, QRgb color);
 
 private:
-    QColorDialogOptionsPrivate *d;
+    QSharedDataPointer<QColorDialogOptionsPrivate> d;
 };
+
+Q_DECLARE_SHARED(QColorDialogOptions)
 
 class Q_GUI_EXPORT QPlatformColorDialogHelper : public QPlatformDialogHelper
 {
@@ -238,11 +231,6 @@ private:
 class Q_GUI_EXPORT QFontDialogOptions
 {
     Q_GADGET
-    Q_DISABLE_COPY(QFontDialogOptions)
-protected:
-    explicit QFontDialogOptions(QFontDialogOptionsPrivate *dd);
-    ~QFontDialogOptions();
-
 public:
     enum FontDialogOption {
         NoButtons           = 0x00000001,
@@ -256,8 +244,12 @@ public:
     Q_DECLARE_FLAGS(FontDialogOptions, FontDialogOption)
     Q_FLAG(FontDialogOptions)
 
-    static QSharedPointer<QFontDialogOptions> create();
-    QSharedPointer<QFontDialogOptions> clone() const;
+    QFontDialogOptions();
+    QFontDialogOptions(const QFontDialogOptions &rhs);
+    QFontDialogOptions &operator=(const QFontDialogOptions &rhs);
+    ~QFontDialogOptions();
+
+    void swap(QFontDialogOptions &other) { qSwap(d, other.d); }
 
     QString windowTitle() const;
     void setWindowTitle(const QString &);
@@ -268,8 +260,10 @@ public:
     FontDialogOptions options() const;
 
 private:
-    QFontDialogOptionsPrivate *d;
+    QSharedDataPointer<QFontDialogOptionsPrivate> d;
 };
+
+Q_DECLARE_SHARED(QFontDialogOptions)
 
 class Q_GUI_EXPORT QPlatformFontDialogHelper : public QPlatformDialogHelper
 {
@@ -292,11 +286,6 @@ private:
 class Q_GUI_EXPORT QFileDialogOptions
 {
     Q_GADGET
-    Q_DISABLE_COPY(QFileDialogOptions)
-protected:
-    QFileDialogOptions(QFileDialogOptionsPrivate *dd);
-    ~QFileDialogOptions();
-
 public:
     enum ViewMode { Detail, List };
     Q_ENUM(ViewMode)
@@ -324,8 +313,12 @@ public:
     Q_DECLARE_FLAGS(FileDialogOptions, FileDialogOption)
     Q_FLAG(FileDialogOptions)
 
-    static QSharedPointer<QFileDialogOptions> create();
-    QSharedPointer<QFileDialogOptions> clone() const;
+    QFileDialogOptions();
+    QFileDialogOptions(const QFileDialogOptions &rhs);
+    QFileDialogOptions &operator=(const QFileDialogOptions &rhs);
+    ~QFileDialogOptions();
+
+    void swap(QFileDialogOptions &other) { qSwap(d, other.d); }
 
     QString windowTitle() const;
     void setWindowTitle(const QString &);
@@ -350,9 +343,6 @@ public:
     void setSidebarUrls(const QList<QUrl> &urls);
     QList<QUrl> sidebarUrls() const;
 
-    bool useDefaultNameFilters() const;
-    void setUseDefaultNameFilters(bool d);
-
     void setNameFilters(const QStringList &filters);
     QStringList nameFilters() const;
 
@@ -372,9 +362,6 @@ public:
     QUrl initialDirectory() const;
     void setInitialDirectory(const QUrl &);
 
-    QString initiallySelectedMimeTypeFilter() const;
-    void setInitiallySelectedMimeTypeFilter(const QString &);
-
     QString initiallySelectedNameFilter() const;
     void setInitiallySelectedNameFilter(const QString &);
 
@@ -384,11 +371,11 @@ public:
     void setSupportedSchemes(const QStringList &schemes);
     QStringList supportedSchemes() const;
 
-    static QString defaultNameFilterString();
-
 private:
-    QFileDialogOptionsPrivate *d;
+    QSharedDataPointer<QFileDialogOptionsPrivate> d;
 };
+
+Q_DECLARE_SHARED(QFileDialogOptions)
 
 class Q_GUI_EXPORT QPlatformFileDialogHelper : public QPlatformDialogHelper
 {
@@ -400,9 +387,7 @@ public:
     virtual void selectFile(const QUrl &filename) = 0;
     virtual QList<QUrl> selectedFiles() const = 0;
     virtual void setFilter() = 0;
-    virtual void selectMimeTypeFilter(const QString &filter);
     virtual void selectNameFilter(const QString &filter) = 0;
-    virtual QString selectedMimeTypeFilter() const;
     virtual QString selectedNameFilter() const = 0;
 
     virtual bool isSupportedUrl(const QUrl &url) const;
@@ -427,18 +412,17 @@ private:
 class Q_GUI_EXPORT QMessageDialogOptions
 {
     Q_GADGET
-    Q_DISABLE_COPY(QMessageDialogOptions)
-protected:
-    QMessageDialogOptions(QMessageDialogOptionsPrivate *dd);
-    ~QMessageDialogOptions();
-
 public:
     // Keep in sync with QMessageBox::Icon
     enum Icon { NoIcon, Information, Warning, Critical, Question };
     Q_ENUM(Icon)
 
-    static QSharedPointer<QMessageDialogOptions> create();
-    QSharedPointer<QMessageDialogOptions> clone() const;
+    QMessageDialogOptions();
+    QMessageDialogOptions(const QMessageDialogOptions &rhs);
+    QMessageDialogOptions &operator=(const QMessageDialogOptions &rhs);
+    ~QMessageDialogOptions();
+
+    void swap(QMessageDialogOptions &other) { qSwap(d, other.d); }
 
     QString windowTitle() const;
     void setWindowTitle(const QString &);
@@ -459,8 +443,10 @@ public:
     QPlatformDialogHelper::StandardButtons standardButtons() const;
 
 private:
-    QMessageDialogOptionsPrivate *d;
+    QSharedDataPointer<QMessageDialogOptionsPrivate> d;
 };
+
+Q_DECLARE_SHARED(QMessageDialogOptions)
 
 class Q_GUI_EXPORT QPlatformMessageDialogHelper : public QPlatformDialogHelper
 {

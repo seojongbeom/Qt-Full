@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Labs Calendar module of the Qt Toolkit.
@@ -37,7 +37,7 @@
 #include "qquickweeknumbercolumn_p.h"
 #include "qquickweeknumbermodel_p.h"
 
-#include <QtQuickTemplates2/private/qquickcontrol_p_p.h>
+#include <QtLabsTemplates/private/qquickcontrol_p_p.h>
 #include <QtQml/qqmlinfo.h>
 
 QT_BEGIN_NAMESPACE
@@ -74,7 +74,7 @@ QT_BEGIN_NAMESPACE
 class QQuickWeekNumberColumnPrivate : public QQuickControlPrivate
 {
 public:
-    QQuickWeekNumberColumnPrivate() : delegate(nullptr), model(nullptr) { }
+    QQuickWeekNumberColumnPrivate() : delegate(Q_NULLPTR), model(Q_NULLPTR) { }
 
     void resizeItems();
 
@@ -92,8 +92,7 @@ void QQuickWeekNumberColumnPrivate::resizeItems()
     itemSize.setWidth(contentItem->width());
     itemSize.setHeight((contentItem->height() - 5 * spacing) / 6);
 
-    const auto childItems = contentItem->childItems();
-    for (QQuickItem *item : childItems)
+    foreach (QQuickItem *item, contentItem->childItems())
         item->setSize(itemSize);
 }
 
@@ -144,7 +143,7 @@ void QQuickWeekNumberColumn::setMonth(int month)
 {
     Q_D(QQuickWeekNumberColumn);
     if (month < 0 || month > 11) {
-        qmlWarning(this) << "month " << month << " is out of range [0...11]";
+        qmlInfo(this) << "month " << month << " is out of range [0...11]";
         return;
     }
     d->model->setMonth(month + 1);
@@ -168,7 +167,7 @@ void QQuickWeekNumberColumn::setYear(int year)
 {
     Q_D(QQuickWeekNumberColumn);
     if (year < -271820 || year > 275759) {
-        qmlWarning(this) << "year " << year << " is out of range [-271820...275759]";
+        qmlInfo(this) << "year " << year << " is out of range [-271820...275759]";
         return;
     }
     d->model->setYear(year);

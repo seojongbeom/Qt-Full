@@ -1,22 +1,12 @@
 /****************************************************************************
 **
 ** Copyright (C) 2015 Canonical Limited and/or its subsidiary(-ies)
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the demonstration applications of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -61,37 +51,37 @@ class AsyncImageResponse : public QQuickImageResponse, public QRunnable
 {
     public:
         AsyncImageResponse(const QString &id, const QSize &requestedSize)
-         : m_id(id), m_requestedSize(requestedSize)
+         : m_id(id), m_requestedSize(requestedSize), m_texture(0)
         {
             setAutoDelete(false);
         }
 
         QQuickTextureFactory *textureFactory() const
         {
-            return QQuickTextureFactory::textureFactoryForImage(m_image);
+            return m_texture;
         }
 
         void run()
         {
-            m_image = QImage(50, 50, QImage::Format_RGB32);
+            QImage image(50, 50, QImage::Format_RGB32);
             if (m_id == "slow") {
                 qDebug() << "Slow, red, sleeping for 5 seconds";
                 QThread::sleep(5);
-                m_image.fill(Qt::red);
+                image.fill(Qt::red);
             } else {
                 qDebug() << "Fast, blue, sleeping for 1 second";
                 QThread::sleep(1);
-                m_image.fill(Qt::blue);
+                image.fill(Qt::blue);
             }
             if (m_requestedSize.isValid())
-                m_image = m_image.scaled(m_requestedSize);
-
+                image = image.scaled(m_requestedSize);
+            m_texture = QQuickTextureFactory::textureFactoryForImage(image);
             emit finished();
         }
 
         QString m_id;
         QSize m_requestedSize;
-        QImage m_image;
+        QQuickTextureFactory *m_texture;
 };
 
 class AsyncImageProvider : public QQuickAsyncImageProvider

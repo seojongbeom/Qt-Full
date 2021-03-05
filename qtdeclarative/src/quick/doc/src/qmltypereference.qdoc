@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,13 +20,13 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 /*!
-\qmlmodule QtQuick 2.7
+\qmlmodule QtQuick 2.5
 \title Qt Quick QML Types
 \ingroup qmlmodules
 \brief Provides graphical QML types.
@@ -34,11 +34,11 @@
 The \l{Qt Quick} module provides graphical primitive types. These types are only
 available in a QML document if that document imports the \c QtQuick namespace.
 
-The current version of the \c QtQuick module is version 2.7, and thus it may be
+The current version of the \c QtQuick module is version 2.5, and thus it may be
 imported via the following statement:
 
 \qml
-import QtQuick 2.7
+import QtQuick 2.5
 \endqml
 
 Visit the \l {Qt Quick} module documentation for more
@@ -100,9 +100,9 @@ available when you import \c QtQuick.
     \li By a hexadecimal triplet or quad in the form \c "#RRGGBB" and \c "#AARRGGBB"
         respectively. For example, the color red corresponds to a triplet of \c "#FF0000"
         and a slightly transparent blue to a quad of \c "#800000FF".
-    \li Using the \l{QtQml::Qt::rgba()}{Qt.rgba()}, \l{QtQml::Qt::hsva()}{Qt.hsva()},
-        \l{QtQml::Qt::hsla()}{Qt.hsla()}, \l{QtQml::Qt::darker()}{Qt.darker()},
-        \l{QtQml::Qt::lighter()}{Qt.lighter()} or \l{QtQml::Qt::tint()}{Qt.tint()} functions.
+    \li Using the \l{QtQml::Qt::rgba()}{Qt.rgba()}, \l{QtQml::Qt::hsla()}{Qt.hsla()},
+        \l{QtQml::Qt::darker()}{Qt.darker()}, \l{QtQml::Qt::lighter()}{Qt.lighter()} or
+        \l{QtQml::Qt::tint()}{Qt.tint()} functions.
     \endlist
 
     Example:
@@ -112,11 +112,8 @@ available when you import \c QtQuick.
     \enddiv
     \snippet qml/colors.qml colors
 
-    A color type has \c r, \c g, \c b and \c a properties that refer to the red,
-    green, blue and alpha values of the color, respectively. Additionally it has
-    \c hsvHue, \c hsvSaturation, \c hsvValue and \c hslHue, \c hslSaturation,
-    \c hslLightness properties, which allow access to color values in HSV and HSL
-    color models accordingly:
+    Additionally, a color type has \c r, \c g, \c b and \c a properties that refer to the
+    red, green, blue and alpha values of the color, respectively:
 
     \qml
     Text {
@@ -170,7 +167,6 @@ available when you import \c QtQuick.
     \li \l enumeration \c font.capitalization
     \li \l real \c font.letterSpacing
     \li \l real \c font.wordSpacing
-    \li \l enumeration \c font.hintingPreference
     \endlist
 
     Example:
@@ -236,19 +232,6 @@ available when you import \c QtQuick.
         \li \c Font.Capitalize
         \li Alters the text to be rendered with the first character of each word as an uppercase character.
     \endtable
-
-    Setting the hinting preference only has an effect when using the "NativeRendering" render type.
-    The property supports the following values:
-
-    \list
-    \value Font.PreferDefaultHinting - Use the default hinting level for the target platform.
-    \value Font.PreferNoHinting - If possible, render text without hinting the outlines
-           of the glyphs.
-    \value Font.PreferVerticalHinting - If possible, render text with no horizontal hinting,
-           but align glyphs to the pixel grid in the vertical direction.
-    \value Font.PreferFullHinting - If possible, render text with hinting in both horizontal and
-           vertical directions.
-    \endlist
 
     \sa {QML Basic Types}
 */

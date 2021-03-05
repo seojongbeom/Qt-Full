@@ -1,37 +1,31 @@
 /***************************************************************************
 **
 ** Copyright (C) 2011 - 2013 BlackBerry Limited. All rights reserved.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,14 +35,17 @@
 #define QQNXINTEGRATION_H
 
 #include <qpa/qplatformintegration.h>
-#include <private/qtguiglobal_p.h>
+
 #include <QtCore/qmutex.h>
 
 #include <screen/screen.h>
 
 QT_BEGIN_NAMESPACE
 
+class QQnxBpsEventFilter;
+#if defined(QQNX_SCREENEVENTTHREAD)
 class QQnxScreenEventThread;
+#endif
 class QQnxFileDialogHelper;
 class QQnxNativeInterface;
 class QQnxWindow;
@@ -61,7 +58,7 @@ class QQnxServices;
 
 class QSimpleDrag;
 
-#if QT_CONFIG(qqnx_pps)
+#if defined(QQNX_PPS)
 class QQnxInputContext;
 class QQnxNavigatorEventNotifier;
 class QQnxButtonEventNotifier;
@@ -87,38 +84,44 @@ public:
     explicit QQnxIntegration(const QStringList &paramList);
     ~QQnxIntegration();
 
-    bool hasCapability(QPlatformIntegration::Capability cap) const override;
+    bool hasCapability(QPlatformIntegration::Capability cap) const;
 
-    QPlatformWindow *createPlatformWindow(QWindow *window) const override;
-    QPlatformBackingStore *createPlatformBackingStore(QWindow *window) const override;
+    QPlatformWindow *createPlatformWindow(QWindow *window) const;
+    QPlatformBackingStore *createPlatformBackingStore(QWindow *window) const;
 
 #if !defined(QT_NO_OPENGL)
-    QPlatformOpenGLContext *createPlatformOpenGLContext(QOpenGLContext *context) const override;
+    QPlatformOpenGLContext *createPlatformOpenGLContext(QOpenGLContext *context) const;
 #endif
 
-#if QT_CONFIG(qqnx_pps)
-    QPlatformInputContext *inputContext() const override;
+#if defined(QQNX_PPS)
+    QPlatformInputContext *inputContext() const;
 #endif
 
     void moveToScreen(QWindow *window, int screen);
 
     bool supportsNavigatorEvents() const;
 
-    QAbstractEventDispatcher *createEventDispatcher() const override;
+    QAbstractEventDispatcher *createEventDispatcher() const;
 
-    QPlatformFontDatabase *fontDatabase() const override { return m_fontDatabase; }
+    QPlatformFontDatabase *fontDatabase() const { return m_fontDatabase; }
 
-    QPlatformNativeInterface *nativeInterface() const override;
+    QPlatformNativeInterface *nativeInterface() const;
 
 #if !defined(QT_NO_CLIPBOARD)
-    QPlatformClipboard *clipboard() const override;
+    QPlatformClipboard *clipboard() const;
 #endif
 #if !defined(QT_NO_DRAGANDDROP)
-    QPlatformDrag *drag() const override;
+    QPlatformDrag *drag() const;
 #endif
-    QVariant styleHint(StyleHint hint) const override;
+    QVariant styleHint(StyleHint hint) const;
 
-    QPlatformServices *services() const override;
+    QPlatformServices *services() const;
+
+#if defined(Q_OS_BLACKBERRY)
+    QStringList themeNames() const;
+    QPlatformTheme *createPlatformTheme(const QString &name) const;
+    QQnxBpsEventFilter *bpsEventFilter() const { return m_bpsEventFilter; }
+#endif
 
     static QWindow *window(screen_window_t qnxWindow);
 
@@ -140,10 +143,12 @@ private:
     static void removeWindow(screen_window_t qnxWindow);
 
     static screen_context_t ms_screenContext;
+#if defined(QQNX_SCREENEVENTTHREAD)
     QQnxScreenEventThread *m_screenEventThread;
+#endif
     QQnxNavigatorEventHandler *m_navigatorEventHandler;
     QQnxAbstractVirtualKeyboard *m_virtualKeyboard;
-#if QT_CONFIG(qqnx_pps)
+#if defined(QQNX_PPS)
     QQnxNavigatorEventNotifier *m_navigatorEventNotifier;
     QQnxInputContext *m_inputContext;
     QQnxButtonEventNotifier *m_buttonsNotifier;
@@ -151,6 +156,9 @@ private:
     QQnxServices *m_services;
     QPlatformFontDatabase *m_fontDatabase;
     mutable QAbstractEventDispatcher *m_eventDispatcher;
+#if defined(Q_OS_BLACKBERRY)
+    QQnxBpsEventFilter *m_bpsEventFilter;
+#endif
     QQnxNativeInterface *m_nativeInterface;
     QList<QQnxScreen*> m_screens;
     QQnxScreenEventHandler *m_screenEventHandler;

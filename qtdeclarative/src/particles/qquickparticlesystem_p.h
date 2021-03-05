@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,38 +50,13 @@
 #include <QVector>
 #include <QHash>
 #include <QPointer>
+#include <QSignalMapper>
 #include <private/qquicksprite_p.h>
 #include <QAbstractAnimation>
 #include <QtQml/qqml.h>
 #include <private/qv8engine_p.h> //For QQmlV4Handle
-#include <private/qv4util_p.h>
-#include "qtquickparticlesglobal_p.h"
 
 QT_BEGIN_NAMESPACE
-
-template<class T, int Prealloc>
-class QQuickParticleVarLengthArray: public QVarLengthArray<T, Prealloc>
-{
-public:
-    void insert(const T &element)
-    {
-        if (!this->contains(element)) {
-            this->append(element);
-        }
-    }
-
-    bool removeOne(const T &element)
-    {
-        for (int i = 0; i < this->size(); ++i) {
-            if (this->at(i) == element) {
-                this->remove(i);
-                return true;
-            }
-        }
-
-        return false;
-    }
-};
 
 class QQuickParticleSystem;
 class QQuickParticleAffector;
@@ -106,7 +75,7 @@ struct QQuickParticleDataHeapNode{
     QSet<QQuickParticleData*> data;//Set ptrs instead?
 };
 
-class Q_QUICKPARTICLES_PRIVATE_EXPORT QQuickParticleDataHeap {
+class QQuickParticleDataHeap {
     //Idea is to do a binary heap, but which also stores a set of int,Node* so that if the int already exists, you can
     //add it to the data* list. Pops return the whole list at once.
 public:
@@ -133,88 +102,23 @@ private:
     QHash<int,int> m_lookups;
 };
 
-class Q_QUICKPARTICLES_PRIVATE_EXPORT QQuickParticleGroupData {
-    class FreeList
-    {
-    public:
-        FreeList()
-            : firstUnused(UINT_MAX)
-            , allocated(0)
-        {}
-
-        void resize(int newSize)
-        {
-            Q_ASSERT(newSize >= 0);
-            int oldSize = isUnused.size();
-            isUnused.resize(newSize, true);
-            if (newSize > oldSize) {
-                if (firstUnused == UINT_MAX) {
-                    firstUnused = oldSize;
-                } else {
-                    firstUnused = std::min(firstUnused, unsigned(oldSize));
-                }
-            } else if (firstUnused >= unsigned(newSize)) {
-                firstUnused = UINT_MAX;
-            }
-        }
-
-        void free(int index)
-        {
-            isUnused.setBit(index);
-            firstUnused = std::min(firstUnused, unsigned(index));
-            --allocated;
-        }
-
-        int count() const
-        { return allocated; }
-
-        bool hasUnusedEntries() const
-        { return firstUnused != UINT_MAX; }
-
-        int alloc()
-        {
-            if (hasUnusedEntries()) {
-                int nextFree = firstUnused;
-                isUnused.clearBit(firstUnused);
-                firstUnused = isUnused.findNext(firstUnused, true, false);
-                if (firstUnused >= unsigned(isUnused.size())) {
-                    firstUnused = UINT_MAX;
-                }
-                ++allocated;
-                return nextFree;
-            } else {
-                return -1;
-            }
-        }
-
-    private:
-        QV4::BitVector isUnused;
-        unsigned firstUnused;
-        int allocated;
-    };
-
-public: // types
-    typedef int ID;
-    enum { InvalidID = -1, DefaultGroupID = 0 };
-
+class Q_AUTOTEST_EXPORT QQuickParticleGroupData {
 public:
-    QQuickParticleGroupData(const QString &name, QQuickParticleSystem* sys);
+    QQuickParticleGroupData(int id, QQuickParticleSystem* sys);
     ~QQuickParticleGroupData();
 
-    int size()
-    { return m_size; }
-
+    int size();
     QString name();
 
     void setSize(int newSize);
 
-    const ID index;
-    QQuickParticleVarLengthArray<QQuickParticlePainter*, 4> painters;//TODO: What if they are dynamically removed?
+    int index;
+    QSet<QQuickParticlePainter*> painters;//TODO: What if they are dynamically removed?
 
     //TODO: Refactor particle data list out into a separate class
     QVector<QQuickParticleData*> data;
-    FreeList freeList;
     QQuickParticleDataHeap dataHeap;
+    QSet<int> reusableIndexes;
     bool recycle(); //Force recycling round, returns true if all indexes are now reusable
 
     void initList();
@@ -238,10 +142,10 @@ struct Color4ub {
     uchar a;
 };
 
-class Q_QUICKPARTICLES_PRIVATE_EXPORT QQuickParticleData {
+class Q_AUTOTEST_EXPORT QQuickParticleData {
 public:
     //TODO: QObject like memory management (without the cost, just attached to system)
-    QQuickParticleData();
+    QQuickParticleData(QQuickParticleSystem* sys);
     ~QQuickParticleData();
 
     QQuickParticleData(const QQuickParticleData &other);
@@ -251,28 +155,28 @@ public:
     //If setting multiple parameters at once, doing the conversion yourself will be faster.
 
     //sets the x accleration without affecting the instantaneous x velocity or position
-    void setInstantaneousAX(float ax, QQuickParticleSystem *particleSystem);
+    void setInstantaneousAX(qreal ax);
     //sets the x velocity without affecting the instantaneous x postion
-    void setInstantaneousVX(float vx, QQuickParticleSystem *particleSystem);
+    void setInstantaneousVX(qreal vx);
     //sets the instantaneous x postion
-    void setInstantaneousX(float x, QQuickParticleSystem *particleSystem);
+    void setInstantaneousX(qreal x);
     //sets the y accleration without affecting the instantaneous y velocity or position
-    void setInstantaneousAY(float ay, QQuickParticleSystem *particleSystem);
+    void setInstantaneousAY(qreal ay);
     //sets the y velocity without affecting the instantaneous y postion
-    void setInstantaneousVY(float vy, QQuickParticleSystem *particleSystem);
+    void setInstantaneousVY(qreal vy);
     //sets the instantaneous Y postion
-    void setInstantaneousY(float y, QQuickParticleSystem *particleSystem);
+    void setInstantaneousY(qreal y);
 
     //TODO: Slight caching?
-    float curX(QQuickParticleSystem *particleSystem) const;
-    float curVX(QQuickParticleSystem *particleSystem) const;
-    float curAX() const { return ax; }
-    float curAX(QQuickParticleSystem *) const { return ax; } // used by the macros in qquickv4particledata.cpp
-    float curY(QQuickParticleSystem *particleSystem) const;
-    float curVY(QQuickParticleSystem *particleSystem) const;
-    float curAY() const { return ay; }
-    float curAY(QQuickParticleSystem *) const { return ay; } // used by the macros in qquickv4particledata.cpp
+    qreal curX() const;
+    qreal curVX() const;
+    qreal curAX() const { return ax; }
+    qreal curY() const;
+    qreal curVY() const;
+    qreal curAY() const { return ay; }
 
+    QQuickParticleEmitter* e;//### Needed?
+    QQuickParticleSystem* system;
     int index;
     int systemIndex;
 
@@ -310,7 +214,7 @@ public:
     float animWidth;
     float animHeight;
 
-    QQuickParticleGroupData::ID groupId;
+    int group;
 
     //Used by ImageParticle data shadowing
     QQuickImageParticle* colorOwner;
@@ -329,23 +233,19 @@ public:
     // 4 bytes wasted
 
 
-    void debugDump(QQuickParticleSystem *particleSystem) const;
-    bool stillAlive(QQuickParticleSystem *particleSystem) const; //Only checks end, because usually that's all you need and it's a little faster.
-    bool alive(QQuickParticleSystem *particleSystem) const;
-    float lifeLeft(QQuickParticleSystem *particleSystem) const;
-
-    float curSize(QQuickParticleSystem *particleSystem) const;
+    void debugDump();
+    bool stillAlive();//Only checks end, because usually that's all you need and it's a little faster.
+    bool alive();
+    float lifeLeft();
+    float curSize();
     void clone(const QQuickParticleData& other);//Not =, leaves meta-data like index
-    QQmlV4Handle v4Value(QQuickParticleSystem *particleSystem);
-    void extendLife(float time, QQuickParticleSystem *particleSystem);
-
-    static inline Q_DECL_CONSTEXPR float EPSILON() Q_DECL_NOTHROW { return 0.001f; }
-
+    QQmlV4Handle v4Value();
+    void extendLife(float time);
 private:
     QQuickV4ParticleData* v8Datum;
 };
 
-class Q_QUICKPARTICLES_PRIVATE_EXPORT QQuickParticleSystem : public QQuickItem
+class Q_AUTOTEST_EXPORT QQuickParticleSystem : public QQuickItem
 {
     Q_OBJECT
     Q_PROPERTY(bool running READ isRunning WRITE setRunning NOTIFY runningChanged)
@@ -388,17 +288,17 @@ public Q_SLOTS:
 
 protected:
     //This one only once per frame (effectively)
-    void componentComplete() override;
+    void componentComplete();
 
 private Q_SLOTS:
     void emittersChanged();
-    void loadPainter(QQuickParticlePainter *p);
+    void loadPainter(QObject* p);
     void createEngine(); //Not invoked by sprite engine, unlike Sprite uses
     void particleStateChange(int idx);
 
 public:
     //These can be called multiple times per frame, performance critical
-    void emitParticle(QQuickParticleData* p, QQuickParticleEmitter *particleEmitter);
+    void emitParticle(QQuickParticleData* p);
     QQuickParticleData* newDatum(int groupId, bool respectLimits = true, int sysIdx = -1);
     void finishNewDatum(QQuickParticleData*);
     void moveGroups(QQuickParticleData *d, int newGIdx);
@@ -410,12 +310,9 @@ public:
     //Data members here for ease of related class and auto-test usage. Not "public" API. TODO: d_ptrize
     QSet<QQuickParticleData*> needsReset;
     QVector<QQuickParticleData*> bySysIdx; //Another reference to the data (data owned by group), but by sysIdx
-    QQuickStochasticEngine* stateEngine;
-
     QHash<QString, int> groupIds;
-    QVarLengthArray<QQuickParticleGroupData*, 32> groupData;
-    int nextFreeGroupId;
-    int registerParticleGroupData(const QString &name, QQuickParticleGroupData *pgd);
+    QHash<int, QQuickParticleGroupData*> groupData;
+    QQuickStochasticEngine* stateEngine;
 
     //Also only here for auto-test usage
     void updateCurrentTime( int currentTime );
@@ -429,7 +326,6 @@ public:
 
     void registerParticlePainter(QQuickParticlePainter* p);
     void registerParticleEmitter(QQuickParticleEmitter* e);
-    void finishRegisteringParticleEmitter(QQuickParticleEmitter *e);
     void registerParticleAffector(QQuickParticleAffector* a);
     void registerParticleGroup(QQuickParticleGroup* g);
 
@@ -446,9 +342,6 @@ public:
     }
 
 private:
-    void searchNextFreeGroupId();
-
-private:
     void initializeSystem();
     void initGroups();
     QList<QPointer<QQuickParticleEmitter> > m_emitters;
@@ -456,10 +349,13 @@ private:
     QList<QPointer<QQuickParticlePainter> > m_painters;
     QList<QPointer<QQuickParticlePainter> > m_syncList;
     QList<QQuickParticleGroup*> m_groups;
+    int m_nextGroupId;
     int m_nextIndex;
     QSet<int> m_reusableIndexes;
     bool m_componentComplete;
 
+    QSignalMapper m_painterMapper;
+    QSignalMapper m_emitterMapper;
     bool m_paused;
     bool m_allDead;
     bool m_empty;
@@ -474,12 +370,12 @@ public:
         : QAbstractAnimation(static_cast<QObject*>(system)), m_system(system)
     { }
 protected:
-    void updateCurrentTime(int t) override
+    virtual void updateCurrentTime( int t )
     {
         m_system->updateCurrentTime(t);
     }
 
-    int duration() const override
+    virtual int duration() const
     {
         return -1;
     }
@@ -488,124 +384,6 @@ private:
     QQuickParticleSystem* m_system;
 };
 
-inline void QQuickParticleData::setInstantaneousAX(float ax, QQuickParticleSystem* particleSystem)
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    float vx = (this->vx + t * this->ax) - t * ax;
-    float ex = this->x + this->vx * t + 0.5f * this->ax * t_sq;
-    float x = ex - t * vx - 0.5f * t_sq * ax;
-
-    this->ax = ax;
-    this->vx = vx;
-    this->x = x;
-}
-
-inline void QQuickParticleData::setInstantaneousVX(float vx, QQuickParticleSystem* particleSystem)
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    float evx = vx - t * this->ax;
-    float ex = this->x + this->vx * t + 0.5f * this->ax * t_sq;
-    float x = ex - t * evx - 0.5f * t_sq * this->ax;
-
-    this->vx = evx;
-    this->x = x;
-}
-
-inline void QQuickParticleData::setInstantaneousX(float x, QQuickParticleSystem* particleSystem)
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    this->x = x - t * this->vx - 0.5f * t_sq * this->ax;
-}
-
-inline void QQuickParticleData::setInstantaneousAY(float ay, QQuickParticleSystem* particleSystem)
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    float vy = (this->vy + t * this->ay) - t * ay;
-    float ey = this->y + this->vy * t + 0.5f * this->ay * t_sq;
-    float y = ey - t * vy - 0.5f * t_sq * ay;
-
-    this->ay = ay;
-    this->vy = vy;
-    this->y = y;
-}
-
-inline void QQuickParticleData::setInstantaneousVY(float vy, QQuickParticleSystem* particleSystem)
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    float evy = vy - t * this->ay;
-    float ey = this->y + this->vy * t + 0.5f * this->ay * t_sq;
-    float y = ey - t*evy - 0.5f * t_sq * this->ay;
-
-    this->vy = evy;
-    this->y = y;
-}
-
-inline void QQuickParticleData::setInstantaneousY(float y, QQuickParticleSystem *particleSystem)
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    this->y = y - t * this->vy - 0.5f * t_sq * this->ay;
-}
-
-inline float QQuickParticleData::curX(QQuickParticleSystem *particleSystem) const
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    return this->x + this->vx * t + 0.5f * this->ax * t_sq;
-}
-
-inline float QQuickParticleData::curVX(QQuickParticleSystem *particleSystem) const
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    return this->vx + t * this->ax;
-}
-
-inline float QQuickParticleData::curY(QQuickParticleSystem *particleSystem) const
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    float t_sq = t * t;
-    return y + vy * t + 0.5f * ay * t_sq;
-}
-
-inline float QQuickParticleData::curVY(QQuickParticleSystem *particleSystem) const
-{
-    float t = (particleSystem->timeInt / 1000.0f) - this->t;
-    return vy + t*ay;
-}
-
-inline bool QQuickParticleData::stillAlive(QQuickParticleSystem* system) const
-{
-    if (!system)
-        return false;
-    return (t + lifeSpan - EPSILON()) > (system->timeInt / 1000.0f);
-}
-
-inline bool QQuickParticleData::alive(QQuickParticleSystem* system) const
-{
-    if (!system)
-        return false;
-    float st = (system->timeInt / 1000.0f);
-    return (t + EPSILON()) < st && (t + lifeSpan - EPSILON()) > st;
-}
-
-inline float QQuickParticleData::lifeLeft(QQuickParticleSystem *particleSystem) const
-{
-    if (!particleSystem)
-        return 0.0f;
-    return (t + lifeSpan) - (particleSystem->timeInt / 1000.0f);
-}
-
-inline float QQuickParticleData::curSize(QQuickParticleSystem *particleSystem) const
-{
-    if (!particleSystem || lifeSpan == 0.0f)
-        return 0.0f;
-    return size + (endSize - size) * (1 - (lifeLeft(particleSystem) / lifeSpan));
-}
 
 QT_END_NAMESPACE
 

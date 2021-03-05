@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -36,9 +36,7 @@
 
 #include "qquickmaterialtheme_p.h"
 
-#include <QtGui/qpa/qplatformdialoghelper.h>
 #include <QtGui/qfont.h>
-#include <QtGui/qfontinfo.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -46,22 +44,15 @@ QQuickMaterialTheme::QQuickMaterialTheme(QPlatformTheme *theme)
     : QQuickProxyTheme(theme)
 {
     QFont font;
-    font.setFamily(QLatin1String("Roboto"));
-    QString family = QFontInfo(font).family();
+    font.setFamily(QStringLiteral("Roboto"));
+    if (!font.exactMatch())
+        font.setFamily(QStringLiteral("Noto"));
 
-    if (family != QLatin1String("Roboto")) {
-        font.setFamily(QLatin1String("Noto"));
-        family = QFontInfo(font).family();
-    }
-
-    if (family == QLatin1String("Roboto") || family == QLatin1String("Noto")) {
-        systemFont.setFamily(family);
-        buttonFont.setFamily(family);
-        toolTipFont.setFamily(family);
-        itemViewFont.setFamily(family);
-        listViewFont.setFamily(family);
-        menuItemFont.setFamily(family);
-        editorFont.setFamily(family);
+    if (font.exactMatch()) {
+        systemFont.setFamily(font.family());
+        buttonFont.setFamily(font.family());
+        itemViewFont.setFamily(font.family());
+        menuItemFont.setFamily(font.family());
     }
 
     systemFont.setPixelSize(14);
@@ -70,17 +61,14 @@ QQuickMaterialTheme::QQuickMaterialTheme(QPlatformTheme *theme)
     buttonFont.setCapitalization(QFont::AllUppercase);
     buttonFont.setWeight(QFont::Medium);
 
-    toolTipFont.setPixelSize(14);
-    toolTipFont.setWeight(QFont::Medium);
-
     itemViewFont.setPixelSize(14);
     itemViewFont.setWeight(QFont::Medium);
 
-    listViewFont.setPixelSize(16);
-
     menuItemFont.setPixelSize(16);
+}
 
-    editorFont.setPixelSize(16);
+QQuickMaterialTheme::~QQuickMaterialTheme()
+{
 }
 
 const QFont *QQuickMaterialTheme::font(QPlatformTheme::Font type) const
@@ -90,36 +78,13 @@ const QFont *QQuickMaterialTheme::font(QPlatformTheme::Font type) const
     case QPlatformTheme::PushButtonFont:
     case QPlatformTheme::ToolButtonFont:
         return &buttonFont;
-    case QPlatformTheme::TipLabelFont:
-        return &toolTipFont;
     case QPlatformTheme::ItemViewFont:
         return &itemViewFont;
-    case QPlatformTheme::ListViewFont:
-        return &listViewFont;
     case QPlatformTheme::MenuItemFont:
     case QPlatformTheme::ComboMenuItemFont:
         return &menuItemFont;
-    case QPlatformTheme::EditorFont:
-        return &editorFont;
     default:
         return &systemFont;
-    }
-}
-
-QVariant QQuickMaterialTheme::themeHint(ThemeHint hint) const
-{
-    switch (hint) {
-    case QPlatformTheme::DialogButtonBoxLayout:
-        // https://material.io/guidelines/components/dialogs.html#dialogs-specs
-        // As per spec, affirmative actions are placed to the right, dismissive
-        // actions are placed directly to the left of affirmative actions.
-        // In the Android sources, there are additional type of actions -
-        // neutral, which are placed to the left.
-        // Rules for macOS seems to be the most suitable here and are also used
-        // in the Android QPA plugin.
-        return QVariant(QPlatformDialogHelper::MacLayout);
-    default:
-        return QQuickProxyTheme::themeHint(hint);
     }
 }
 

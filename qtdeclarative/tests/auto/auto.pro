@@ -2,23 +2,16 @@ TEMPLATE=subdirs
 SUBDIRS=\
     qml \
     quick \
-    quicktest \
+    particles \
     qmltest \
     qmldevtools \
     cmake \
     installed_cmake \
     toolsupport
 
-qtHaveModule(gui):qtConfig(opengl(es1|es2)?) {
-    SUBDIRS += particles
-    qtHaveModule(widgets): SUBDIRS += quickwidgets
+qtHaveModule(widgets): SUBDIRS += quickwidgets
 
-}
-
-# console applications not supported
-uikit: SUBDIRS -= qmltest
-
-# Restricted sub-set for now
-boot2qt: SUBDIRS = qml
+qmldevtools.CONFIG = host_build
 
 installed_cmake.depends = cmake
+

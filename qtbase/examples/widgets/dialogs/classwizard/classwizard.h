@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -69,7 +59,7 @@ class ClassWizard : public QWizard
 public:
     ClassWizard(QWidget *parent = 0);
 
-    void accept() override;
+    void accept() Q_DECL_OVERRIDE;
 };
 //! [0]
 
@@ -117,7 +107,7 @@ public:
     CodeStylePage(QWidget *parent = 0);
 
 protected:
-    void initializePage() override;
+    void initializePage() Q_DECL_OVERRIDE;
 
 private:
     QCheckBox *commentCheckBox;
@@ -138,7 +128,7 @@ public:
     OutputFilesPage(QWidget *parent = 0);
 
 protected:
-    void initializePage() override;
+    void initializePage() Q_DECL_OVERRIDE;
 
 private:
     QLabel *outputDirLabel;
@@ -157,7 +147,7 @@ public:
     ConclusionPage(QWidget *parent = 0);
 
 protected:
-    void initializePage() override;
+    void initializePage() Q_DECL_OVERRIDE;
 
 private:
     QLabel *label;

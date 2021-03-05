@@ -15,26 +15,21 @@
 namespace rx
 {
 
-SwapChain9::SwapChain9(Renderer9 *renderer,
-                       NativeWindow nativeWindow,
-                       HANDLE shareHandle,
-                       GLenum backBufferFormat,
-                       GLenum depthBufferFormat,
-                       EGLint orientation)
-    : SwapChainD3D(nativeWindow, shareHandle, backBufferFormat, depthBufferFormat),
-      mRenderer(renderer),
-      mWidth(-1),
-      mHeight(-1),
-      mSwapInterval(-1),
-      mSwapChain(nullptr),
-      mBackBuffer(nullptr),
-      mRenderTarget(nullptr),
-      mDepthStencil(nullptr),
-      mOffscreenTexture(nullptr),
+SwapChain9::SwapChain9(Renderer9 *renderer, NativeWindow nativeWindow, HANDLE shareHandle,
+                       GLenum backBufferFormat, GLenum depthBufferFormat)
+    : mRenderer(renderer),
+      SwapChainD3D(nativeWindow, shareHandle, backBufferFormat, depthBufferFormat),
       mColorRenderTarget(this, false),
       mDepthStencilRenderTarget(this, true)
 {
-    ASSERT(orientation == 0);
+    mSwapChain = NULL;
+    mBackBuffer = NULL;
+    mDepthStencil = NULL;
+    mRenderTarget = NULL;
+    mOffscreenTexture = NULL;
+    mWidth = -1;
+    mHeight = -1;
+    mSwapInterval = -1;
 }
 
 SwapChain9::~SwapChain9()
@@ -109,7 +104,7 @@ EGLint SwapChain9::reset(int backbufferWidth, int backbufferHeight, EGLint swapI
         pShareHandle = &mShareHandle;
     }
 
-    const d3d9::TextureFormat &backBufferd3dFormatInfo = d3d9::GetTextureFormatInfo(mOffscreenRenderTargetFormat);
+    const d3d9::TextureFormat &backBufferd3dFormatInfo = d3d9::GetTextureFormatInfo(mBackBufferFormat);
     result = device->CreateTexture(backbufferWidth, backbufferHeight, 1, D3DUSAGE_RENDERTARGET,
                                    backBufferd3dFormatInfo.texFormat, D3DPOOL_DEFAULT, &mOffscreenTexture,
                                    pShareHandle);
@@ -291,7 +286,7 @@ EGLint SwapChain9::swapRect(EGLint x, EGLint y, EGLint width, EGLint height)
         device->SetStreamSourceFreq(streamIndex, 1);
     }
 
-    D3DVIEWPORT9 viewport = {0, 0, static_cast<DWORD>(mWidth), static_cast<DWORD>(mHeight), 0.0f, 1.0f};
+    D3DVIEWPORT9 viewport = {0, 0, mWidth, mHeight, 0.0f, 1.0f};
     device->SetViewport(&viewport);
 
     float x1 = x - 0.5f;
@@ -317,8 +312,8 @@ EGLint SwapChain9::swapRect(EGLint x, EGLint y, EGLint width, EGLint height)
 
     RECT rect =
     {
-        static_cast<LONG>(x), static_cast<LONG>(mHeight - y - height),
-        static_cast<LONG>(x + width), static_cast<LONG>(mHeight - y)
+        x, mHeight - y - height,
+        x + width, mHeight - y
     };
 
     HRESULT result = mSwapChain->Present(&rect, &rect, NULL, NULL, 0);
@@ -389,10 +384,10 @@ IDirect3DTexture9 *SwapChain9::getOffscreenTexture()
     return mOffscreenTexture;
 }
 
-void *SwapChain9::getKeyedMutex()
+SwapChain9 *SwapChain9::makeSwapChain9(SwapChainD3D *swapChain)
 {
-    UNREACHABLE();
-    return nullptr;
+    ASSERT(HAS_DYNAMIC_TYPE(SwapChain9*, swapChain));
+    return static_cast<SwapChain9*>(swapChain);
 }
 
 void SwapChain9::recreate()

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,12 +41,9 @@
 
 #include <private/qguiapplication_p.h>
 #include <private/qqmlengine_p.h>
-#include <private/qv4qobjectwrapper_p.h>
 #include <qpa/qplatformintegration.h>
 
 QT_BEGIN_NAMESPACE
-
-Q_DECLARE_LOGGING_CATEGORY(lcTransient)
 
 class QQuickWindowQmlImplPrivate : public QQuickWindowPrivate
 {
@@ -75,22 +66,23 @@ QQuickWindowQmlImpl::QQuickWindowQmlImpl(QWindow *parent)
 {
     connect(this, &QWindow::visibleChanged, this, &QQuickWindowQmlImpl::visibleChanged);
     connect(this, &QWindow::visibilityChanged, this, &QQuickWindowQmlImpl::visibilityChanged);
-    connect(this, &QWindow::screenChanged, this, &QQuickWindowQmlImpl::screenChanged);
 }
 
 void QQuickWindowQmlImpl::setVisible(bool visible)
 {
     Q_D(QQuickWindowQmlImpl);
-    d->visible = visible;
-    if (d->complete && (!transientParent() || transientParent()->isVisible()))
+    if (!d->complete)
+        d->visible = visible;
+    else if (!transientParent() || transientParent()->isVisible())
         QQuickWindow::setVisible(visible);
 }
 
 void QQuickWindowQmlImpl::setVisibility(Visibility visibility)
 {
     Q_D(QQuickWindowQmlImpl);
-    d->visibility = visibility;
-    if (d->complete)
+    if (!d->complete)
+        d->visibility = visibility;
+    else
         QQuickWindow::setVisibility(visibility);
 }
 
@@ -103,9 +95,6 @@ void QQuickWindowQmlImpl::classBegin()
 {
     Q_D(QQuickWindowQmlImpl);
     QQmlEngine* e = qmlEngine(this);
-
-    QQmlEngine::setContextForObject(contentItem(), e->rootContext());
-
     //Give QQuickView behavior when created from QML with QQmlApplicationEngine
     if (QCoreApplication::instance()->property("__qml_using_qqmlapplicationengine") == QVariant(true)) {
         if (e && !e->incubationController())
@@ -123,13 +112,7 @@ void QQuickWindowQmlImpl::componentComplete()
 {
     Q_D(QQuickWindowQmlImpl);
     d->complete = true;
-    QQuickItem *itemParent = qmlobject_cast<QQuickItem *>(QObject::parent());
-    if (itemParent && !itemParent->window()) {
-        qCDebug(lcTransient) << "window" << title() << "has invisible Item parent" << itemParent << "transientParent"
-                             << transientParent() << "declared visibility" << d->visibility << "; delaying show";
-        connect(itemParent, &QQuickItem::windowChanged, this,
-                &QQuickWindowQmlImpl::setWindowVisibility, Qt::QueuedConnection);
-    } else if (transientParent() && !transientParent()->isVisible()) {
+    if (transientParent() && !transientParent()->isVisible()) {
         connect(transientParent(), &QQuickWindow::visibleChanged, this,
                 &QQuickWindowQmlImpl::setWindowVisibility, Qt::QueuedConnection);
     } else {
@@ -143,10 +126,9 @@ void QQuickWindowQmlImpl::setWindowVisibility()
     if (transientParent() && !transientParent()->isVisible())
         return;
 
-    if (QQuickItem *senderItem = qmlobject_cast<QQuickItem *>(sender())) {
-        disconnect(senderItem, &QQuickItem::windowChanged, this, &QQuickWindowQmlImpl::setWindowVisibility);
-    } else if (sender()) {
-        disconnect(transientParent(), &QWindow::visibleChanged, this, &QQuickWindowQmlImpl::setWindowVisibility);
+    if (sender()) {
+        disconnect(transientParent(), &QWindow::visibleChanged, this,
+                   &QQuickWindowQmlImpl::setWindowVisibility);
     }
 
     // We have deferred window creation until we have the full picture of what
@@ -183,17 +165,6 @@ void QQuickWindowQmlImpl::setWindowVisibility()
     }
 }
 
-QObject *QQuickWindowQmlImpl::screen() const
-{
-    return new QQuickScreenInfo(const_cast<QQuickWindowQmlImpl *>(this), QWindow::screen());
-}
-
-void QQuickWindowQmlImpl::setScreen(QObject *screen)
-{
-    QQuickScreenInfo *screenWrapper = qobject_cast<QQuickScreenInfo *>(screen);
-    QWindow::setScreen(screenWrapper ? screenWrapper->wrappedScreen() : nullptr);
-}
-
 void QQuickWindowModule::defineModule()
 {
     const char uri[] = "QtQuick.Window";
@@ -205,12 +176,9 @@ void QQuickWindowModule::defineModule()
     qmlRegisterRevision<QQuickWindow,2>(uri, 2, 2);
     qmlRegisterType<QQuickWindowQmlImpl>(uri, 2, 1, "Window");
     qmlRegisterType<QQuickWindowQmlImpl,1>(uri, 2, 2, "Window");
-    qmlRegisterType<QQuickWindowQmlImpl,2>(uri, 2, 3, "Window");
     qmlRegisterUncreatableType<QQuickScreen>(uri, 2, 0, "Screen", QStringLiteral("Screen can only be used via the attached property."));
-    qmlRegisterUncreatableType<QQuickScreen,1>(uri, 2, 3, "Screen", QStringLiteral("Screen can only be used via the attached property."));
-    qmlRegisterUncreatableType<QQuickScreenInfo,2>(uri, 2, 3, "ScreenInfo", QStringLiteral("ScreenInfo can only be used via the attached property."));
 }
 
 QT_END_NAMESPACE
 
-#include "moc_qquickwindowmodule_p.cpp"
+QML_DECLARE_TYPEINFO(QQuickWindowQmlImpl, QML_HAS_ATTACHED_PROPERTIES)

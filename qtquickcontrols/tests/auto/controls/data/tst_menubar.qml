@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -91,58 +81,17 @@ TestCase {
     }
 
     function test_createMenuBar() {
-        createTemporaryQmlObject('import QtQuick.Controls 1.2; MenuBar {}', testCase, '');
+        var menuBar = Qt.createQmlObject('import QtQuick.Controls 1.2; MenuBar {}', testCase, '');
+        menuBar.destroy()
     }
 
-    function test_clickMenuBar() {
-        if (Qt.platform.os === "osx")
-            skip("MenuBar cannot be reliably tested on OS X")
-
-        var window = createTemporaryObject(windowComponent)
-        waitForRendering(window.contentItem)
-        var fileMenu = findChild(window, "fileMenu")
-        compare(fileMenu !== null, true)
-        // Click menu should open
-        compare(fileMenu.__popupVisible, false)
-        mouseClick(fileMenu.__visualItem)
-        tryCompare(fileMenu, "__popupVisible", true)
-        // wait until popup is visible
-        tryCompare(fileMenu.__contentItem, "status", Loader.Ready)
-        waitForRendering(fileMenu.__contentItem.item)
-        // Clicking on menu should close, we workaround the current
-        // implementation event routing of the TestCase suite.
-        // We send the event to an item that is child of the menupopupwindow
-        // to a a negative coordinate
-        mouseClick(fileMenu.__contentItem, 20, -13)
-        tryCompare(fileMenu, "__popupVisible", false)
-    }
-
-    function test_closeOnEscapePressed() {
-        if (Qt.platform.os === "osx")
-            skip("MenuBar cannot be reliably tested on OS X")
-
-        var window = createTemporaryObject(windowComponent)
-        waitForRendering(window.contentItem)
-        var fileMenu = findChild(window, "fileMenu")
-        verify(fileMenu)
-        // Click menu should open
-        compare(fileMenu.__popupVisible, false)
-        mouseClick(fileMenu.__visualItem)
-        tryCompare(fileMenu, "__popupVisible", true)
-        // wait until popup is visible
-        tryCompare(fileMenu.__contentItem, "status", Loader.Ready)
-        waitForRendering(fileMenu.__contentItem.item)
-        // Pressing escape should close the popup
-        keyPress(Qt.Key_Escape)
-        compare(fileMenu.__popupVisible, false)
-    }
 
     function test_qtBug47295()
     {
         if (Qt.platform.os === "osx")
             skip("MenuBar cannot be reliably tested on OS X")
 
-        var window = createTemporaryObject(windowComponent)
+        var window = windowComponent.createObject()
         waitForRendering(window.contentItem)
         var fileMenu = findChild(window, "fileMenu")
         verify(fileMenu)
@@ -155,13 +104,15 @@ TestCase {
         mouseRelease(fileMenu.__contentItem, 0, -10)
         tryCompare(fileMenu, "__popupVisible", true)
         wait(waitTime)
+
+        window.destroy();
     }
 
     function test_keyNavigation() {
         if (Qt.platform.os === "osx")
             skip("MenuBar cannot be reliably tested on OS X")
 
-        var window = createTemporaryObject(windowComponent)
+        var window = windowComponent.createObject()
         waitForRendering(window.contentItem)
         var fileMenu = findChild(window, "fileMenu")
         verify(fileMenu)
@@ -243,5 +194,7 @@ TestCase {
         keyRelease(Qt.Key_Left, Qt.NoModifier, waitTime)
         tryCompare(recentFilesSubMenu, "__popupVisible", false)
         tryCompare(recentFilesSubMenu, "__currentIndex", -1)
+
+        window.destroy()
     }
 }

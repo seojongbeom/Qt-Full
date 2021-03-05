@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -54,8 +59,6 @@ private slots:
     void getSetCheck();
     void inexistentUrl();
     void emptyUrl();
-    void invalidUrl_data();
-    void invalidUrl();
     void testStrokeWidth();
     void testMapViewBoxToTarget();
     void testRenderElement();
@@ -131,30 +134,6 @@ void tst_QSvgRenderer::emptyUrl()
     QByteArray data(src);
     QSvgRenderer renderer(data);
 
-    QVERIFY(renderer.isValid());
-}
-
-void tst_QSvgRenderer::invalidUrl_data()
-{
-    QTest::addColumn<QByteArray>("svg");
-
-    QTest::newRow("00") << QByteArray("<svg><circle fill=\"url\" /></svg>");
-    QTest::newRow("01") << QByteArray("<svg><circle fill=\"url0\" /></svg>");
-    QTest::newRow("02") << QByteArray("<svg><circle fill=\"url(0\" /></svg>");
-    QTest::newRow("03") << QByteArray("<svg><circle fill=\"url (0\" /></svg>");
-    QTest::newRow("04") << QByteArray("<svg><circle fill=\"url ( 0\" /></svg>");
-    QTest::newRow("05") << QByteArray("<svg><circle fill=\"url#\" /></svg>");
-    QTest::newRow("06") << QByteArray("<svg><circle fill=\"url#(\" /></svg>");
-    QTest::newRow("07") << QByteArray("<svg><circle fill=\"url(#\" /></svg>");
-    QTest::newRow("08") << QByteArray("<svg><circle fill=\"url(# \" /></svg>");
-    QTest::newRow("09") << QByteArray("<svg><circle fill=\"url(# 0\" /></svg>");
-}
-
-void tst_QSvgRenderer::invalidUrl()
-{
-    QFETCH(QByteArray, svg);
-
-    QSvgRenderer renderer(svg);
     QVERIFY(renderer.isValid());
 }
 
@@ -1334,17 +1313,6 @@ void tst_QSvgRenderer::testUseElement()
         " <g fill = \"red\" fill-opacity =\"0.5\">"
         "  <use xlink:href =\"#usedG\" />"
         " </g>"
-        "</svg>",
-        // Self referral, should be ignored
-        "<svg><g id=\"0\"><use xlink:href=\"#0\" /></g></svg>",
-        "<svg width=\"200\" height=\"200\">"
-        "  <rect width=\"100\" height=\"50\"/>"
-        "</svg>",
-        "<svg width=\"200\" height=\"200\">"
-        "  <g id=\"0\"><use xlink:href=\"#0\" /><rect width=\"100\" height=\"50\"/></g>"
-        "</svg>",
-        "<svg width=\"200\" height=\"200\">"
-        "  <g id=\"0\"><g><use xlink:href=\"#0\" /><rect width=\"100\" height=\"50\"/></g></g>"
         "</svg>"
     };
 
@@ -1371,10 +1339,8 @@ void tst_QSvgRenderer::testUseElement()
                 // For this reason an exact comparison will fail.
                 QCOMPARE(images[4], images[i]);
             }
-        } else if (i > 7 && i < 10) {
+        } else if (i > 7) {
             QCOMPARE(images[8], images[i]);
-        } else if (i > 11) {
-            QCOMPARE(images[11], images[i]);
         }
     }
 }

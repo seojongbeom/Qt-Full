@@ -5,146 +5,67 @@
 //
 
 #include "libANGLE/TransformFeedback.h"
-
-#include "libANGLE/Buffer.h"
-#include "libANGLE/Caps.h"
 #include "libANGLE/renderer/TransformFeedbackImpl.h"
 
 namespace gl
 {
 
-TransformFeedback::TransformFeedback(rx::TransformFeedbackImpl *impl, GLuint id, const Caps &caps)
+TransformFeedback::TransformFeedback(rx::TransformFeedbackImpl* impl, GLuint id)
     : RefCountObject(id),
-      mImplementation(impl),
-      mLabel(),
-      mActive(false),
+      mTransformFeedback(impl),
+      mStarted(GL_FALSE),
       mPrimitiveMode(GL_NONE),
-      mPaused(false),
-      mGenericBuffer(),
-      mIndexedBuffers(caps.maxTransformFeedbackSeparateAttributes)
+      mPaused(GL_FALSE)
 {
     ASSERT(impl != NULL);
 }
 
 TransformFeedback::~TransformFeedback()
 {
-    mGenericBuffer.set(nullptr);
-    for (size_t i = 0; i < mIndexedBuffers.size(); i++)
-    {
-        mIndexedBuffers[i].set(nullptr);
-    }
-
-    SafeDelete(mImplementation);
+    SafeDelete(mTransformFeedback);
 }
 
-void TransformFeedback::setLabel(const std::string &label)
+void TransformFeedback::start(GLenum primitiveMode)
 {
-    mLabel = label;
-}
-
-const std::string &TransformFeedback::getLabel() const
-{
-    return mLabel;
-}
-
-void TransformFeedback::begin(GLenum primitiveMode)
-{
-    mActive = true;
+    mStarted = GL_TRUE;
     mPrimitiveMode = primitiveMode;
-    mPaused = false;
-    mImplementation->begin(primitiveMode);
+    mPaused = GL_FALSE;
+    mTransformFeedback->begin(primitiveMode);
 }
 
-void TransformFeedback::end()
+void TransformFeedback::stop()
 {
-    mActive = false;
+    mStarted = GL_FALSE;
     mPrimitiveMode = GL_NONE;
-    mPaused = false;
-    mImplementation->end();
+    mPaused = GL_FALSE;
+    mTransformFeedback->end();
 }
 
-void TransformFeedback::pause()
+GLboolean TransformFeedback::isStarted() const
 {
-    mPaused = true;
-    mImplementation->pause();
+    return mStarted;
 }
 
-void TransformFeedback::resume()
-{
-    mPaused = false;
-    mImplementation->resume();
-}
-
-bool TransformFeedback::isActive() const
-{
-    return mActive;
-}
-
-bool TransformFeedback::isPaused() const
-{
-    return mPaused;
-}
-
-GLenum TransformFeedback::getPrimitiveMode() const
+GLenum TransformFeedback::getDrawMode() const
 {
     return mPrimitiveMode;
 }
 
-void TransformFeedback::bindGenericBuffer(Buffer *buffer)
+void TransformFeedback::pause()
 {
-    mGenericBuffer.set(buffer);
-    mImplementation->bindGenericBuffer(mGenericBuffer);
+    mPaused = GL_TRUE;
+    mTransformFeedback->pause();
 }
 
-void TransformFeedback::detachBuffer(GLuint bufferName)
+void TransformFeedback::resume()
 {
-    for (size_t index = 0; index < mIndexedBuffers.size(); index++)
-    {
-        if (mIndexedBuffers[index].id() == bufferName)
-        {
-            mIndexedBuffers[index].set(nullptr);
-            mImplementation->bindIndexedBuffer(index, mIndexedBuffers[index]);
-        }
-    }
-
-    if (mGenericBuffer.id() == bufferName)
-    {
-        mGenericBuffer.set(nullptr);
-        mImplementation->bindGenericBuffer(mGenericBuffer);
-    }
+    mPaused = GL_FALSE;
+    mTransformFeedback->resume();
 }
 
-const BindingPointer<Buffer> &TransformFeedback::getGenericBuffer() const
+GLboolean TransformFeedback::isPaused() const
 {
-    return mGenericBuffer;
-}
-
-void TransformFeedback::bindIndexedBuffer(size_t index, Buffer *buffer, size_t offset, size_t size)
-{
-    ASSERT(index < mIndexedBuffers.size());
-    mIndexedBuffers[index].set(buffer, offset, size);
-    mImplementation->bindIndexedBuffer(index, mIndexedBuffers[index]);
-}
-
-const OffsetBindingPointer<Buffer> &TransformFeedback::getIndexedBuffer(size_t index) const
-{
-    ASSERT(index < mIndexedBuffers.size());
-    return mIndexedBuffers[index];
-}
-
-size_t TransformFeedback::getIndexedBufferCount() const
-{
-    return mIndexedBuffers.size();
-}
-
-rx::TransformFeedbackImpl *TransformFeedback::getImplementation()
-{
-    return mImplementation;
-}
-
-const rx::TransformFeedbackImpl *TransformFeedback::getImplementation() const
-{
-    return mImplementation;
+    return mPaused;
 }
 
 }

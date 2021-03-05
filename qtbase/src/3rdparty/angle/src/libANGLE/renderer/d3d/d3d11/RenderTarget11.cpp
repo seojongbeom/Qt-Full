@@ -8,12 +8,10 @@
 // retained by Renderbuffers.
 
 #include "libANGLE/renderer/d3d/d3d11/RenderTarget11.h"
-
-#include "libANGLE/renderer/d3d/d3d11/formatutils11.h"
 #include "libANGLE/renderer/d3d/d3d11/Renderer11.h"
 #include "libANGLE/renderer/d3d/d3d11/renderer11_utils.h"
 #include "libANGLE/renderer/d3d/d3d11/SwapChain11.h"
-#include "libANGLE/renderer/d3d/d3d11/texture_format_table.h"
+#include "libANGLE/renderer/d3d/d3d11/formatutils11.h"
 
 namespace rx
 {
@@ -176,6 +174,12 @@ static unsigned int getDSVSubresourceIndex(ID3D11Resource *resource, ID3D11Depth
     getTextureProperties(resource, &mipLevels, &samples);
 
     return D3D11CalcSubresource(mipSlice, arraySlice, mipLevels);
+}
+
+RenderTarget11 *RenderTarget11::makeRenderTarget11(RenderTargetD3D *target)
+{
+    ASSERT(HAS_DYNAMIC_TYPE(RenderTarget11*, target));
+    return static_cast<RenderTarget11*>(target);
 }
 
 TextureRenderTarget11::TextureRenderTarget11(ID3D11RenderTargetView *rtv, ID3D11Resource *resource, ID3D11ShaderResourceView *srv,
@@ -348,7 +352,7 @@ GLsizei SurfaceRenderTarget11::getDepth() const
 
 GLenum SurfaceRenderTarget11::getInternalFormat() const
 {
-    return (mDepth ? mSwapChain->GetDepthBufferInternalFormat() : mSwapChain->GetRenderTargetInternalFormat());
+    return (mDepth ? mSwapChain->GetDepthBufferInternalFormat() : mSwapChain->GetBackBufferInternalFormat());
 }
 
 GLsizei SurfaceRenderTarget11::getSamples() const
@@ -384,7 +388,7 @@ unsigned int SurfaceRenderTarget11::getSubresourceIndex() const
 
 DXGI_FORMAT SurfaceRenderTarget11::getDXGIFormat() const
 {
-    return d3d11::GetTextureFormatInfo(getInternalFormat(), mRenderer->getRenderer11DeviceCaps()).texFormat;
+    return d3d11::GetTextureFormatInfo(getInternalFormat(), mRenderer->getFeatureLevel()).texFormat;
 }
 
 }

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,14 +34,14 @@
 #ifndef QDATETIMEEDIT_H
 #define QDATETIMEEDIT_H
 
-#include <QtWidgets/qtwidgetsglobal.h>
 #include <QtCore/qdatetime.h>
 #include <QtCore/qvariant.h>
 #include <QtWidgets/qabstractspinbox.h>
 
-QT_REQUIRE_CONFIG(datetimeedit);
-
 QT_BEGIN_NAMESPACE
+
+
+#ifndef QT_NO_DATETIMEEDIT
 
 class QDateTimeEditPrivate;
 class QStyleOptionSpinBox;
@@ -57,6 +51,7 @@ class Q_WIDGETS_EXPORT QDateTimeEdit : public QAbstractSpinBox
 {
     Q_OBJECT
 
+    Q_FLAGS(Sections)
     Q_PROPERTY(QDateTime dateTime READ dateTime WRITE setDateTime NOTIFY dateTimeChanged USER true)
     Q_PROPERTY(QDate date READ date WRITE setDate NOTIFY dateChanged)
     Q_PROPERTY(QTime time READ time WRITE setTime NOTIFY timeChanged)
@@ -90,7 +85,6 @@ public:
     Q_ENUM(Section)
 
     Q_DECLARE_FLAGS(Sections, Section)
-    Q_FLAG(Sections)
 
     explicit QDateTimeEdit(QWidget *parent = Q_NULLPTR);
     explicit QDateTimeEdit(const QDateTime &dt, QWidget *parent = Q_NULLPTR);
@@ -158,12 +152,12 @@ public:
     Qt::TimeSpec timeSpec() const;
     void setTimeSpec(Qt::TimeSpec spec);
 
-    QSize sizeHint() const override;
+    QSize sizeHint() const;
 
-    void clear() override;
-    void stepBy(int steps) override;
+    virtual void clear();
+    virtual void stepBy(int steps);
 
-    bool event(QEvent *event) override;
+    bool event(QEvent *event);
 Q_SIGNALS:
     void dateTimeChanged(const QDateTime &dateTime);
     void timeChanged(const QTime &time);
@@ -175,20 +169,20 @@ public Q_SLOTS:
     void setTime(const QTime &time);
 
 protected:
-    void keyPressEvent(QKeyEvent *event) override;
-#if QT_CONFIG(wheelevent)
-    void wheelEvent(QWheelEvent *event) override;
+    virtual void keyPressEvent(QKeyEvent *event);
+#ifndef QT_NO_WHEELEVENT
+    virtual void wheelEvent(QWheelEvent *event);
 #endif
-    void focusInEvent(QFocusEvent *event) override;
-    bool focusNextPrevChild(bool next) override;
-    QValidator::State validate(QString &input, int &pos) const override;
-    void fixup(QString &input) const override;
+    virtual void focusInEvent(QFocusEvent *event);
+    virtual bool focusNextPrevChild(bool next);
+    virtual QValidator::State validate(QString &input, int &pos) const;
+    virtual void fixup(QString &input) const;
 
     virtual QDateTime dateTimeFromText(const QString &text) const;
     virtual QString textFromDateTime(const QDateTime &dt) const;
-    StepEnabled stepEnabled() const override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void paintEvent(QPaintEvent *event) override;
+    virtual StepEnabled stepEnabled() const;
+    virtual void mousePressEvent(QMouseEvent *event);
+    virtual void paintEvent(QPaintEvent *event);
     void initStyleOption(QStyleOptionSpinBox *option) const;
 
     QDateTimeEdit(const QVariant &val, QVariant::Type parserType, QWidget *parent = Q_NULLPTR);
@@ -226,6 +220,8 @@ Q_SIGNALS:
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QDateTimeEdit::Sections)
+
+#endif // QT_NO_DATETIMEEDIT
 
 QT_END_NAMESPACE
 

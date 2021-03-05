@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,27 +34,37 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.impl 1.0
 
 T.ProgressBar {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            indicator ? indicator.implicitWidth : 0) + leftPadding + rightPadding
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
+                             indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding
 
-    contentItem: ProgressBarImpl {
-        implicitHeight: 6
-        implicitWidth: 116
+    //! [indicator]
+    indicator: ProgressStrip {
+        id: strip
+        x: control.leftPadding
+        y: control.topPadding + (control.availableHeight - height) / 2
+        width: control.availableWidth
+        height: 6
         scale: control.mirrored ? -1 : 1
         progress: control.position
-        indeterminate: control.visible && control.indeterminate
-    }
+        indeterminate: control.indeterminate
 
+        ProgressStripAnimator {
+            target: strip
+            running: control.visible && control.indeterminate
+        }
+    }
+    //! [indicator]
+
+    //! [background]
     background: Rectangle {
         implicitWidth: 200
         implicitHeight: 6
@@ -63,6 +73,7 @@ T.ProgressBar {
         width: control.availableWidth
         height: 6
 
-        color: Default.progressBarColor
+        color: "#e4e4e4"
     }
+    //! [background]
 }

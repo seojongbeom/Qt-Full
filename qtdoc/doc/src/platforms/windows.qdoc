@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -89,11 +89,11 @@
     Qt's vibrant and active community site, \l{http://qt.io} houses
     a wiki, a forum, and additional learning guides and presentations.
 
-    \section2 Visual Studio Tools
+    \section2 Visual Studio Add-in
 
-    The \l {Qt VS Tools} allows programmers to create, build, debug
+    The \l {Qt Visual Studio Add-in} allows programmers to create, build, debug
     and run Qt applications from within non-Express versions of Microsoft Visual Studio
-    2013 and later. The add-in contains project wizards, Qt project import/export
+    2008, 2010, and 2012. The add-in contains project wizards, Qt project import/export
     support, integrated Qt resource manager and automated build setup for
     the Qt Meta-Object Compiler, User Interface Compiler, and Resource
     Compiler.
@@ -221,13 +221,12 @@
 
     When configured with \c{-opengl dynamic}, neither Qt nor the applications
     built using \c qmake will link to the opengl32 (standard desktop OpenGL) or
-    QtANGLE libraries. Instead, the appropriate library is chosen at
+    libGLESv2 (ANGLE) libraries. Instead, the appropriate library is chosen at
     runtime. By default, Qt will determine whether the system's opengl32.dll
     provides OpenGL 2 functions. If these are present, opengl32.dll is used,
-    otherwise the ANGLE libraries (libEGL.dll and libGLESv2.dll) will be used.
-    In case the ANGLE libraries are missing or initialization fails for some
-    reason, an additional fallback is attempted by trying to load
-    \c{opengl32sw.dll}. See below for details.
+    otherwise the ANGLE libraries will be used. In case the ANGLE libraries are
+    missing or initialization fails for some reason, an additional fallback is
+    attempted by trying to load \c{opengl32sw.dll}. See below for details.
 
     The loading mechanism can be configured through the \c{QT_OPENGL}
     environment variable and the following application attributes:
@@ -244,7 +243,7 @@
 
     The dynamic loading has a significant impact on applications that contain
     native OpenGL calls: they may fail to link since \c qmake no longer
-    automatically adds opengl32.lib or libGLESv2.lib. Instead, applications are
+    automatically adds opengl32.lib or libglesv2.lib. Instead, applications are
     expected to use the OpenGL functions via the QOpenGLFunctions class. Thus
     the direct dependency on the OpenGL library is removed and all calls will be
     routed during runtime to the implementation chosen by Qt.
@@ -401,44 +400,35 @@
     For instructions for building the Qt 5 source, read
     the \l{Qt for Windows - Building from Source} page.
 
-    \section1 Compilers
+    \section1 SDKs and Compilers
 
-    \section2 Visual Studio
-
-    Qt can be built with Visual Studio 2013 (Update 1), Visual Studio 2015 (Update 2),
-    Visual C++ Build Tools 2015, Visual Studio 2017, and Build Tools for Visual Studio 2017.
-
-    \section2 Intel C++ Compiler (Windows, Altix)
-
-    Qt has been tested successfully with:
+    A Windows SDK is required to develop Qt applications on Windows.
 
     \list
-    \li Windows - Intel(R) C++ Compiler for 32-bit applications,
-       Version 9.1.040.
-    \li Altix - Intel(R) C++ Itanium(R) Compiler for Itanium(R)-based
-       applications Version 8.1 Build 20050406 Package ID: l_cc_pc_8.1.030
+        \li Windows SDK 8 (with Visual Studio 2012 Express).
+            As of Windows 8, the SDK no longer ships with a complete command-line build environment.
+            You must install a compiler and build environment separately. If you require a
+            complete development environment that includes compilers and a build environment,
+            you can download Visual Studio 2012 Express, which includes the appropriate
+            components of the Windows SDK.
+            (\l{http://msdn.microsoft.com/en-us/windows/desktop/hh852363.aspx}{Download page})
+        \li Windows SDK 7.1.
+            Note that, as of 16.3.2012, if you use this SDK with Visual Studio 2010,
+            installing the SDK requires installing the following packages
+            in this order (see \e readme.html provided with the service pack):
+            \list 1
+                \li Install Visual Studio 2010
+                \li Install Windows SDK 7.1
+                \li Install Visual Studio 2010 SP1
+                \li Install Visual C++ 2010 SP1 Compiler Update for the Windows SDK 7.1
+            \endlist
+        \li Windows SDK 7.
+        \li A MinGW toolchain with g++ version 4.7 or higher. Qt 5 is tested regularly with a \
+            \l{http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.1/threads-posix/dwarf/i686-4.9.1-release-posix-dwarf-rt_v3-rev2.7z/download}
+            {32 bit gcc 4.9.1 toolchain} from the \l{http://mingw-w64.sourceforge.net/}{MinGW-w64}
+            project.
+
     \endlist
-
-    \section2 GCC (MinGW-builds)
-
-    The minimum version of MinGW-builds supported is GCC 4.9.1
-    (\l{https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/4.9.1/threads-posix/sjlj/x86_64-4.9.1-release-posix-sjlj-rt_v3-rev3.7z/download}{64bit},
-     \l{https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.1/threads-posix/sjlj/i686-4.9.1-release-posix-sjlj-rt_v3-rev3.7z/download}{32bit}),
-     available from its \l{https://sourceforge.net/projects/mingw-w64/files}{download page}.
-
-    For more information about the MinGW builds, visit the
-    \e{Reference Configuration} section of the
-    \l{Community Supported Platforms#Reference Configurations}{supported platforms}
-    page.
-
-    \section2 Clang(clang-cl)
-
-    Qt has been tested successfully with Clang 3.8(llvm svn rev. 256453 and clang
-    svn rev. 256453). Visual Studio 2015 Update 1 was used to build clang. Mkspec is
-    using the clang-cl tool to build Qt. Clang 3.8 does not support precompiled
-    headers.
-
-    \section2 Building Qt WebEngine
 
     \l{Qt WebEngine} has additional build requirements which are listed in the
     \l{Qt WebEngine Platform Notes}.
@@ -451,13 +441,41 @@
 
     This page contains information about \l{Qt for Windows}.
 
-    \section1 Library Naming
+    \section1 Windows XP
 
-    The \c configure option -qtlibinfix cannot take a version number as an argument.
+    \section2 Targeting XP with Visual Studio 2012 and later
+
+    Visual Studio 2012 and later do not support building for Windows XP out of the box.
+    However, support for targeting XP was added in an
+    \l{http://blogs.msdn.com/b/vcblog/archive/2012/10/08/windows-xp-targeting-with-c-in-visual-studio-2012.aspx}
+    {update of Visual Studio 2012}. This works also with Visual Studio 2013.
+
+    You need to compile Qt from sources. Set up an environment on the command line, for example
+
+    \code
+    "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat"
+    set PATH=C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Bin;%PATH%
+    set INCLUDE=C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include;%INCLUDE%
+    set LIB=C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include;%LIB%
+    set CL=/D_USING_V110_SDK71_
+    \endcode
+
+    Then run \c configure with the \c{-target xp} argument:
+
+    \code
+    configure -target xp <other arguments>
+    nmake
+    \endcode
+
+    \note The \c configure option -qtlibinfix cannot take a version number as an argument.
     For example:
     \c{-qtlibinfix 5.6.0} should be specified as \c{-qtlibinfix QtCore5.6.dll}.
 
-    \section1 Installation location
+    Also compile your own application in the above environment if compiling
+    on the command line. If you use Visual Studio, set the \c v110_xp toolset in the project's
+    property pages.
+
+    \section2 Installation location
 
     Installing Qt into a directory with spaces, for example,
     \e{C:\\Program Files}, may cause linker errors like the following:
@@ -472,6 +490,29 @@
     rendering is enabled. Other GL-applications may not work as expected,
     unless direct rendering is disabled.
 
+    \section1 GCC (MinGW-builds)
+
+    The minimum version of MinGW-builds supported is GCC 4.7.2.
+    \l{http://sourceforge.net/projects/mingwbuilds/files/host-windows/releases/4.7.2/32-bit/threads-posix/sjlj/x32-4.7.2-release-posix-sjlj-rev8.7z}
+    {MinGW-builds GCC 4.7.2 32 bit, rev 8} and later should be able
+    to build Qt.
+
+    For more information about the MinGW builds, visit the
+    \e{Reference Configuration} section of the
+    \l{Community Supported Platforms#Reference Configurations}{supported platforms}
+    page.
+
+    \section1 Intel C++ Compiler (Windows, Altix)
+
+    Qt has been tested successfully with:
+
+    \list
+    \li Windows - Intel(R) C++ Compiler for 32-bit applications,
+       Version 9.1.040.
+    \li Altix - Intel(R) C++ Itanium(R) Compiler for Itanium(R)-based
+       applications Version 8.1 Build 20050406 Package ID: l_cc_pc_8.1.030
+    \endlist
+
     \section1 Visual Studio
 
     The Visual C++ Linker doesn't understand filenames with spaces (for example,
@@ -484,6 +525,13 @@
     modify the alignment of structure and union members (such as \c{/Zp2})
     then you will need to recompile Qt with the flags set for the
     application as well.
+
+    Visual Studio 2010 should be updated to Service Pack 1. Otherwise, a
+    problem when compiling Qt for 64-bit in release mode may occur (visit
+    \l{http://support.microsoft.com/kb/2280741}).
+
+    Consult the \l{Qt for Windows - Requirements} page for specific versions
+    of the Windows SDK.
 
     \section1 Fullscreen OpenGL Based Windows
 
@@ -528,10 +576,9 @@
     \section1 The Windows Deployment Tool
     \target windeployqt
     The Windows deployment tool is designed to automate the process of creating
-    a deployable folder containing the \l{Qt}-related dependencies
-    (libraries, QML imports, plugins, and translations) required to run
-    the application from that folder.
-    It creates a sandbox for \l{Qt for WinRT}{Windows Runtime}
+    a deployable folder containing the dependencies (libraries, QML imports,
+    plugins, and translations) that are required to run the application from
+    that folder. It creates a sandbox for \l{Qt for WinRT}{Windows Runtime}
     or an installation tree for Windows desktop applications, which can be
     easily bundled into an installation package.
 
@@ -544,21 +591,11 @@
     directory. The hardcoded local paths in Qt5Core.dll are furthermore replaced
     with relative ones.
 
-    For Windows desktop applications, the required runtime files for the compiler
-    are also copied to the deployable folder by default (unless the option
-    \c --no-compiler-runtime is specified). In the case of release builds using
-    Microsoft Visual C++, these consist of the Visual C++ Redistributable Packages,
-    which are intended for recursive installation by the application's installer on
-    the target machine. Otherwise, the shared libraries of the compiler runtime are used.
-
-    The application may require additional 3rd-party libraries (for example,
-    database libraries), which are not taken into account by windeployqt.
-
     Additional arguments are described in the tools' help output:
 
     \badcode
     Usage: windeployqt [options] [files]
-    Qt Deploy Tool 5.9.0
+    Qt Deploy Tool 5.6.0
 
     The simplest way to use windeployqt is to add the bin directory of your Qt
     installation (e.g. <QT_DIR\bin>) to the PATH variable and then run:
@@ -568,55 +605,54 @@
       windeployqt --qmldir <path-to-app-qml-files> <path-to-app-binary>
 
     Options:
-      -?, -h, --help            Displays this help.
-      -v, --version             Displays version information.
-      --dir <directory>         Use directory instead of binary directory.
-      --libdir <path>           Copy libraries to path.
-      --plugindir <path>        Copy plugins to path.
-      --debug                   Assume debug binaries.
-      --release                 Assume release binaries.
-      --pdb                     Deploy .pdb files (MSVC).
-      --force                   Force updating files.
-      --dry-run                 Simulation mode. Behave normally, but do not
-                                copy/update any files.
-      --no-patchqt              Do not patch the Qt5Core library.
-      --no-plugins              Skip plugin deployment.
-      --no-libraries            Skip library deployment.
-      --qmldir <directory>      Scan for QML-imports starting from directory.
-      --no-quick-import         Skip deployment of Qt Quick imports.
-      --no-translations         Skip deployment of translations.
-      --no-system-d3d-compiler  Skip deployment of the system D3D compiler.
-      --compiler-runtime        Deploy compiler runtime (Desktop only).
-      --no-compiler-runtime     Do not deploy compiler runtime (Desktop only).
-      --webkit2                 Deployment of WebKit2 (web process).
-      --no-webkit2              Skip deployment of WebKit2.
-      --json                    Print to stdout in JSON format.
-      --angle                   Force deployment of ANGLE.
-      --no-angle                Disable deployment of ANGLE.
-      --no-opengl-sw            Do not deploy the software rasterizer library.
-      --list <option>           Print only the names of the files copied.
-                                Available options:
-                                 source:   absolute path of the source files
-                                 target:   absolute path of the target files
-                                 relative: paths of the target files, relative
-                                           to the target directory
-                                 mapping:  outputs the source and the relative
-                                           target, suitable for use within an
-                                           Appx mapping file
-      --verbose <level>         Verbose level.
+      -?, -h, --help             Displays this help.
+      -v, --version              Displays version information.
+      --dir <directory>          Use directory instead of binary directory.
+      --libdir <path>            Copy libraries to path.
+      --plugindir <path>         Copy plugins to path.
+      --debug                    Assume debug binaries.
+      --release                  Assume release binaries.
+      --pdb                      Deploy .pdb files (MSVC).
+      --force                    Force updating files.
+      --dry-run                  Simulation mode. Behave normally, but do not
+                                 copy/update any files.
+      --no-plugins               Skip plugin deployment.
+      --no-libraries             Skip library deployment.
+      --qmldir <directory>       Scan for QML-imports starting from directory.
+      --no-quick-import          Skip deployment of Qt Quick imports.
+      --no-translations          Skip deployment of translations.
+      --no-system-d3d-compiler   Skip deployment of the system D3D compiler.
+      --compiler-runtime         Deploy compiler runtime (Desktop only).
+      --no-compiler-runtime      Do not deploy compiler runtime (Desktop only).
+      --webkit2                  Deployment of WebKit2 (web process).
+      --no-webkit2               Skip deployment of WebKit2.
+      --json                     Print to stdout in JSON format.
+      --angle                    Force deployment of ANGLE.
+      --no-angle                 Disable deployment of ANGLE.
+      --no-opengl-sw             Do not deploy the software rasterizer library.
+      --list <option>            Print only the names of the files copied.
+                                 Available options:
+                                  source:   absolute path of the source files
+                                  target:   absolute path of the target files
+                                  relative: paths of the target files, relative
+                                            to the target directory
+                                  mapping:  outputs the source and the relative
+                                            target, suitable for use within an
+                                            Appx mapping file
+      --verbose <level>          Verbose level.
 
     Qt libraries can be added by passing their name (-xml) or removed by passing
     the name prepended by --no- (--no-xml). Available libraries:
-    bluetooth concurrent core declarative designer designercomponents
+    bluetooth clucene concurrent core declarative designer designercomponents
     enginio gui qthelp multimedia multimediawidgets multimediaquick network nfc
     opengl positioning printsupport qml qmltooling quick quickparticles quickwidgets
-    script scripttools sensors serialport sql svg test webkit webkitwidgets
+    script scripttools sensors serialport sql svg test
     websockets widgets winextras xml xmlpatterns webenginecore webengine
     webenginewidgets 3dcore 3drenderer 3dquick 3dquickrenderer 3dinput geoservices
-    webchannel texttospeech serialbus
+    webchannel
 
     Arguments:
-      [files]                   Binaries or directory containing the binary.
+      [files]                    Binaries or directory containing the binary.
 \endcode
 
     \section1 Static Linking
@@ -717,17 +753,31 @@
     is a subdirectory named \c {platforms}. \l{Qt Plugins} section has
     additional information about plugins and how Qt searches for them.
 
-    If \l{ANGLE} or dynamic OpenGL (the default) is used, you additionally
-    need to include both \c libEGL.dll and \c libGLESv2.dll from Qt's \c lib
-    directory as well as the HLSL compiler from DirectX. The HLSL compiler
-    library, d3dcompiler_XX.dll, where XX is the version number that ANGLE
-    (libGLESv2) was linked against.
+    If \l{ANGLE} (the default) is used, you additionally need to include both
+    \c libEGL.dll and \c libGLESv2.dll from Qt's 'lib' directory as well as
+    the HLSL compiler from DirectX. The HLSL compiler library,
+    d3dcompiler_XX.dll, where XX is the version number that ANGLE (libGLESv2)
+    was linked against.
 
     If Qt was configured to link against ICU or OpenSSL, the respective DLL's
     need to be added to the \c release folder, too.
 
-    \note \l{Qt WebEngine} applications have additional requirements that are
-    listed in \l{Deploying Qt WebEngine Applications}.
+    If your application depends on Qt WebEngine, you must deploy
+    \c{<Qt install path>/bin/QtWebEngineProcess.exe} to the application install
+    path. If you chose to deploy the binary to a different path, set the
+    \c QTWEBENGINEPROCESS_PATH environment variable to the binary's absolute
+    path (including its file name). This enables the application to find the
+    binary and execute it for every instance of QWebEngineView or
+    WebEngineView created. For example, a browser application with two tabs
+    open should have two separate processes of \c QtWebEngineProcess.exe
+    running. This is a common approach used by most modern web engines to
+    provide a stable browsing experience.
+
+    \note To support HTML5 videos, you must additionally deploy
+    \c ffmpegsumo.dll (WebM codec plugin) into the \c qtwebengine directory
+    under the application install path or under the path that the
+    \c PluginsPath variable was set to in
+    \c{<Qt install path>/<Qt version>/msvc2013/qt.conf}.
 
     Remember that if your application depends on compiler specific
     libraries, these must be redistributed along with your
@@ -794,15 +844,17 @@
 
     \table 100%
     \header
-        \li \li VC++ 12.0 (2013) \li VC++ 14.0 (2015)
+        \li \li VC++ 8.0 (2005) \li VC++ 9.0 (2008) \li VC++ 10.0 (2010)
     \row
         \li The C run-time
-        \li \c msvcr120.dll
-        \li \c vccorlib140.dll, \c vcruntime140.dll
+        \li \c msvcr80.dll
+        \li \c msvcr90.dll
+        \li \c msvcr100.dll
     \row
         \li The C++ run-time
-        \li \c msvcp120.dll
-        \li \c msvcp140.dll
+        \li \c msvcp80.dll
+        \li \c msvcp90.dll
+        \li \c msvcp100.dll
     \endtable
 
     If Qt was configured to use ICU, the archive must contain:
@@ -821,7 +873,7 @@
 
     \table 100%
     \header
-        \li{2,1} File Name
+        \li{3,1} File Name
     \row
         \li libEGL.dll
         \li libGLESv2.dll
@@ -851,8 +903,8 @@
 
     \section2 Manifest files
 
-    When deploying an application compiled with Visual Studio, there are some
-    additional steps to be taken.
+    When deploying an application compiled with Visual Studio 2005 onwards,
+    there are some additional steps to be taken.
 
     First, we need to copy the manifest file created when linking the
     application. This manifest file contains information about the
@@ -888,17 +940,41 @@
     executable with your application and ensure that it is executed when the
     user installs your application.
 
-    They are named \c vcredist_x64.exe (IA64 and 64-bit) or
-    \c vcredist_x86.exe (32-bit) and can be found in the folder
-    c{Visual Studio install path>/VC/redist/<language-code>}.
-
-    Alternatively, they can be downloaded from the web, for example
-    \l{https://www.microsoft.com/download/details.aspx?id=48145}
-    {vcredist_x64.exe for Visual Studio 2015}.
+    For example, on an 32-bit x86-based system, you would include the
+    \l{http://www.microsoft.com/downloads/details.aspx?FamilyId=32BC1BEE-A3F9-4C13-9C99-220B62A191EE}{vcredist_x86.exe}
+    executable. The \l{http://www.microsoft.com/downloads/details.aspx?familyid=526BF4A7-44E6-4A91-B328-A4594ADB70E5}{vcredist_IA64.exe}
+    and \l{http://www.microsoft.com/downloads/details.aspx?familyid=90548130-4468-4BBC-9673-D6ACABD5D13B}{vcredist_x64.exe}
+    executables provide the appropriate libraries for the IA64 and 64-bit x86
+    architectures, respectively.
 
     \note The application you ship must be compiled with exactly the same
     compiler version against the same C runtime version. This prevents
     deploying errors caused by different versions of the C runtime libraries.
+
+    \section2 Manual installations with Visual Studio 2008 and 2010
+
+    As well as the above details for VS 2005 and onwards, Visual Studio 2008/2010
+    applications may have problems when deploying manually, say to a USB
+    stick.
+
+    The recommended procedure is to configure Qt with the \c -plugin-manifests
+    option using the 'configure' tool. Then follow the \l {http://msdn.microsoft.com/en-us/library/ms235291(VS.80).aspx}{guidelines}
+    for manually deploying private assemblies.
+
+    In brief the steps are
+
+    \list 1
+
+        \li create a folder structure on the development computer that will match the target USB stick directory structure, for example '\\app' and for your dlls, '\\app\\lib'.
+
+        \li on the development computer, from the appropriate 'redist' folder copy over Microsoft.VC80.CRT and Microsoft.VC80.MFC to the directories '\\app' and '\\app\\lib' on the development PC.
+
+        \li xcopy the \\app folder to the target USB stick.
+    \endlist
+
+    Your application should now run. Also be aware that even with a service
+    pack installed the Windows DLLs that are linked to will be the defaults. See
+    the information on \l {http://msdn.microsoft.com/en-us/library/cc664727.aspx}{how to select the appropriate target DLLs}.
 
     \section1 Application Dependencies
 
@@ -908,7 +984,8 @@
     redistributed along with your application.
 
     For example, if Qt is built using \l{ANGLE}, its shared libraries
-    and the HLSL compiler from DirectX to be shipped as well.
+    and the required shared libraries of the \l{Direct X SDK} need to
+    be shipped as well.
 
     You can check which
     libraries your application is linking against by using the
@@ -929,8 +1006,9 @@
     \table 100%
         \header
             \li Qt
+            \li VC++ 10.0 (2010)
+            \li VC++ 11.0 (2012)
             \li VC++ 12.0 (2013)
-            \li VC++ 14.0 (2015)
             \li MinGW
         \row
         \li \list
@@ -939,12 +1017,16 @@
                \li QT5WIDGETS.DLL - The QtWidgets runtime
            \endlist
         \li \list
-               \li MSVCR120.DLL - The C runtime
-               \li MSVCP120.DLL - The C++ runtime
+               \li MSVCR100.DLL - The C runtime
+               \li MSVCP100.DLL - The C++ runtime
            \endlist
         \li \list
-               \li VCCORLIB140.DLL, VCRUNTIME140D.DLL - The C runtime
-               \li MSVCP140.DLL - The C++ runtime
+               \li MSVCR110.DLL - The C runtime
+               \li MSVCP110.DLL - The C++ runtime
+           \endlist
+        \li \list
+               \li MSVCR120.DLL - The C runtime
+               \li MSVCP120.DLL - The C++ runtime
            \endlist
         \li \list
                \li LIBWINPTHREAD-1.DLL
@@ -1036,18 +1118,17 @@
     more information, visit the \l{Getting Started with Qt} page.
 
 
-    \section1 Step 1: Install the License File (Commercially Licensed Qt Only)
+    \section1 Step 1: Install the License File (Commercial Editions Only)
 
-        If you use Qt with a commercial license, the Qt tools look for a local license file.
-        If you are using a binary installer or the commercial Qt Creator, your licenses
-        are automatically fetched and stored in your local user profile
-        (\c{%USERPROFILE%\AppData\Roaming\Qt\qtlicenses.ini} file).
+        If you have the commercial edition of Qt, copy the license file
+        from your account on the distribution server into your home directory
+        (this may be known as the \c userprofile environment variable) and
+        rename it to \c{.qt-license}. This renaming process must be done
+        using a \e{command prompt} on Windows, \b{not} with Windows Explorer.
+        For example on Windows 2000, \c{%USERPROFILE%} should be something
+        like \c{C:\Documents and Settings\username}
 
-        If you do not use any binary installer or Qt Creator, you can download
-        the respective license file from your \l {Qt Account} Web portal and save
-        it to your user profile as \c{%USERPROFILE%\.qt-license}. If you prefer a
-        different location or file name, you need to set the \c{QT_LICENSE_FILE}
-        environment variable to the respective file path.
+        For the open source version you do not need a license file.
 
     \section1 Step 2: Unpack the Archive
 
@@ -1076,6 +1157,7 @@
         SET PATH=%_ROOT%\qtbase\bin;%_ROOT%\gnuwin32\bin;%PATH%
         REM Uncomment the below line when using a git checkout of the source repository
         REM SET PATH=%_ROOT%\qtrepotools\bin;%PATH%
+        SET QMAKESPEC=win32-msvc2013
         SET _ROOT=
         \endcode
 

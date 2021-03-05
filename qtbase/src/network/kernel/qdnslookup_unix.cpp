@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2012 Jeremy Lainé <jeremy.laine@m4x.org>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,13 +33,9 @@
 
 #include "qdnslookup_p.h"
 
-#if QT_CONFIG(library)
 #include <qlibrary.h>
-#endif
-#include <qvarlengtharray.h>
 #include <qscopedpointer.h>
 #include <qurl.h>
-#include <private/qnativesocketengine_p.h>
 
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -59,11 +49,9 @@
 #  include <gnu/lib-names.h>
 #endif
 
-#include <cstring>
-
 QT_BEGIN_NAMESPACE
 
-#if QT_CONFIG(library)
+#ifndef QT_NO_LIBRARY
 
 #if defined(Q_OS_OPENBSD)
 typedef struct __res_state* res_state;
@@ -140,7 +128,7 @@ void QDnsLookupRunnable::query(const int requestType, const QByteArray &requestN
 
     // Initialize state.
     struct __res_state state;
-    std::memset(&state, 0, sizeof(state));
+    memset(&state, 0, sizeof(state));
     if (local_res_ninit(&state) < 0) {
         reply->error = QDnsLookup::ResolverError;
         reply->errorString = tr("Resolver initialization failed");
@@ -172,7 +160,6 @@ void QDnsLookupRunnable::query(const int requestType, const QByteArray &requestN
             state._u._ext.nscount6 = 1;
             ns->sin6_family = AF_INET6;
             ns->sin6_port = htons(53);
-            SetSALen::set(ns, sizeof(*ns));
 
             Q_IPV6ADDR ipv6Address = nameserver.toIPv6Address();
             for (int i=0; i<16; i++) {
@@ -192,25 +179,11 @@ void QDnsLookupRunnable::query(const int requestType, const QByteArray &requestN
     QScopedPointer<struct __res_state, QDnsLookupStateDeleter> state_ptr(&state);
 
     // Perform DNS query.
-    QVarLengthArray<unsigned char, PACKETSZ> buffer(PACKETSZ);
-    std::memset(buffer.data(), 0, buffer.size());
-    int responseLength = local_res_nquery(&state, requestName, C_IN, requestType, buffer.data(), buffer.size());
-    if (Q_UNLIKELY(responseLength > PACKETSZ)) {
-        buffer.resize(responseLength);
-        std::memset(buffer.data(), 0, buffer.size());
-        responseLength = local_res_nquery(&state, requestName, C_IN, requestType, buffer.data(), buffer.size());
-        if (Q_UNLIKELY(responseLength > buffer.size())) {
-            // Ok, we give up.
-            reply->error = QDnsLookup::ResolverError;
-            reply->errorString.clear(); // We cannot be more specific, alas.
-            return;
-        }
-    }
+    unsigned char response[PACKETSZ];
+    memset(response, 0, sizeof(response));
+    const int responseLength = local_res_nquery(&state, requestName, C_IN, requestType, response, sizeof(response));
 
-    unsigned char *response = buffer.data();
-    // Check the response header. Though res_nquery returns -1 as a
-    // responseLength in case of error, we still can extract the
-    // exact error code from the response.
+    // Check the response header.
     HEADER *header = (HEADER*)response;
     const int answerCount = ntohs(header->ancount);
     switch (header->rcode) {
@@ -401,6 +374,6 @@ void QDnsLookupRunnable::query(const int requestType, const QByteArray &requestN
     return;
 }
 
-#endif /* QT_CONFIG(library) */
+#endif /* ifndef QT_NO_LIBRARY */
 
 QT_END_NAMESPACE

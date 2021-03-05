@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,10 +34,8 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.SpinBox {
     id: control
@@ -53,84 +51,83 @@ T.SpinBox {
     baselineOffset: contentItem.y + contentItem.baselineOffset
 
     padding: 6
-    leftPadding: padding + (control.mirrored ? (up.indicator ? up.indicator.width : 0) : (down.indicator ? down.indicator.width : 0))
-    rightPadding: padding + (control.mirrored ? (down.indicator ? down.indicator.width : 0) : (up.indicator ? up.indicator.width : 0))
+    leftPadding: 6 + (control.mirrored ? (up.indicator ? up.indicator.width : 0) : (down.indicator ? down.indicator.width : 0))
+    rightPadding: 6 + (control.mirrored ? (down.indicator ? down.indicator.width : 0) : (up.indicator ? up.indicator.width : 0))
+    opacity: control.enabled ? 1 : 0.3
 
+    //! [validator]
     validator: IntValidator {
         locale: control.locale.name
         bottom: Math.min(control.from, control.to)
         top: Math.max(control.from, control.to)
     }
+    //! [validator]
 
+    //! [contentItem]
     contentItem: TextInput {
-        z: 2
         text: control.textFromValue(control.value, control.locale)
-        opacity: control.enabled ? 1 : 0.3
 
         font: control.font
-        color: Default.textColor
-        selectionColor: Default.focusColor
-        selectedTextColor: Default.textLightColor
+        color: "#353637"
+        selectionColor: "#fddd5c"
+        selectedTextColor: color
         horizontalAlignment: Qt.AlignHCenter
         verticalAlignment: Qt.AlignVCenter
 
-        readOnly: !control.editable
         validator: control.validator
-        inputMethodHints: control.inputMethodHints
-
-        Rectangle {
-            x: -6 - (down.indicator ? 1 : 0)
-            y: -6
-            width: control.width - (up.indicator ? up.indicator.width - 1 : 0) - (down.indicator ? down.indicator.width - 1 : 0)
-            height: control.height
-            visible: control.activeFocus
-            color: "transparent"
-            border.color: Default.focusColor
-            border.width: 2
-        }
+        inputMethodHints: Qt.ImhFormattedNumbersOnly
     }
+    //! [contentItem]
 
+    //! [up.indicator]
     up.indicator: Rectangle {
         x: control.mirrored ? 0 : parent.width - width
         height: parent.height
         implicitWidth: 40
         implicitHeight: 40
-        color: up.pressed ? Default.buttonPressedColor : Default.buttonColor
+        color: up.pressed ? "#e4e4e4" : "#f6f6f6"
+        border.color: control.enabled ? "#353637" : "#bdbebf"
 
         Rectangle {
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
             width: parent.width / 3
             height: 2
-            color: enabled ? Default.textColor : Default.textDisabledColor
+            color: control.enabled ? "#353637" : "#bdbebf"
         }
         Rectangle {
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
             width: 2
             height: parent.width / 3
-            color: enabled ? Default.textColor : Default.textDisabledColor
+            color: control.enabled ? "#353637" : "#bdbebf"
         }
     }
+    //! [up.indicator]
 
+    //! [down.indicator]
     down.indicator: Rectangle {
         x: control.mirrored ? parent.width - width : 0
         height: parent.height
         implicitWidth: 40
         implicitHeight: 40
-        color: down.pressed ? Default.buttonPressedColor : Default.buttonColor
+        color: down.pressed ? "#e4e4e4" : "#f6f6f6"
+        border.color: control.enabled ? "#353637" : "#bdbebf"
 
         Rectangle {
             x: (parent.width - width) / 2
             y: (parent.height - height) / 2
             width: parent.width / 3
             height: 2
-            color: enabled ? Default.textColor : Default.textDisabledColor
+            color: control.enabled ? "#353637" : "#bdbebf"
         }
     }
+    //! [down.indicator]
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 140
-        border.color: Default.buttonColor
+        border.color: "#bdbebf"
     }
+    //! [background]
 }

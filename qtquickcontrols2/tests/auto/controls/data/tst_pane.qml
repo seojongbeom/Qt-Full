@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -113,56 +103,54 @@ TestCase {
     }
 
     function test_empty() {
-        var control = createTemporaryObject(pane, testCase)
+        var control = pane.createObject(testCase)
         verify(control)
 
         verify(control.contentItem)
         compare(control.contentWidth, 0)
         compare(control.contentHeight, 0)
+
+        control.destroy()
     }
 
     function test_oneChild() {
-        var control = createTemporaryObject(oneChildPane, testCase)
+        var control = oneChildPane.createObject(testCase)
         verify(control)
 
         compare(control.contentWidth, 100)
         compare(control.contentHeight, 30)
         verify(control.implicitWidth > 100)
         verify(control.implicitHeight > 30)
+
+        control.destroy()
     }
 
     function test_twoChildren() {
-        var control = createTemporaryObject(twoChildrenPane, testCase)
+        var control = twoChildrenPane.createObject(testCase)
         verify(control)
 
         compare(control.contentWidth, 0)
         compare(control.contentHeight, 0)
         verify(control.implicitWidth > 0)
         verify(control.implicitHeight > 0)
+
+        control.destroy()
     }
 
     function test_contentItem() {
-        var control = createTemporaryObject(contentPane, testCase)
+        var control = contentPane.createObject(testCase)
         verify(control)
 
         compare(control.contentWidth, 100)
         compare(control.contentHeight, 30)
         verify(control.implicitWidth > 100)
         verify(control.implicitHeight > 30)
-    }
 
-    function test_implicitContentItem() {
-        var control = createTemporaryObject(pane, testCase, {width: 100, height: 100})
-        verify(control)
-
-        compare(control.width, 100)
-        compare(control.height, 100)
-        compare(control.contentItem.width, control.availableWidth)
-        compare(control.contentItem.height, control.availableHeight)
+        control.destroy()
     }
 
     function test_press() {
-        var control = createTemporaryObject(pressPane, testCase)
+        var control = pressPane.createObject(testCase)
         verify(control)
 
         compare(control.pressCount, 0)
@@ -172,5 +160,7 @@ TestCase {
         control.children[0].enabled = false
         mouseClick(control)
         compare(control.pressCount, 1)
+
+        control.destroy()
     }
 }

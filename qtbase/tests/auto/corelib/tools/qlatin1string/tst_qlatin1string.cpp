@@ -1,26 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Marc Mutz <marc.mutz@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,41 +49,11 @@ class tst_QLatin1String : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
-    void at();
-    void midLeftRight();
     void nullString();
     void emptyString();
     void relationalOperators_data();
     void relationalOperators();
 };
-
-
-void tst_QLatin1String::at()
-{
-    const QLatin1String l1("Hello World");
-    QCOMPARE(l1.at(0), QLatin1Char('H'));
-    QCOMPARE(l1.at(l1.size() - 1), QLatin1Char('d'));
-    QCOMPARE(l1[0], QLatin1Char('H'));
-    QCOMPARE(l1[l1.size() - 1], QLatin1Char('d'));
-}
-
-void tst_QLatin1String::midLeftRight()
-{
-    const QLatin1String l1("Hello World");
-    QCOMPARE(l1.mid(0),            l1);
-    QCOMPARE(l1.mid(0, l1.size()), l1);
-    QCOMPARE(l1.left(l1.size()),   l1);
-    QCOMPARE(l1.right(l1.size()),  l1);
-
-    QCOMPARE(l1.mid(6), QLatin1String("World"));
-    QCOMPARE(l1.mid(6, 5), QLatin1String("World"));
-    QCOMPARE(l1.right(5), QLatin1String("World"));
-
-    QCOMPARE(l1.mid(6, 1), QLatin1String("W"));
-    QCOMPARE(l1.right(5).left(1), QLatin1String("W"));
-
-    QCOMPARE(l1.left(5), QLatin1String("Hello"));
-}
 
 void tst_QLatin1String::nullString()
 {
@@ -176,9 +151,9 @@ void tst_QLatin1String::relationalOperators_data()
     for (Data *lhs = data; lhs != data + sizeof data / sizeof *data; ++lhs) {
         for (Data *rhs = data; rhs != data + sizeof data / sizeof *data; ++rhs) {
             QLatin1StringContainer l = { lhs->l1 }, r = { rhs->l1 };
-            QTest::addRow("\"%s\" <> \"%s\"",
-                          lhs->l1.data() ? lhs->l1.data() : "nullptr",
-                          rhs->l1.data() ? rhs->l1.data() : "nullptr")
+            QTest::newRow(qPrintable(QString::asprintf("\"%s\" <> \"%s\"",
+                                                       lhs->l1.data() ? lhs->l1.data() : "nullptr",
+                                                       rhs->l1.data() ? rhs->l1.data() : "nullptr")))
                 << l << lhs->order << r << rhs->order;
         }
     }

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -117,9 +122,8 @@ QStringList findSharedLibraries(const QDir &directory, Platform platform,
     nameFilter += sharedLibrarySuffix(platform);
     QStringList result;
     QString errorMessage;
-    const QFileInfoList &dlls = directory.entryInfoList(QStringList(nameFilter), QDir::Files);
-    for (const QFileInfo &dllFi : dlls) {
-        const QString dllPath = dllFi.absoluteFilePath();
+    foreach (const QString &dll, directory.entryList(QStringList(nameFilter), QDir::Files)) {
+        const QString dllPath = directory.absoluteFilePath(dll);
         bool matches = true;
         if (debugMatchMode != MatchDebugOrRelease && (platform & WindowsBased)) {
             bool debugDll;
@@ -132,7 +136,7 @@ QStringList findSharedLibraries(const QDir &directory, Platform platform,
             }
         } // Windows
         if (matches)
-            result += dllFi.fileName();
+            result += dll;
     } // for
     return result;
 }
@@ -271,7 +275,7 @@ bool runProcess(const QString &binary, const QStringList &args,
     // Create a copy of the command line which CreateProcessW can modify.
     QString commandLine;
     appendToCommandLine(binary, &commandLine);
-    for (const QString &a : args)
+    foreach (const QString &a, args)
         appendToCommandLine(a, &commandLine);
     if (optVerboseLevel > 1)
         std::wcout << "Running: " << commandLine << '\n';
@@ -395,7 +399,7 @@ bool runProcess(const QString &binary, const QStringList &args,
         char **argv  = new char *[args.size() + 2]; // Create argv.
         char **ap = argv;
         *ap++ = encodeFileName(binary);
-        for (const QString &a : qAsConst(args))
+        foreach (const QString &a, args)
             *ap++ = encodeFileName(a);
         *ap = 0;
 
@@ -566,12 +570,10 @@ bool updateFile(const QString &sourceFileName, const QStringList &nameFilters,
         }
         // Recurse into directory
         QDir dir(sourceFileName);
-        const QFileInfoList allEntries = dir.entryInfoList(nameFilters, QDir::Files)
-            + dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-        for (const QFileInfo &entryFi : allEntries) {
-            if (!updateFile(entryFi.absoluteFilePath(), nameFilters, targetFileName, flags, json, errorMessage))
+        const QStringList allEntries = dir.entryList(nameFilters, QDir::Files) + dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        foreach (const QString &entry, allEntries)
+            if (!updateFile(sourceFileName + QLatin1Char('/') + entry, nameFilters, targetFileName, flags, json, errorMessage))
                 return false;
-        }
         return true;
     } // Source is directory.
 
@@ -629,7 +631,7 @@ bool readElfExecutable(const QString &elfExecutableFileName, QString *errorMessa
                 + elfReader.errorString();
                 return false;
         }
-        for (const QByteArray &l : libs)
+        foreach (const QByteArray &l, libs)
             dependentLibraries->push_back(QString::fromLocal8Bit(l));
     }
     if (isDebug)
@@ -754,7 +756,7 @@ enum MsvcDebugRuntimeResult { MsvcDebugRuntime, MsvcReleaseRuntime, NoMsvcRuntim
 
 static inline MsvcDebugRuntimeResult checkMsvcDebugRuntime(const QStringList &dependentLibraries)
 {
-    for (const QString &lib : dependentLibraries) {
+    foreach (const QString &lib, dependentLibraries) {
         int pos = 0;
         if (lib.startsWith(QLatin1String("MSVCR"), Qt::CaseInsensitive)
             || lib.startsWith(QLatin1String("MSVCP"), Qt::CaseInsensitive)) {
@@ -907,7 +909,7 @@ QString findD3dCompiler(Platform platform, const QString &qtBinDir, unsigned wor
         candidateVersions.append(prefix + QString::number(i) + suffix);
     // Check the bin directory of the Qt SDK (in case it is shadowed by the
     // Windows system directory in PATH).
-    for (const QString &candidate : qAsConst(candidateVersions)) {
+    foreach (const QString &candidate, candidateVersions) {
         const QFileInfo fi(qtBinDir + QLatin1Char('/') + candidate);
         if (fi.isFile())
             return fi.absoluteFilePath();
@@ -916,7 +918,7 @@ QString findD3dCompiler(Platform platform, const QString &qtBinDir, unsigned wor
     if (platform & IntelBased) {
         QString errorMessage;
         unsigned detectedWordSize;
-        for (const QString &candidate : qAsConst(candidateVersions)) {
+        foreach (const QString &candidate, candidateVersions) {
             const QString dll = findInPath(candidate);
             if (!dll.isEmpty()
                 && readPeExecutable(dll, &errorMessage, 0, &detectedWordSize, 0)

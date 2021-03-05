@@ -1,7 +1,5 @@
-CONFIG += testcase
+CONFIG += testcase parallel_test
 TARGET = tst_qtimer
 QT = core testlib
 SOURCES = tst_qtimer.cpp
-
-# Force C++17 if available
-contains(QT_CONFIG, c++1z): CONFIG += c++1z
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

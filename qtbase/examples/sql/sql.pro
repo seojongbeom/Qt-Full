@@ -4,13 +4,15 @@ TEMPLATE      = subdirs
 
 SUBDIRS             =   books \
                         drilldown \
-                        cachedtable \
-                        querymodel \
+                         cachedtable \
                         relationaltablemodel \
-                        sqlwidgetmapper \
-                        tablemodel
+                        sqlwidgetmapper
 
-qtHaveModule(xml): SUBDIRS += masterdetail
+!wince:  SUBDIRS   +=  masterdetail
+
+!wince:  SUBDIRS += \
+                        querymodel \
+                        tablemodel
 
 !cross_compile:{
     contains(QT_BUILD_PARTS, tools):{

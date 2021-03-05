@@ -1,23 +1,24 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += gui-private
 
-android:!android-embedded: SUBDIRS += android
+android:!android-no-sdk: SUBDIRS += android
 
 !android: SUBDIRS += minimal
 
-!android:qtConfig(freetype): SUBDIRS += offscreen
+!android:if(!win32|contains(QT_CONFIG, freetype)): SUBDIRS += offscreen
 
-qtConfig(xcb) {
+contains(QT_CONFIG, xcb) {
     SUBDIRS += xcb
 }
 
-uikit:!watchos: SUBDIRS += ios
-osx: SUBDIRS += cocoa
+mac {
+    ios: SUBDIRS += ios
+    else: SUBDIRS += cocoa
+}
 
 win32:!winrt: SUBDIRS += windows
 winrt: SUBDIRS += winrt
 
-qtConfig(direct2d) {
+contains(QT_CONFIG, direct2d) {
     SUBDIRS += direct2d
 }
 
@@ -25,27 +26,19 @@ qnx {
     SUBDIRS += qnx
 }
 
-qtConfig(eglfs) {
+contains(QT_CONFIG, eglfs) {
     SUBDIRS += eglfs
     SUBDIRS += minimalegl
 }
 
-qtConfig(directfb) {
+contains(QT_CONFIG, directfb) {
     SUBDIRS += directfb
 }
 
-qtConfig(linuxfb): SUBDIRS += linuxfb
-
-qtHaveModule(network):qtConfig(vnc): SUBDIRS += vnc
-
-freebsd {
-    SUBDIRS += bsdfb
-}
+contains(QT_CONFIG, linuxfb): SUBDIRS += linuxfb
 
 haiku {
     SUBDIRS += haiku
 }
 
-qtConfig(mirclient): SUBDIRS += mirclient
-
-qtConfig(integrityfb): SUBDIRS += integrity
+contains(QT_CONFIG, mirclient): SUBDIRS += mirclient

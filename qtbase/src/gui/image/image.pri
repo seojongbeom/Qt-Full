@@ -10,6 +10,8 @@ HEADERS += \
         image/qimageiohandler.h \
         image/qimagereader.h \
         image/qimagewriter.h \
+        image/qmovie.h \
+        image/qnativeimage_p.h \
         image/qpaintengine_pic_p.h \
         image/qpicture.h \
         image/qpicture_p.h \
@@ -40,22 +42,18 @@ SOURCES += \
         image/qpixmap.cpp \
         image/qpixmapcache.cpp \
         image/qplatformpixmap.cpp \
+        image/qmovie.cpp \
         image/qpixmap_raster.cpp \
         image/qpixmap_blitter.cpp \
+        image/qnativeimage.cpp \
         image/qimagepixmapcleanuphooks.cpp \
         image/qicon.cpp \
         image/qiconloader.cpp \
         image/qiconengine.cpp \
         image/qiconengineplugin.cpp \
 
-qtConfig(movie) {
-    HEADERS += image/qmovie.h
-    SOURCES += image/qmovie.cpp
-}
 
 win32:!winrt: SOURCES += image/qpixmap_win.cpp
-
-darwin: OBJECTIVE_SOURCES += image/qimage_darwin.mm
 
 NO_PCH_SOURCES += image/qimage_compat.cpp
 false: SOURCES += $$NO_PCH_SOURCES # Hack for QtCreator
@@ -73,11 +71,11 @@ SOURCES += \
         image/qxbmhandler.cpp \
         image/qxpmhandler.cpp
 
-qtConfig(png) {
-    HEADERS += image/qpnghandler_p.h
-    SOURCES += image/qpnghandler.cpp
-    QMAKE_USE_PRIVATE += libpng
-}
+!contains(QT_CONFIG, no-png):include($$PWD/qpnghandler.pri)
+else:DEFINES *= QT_NO_IMAGEFORMAT_PNG
+
+contains(QT_CONFIG, jpeg):include($$PWD/qjpeghandler.pri)
+contains(QT_CONFIG, gif):include($$PWD/qgifhandler.pri)
 
 # SIMD
 SSE2_SOURCES += image/qimage_sse2.cpp

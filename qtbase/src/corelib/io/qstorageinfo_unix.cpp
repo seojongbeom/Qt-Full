@@ -1,38 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2014 Ivan Komissarov <ABBAPOH@gmail.com>
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -120,7 +113,6 @@ public:
     inline QString rootPath() const;
     inline QByteArray fileSystemType() const;
     inline QByteArray device() const;
-    inline QByteArray options() const;
 private:
 #if defined(Q_OS_BSD4)
     QT_STATFSBUF *stat_buf;
@@ -134,7 +126,6 @@ private:
     QByteArray m_rootPath;
     QByteArray m_fileSystemType;
     QByteArray m_device;
-    QByteArray m_options;
 #elif defined(Q_OS_LINUX) || defined(Q_OS_HURD)
     FILE *fp;
     mntent mnt;
@@ -156,51 +147,35 @@ static bool isParentOf(const String &parent, const QString &dirName)
              parent.size() == 1);
 }
 
-static bool shouldIncludeFs(const QStorageIterator &it)
+static bool isPseudoFs(const QStorageIterator &it)
 {
-    /*
-     * This function implements a heuristic algorithm to determine whether a
-     * given mount should be reported to the user. Our objective is to list
-     * only entries that the end-user would find useful.
-     *
-     * We therefore ignore:
-     *  - mounted in /dev, /proc, /sys: special mounts
-     *    (this will catch /sys/fs/cgroup, /proc/sys/fs/binfmt_misc, /dev/pts,
-     *    some of which are tmpfs on Linux)
-     *  - mounted in /var/run or /var/lock: most likely pseudofs
-     *    (on earlier systemd versions, /var/run was a bind-mount of /run, so
-     *    everything would be unnecessarily duplicated)
-     *  - filesystem type is "rootfs": artifact of the root-pivot on some Linux
-     *    initrd
-     *  - if the filesystem total size is zero, it's a pseudo-fs (not checked here).
-     */
-
     QString mountDir = it.rootPath();
     if (isParentOf(QLatin1String("/dev"), mountDir)
         || isParentOf(QLatin1String("/proc"), mountDir)
         || isParentOf(QLatin1String("/sys"), mountDir)
         || isParentOf(QLatin1String("/var/run"), mountDir)
         || isParentOf(QLatin1String("/var/lock"), mountDir)) {
-        return false;
+        return true;
     }
 
-#ifdef Q_OS_LINUX
-    if (it.fileSystemType() == "rootfs")
+    QByteArray type = it.fileSystemType();
+    if (type == "tmpfs")
         return false;
+#if defined(Q_OS_LINUX)
+    if (type == "rootfs" || type == "rpc_pipefs")
+        return true;
 #endif
 
-    // size checking in mountedVolumes()
-    return true;
+    if (!it.device().startsWith('/'))
+        return true;
+
+    return false;
 }
 
 #if defined(Q_OS_BSD4)
 
-#ifndef MNT_NOWAIT
-#  define MNT_NOWAIT 0
-#endif
-
 inline QStorageIterator::QStorageIterator()
-    : entryCount(::getmntinfo(&stat_buf, MNT_NOWAIT)),
+    : entryCount(::getmntinfo(&stat_buf, 0)),
       currentIndex(-1)
 {
 }
@@ -232,11 +207,6 @@ inline QByteArray QStorageIterator::fileSystemType() const
 inline QByteArray QStorageIterator::device() const
 {
     return QByteArray(stat_buf[currentIndex].f_mntfromname);
-}
-
-inline QByteArray QStorageIterator::options() const
-{
-    return QByteArray();
 }
 
 #elif defined(Q_OS_SOLARIS)
@@ -312,7 +282,6 @@ inline bool QStorageIterator::next()
     m_device = data.at(0);
     m_rootPath = data.at(1);
     m_fileSystemType = data.at(2);
-    m_options = data.at(3);
 
     return true;
 }
@@ -330,11 +299,6 @@ inline QByteArray QStorageIterator::fileSystemType() const
 inline QByteArray QStorageIterator::device() const
 {
     return m_device;
-}
-
-inline QByteArray QStorageIterator::options() const
-{
-    return m_options;
 }
 
 #elif defined(Q_OS_LINUX) || defined(Q_OS_HURD)
@@ -378,11 +342,6 @@ inline QByteArray QStorageIterator::fileSystemType() const
 inline QByteArray QStorageIterator::device() const
 {
     return QByteArray(mnt.mnt_fsname);
-}
-
-inline QByteArray QStorageIterator::options() const
-{
-    return QByteArray(mnt.mnt_opts);
 }
 
 #elif defined(Q_OS_HAIKU)
@@ -442,11 +401,6 @@ inline QByteArray QStorageIterator::device() const
     return m_device;
 }
 
-inline QByteArray QStorageIterator::options() const
-{
-    return QByteArray();
-}
-
 #else
 
 inline QStorageIterator::QStorageIterator()
@@ -482,36 +436,7 @@ inline QByteArray QStorageIterator::device() const
     return QByteArray();
 }
 
-inline QByteArray QStorageIterator::options() const
-{
-    return QByteArray();
-}
-
 #endif
-
-static QByteArray extractSubvolume(const QStorageIterator &it)
-{
-#ifdef Q_OS_LINUX
-    if (it.fileSystemType() == "btrfs") {
-        const QByteArrayList opts = it.options().split(',');
-        QByteArray id;
-        for (const QByteArray &opt : opts) {
-            static const char subvol[] = "subvol=";
-            static const char subvolid[] = "subvolid=";
-            if (opt.startsWith(subvol))
-                return std::move(opt).mid(strlen(subvol));
-            if (opt.startsWith(subvolid))
-                id = std::move(opt).mid(strlen(subvolid));
-        }
-
-        // if we didn't find the subvolume name, return the subvolume ID
-        return id;
-    }
-#else
-    Q_UNUSED(it);
-#endif
-    return QByteArray();
-}
 
 void QStorageInfoPrivate::initRootPath()
 {
@@ -539,42 +464,9 @@ void QStorageInfoPrivate::initRootPath()
             rootPath = mountDir;
             device = it.device();
             fileSystemType = fsName;
-            subvolume = extractSubvolume(it);
         }
     }
 }
-
-#ifdef Q_OS_LINUX
-// udev encodes the labels with ID_LABEL_FS_ENC which is done with
-// blkid_encode_string(). Within this function some 1-byte utf-8
-// characters not considered safe (e.g. '\' or ' ') are encoded as hex
-static QString decodeFsEncString(const QString &str)
-{
-    QString decoded;
-    decoded.reserve(str.size());
-
-    int i = 0;
-    while (i < str.size()) {
-        if (i <= str.size() - 4) {    // we need at least four characters \xAB
-            if (str.at(i) == QLatin1Char('\\') &&
-                str.at(i+1) == QLatin1Char('x')) {
-                bool bOk;
-                const int code = str.midRef(i+2, 2).toInt(&bOk, 16);
-                // only decode characters between 0x20 and 0x7f but not
-                // the backslash to prevent collisions
-                if (bOk && code >= 0x20 && code < 0x80 && code != '\\') {
-                    decoded += QChar(code);
-                    i += 4;
-                    continue;
-                }
-            }
-        }
-        decoded += str.at(i);
-        ++i;
-    }
-    return decoded;
-}
-#endif
 
 static inline QString retrieveLabel(const QByteArray &device)
 {
@@ -589,7 +481,7 @@ static inline QString retrieveLabel(const QByteArray &device)
         it.next();
         QFileInfo fileInfo(it.fileInfo());
         if (fileInfo.isSymLink() && fileInfo.symLinkTarget() == devicePath)
-            return decodeFsEncString(fileInfo.fileName());
+            return fileInfo.fileName();
     }
 #elif defined Q_OS_HAIKU
     fs_info fsInfo;
@@ -630,7 +522,7 @@ void QStorageInfoPrivate::retrieveVolumeInfo()
         valid = true;
         ready = true;
 
-#if defined(Q_OS_INTEGRITY) || (defined(Q_OS_BSD4) && !defined(Q_OS_NETBSD))
+#if defined(Q_OS_BSD4) && !defined(Q_OS_NETBSD)
         bytesTotal = statfs_buf.f_blocks * statfs_buf.f_bsize;
         bytesFree = statfs_buf.f_bfree * statfs_buf.f_bsize;
         bytesAvailable = statfs_buf.f_bavail * statfs_buf.f_bsize;
@@ -640,7 +532,7 @@ void QStorageInfoPrivate::retrieveVolumeInfo()
         bytesAvailable = statfs_buf.f_bavail * statfs_buf.f_frsize;
 #endif
         blockSize = statfs_buf.f_bsize;
-#if defined(Q_OS_ANDROID) || defined(Q_OS_BSD4) || defined(Q_OS_INTEGRITY)
+#if defined(Q_OS_ANDROID) || defined (Q_OS_BSD4)
 #if defined(_STATFS_F_FLAGS)
         readOnly = (statfs_buf.f_flags & ST_RDONLY) != 0;
 #endif
@@ -659,14 +551,11 @@ QList<QStorageInfo> QStorageInfoPrivate::mountedVolumes()
     QList<QStorageInfo> volumes;
 
     while (it.next()) {
-        if (!shouldIncludeFs(it))
+        if (isPseudoFs(it))
             continue;
 
         const QString mountDir = it.rootPath();
-        QStorageInfo info(mountDir);
-        if (info.bytesTotal() == 0)
-            continue;
-        volumes.append(info);
+        volumes.append(QStorageInfo(mountDir));
     }
 
     return volumes;

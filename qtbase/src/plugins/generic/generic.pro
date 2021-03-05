@@ -1,24 +1,19 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += gui-private network-private
 
-qtConfig(evdev) {
-    SUBDIRS += evdevmouse evdevtouch evdevkeyboard
-    qtConfig(tabletevent): \
-        SUBDIRS += evdevtablet
+load(qfeatures)
+
+contains(QT_CONFIG, evdev) {
+    SUBDIRS += evdevmouse evdevtouch evdevkeyboard evdevtablet
 }
 
-qtConfig(tslib) {
+contains(QT_CONFIG, tslib) {
     SUBDIRS += tslib
 }
 
-qtHaveModule(network):qtConfig(udpsocket) {
+!contains(QT_DISABLED_FEATURES, udpsocket) {
     SUBDIRS += tuiotouch
 }
 
-qtConfig(libinput) {
+contains(QT_CONFIG, libinput) {
     SUBDIRS += libinput
-}
-
-freebsd {
-    SUBDIRS += bsdkeyboard bsdmouse
 }

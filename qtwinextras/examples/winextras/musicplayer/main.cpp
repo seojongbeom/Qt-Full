@@ -6,17 +6,7 @@
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -51,80 +41,49 @@
 #include "musicplayer.h"
 
 #include <QApplication>
-#include <QCommandLineParser>
-#include <QCommandLineOption>
-#include <QDesktopWidget>
 #include <QFileInfo>
-#include <QMimeDatabase>
 #include <QSettings>
 #include <QIcon>
 #include <QDir>
-#include <QUrl>
 
 //! [0]
-static bool associateFileTypes()
+static void associateFileTypes(const QStringList &fileTypes)
 {
     QString displayName = QGuiApplication::applicationDisplayName();
     QString filePath = QCoreApplication::applicationFilePath();
     QString fileName = QFileInfo(filePath).fileName();
 
-    const QString key = QStringLiteral("HKEY_CURRENT_USER\\Software\\Classes\\Applications\\") + fileName;
-    QSettings settings(key, QSettings::NativeFormat);
-    if (settings.status() != QSettings::NoError) {
-        qWarning() << "Cannot access registry key" << key;
-        return false;
-    }
-    settings.setValue(QStringLiteral("FriendlyAppName"), displayName);
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Classes\\Applications\\" + fileName, QSettings::NativeFormat);
+    settings.setValue("FriendlyAppName", displayName);
 
-    settings.beginGroup(QStringLiteral("SupportedTypes"));
-    QMimeDatabase mimeDatabase;
-    const QStringList supportedMimeTypes = MusicPlayer::supportedMimeTypes();
-    for (const QString &fileType : supportedMimeTypes) {
-        const QStringList suffixes = mimeDatabase.mimeTypeForName(fileType).suffixes();
-        for (QString suffix : suffixes) {
-            suffix.prepend('.');
-            settings.setValue(suffix, QString());
-        }
-    }
+    settings.beginGroup("SupportedTypes");
+    foreach (const QString& fileType, fileTypes)
+        settings.setValue(fileType, QString());
     settings.endGroup();
 
-    settings.beginGroup(QStringLiteral("shell"));
-    settings.beginGroup(QStringLiteral("open"));
-    settings.setValue(QStringLiteral("FriendlyAppName"), displayName);
-    settings.beginGroup(QStringLiteral("Command"));
-    settings.setValue(QStringLiteral("."),
-                      QLatin1Char('"') + QDir::toNativeSeparators(filePath) + QStringLiteral("\" \"%1\""));
-
-    return true;
+    settings.beginGroup("shell");
+    settings.beginGroup("open");
+    settings.setValue("FriendlyAppName", displayName);
+    settings.beginGroup("Command");
+    settings.setValue(".", QChar('"') + QDir::toNativeSeparators(filePath) + QString("\" \"%1\""));
 }
 //! [0]
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QCoreApplication::setApplicationName(QStringLiteral("MusicPlayer"));
-    QCoreApplication::setApplicationVersion( QLatin1String(QT_VERSION_STR));
-    QCoreApplication::setOrganizationName(QStringLiteral("QtWinExtras"));
-    QCoreApplication::setOrganizationDomain("qt-project.org");
-    QGuiApplication::setApplicationDisplayName(QStringLiteral("QtWinExtras Music Player"));
+    app.setApplicationName("MusicPlayer");
+    app.setOrganizationName("QtWinExtras");
+    app.setOrganizationDomain("qt-project.org");
+    app.setApplicationDisplayName("QtWinExtras Music Player");
 
-    if (!associateFileTypes())
-        return -1;
-
-    QCommandLineParser parser;
-    parser.setApplicationDescription(QGuiApplication::applicationDisplayName());
-    parser.addHelpOption();
-    parser.addVersionOption();
-    parser.addPositionalArgument(QStringLiteral("url"), MusicPlayer::tr("The URL to open."));
-    parser.process(app);
+    associateFileTypes(QStringList(".mp3"));
 
     MusicPlayer player;
-
-    if (!parser.positionalArguments().isEmpty())
-        player.playUrl(QUrl::fromUserInput(parser.positionalArguments().constFirst(), QDir::currentPath(), QUrl::AssumeLocalFile));
-
-    const QRect availableGeometry = QApplication::desktop()->availableGeometry(&player);
-    player.resize(availableGeometry.width() / 6, availableGeometry.height() / 17);
+    const QStringList arguments = QCoreApplication::arguments();
+    if (arguments.size() > 1)
+        player.playFile(arguments.at(1));
+    player.resize(300, 60);
     player.show();
 
     return app.exec();

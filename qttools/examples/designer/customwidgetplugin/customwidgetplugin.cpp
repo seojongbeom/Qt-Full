@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -56,6 +46,7 @@
 //! [0]
 AnalogClockPlugin::AnalogClockPlugin(QObject *parent)
     : QObject(parent)
+    , initialized(false)
 {
 }
 //! [0]
@@ -87,14 +78,14 @@ QWidget *AnalogClockPlugin::createWidget(QWidget *parent)
 //! [4]
 QString AnalogClockPlugin::name() const
 {
-    return QStringLiteral("AnalogClock");
+    return "AnalogClock";
 }
 //! [4]
 
 //! [5]
 QString AnalogClockPlugin::group() const
 {
-    return QStringLiteral("Display Widgets [Examples]");
+    return "Display Widgets [Examples]";
 }
 //! [5]
 
@@ -108,14 +99,14 @@ QIcon AnalogClockPlugin::icon() const
 //! [7]
 QString AnalogClockPlugin::toolTip() const
 {
-    return QString();
+    return "";
 }
 //! [7]
 
 //! [8]
 QString AnalogClockPlugin::whatsThis() const
 {
-    return QString();
+    return "";
 }
 //! [8]
 
@@ -155,6 +146,6 @@ QString AnalogClockPlugin::domXml() const
 //! [12]
 QString AnalogClockPlugin::includeFile() const
 {
-    return QStringLiteral("analogclock.h");
+    return "analogclock.h";
 }
 //! [12]

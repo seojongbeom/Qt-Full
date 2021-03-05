@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtOpenGL module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,8 +41,6 @@
 #if defined(QT_DEBUG)
 #include <QMetaEnum>
 #endif
-
-#include <algorithm>
 
 // #define QT_GL_SHARED_SHADER_DEBUG
 
@@ -196,7 +188,7 @@ QGLEngineSharedShaders::QGLEngineSharedShaders(const QGLContext* context)
 #if defined(QT_DEBUG)
         // Check that all the elements have been filled:
         for (int i = 0; i < TotalSnippetCount; ++i) {
-            if (Q_UNLIKELY(!qShaderSnippets[i])) {
+            if (qShaderSnippets[i] == 0) {
                 qFatal("Shader snippet for %s (#%d) is missing!",
                        snippetNameStr(SnippetName(i)).constData(), i);
             }
@@ -245,11 +237,11 @@ QGLEngineSharedShaders::QGLEngineSharedShaders(const QGLContext* context)
 
     simpleShaderProg->link();
 
-    if (Q_UNLIKELY(!simpleShaderProg->isLinked())) {
-        qCritical("Errors linking simple shader: %s", qPrintable(simpleShaderProg->log()));
-    } else {
+    if (simpleShaderProg->isLinked()) {
         if (!inCache)
             simpleShaderCache.store(simpleShaderProg, context);
+    } else {
+        qCritical("Errors linking simple shader: %s", qPrintable(simpleShaderProg->log()));
     }
 
     // Compile the blit shader:
@@ -286,11 +278,11 @@ QGLEngineSharedShaders::QGLEngineSharedShaders(const QGLContext* context)
     }
 
     blitShaderProg->link();
-    if (Q_UNLIKELY(!blitShaderProg->isLinked())) {
-        qCritical("Errors linking blit shader: %s", qPrintable(blitShaderProg->log()));
-    } else {
+    if (blitShaderProg->isLinked()) {
         if (!inCache)
             blitShaderCache.store(blitShaderProg, context);
+    } else {
+        qCritical("Errors linking blit shader: %s", qPrintable(blitShaderProg->log()));
     }
 
 #ifdef QT_GL_SHARED_SHADER_DEBUG
@@ -333,7 +325,7 @@ QByteArray QGLEngineSharedShaders::snippetNameStr(SnippetName name)
 QGLEngineShaderProg *QGLEngineSharedShaders::findProgramInCache(const QGLEngineShaderProg &prog)
 {
     for (int i = 0; i < cachedPrograms.size(); ++i) {
-        QGLEngineShaderProg *cachedProg = cachedPrograms.at(i);
+        QGLEngineShaderProg *cachedProg = cachedPrograms[i];
         if (*cachedProg == prog) {
             // Move the program to the top of the list as a poor-man's cache algo
             cachedPrograms.move(i, 0);
@@ -474,16 +466,15 @@ QGLEngineShaderProg *QGLEngineSharedShaders::findProgramInCache(const QGLEngineS
 
 void QGLEngineSharedShaders::cleanupCustomStage(QGLCustomShaderStage* stage)
 {
-    auto hasStageAsCustomShaderSouce = [stage](QGLEngineShaderProg *cachedProg) -> bool {
+    // Remove any shader programs which has this as the custom shader src:
+    for (int i = 0; i < cachedPrograms.size(); ++i) {
+        QGLEngineShaderProg *cachedProg = cachedPrograms[i];
         if (cachedProg->customStageSource == stage->source()) {
             delete cachedProg;
-            return true;
+            cachedPrograms.removeAt(i);
+            i--;
         }
-        return false;
-    };
-    cachedPrograms.erase(std::remove_if(cachedPrograms.begin(), cachedPrograms.end(),
-                                        hasStageAsCustomShaderSouce),
-                         cachedPrograms.end());
+    }
 }
 
 

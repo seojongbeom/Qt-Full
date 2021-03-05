@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -71,58 +65,6 @@ static inline void setLocation(IR::Stmt *s, const SourceLocation &loc)
 {
     if (s && loc.isValid())
         s->location = loc;
-}
-
-static bool cjumpCanHandle(IR::AluOp op)
-{
-    switch (op) {
-    case IR::OpIn:
-    case IR::OpInstanceof:
-    case IR::OpEqual:
-    case IR::OpNotEqual:
-    case IR::OpGe:
-    case IR::OpGt:
-    case IR::OpLe:
-    case IR::OpLt:
-    case IR::OpStrictEqual:
-    case IR::OpStrictNotEqual:
-        return true;
-    default:
-        return false;
-    }
-}
-
-static inline void setJumpOutLocation(IR::Stmt *s, const Statement *body,
-                                      const SourceLocation &fallback)
-{
-    switch (body->kind) {
-    // Statements where we might never execute the last line.
-    // Use the fallback.
-    case Statement::Kind_ConditionalExpression:
-    case Statement::Kind_ForEachStatement:
-    case Statement::Kind_ForStatement:
-    case Statement::Kind_IfStatement:
-    case Statement::Kind_LocalForEachStatement:
-    case Statement::Kind_LocalForStatement:
-    case Statement::Kind_WhileStatement:
-        setLocation(s, fallback);
-        break;
-    default:
-        setLocation(s, body->lastSourceLocation());
-        break;
-    }
-}
-
-static inline bool isSimpleExpr(IR::Expr *e)
-{
-    switch (e->exprKind) {
-    case IR::Expr::TempExpr:
-    case IR::Expr::ArgLocalExpr:
-    case IR::Expr::ConstExpr:
-        return true;
-    default:
-        return false;
-    }
 }
 
 Codegen::ScanFunctions::ScanFunctions(Codegen *cg, const QString &sourceCode, CompilationMode defaultProgramMode)
@@ -167,7 +109,7 @@ void Codegen::ScanFunctions::checkDirectivePrologue(SourceElements *ast)
                     if (strLit->literalToken.length < 2)
                         continue;
                     QStringRef str = _sourceCode.midRef(strLit->literalToken.offset + 1, strLit->literalToken.length - 2);
-                    if (str == QLatin1String("use strict")) {
+                    if (str == QStringLiteral("use strict")) {
                         _env->isStrict = true;
                     } else {
                         // TODO: give a warning.
@@ -200,7 +142,7 @@ void Codegen::ScanFunctions::checkName(const QStringRef &name, const SourceLocat
 void Codegen::ScanFunctions::checkForArguments(AST::FormalParameterList *parameters)
 {
     while (parameters) {
-        if (parameters->name == QLatin1String("arguments"))
+        if (parameters->name == QStringLiteral("arguments"))
             _env->usesArgumentsObject = Environment::ArgumentsObjectNotUsed;
         parameters = parameters->next;
     }
@@ -222,7 +164,7 @@ bool Codegen::ScanFunctions::visit(CallExpression *ast)
 {
     if (! _env->hasDirectEval) {
         if (IdentifierExpression *id = cast<IdentifierExpression *>(ast->base)) {
-            if (id->name == QLatin1String("eval")) {
+            if (id->name == QStringLiteral("eval")) {
                 if (_env->usesArgumentsObject == Environment::ArgumentsObjectUnknown)
                     _env->usesArgumentsObject = Environment::ArgumentsObjectUsed;
                 _env->hasDirectEval = true;
@@ -293,7 +235,7 @@ bool Codegen::ScanFunctions::visit(ExpressionStatement *ast)
         return false;
     } else {
         SourceLocation firstToken = ast->firstSourceLocation();
-        if (_sourceCode.midRef(firstToken.offset, firstToken.length) == QLatin1String("function")) {
+        if (_sourceCode.midRef(firstToken.offset, firstToken.length) == QStringLiteral("function")) {
             _cg->throwSyntaxError(firstToken, QStringLiteral("unexpected token"));
         }
     }
@@ -489,7 +431,6 @@ Codegen::Codegen(bool strict)
 }
 
 void Codegen::generateFromProgram(const QString &fileName,
-                                  const QString &finalUrl,
                                   const QString &sourceCode,
                                   Program *node,
                                   QV4::IR::Module *module,
@@ -502,7 +443,6 @@ void Codegen::generateFromProgram(const QString &fileName,
     _env = 0;
 
     _module->setFileName(fileName);
-    _module->setFinalUrl(finalUrl);
 
     ScanFunctions scan(this, sourceCode, mode);
     scan(node);
@@ -513,14 +453,12 @@ void Codegen::generateFromProgram(const QString &fileName,
 }
 
 void Codegen::generateFromFunctionExpression(const QString &fileName,
-                                             const QString &finalUrl,
                                              const QString &sourceCode,
                                              AST::FunctionExpression *ast,
                                              QV4::IR::Module *module)
 {
     _module = module;
     _module->setFileName(fileName);
-    _module->setFinalUrl(finalUrl);
     _env = 0;
 
     ScanFunctions scan(this, sourceCode, GlobalCode);
@@ -577,6 +515,28 @@ IR::Expr *Codegen::member(IR::Expr *base, const QString *name)
     }
 }
 
+IR::Expr *Codegen::subscript(IR::Expr *base, IR::Expr *index)
+{
+    if (hasError)
+        return 0;
+
+    if (! base->asTemp() || base->asArgLocal()) {
+        const unsigned t = _block->newTemp();
+        move(_block->TEMP(t), base);
+        base = _block->TEMP(t);
+    }
+
+    if (! index->asTemp() || index->asArgLocal()) {
+        const unsigned t = _block->newTemp();
+        move(_block->TEMP(t), index);
+        index = _block->TEMP(t);
+    }
+
+    Q_ASSERT(base->asTemp() || base->asArgLocal());
+    Q_ASSERT(index->asTemp() || index->asArgLocal());
+    return _block->SUBSCRIPT(base->asTemp(), index->asTemp());
+}
+
 IR::Expr *Codegen::argument(IR::Expr *expr)
 {
     if (expr && !expr->asTemp()) {
@@ -629,14 +589,12 @@ IR::Expr *Codegen::unop(IR::AluOp op, IR::Expr *expr, const SourceLocation &loc)
             }
         }
     }
-
-    TempScope scope(_function);
-    if (isSimpleExpr(expr))
-        return _block->UNOP(op, expr);
-
-    const unsigned t = _block->newTemp();
-    setLocation(move(_block->TEMP(t), expr), loc);
-    expr = _block->TEMP(t);
+    if (!expr->asTemp() && !expr->asArgLocal()) {
+        const unsigned t = _block->newTemp();
+        setLocation(move(_block->TEMP(t), expr), loc);
+        expr = _block->TEMP(t);
+    }
+    Q_ASSERT(expr->asTemp() || expr->asArgLocal());
     return _block->UNOP(op, expr);
 }
 
@@ -645,11 +603,9 @@ IR::Expr *Codegen::binop(IR::AluOp op, IR::Expr *left, IR::Expr *right, const AS
     if (hasError)
         return 0;
 
-    TempScope scope(_function);
-
     if (IR::Const *c1 = left->asConst()) {
         if (IR::Const *c2 = right->asConst()) {
-            if ((c1->type & IR::NumberType) && (c2->type & IR::NumberType)) {
+            if (c1->type == IR::NumberType && c2->type == IR::NumberType) {
                 switch (op) {
                 case IR::OpAdd: return _block->CONST(IR::NumberType, c1->value + c2->value);
                 case IR::OpAnd: return _block->CONST(IR::BoolType, c1->value ? c2->value : 0);
@@ -697,20 +653,20 @@ IR::Expr *Codegen::binop(IR::AluOp op, IR::Expr *left, IR::Expr *right, const AS
         }
     }
 
-    if (!left->asTemp() && !left->asArgLocal() && !left->asConst()) {
+    if (!left->asTemp() && !left->asArgLocal()) {
         const unsigned t = _block->newTemp();
         setLocation(move(_block->TEMP(t), left), loc);
         left = _block->TEMP(t);
     }
 
-    if (!right->asTemp() && !right->asArgLocal() && !right->asConst()) {
+    if (!right->asTemp() && !right->asArgLocal()) {
         const unsigned t = _block->newTemp();
         setLocation(move(_block->TEMP(t), right), loc);
         right = _block->TEMP(t);
     }
 
-    Q_ASSERT(left->asTemp() || left->asArgLocal() || left->asConst());
-    Q_ASSERT(right->asTemp() || right->asArgLocal() || right->asConst());
+    Q_ASSERT(left->asTemp() || left->asArgLocal());
+    Q_ASSERT(right->asTemp() || right->asArgLocal());
 
     return _block->BINOP(op, left, right);
 }
@@ -734,8 +690,6 @@ IR::Stmt *Codegen::move(IR::Expr *target, IR::Expr *source, IR::AluOp op)
         return move(target, binop(op, target, source));
     }
 
-    TempScope scope(_function);
-
     if (!source->asTemp() && !source->asConst() && !target->asTemp() && !source->asArgLocal() && !target->asArgLocal()) {
         unsigned t = _block->newTemp();
         _block->MOVE(_block->TEMP(t), source);
@@ -755,9 +709,7 @@ IR::Stmt *Codegen::cjump(IR::Expr *cond, IR::BasicBlock *iftrue, IR::BasicBlock 
     if (hasError)
         return 0;
 
-    TempScope scope(_function);
-
-    if (! (cond->asTemp() || (cond->asBinop() && cjumpCanHandle(cond->asBinop()->op)) )) {
+    if (! (cond->asTemp() || cond->asBinop())) {
         const unsigned t = _block->newTemp();
         move(_block->TEMP(t), cond);
         cond = _block->TEMP(t);
@@ -776,16 +728,12 @@ void Codegen::accept(Node *node)
 
 void Codegen::statement(Statement *ast)
 {
-    TempScope scope(_function);
-
     _block->nextLocation = ast->firstSourceLocation();
     accept(ast);
 }
 
 void Codegen::statement(ExpressionNode *ast)
 {
-    TempScope scope(_function);
-
     if (! ast) {
         return;
     } else {
@@ -888,17 +836,9 @@ void Codegen::variableDeclaration(VariableDeclaration *ast)
     Q_ASSERT(expr.code);
     initializer = *expr;
 
-    IR::Expr *lhs = identifier(ast->name.toString(), ast->identifierToken.startLine,
-                               ast->identifierToken.startColumn);
-
-    if (lhs->asArgLocal()) {
-        move(lhs, initializer);
-    } else {
-        TempScope scope(_function);
-        int initialized = _block->newTemp();
-        move(_block->TEMP(initialized), initializer);
-        move(lhs, _block->TEMP(initialized));
-    }
+    int initialized = _block->newTemp();
+    move(_block->TEMP(initialized), initializer);
+    move(identifier(ast->name.toString(), ast->identifierToken.startLine, ast->identifierToken.startColumn), _block->TEMP(initialized));
 }
 
 void Codegen::variableDeclarationList(VariableDeclarationList *ast)
@@ -1098,10 +1038,6 @@ bool Codegen::visit(ArrayLiteral *ast)
     if (hasError)
         return false;
 
-    const unsigned t = _block->newTemp();
-
-    TempScope scope(_function);
-
     IR::ExprList *args = 0;
     IR::ExprList *current = 0;
     for (ElementList *it = ast->elements; it; it = it->next) {
@@ -1147,6 +1083,7 @@ bool Codegen::visit(ArrayLiteral *ast)
         current->expr = _block->CONST(IR::MissingType, 0);
     }
 
+    const unsigned t = _block->newTemp();
     move(_block->TEMP(t), _block->CALL(_block->NAME(IR::Name::builtin_define_array, 0, 0), args));
     _expr.code = _block->TEMP(t);
     return false;
@@ -1157,25 +1094,11 @@ bool Codegen::visit(ArrayMemberExpression *ast)
     if (hasError)
         return false;
 
-    IR::Expr *base = *expression(ast->base);
+    Result base = expression(ast->base);
+    Result index = expression(ast->expression);
     if (hasError)
         return false;
-    if (!isSimpleExpr(base)) {
-        const unsigned t = _block->newTemp();
-        move(_block->TEMP(t), base);
-        base = _block->TEMP(t);
-    }
-
-    IR::Expr *index = *expression(ast->expression);
-    if (hasError)
-        return false;
-    if (!isSimpleExpr(index)) {
-        const unsigned t = _block->newTemp();
-        move(_block->TEMP(t), index);
-        index = _block->TEMP(t);
-    }
-
-    _expr.code = _block->SUBSCRIPT(base, index);
+    _expr.code = subscript(*base, *index);
     return false;
 }
 
@@ -1311,12 +1234,14 @@ bool Codegen::visit(BinaryExpression *ast)
             return false;
         }
 
-        TempScope scope(_function);
-        const unsigned t = _block->newTemp();
-        move(_block->TEMP(t), *right);
-        move(left, _block->TEMP(t), baseOp(ast->op));
-        if (!_expr.accept(nx))
+        if (_expr.accept(nx)) {
+            move(left, *right, baseOp(ast->op));
+        } else {
+            const unsigned t = _block->newTemp();
+            move(_block->TEMP(t), *right);
+            move(left, _block->TEMP(t), baseOp(ast->op));
             _expr.code = left;
+        }
         break;
     }
 
@@ -1330,7 +1255,6 @@ bool Codegen::visit(BinaryExpression *ast)
     case QSOperator::Lt:
     case QSOperator::StrictEqual:
     case QSOperator::StrictNotEqual: {
-        TempScope scope(_function);
         if (!left->asTemp() && !left->asArgLocal() && !left->asConst()) {
             const unsigned t = _block->newTemp();
             setLocation(move(_block->TEMP(t), left), ast->operatorToken);
@@ -1344,7 +1268,14 @@ bool Codegen::visit(BinaryExpression *ast)
         if (_expr.accept(cx)) {
             setLocation(cjump(binop(IR::binaryOperator(ast->op), left, *right, ast->operatorToken), _expr.iftrue, _expr.iffalse), ast->operatorToken);
         } else {
-            _expr.code = binop(IR::binaryOperator(ast->op), left, *right, ast->operatorToken);
+            IR::Expr *e = binop(IR::binaryOperator(ast->op), left, *right, ast->operatorToken);
+            if (e->asConst() || e->asString())
+                _expr.code = e;
+            else {
+                const unsigned t = _block->newTemp();
+                setLocation(move(_block->TEMP(t), e), ast->operatorToken);
+                _expr.code = _block->TEMP(t);
+            }
         }
         break;
     }
@@ -1360,7 +1291,6 @@ bool Codegen::visit(BinaryExpression *ast)
     case QSOperator::RShift:
     case QSOperator::Sub:
     case QSOperator::URShift: {
-        TempScope scope(_function);
         if (!left->asTemp() && !left->asArgLocal() && !left->asConst()) {
             const unsigned t = _block->newTemp();
             setLocation(move(_block->TEMP(t), left), ast->operatorToken);
@@ -1371,7 +1301,14 @@ bool Codegen::visit(BinaryExpression *ast)
         if (hasError)
             return false;
 
-        _expr.code = binop(IR::binaryOperator(ast->op), left, *right, ast->operatorToken);
+        IR::Expr *e = binop(IR::binaryOperator(ast->op), left, *right, ast->operatorToken);
+        if (e->asConst() || e->asString())
+            _expr.code = e;
+        else {
+            const unsigned t = _block->newTemp();
+            setLocation(move(_block->TEMP(t), e), ast->operatorToken);
+            _expr.code = _block->TEMP(t);
+        }
         break;
     }
 
@@ -1412,7 +1349,6 @@ bool Codegen::visit(ConditionalExpression *ast)
     IR::BasicBlock *endif = _function->newBasicBlock(exceptionHandler());
 
     const unsigned t = _block->newTemp();
-    TempScope scope(_function);
 
     condition(ast->expression, iftrue, iffalse);
 
@@ -1516,8 +1452,6 @@ bool Codegen::visit(FunctionExpression *ast)
     if (hasError)
         return false;
 
-    TempScope scope(_function);
-
     int function = defineFunction(ast->name.toString(), ast, ast->formals, ast->body ? ast->body->elements : 0);
     _expr.code = _block->CLOSURE(function);
     return false;
@@ -1533,18 +1467,18 @@ IR::Expr *Codegen::identifier(const QString &name, int line, int col)
     IR::Function *f = _function;
 
     while (f && e->parent) {
-        if (f->insideWithOrCatch || (f->isNamedExpression && QStringRef(f->name) == name))
+        if (f->insideWithOrCatch || (f->isNamedExpression && f->name == name))
             return _block->NAME(name, line, col);
 
         int index = e->findMember(name);
         Q_ASSERT (index < e->members.size());
         if (index != -1) {
             IR::ArgLocal *al = _block->LOCAL(index, scope);
-            if (name == QLatin1String("arguments") || name == QLatin1String("eval"))
+            if (name == QStringLiteral("arguments") || name == QStringLiteral("eval"))
                 al->isArgumentsOrEval = true;
             return al;
         }
-        const int argIdx = f->indexOfArgument(QStringRef(&name));
+        const int argIdx = f->indexOfArgument(&name);
         if (argIdx != -1)
             return _block->ARG(argIdx, scope);
 
@@ -1598,7 +1532,6 @@ bool Codegen::visit(NewExpression *ast)
 {
     if (hasError)
         return false;
-    TempScope scope(_function);
 
     Result base = expression(ast->expression);
     if (hasError)
@@ -1617,10 +1550,6 @@ bool Codegen::visit(NewMemberExpression *ast)
 {
     if (hasError)
         return false;
-
-    const unsigned t = _block->newTemp();
-
-    TempScope scope(_function);
 
     Result base = expression(ast->base);
     if (hasError)
@@ -1642,6 +1571,7 @@ bool Codegen::visit(NewMemberExpression *ast)
         (*args_it)->init(actual);
         args_it = &(*args_it)->next;
     }
+    const unsigned t = _block->newTemp();
     move(_block->TEMP(t), _block->NEW(expr, args));
     _expr.code = _block->TEMP(t);
     return false;
@@ -1652,12 +1582,10 @@ bool Codegen::visit(NotExpression *ast)
     if (hasError)
         return false;
 
-    const unsigned r = _block->newTemp();
-    TempScope scope(_function);
-
     Result expr = expression(ast->expression);
     if (hasError)
         return false;
+    const unsigned r = _block->newTemp();
     setLocation(move(_block->TEMP(r), unop(IR::OpNot, *expr, ast->notToken)), ast->notToken);
     _expr.code = _block->TEMP(r);
     return false;
@@ -1710,9 +1638,6 @@ bool Codegen::visit(ObjectLiteral *ast)
 
     QMap<QString, ObjectPropertyValue> valueMap;
 
-    const unsigned t = _block->newTemp();
-    TempScope scope(_function);
-
     for (PropertyAssignmentList *it = ast->properties; it; it = it->next) {
         QString name = it->assignment->name->asString();
         if (PropertyNameAndValue *nv = AST::cast<AST::PropertyNameAndValue *>(it->assignment)) {
@@ -1726,13 +1651,7 @@ bool Codegen::visit(ObjectLiteral *ast)
                 return false;
             }
 
-            if (IR::Const *c = (*value)->asConst()) {
-                valueMap[name].value = c;
-            } else {
-                unsigned t = _block->newTemp();
-                move(_block->TEMP(t), *value);
-                valueMap[name].value = _block->TEMP(t);
-            }
+            valueMap[name].value = *value;
         } else if (PropertyGetterSetter *gs = AST::cast<AST::PropertyGetterSetter *>(it->assignment)) {
             const int function = defineFunction(name, gs, gs->formals, gs->functionBody ? gs->functionBody->elements : 0);
             ObjectPropertyValue &v = valueMap[name];
@@ -1803,9 +1722,12 @@ bool Codegen::visit(ObjectLiteral *ast)
             current = current->next;
             current->expr = _block->CONST(IR::BoolType, true);
 
+            unsigned value = _block->newTemp();
+            move(_block->TEMP(value), it->value);
+
             current->next = _function->New<IR::ExprList>();
             current = current->next;
-            current->expr = it->value;
+            current->expr = _block->TEMP(value);
         } else {
             current->next = _function->New<IR::ExprList>();
             current = current->next;
@@ -1838,6 +1760,7 @@ bool Codegen::visit(ObjectLiteral *ast)
             args->next = arrayEntries;
     }
 
+    const unsigned t = _block->newTemp();
     move(_block->TEMP(t), _block->CALL(_block->NAME(IR::Name::builtin_define_object_literal,
          ast->firstSourceLocation().startLine, ast->firstSourceLocation().startColumn), args));
 
@@ -1863,7 +1786,6 @@ bool Codegen::visit(PostDecrementExpression *ast)
     const unsigned oldValue = _block->newTemp();
     setLocation(move(_block->TEMP(oldValue), unop(IR::OpUPlus, *expr, ast->decrementToken)), ast->decrementToken);
 
-    TempScope scope(_function);
     const unsigned  newValue = _block->newTemp();
     setLocation(move(_block->TEMP(newValue), binop(IR::OpSub, _block->TEMP(oldValue), _block->CONST(IR::NumberType, 1), ast->decrementToken)), ast->decrementToken);
     setLocation(move(*expr, _block->TEMP(newValue)), ast->decrementToken);
@@ -1892,7 +1814,6 @@ bool Codegen::visit(PostIncrementExpression *ast)
     const unsigned oldValue = _block->newTemp();
     setLocation(move(_block->TEMP(oldValue), unop(IR::OpUPlus, *expr, ast->incrementToken)), ast->incrementToken);
 
-    TempScope scope(_function);
     const unsigned  newValue = _block->newTemp();
     setLocation(move(_block->TEMP(newValue), binop(IR::OpAdd, _block->TEMP(oldValue), _block->CONST(IR::NumberType, 1), ast->incrementToken)), ast->incrementToken);
     setLocation(move(*expr, _block->TEMP(newValue)), ast->incrementToken);
@@ -1989,12 +1910,10 @@ bool Codegen::visit(TildeExpression *ast)
     if (hasError)
         return false;
 
-    const unsigned t = _block->newTemp();
-    TempScope scope(_function);
-
     Result expr = expression(ast->expression);
     if (hasError)
         return false;
+    const unsigned t = _block->newTemp();
     setLocation(move(_block->TEMP(t), unop(IR::OpCompl, *expr, ast->tildeToken)), ast->tildeToken);
     _expr.code = _block->TEMP(t);
     return false;
@@ -2017,8 +1936,6 @@ bool Codegen::visit(TypeOfExpression *ast)
 {
     if (hasError)
         return false;
-
-    TempScope scope(_function);
 
     Result expr = expression(ast->expression);
     if (hasError)
@@ -2062,8 +1979,6 @@ bool Codegen::visit(VoidExpression *ast)
     if (hasError)
         return false;
 
-    TempScope scope(_function);
-
     statement(ast->expression);
     _expr.code = _block->CONST(IR::UndefinedType, 0);
     return false;
@@ -2073,8 +1988,6 @@ bool Codegen::visit(FunctionDeclaration * ast)
 {
     if (hasError)
         return false;
-
-    TempScope scope(_function);
 
     if (_env->compilationMode == QmlBinding)
         move(_block->TEMP(_returnAddress), _block->NAME(ast->name.toString(), 0, 0));
@@ -2102,21 +2015,11 @@ int Codegen::defineFunction(const QString &name, AST::Node *ast,
     IR::BasicBlock *exitBlock = function->newBasicBlock(0, IR::Function::DontInsertBlock);
     function->hasDirectEval = _env->hasDirectEval || _env->compilationMode == EvalCode
             || _module->debugMode; // Conditional breakpoints are like eval in the function
-
-    // When a user writes the following QML signal binding:
-    //    onSignal: function() { doSomethingUsefull }
-    // we will generate a binding function that just returns the closure. However, that's not useful
-    // at all, because if the onSignal is a signal handler, the user is actually making it explicit
-    // that the binding is a function, so we should execute that. However, we don't know that during
-    // AOT compilation, so mark the surrounding function as only-returning-a-closure.
-    function->returnsClosure = cast<ExpressionStatement *>(ast) && cast<FunctionExpression *>(cast<ExpressionStatement *>(ast)->expression);
-
     function->usesArgumentsObject = _env->parent && (_env->usesArgumentsObject == Environment::ArgumentsObjectUsed);
     function->usesThis = _env->usesThis;
     function->maxNumberOfArguments = qMax(_env->maxNumberOfArguments, (int)QV4::Global::ReservedArgumentCount);
     function->isStrict = _env->isStrict;
     function->isNamedExpression = _env->isNamedFunctionExpression;
-    function->isQmlBinding = _env->compilationMode == QmlBinding;
 
     AST::SourceLocation loc = ast->firstSourceLocation();
     function->line = loc.startLine;
@@ -2137,7 +2040,7 @@ int Codegen::defineFunction(const QString &name, AST::Node *ast,
         }
     } else {
         if (!_env->isStrict) {
-            for (const QString &inheritedLocal : qAsConst(inheritedLocals)) {
+            foreach (const QString &inheritedLocal, inheritedLocals) {
                 function->LOCAL(inheritedLocal);
                 unsigned tempIndex = entryBlock->newTemp();
                 Environment::Member member = { Environment::UndefinedMember,
@@ -2179,7 +2082,7 @@ int Codegen::defineFunction(const QString &name, AST::Node *ast,
         _function->RECEIVE(it->name.toString());
     }
 
-    for (const Environment::Member &member : qAsConst(_env->members)) {
+    foreach (const Environment::Member &member, _env->members) {
         if (member.function) {
             const int function = defineFunction(member.function->name.toString(), member.function, member.function->formals,
                                                 member.function->body ? member.function->body->elements : 0);
@@ -2247,8 +2150,6 @@ bool Codegen::visit(Block *ast)
     if (hasError)
         return false;
 
-    TempScope scope(_function);
-
     for (StatementList *it = ast->statements; it; it = it->next) {
         statement(it->statement);
     }
@@ -2259,8 +2160,6 @@ bool Codegen::visit(BreakStatement *ast)
 {
     if (hasError)
         return false;
-
-    TempScope scope(_function);
 
     if (!_loop) {
         throwSyntaxError(ast->lastSourceLocation(), QStringLiteral("Break outside of loop"));
@@ -2288,8 +2187,6 @@ bool Codegen::visit(ContinueStatement *ast)
 {
     if (hasError)
         return false;
-
-    TempScope scope(_function);
 
     Loop *loop = 0;
     if (ast->label.isEmpty()) {
@@ -2330,8 +2227,6 @@ bool Codegen::visit(DoWhileStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     IR::BasicBlock *loopbody = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *loopcond = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *loopend = _function->newBasicBlock(exceptionHandler());
@@ -2342,7 +2237,7 @@ bool Codegen::visit(DoWhileStatement *ast)
 
     _block = loopbody;
     statement(ast->statement);
-    setJumpOutLocation(_block->JUMP(loopcond), ast->statement, ast->semicolonToken);
+    _block->JUMP(loopcond);
 
     _block = loopcond;
     condition(ast->expression, loopbody, loopend);
@@ -2367,8 +2262,6 @@ bool Codegen::visit(ExpressionStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     if (_env->compilationMode == EvalCode || _env->compilationMode == QmlBinding) {
         Result e = expression(ast->expression);
         if (*e)
@@ -2383,8 +2276,6 @@ bool Codegen::visit(ForEachStatement *ast)
 {
     if (hasError)
         return true;
-
-    TempScope scope(_function);
 
     IR::BasicBlock *foreachin = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *foreachbody = _function->newBasicBlock(exceptionHandler());
@@ -2411,7 +2302,7 @@ bool Codegen::visit(ForEachStatement *ast)
         return false;
     move(*init, _block->TEMP(temp));
     statement(ast->statement);
-    setJumpOutLocation(_block->JUMP(foreachin), ast->statement, ast->forToken);
+    _block->JUMP(foreachin);
 
     _block = foreachin;
 
@@ -2432,8 +2323,6 @@ bool Codegen::visit(ForStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     IR::BasicBlock *forcond = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *forbody = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *forstep = _function->newBasicBlock(exceptionHandler());
@@ -2452,7 +2341,7 @@ bool Codegen::visit(ForStatement *ast)
 
     _block = forbody;
     statement(ast->statement);
-    setJumpOutLocation(_block->JUMP(forstep), ast->statement, ast->forToken);
+    _block->JUMP(forstep);
 
     _block = forstep;
     statement(ast->expression);
@@ -2470,8 +2359,6 @@ bool Codegen::visit(IfStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     IR::BasicBlock *iftrue = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *iffalse = ast->ko ? _function->newBasicBlock(exceptionHandler()) : 0;
     IR::BasicBlock *endif = _function->newBasicBlock(exceptionHandler());
@@ -2480,12 +2367,12 @@ bool Codegen::visit(IfStatement *ast)
 
     _block = iftrue;
     statement(ast->ok);
-    setJumpOutLocation(_block->JUMP(endif), ast->ok, ast->ifToken);
+    _block->JUMP(endif);
 
     if (ast->ko) {
         _block = iffalse;
         statement(ast->ko);
-        setJumpOutLocation(_block->JUMP(endif), ast->ko, ast->elseToken);
+        _block->JUMP(endif);
     }
 
     _block = endif;
@@ -2497,8 +2384,6 @@ bool Codegen::visit(LabelledStatement *ast)
 {
     if (hasError)
         return true;
-
-    TempScope scope(_function);
 
     // check that no outer loop contains the label
     Loop *l = _loop;
@@ -2537,8 +2422,6 @@ bool Codegen::visit(LocalForEachStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     IR::BasicBlock *foreachin = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *foreachbody = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *foreachend = _function->newBasicBlock(exceptionHandler());
@@ -2558,7 +2441,7 @@ bool Codegen::visit(LocalForEachStatement *ast)
     int temp = _block->newTemp();
     move(identifier(ast->declaration->name.toString()), _block->TEMP(temp));
     statement(ast->statement);
-    setJumpOutLocation(_block->JUMP(foreachin), ast->statement, ast->forToken);
+    _block->JUMP(foreachin);
 
     _block = foreachin;
 
@@ -2579,8 +2462,6 @@ bool Codegen::visit(LocalForStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     IR::BasicBlock *forcond = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *forbody = _function->newBasicBlock(exceptionHandler());
     IR::BasicBlock *forstep = _function->newBasicBlock(exceptionHandler());
@@ -2599,7 +2480,7 @@ bool Codegen::visit(LocalForStatement *ast)
 
     _block = forbody;
     statement(ast->statement);
-    setJumpOutLocation(_block->JUMP(forstep), ast->statement, ast->forToken);
+    _block->JUMP(forstep);
 
     _block = forstep;
     statement(ast->expression);
@@ -2642,8 +2523,6 @@ bool Codegen::visit(SwitchStatement *ast)
 {
     if (hasError)
         return true;
-
-    TempScope scope(_function);
 
     IR::BasicBlock *switchend = _function->newBasicBlock(exceptionHandler());
 
@@ -2740,8 +2619,6 @@ bool Codegen::visit(ThrowStatement *ast)
     if (hasError)
         return true;
 
-    TempScope scope(_function);
-
     Result expr = expression(ast->expression);
     move(_block->TEMP(_returnAddress), *expr);
     IR::ExprList *throwArgs = _function->New<IR::ExprList>();
@@ -2754,8 +2631,6 @@ bool Codegen::visit(TryStatement *ast)
 {
     if (hasError)
         return true;
-
-    TempScope scope(_function);
 
     _function->hasTry = true;
 
@@ -2835,8 +2710,6 @@ bool Codegen::visit(TryStatement *ast)
         _function->addBasicBlock(finallyBody);
         _block = finallyBody;
 
-        TempScope scope(_function);
-
         int hasException = _block->newTemp();
         move(_block->TEMP(hasException), _block->CALL(_block->NAME(IR::Name::builtin_unwind_exception, /*line*/0, /*column*/0), 0));
 
@@ -2908,7 +2781,7 @@ bool Codegen::visit(WhileStatement *ast)
 
     _block = whilebody;
     statement(ast->statement);
-    setJumpOutLocation(_block->JUMP(whilecond), ast->statement, ast->whileToken);
+    _block->JUMP(whilecond);
 
     _block = whileend;
     leaveLoop();
@@ -2920,8 +2793,6 @@ bool Codegen::visit(WithStatement *ast)
 {
     if (hasError)
         return true;
-
-    TempScope scope(_function);
 
     _function->hasWith = true;
 
@@ -3062,7 +2933,7 @@ QList<QQmlError> Codegen::qmlErrors() const
     qmlErrors.reserve(_errors.size());
 
     QUrl url(_fileNameIsUrl ? QUrl(_module->fileName) : QUrl::fromLocalFile(_module->fileName));
-    for (const QQmlJS::DiagnosticMessage &msg: qAsConst(_errors)) {
+    foreach (const QQmlJS::DiagnosticMessage &msg, _errors) {
         QQmlError e;
         e.setUrl(url);
         e.setLine(msg.loc.startLine);

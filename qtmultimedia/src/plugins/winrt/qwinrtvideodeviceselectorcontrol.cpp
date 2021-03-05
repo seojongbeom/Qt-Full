@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd and/or its subsidiary(-ies).
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd and/or its subsidiary(-ies).
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -161,7 +158,7 @@ private:
         if (isDefault)
             defaultDeviceIndex = index;
 
-        for (QWinRTVideoDeviceSelectorControl *watcher : qAsConst(watchers))
+        foreach (QWinRTVideoDeviceSelectorControl *watcher, watchers)
             emit watcher->devicesChanged();
 
         return S_OK;
@@ -183,7 +180,7 @@ private:
         if (index >= 0)
             devices.remove(index);
 
-        for (QWinRTVideoDeviceSelectorControl *watcher : qAsConst(watchers))
+        foreach (QWinRTVideoDeviceSelectorControl *watcher, watchers)
             emit watcher->devicesChanged();
 
         return S_OK;
@@ -192,7 +189,7 @@ private:
     HRESULT onDeviceUpdated(IDeviceWatcher *, IDeviceInformationUpdate *)
     {
         // A name or description may have changed, so emit devicesChanged
-        for (QWinRTVideoDeviceSelectorControl *watcher : qAsConst(watchers))
+        foreach (QWinRTVideoDeviceSelectorControl *watcher, watchers)
             emit watcher->devicesChanged();
 
         return S_OK;
@@ -251,22 +248,6 @@ private:
 };
 Q_GLOBAL_STATIC(QWinRTVideoDeviceSelectorControlGlobal, g)
 
-static ComPtr<IEnclosureLocation> enclosureLocation(const QString &deviceName)
-{
-    ComPtr<IEnclosureLocation> enclosureLocation;
-    int deviceIndex = g->deviceIndex.value(deviceName);
-    IDeviceInformation *deviceInfo = g->devices.value(deviceIndex).Get();
-    if (!deviceInfo)
-        return enclosureLocation;
-
-    HRESULT hr;
-    hr = deviceInfo->get_EnclosureLocation(&enclosureLocation);
-    if (FAILED(hr))
-        qErrnoWarning(hr, "Failed to get camera enclosure location");
-
-    return enclosureLocation;
-}
-
 class QWinRTVideoDeviceSelectorControlPrivate
 {
 public:
@@ -323,13 +304,20 @@ int QWinRTVideoDeviceSelectorControl::selectedDevice() const
 
 QCamera::Position QWinRTVideoDeviceSelectorControl::cameraPosition(const QString &deviceName)
 {
-    ComPtr<IEnclosureLocation> enclosure = enclosureLocation(deviceName);
-    if (!enclosure)
+    int deviceIndex = g->deviceIndex.value(deviceName);
+    IDeviceInformation *deviceInfo = g->devices.value(deviceIndex).Get();
+    if (!deviceInfo)
         return QCamera::UnspecifiedPosition;
 
+    ComPtr<IEnclosureLocation> enclosureLocation;
     HRESULT hr;
+    hr = deviceInfo->get_EnclosureLocation(&enclosureLocation);
+    RETURN_IF_FAILED("Failed to get camera enclosure location", return QCamera::UnspecifiedPosition);
+    if (!enclosureLocation)
+        return QCamera::UnspecifiedPosition;
+
     Panel panel;
-    hr = enclosure->get_Panel(&panel);
+    hr = enclosureLocation->get_Panel(&panel);
     RETURN_IF_FAILED("Failed to get camera panel location", return QCamera::UnspecifiedPosition);
 
     switch (panel) {
@@ -345,26 +333,25 @@ QCamera::Position QWinRTVideoDeviceSelectorControl::cameraPosition(const QString
 
 int QWinRTVideoDeviceSelectorControl::cameraOrientation(const QString &deviceName)
 {
-    ComPtr<IEnclosureLocation> enclosure = enclosureLocation(deviceName);
-    if (!enclosure)
-        return 0;
-
-    HRESULT hr;
-    ComPtr<IEnclosureLocation2> enclosure2;
-    hr = enclosure.As(&enclosure2);
-    RETURN_IF_FAILED("Failed to cast camera enclosure location", return 0);
-    quint32 rotation;
-    hr = enclosure2->get_RotationAngleInDegreesClockwise(&rotation);
-    RETURN_IF_FAILED("Failed to get camera rotation angle", return 0);
-    return rotation;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
+    switch (cameraPosition(deviceName)) {
+    case QCamera::FrontFace:
+    case QCamera::BackFace:
+        return 270;
+    default:
+        break;
+    }
+#else
+    Q_UNUSED(deviceName);
+#endif
+    return 0;
 }
 
 QList<QByteArray> QWinRTVideoDeviceSelectorControl::deviceNames()
 {
     QList<QByteArray> devices;
-    devices.reserve(g->deviceIndex.size());
-    for (auto it = g->deviceIndex.keyBegin(), end = g->deviceIndex.keyEnd(); it != end; ++it)
-        devices.append((*it).toUtf8());
+    foreach (const QString &device, g->deviceIndex.keys())
+        devices.append(device.toUtf8());
 
     return devices;
 }

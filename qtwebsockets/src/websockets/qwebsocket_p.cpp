@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Kurt Pattyn <pattyn.kurt@gmail.com>.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Kurt Pattyn <pattyn.kurt@gmail.com>.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWebSockets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -60,7 +54,6 @@
 #ifndef QT_NO_SSL
 #include <QtNetwork/QSslConfiguration>
 #include <QtNetwork/QSslError>
-#include <QtNetwork/QSslPreSharedKeyAuthenticator>
 #endif
 
 #include <QtCore/QDebug>
@@ -305,9 +298,11 @@ QWebSocket *QWebSocketPrivate::upgradeFrom(QTcpSocket *pTcpSocket,
     QWebSocket *pWebSocket = new QWebSocket(pTcpSocket, response.acceptedVersion(), parent);
     if (Q_LIKELY(pWebSocket)) {
         QNetworkRequest netRequest(request.requestUrl());
-        const auto headers = request.headers();
-        for (auto it = headers.begin(), end = headers.end(); it != end; ++it)
-            netRequest.setRawHeader(it.key().toLatin1(), it.value().toLatin1());
+        QMapIterator<QString, QString> headerIter(request.headers());
+        while (headerIter.hasNext()) {
+            headerIter.next();
+            netRequest.setRawHeader(headerIter.key().toLatin1(), headerIter.value().toLatin1());
+        }
 #ifndef QT_NO_SSL
         if (QSslSocket *sslSock = qobject_cast<QSslSocket *>(pTcpSocket))
             pWebSocket->setSslConfiguration(sslSock->sslConfiguration());
@@ -591,14 +586,9 @@ void QWebSocketPrivate::makeConnections(const QTcpSocket *pTcpSocket)
 #ifndef QT_NO_SSL
         const QSslSocket * const sslSocket = qobject_cast<const QSslSocket *>(pTcpSocket);
         if (sslSocket) {
-            QObject::connect(sslSocket, &QSslSocket::preSharedKeyAuthenticationRequired, q,
-                             &QWebSocket::preSharedKeyAuthenticationRequired);
             QObject::connect(sslSocket, &QSslSocket::encryptedBytesWritten, q,
                              &QWebSocket::bytesWritten);
             typedef void (QSslSocket:: *sslErrorSignalType)(const QList<QSslError> &);
-            QObjectPrivate::connect(sslSocket,
-                                    static_cast<sslErrorSignalType>(&QSslSocket::sslErrors),
-                                    this, &QWebSocketPrivate::_q_updateSslConfiguration);
             QObject::connect(sslSocket,
                              static_cast<sslErrorSignalType>(&QSslSocket::sslErrors),
                              q, &QWebSocket::sslErrors);
@@ -636,7 +626,7 @@ void QWebSocketPrivate::makeConnections(const QTcpSocket *pTcpSocket)
 void QWebSocketPrivate::releaseConnections(const QTcpSocket *pTcpSocket)
 {
     if (Q_LIKELY(pTcpSocket))
-        pTcpSocket->disconnect();
+        pTcpSocket->disconnect(pTcpSocket);
     m_dataProcessor.disconnect();
 }
 
@@ -712,11 +702,12 @@ QByteArray QWebSocketPrivate::getFrameHeader(QWebSocketProtocol::OpCode opCode,
                                              bool lastFrame)
 {
     QByteArray header;
+    quint8 byte = 0x00;
     bool ok = payloadLength <= 0x7FFFFFFFFFFFFFFFULL;
 
     if (Q_LIKELY(ok)) {
         //FIN, RSV1-3, opcode (RSV-1, RSV-2 and RSV-3 are zero)
-        quint8 byte = static_cast<quint8>((opCode & 0x0F) | (lastFrame ? 0x80 : 0x00));
+        byte = static_cast<quint8>((opCode & 0x0F) | (lastFrame ? 0x80 : 0x00));
         header.append(static_cast<char>(byte));
 
         byte = 0x00;
@@ -776,6 +767,7 @@ qint64 QWebSocketPrivate::doWriteFrames(const QByteArray &data, bool isBinary)
     if (Q_UNLIKELY(numFrames == 0))
         numFrames = 1;
     quint64 currentPosition = 0;
+    qint64 bytesWritten = 0;
     quint64 bytesLeft = data.size();
 
     for (int i = 0; i < numFrames; ++i) {
@@ -791,7 +783,7 @@ qint64 QWebSocketPrivate::doWriteFrames(const QByteArray &data, bool isBinary)
                                                                : QWebSocketProtocol::OpCodeContinue;
 
         //write header
-        m_pSocket->write(getFrameHeader(opcode, size, maskingKey, isLastFrame));
+        bytesWritten += m_pSocket->write(getFrameHeader(opcode, size, maskingKey, isLastFrame));
 
         //write payload
         if (Q_LIKELY(size > 0)) {
@@ -800,6 +792,7 @@ qint64 QWebSocketPrivate::doWriteFrames(const QByteArray &data, bool isBinary)
                 QWebSocketProtocol::mask(currentData, size, maskingKey);
             qint64 written = m_pSocket->write(currentData, static_cast<qint64>(size));
             if (Q_LIKELY(written > 0)) {
+                bytesWritten += written;
                 payloadWritten += written;
             } else {
                 m_pSocket->flush();
@@ -882,7 +875,7 @@ qint64 QWebSocketPrivate::writeFrame(const QByteArray &frame)
 /*!
     \internal
  */
-static QString readLine(QTcpSocket *pSocket)
+QString readLine(QTcpSocket *pSocket)
 {
     Q_ASSERT(pSocket);
     QString line;
@@ -956,7 +949,7 @@ void QWebSocketPrivate::processHandshake(QTcpSocket *pSocket)
     case NothingDoneState:
         m_headers.clear();
         m_handshakeState = ReadingStatusState;
-        Q_FALLTHROUGH();
+        // no break
     case ReadingStatusState:
         if (!pSocket->canReadLine())
             return;
@@ -966,7 +959,7 @@ void QWebSocketPrivate::processHandshake(QTcpSocket *pSocket)
             break;
         }
         m_handshakeState = ReadingHeaderState;
-        Q_FALLTHROUGH();
+        // no break
     case ReadingHeaderState:
         while (pSocket->canReadLine()) {
             QString headerLine = readLine(pSocket);
@@ -988,7 +981,7 @@ void QWebSocketPrivate::processHandshake(QTcpSocket *pSocket)
             }
             return;
         }
-        Q_FALLTHROUGH();
+        // no break
     case ParsingHeaderState: {
         const QString acceptKey = m_headers.value(QStringLiteral("sec-websocket-accept"), QString());
         const QString upgrade = m_headers.value(QStringLiteral("upgrade"), QString());
@@ -1088,8 +1081,7 @@ void QWebSocketPrivate::processStateChanged(QAbstractSocket::SocketState socketS
             m_key = generateKey();
 
             QList<QPair<QString, QString> > headers;
-            const auto headerList = m_request.rawHeaderList();
-            for (const QByteArray &key : headerList)
+            foreach (const QByteArray &key, m_request.rawHeaderList())
                 headers << qMakePair(QString::fromLatin1(key),
                                      QString::fromLatin1(m_request.rawHeader(key)));
 
@@ -1148,8 +1140,7 @@ void QWebSocketPrivate::socketDestroyed(QObject *socket)
  */
 void QWebSocketPrivate::processData()
 {
-    if (!m_pSocket) // disconnected with data still in-bound
-        return;
+    Q_ASSERT(m_pSocket);
     while (m_pSocket->bytesAvailable()) {
         if (state() == QAbstractSocket::ConnectingState) {
             if (!m_pSocket->canReadLine())
@@ -1206,7 +1197,7 @@ QString QWebSocketPrivate::createHandShakeRequest(QString resourceName,
                                                   QString extensions,
                                                   QString protocols,
                                                   QByteArray key,
-                                                  const QList<QPair<QString, QString> > &headers)
+                                                  QList<QPair<QString, QString> > headers)
 {
     QStringList handshakeRequest;
     if (resourceName.contains(QStringLiteral("\r\n"))) {
@@ -1249,9 +1240,11 @@ QString QWebSocketPrivate::createHandShakeRequest(QString resourceName,
     if (protocols.length() > 0)
         handshakeRequest << QStringLiteral("Sec-WebSocket-Protocol: ") % protocols;
 
-    for (const auto &header : headers)
+    QListIterator<QPair<QString, QString> > headerIter(headers);
+    while (headerIter.hasNext()) {
+        const QPair<QString,QString> &header = headerIter.next();
         handshakeRequest << header.first % QStringLiteral(": ") % header.second;
-
+    }
     handshakeRequest << QStringLiteral("\r\n");
 
     return handshakeRequest.join(QStringLiteral("\r\n"));

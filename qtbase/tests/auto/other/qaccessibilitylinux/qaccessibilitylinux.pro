@@ -1,7 +1,12 @@
 CONFIG += testcase
 
+include($$QT_SOURCE_TREE/src/platformsupport/accessibility/accessibility.pri)
+include($$QT_SOURCE_TREE/src/platformsupport/linuxaccessibility/linuxaccessibility.pri)
+
 TARGET = tst_qaccessibilitylinux
 SOURCES += tst_qaccessibilitylinux.cpp
 
-QT += gui-private widgets dbus testlib accessibility_support-private linuxaccessibility_support-private
+CONFIG += gui
+
+QT += gui-private widgets dbus testlib
 

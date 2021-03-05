@@ -18,6 +18,7 @@ SUBDIRS=\
     qdate \
     qdatetime \
     qeasingcurve \
+    qelapsedtimer \
     qexplicitlyshareddatapointer \
     qfreelist \
     qhash \
@@ -50,7 +51,6 @@ SUBDIRS=\
     qstl \
     qstring \
     qstring_no_cast_from_bytearray \
-    qstringapisymmetry \
     qstringbuilder \
     qstringiterator \
     qstringlist \

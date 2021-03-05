@@ -16,7 +16,7 @@ SUBDIRS=\
    qwmatrix \
    qpolygon \
 
-!qtConfig(private_tests): SUBDIRS -= \
+!contains(QT_CONFIG, private_tests): SUBDIRS -= \
     qpathclipper \
 
 

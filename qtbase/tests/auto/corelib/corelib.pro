@@ -3,7 +3,7 @@ TEMPLATE=subdirs
 SUBDIRS = \
    kernel
 
-!uikit: SUBDIRS += \
+!ios: SUBDIRS += \
    animation \
    codecs \
    global \

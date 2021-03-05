@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Linguist of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -100,7 +105,6 @@ public:
     bool operator!=(const QString &other) const { return !(*this == other); }
     bool operator!=(QLatin1String other) const { return !(*this == other); }
     bool operator!=(const char *other) const { return !(*this == other); }
-    bool operator<(const ProString &other) const { return toQStringRef() < other.toQStringRef(); }
     bool isNull() const { return m_string.isNull(); }
     bool isEmpty() const { return !m_length; }
     int length() const { return m_length; }
@@ -131,9 +135,8 @@ public:
     bool contains(const QString &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const { return indexOf(s, 0, cs) >= 0; }
     bool contains(const char *s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const { return indexOf(QLatin1String(s), 0, cs) >= 0; }
     bool contains(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const { return indexOf(c, 0, cs) >= 0; }
-    int toLongLong(bool *ok = 0, int base = 10) const { return toQStringRef().toLongLong(ok, base); }
-    int toInt(bool *ok = 0, int base = 10) const { return toQStringRef().toInt(ok, base); }
-    short toShort(bool *ok = 0, int base = 10) const { return toQStringRef().toShort(ok, base); }
+    int toInt(bool *ok = 0, int base = 10) const { return toQString().toInt(ok, base); } // XXX optimize
+    short toShort(bool *ok = 0, int base = 10) const { return toQString().toShort(ok, base); } // XXX optimize
 
     uint hash() const { return m_hash; }
     static uint hash(const QChar *p, int n);
@@ -208,13 +211,9 @@ inline QString operator+(const QString &one, const ProString &two)
     { return ProString(one) + two; }
 
 inline QString operator+(const ProString &one, const char *two)
-    { QString ret = one.toQStringRef() + QLatin1String(two); ret.detach(); return ret; }
+    { return one + ProString(two); } // XXX optimize
 inline QString operator+(const char *one, const ProString &two)
-    { QString ret = QLatin1String(one) + two.toQStringRef(); ret.detach(); return ret;  }
-inline QString operator+(const ProString &one, QChar two)
-    { return one.toQStringRef() + two; }
-inline QString operator+(QChar one, const ProString &two)
-    { return one + two.toQStringRef(); }
+    { return ProString(one) + two; } // XXX optimize
 
 inline QString &operator+=(QString &that, const ProString &other)
     { return that += other.toQStringRef(); }
@@ -238,7 +237,6 @@ public:
 
     int length() const { return size(); }
 
-    QString join(const ProString &sep) const;
     QString join(const QString &sep) const;
     QString join(QChar sep) const;
 
@@ -252,7 +250,6 @@ public:
     void removeDuplicates();
 
     bool contains(const ProString &str, Qt::CaseSensitivity cs = Qt::CaseSensitive) const;
-    bool contains(const QStringRef &str, Qt::CaseSensitivity cs = Qt::CaseSensitive) const;
     bool contains(const QString &str, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
         { return contains(ProString(str), cs); }
     bool contains(const char *str, Qt::CaseSensitivity cs = Qt::CaseSensitive) const;
@@ -372,8 +369,6 @@ class ProFunctionDef {
 public:
     ProFunctionDef(ProFile *pro, int offset) : m_pro(pro), m_offset(offset) { m_pro->ref(); }
     ProFunctionDef(const ProFunctionDef &o) : m_pro(o.m_pro), m_offset(o.m_offset) { m_pro->ref(); }
-    ProFunctionDef(ProFunctionDef &&other) Q_DECL_NOTHROW
-        : m_pro(other.m_pro), m_offset(other.m_offset) { other.m_pro = nullptr; }
     ~ProFunctionDef() { m_pro->deref(); }
     ProFunctionDef &operator=(const ProFunctionDef &o)
     {
@@ -385,18 +380,6 @@ public:
         }
         return *this;
     }
-    ProFunctionDef &operator=(ProFunctionDef &&other) Q_DECL_NOTHROW
-    {
-        ProFunctionDef moved(std::move(other));
-        swap(moved);
-        return *this;
-    }
-    void swap(ProFunctionDef &other) Q_DECL_NOTHROW
-    {
-        qSwap(m_pro, other.m_pro);
-        qSwap(m_offset, other.m_offset);
-    }
-
     ProFile *pro() const { return m_pro; }
     const ushort *tokPtr() const { return m_pro->tokPtr() + m_offset; }
 private:

@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,41 +34,57 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.ItemDelegate {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            (label ? label.implicitWidth : 0) +
+                            (indicator ? indicator.implicitWidth : 0) +
+                            (label && indicator ? spacing : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
+                             Math.max(label ? label.implicitHeight : 0,
                                       indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 12
     spacing: 12
 
-    contentItem: Text {
-        leftPadding: control.mirrored ? (control.indicator ? control.indicator.width : 0) + control.spacing : 0
-        rightPadding: !control.mirrored ? (control.indicator ? control.indicator.width : 0) + control.spacing : 0
+    //! [label]
+    label: Text {
+        x: control.mirrored ? control.width - width - control.rightPadding : control.leftPadding
+        y: control.topPadding
+        width: control.availableWidth - (control.checkable ? indicator.width + control.spacing : 0)
+        height: control.availableHeight
 
         text: control.text
         font: control.font
-        color: control.enabled ? Default.textDarkColor : Default.textDisabledColor
+        color: control.enabled ? "#26282a" : "#bdbebf"
         elide: Text.ElideRight
+        visible: control.text
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 
+    //! [indicator]
+    indicator: Image {
+        x: control.mirrored ? control.leftPadding : control.width - width - control.rightPadding
+        y: control.topPadding + (control.availableHeight - height) / 2
+
+        visible: control.checked
+        source: control.checkable ? "qrc:/qt-project.org/imports/Qt/labs/controls/images/check.png" : ""
+    }
+    //! [indicator]
+
+    //! [background]
     background: Rectangle {
         implicitWidth: 100
         implicitHeight: 40
-        visible: control.down || control.highlighted || control.visualFocus
-        color: control.visualFocus
-            ? (control.pressed ? Default.focusPressedColor : Default.delegateFocusColor)
-            : (control.down ? Default.delegatePressedColor : Default.delegateColor)
+        visible: control.pressed || control.highlighted
+        color: control.pressed ? "#bdbebf" : "#eeeeee"
     }
+    //! [background]
 }

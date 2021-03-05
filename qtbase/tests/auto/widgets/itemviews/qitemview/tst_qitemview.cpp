@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -32,13 +37,42 @@
 #include "viewstotest.cpp"
 #include <stdlib.h>
 
-#if defined(Q_OS_UNIX) || defined(Q_OS_WIN)
+#if defined(Q_OS_UNIX)
 #include <time.h>
 #endif
-
 #if defined(Q_OS_WIN)
-#  define random rand
-#  define srandom srand
+#include <time.h>
+#if defined(Q_OS_WINCE)
+#include <aygshell.h>
+#endif
+#define random rand
+#define srandom srand
+
+#if defined(Q_OS_WINCE)
+#ifndef SPI_GETPLATFORMTYPE
+#define SPI_GETPLATFORMTYPE 257
+#endif
+
+bool qt_wince_is_platform(const QString &platformString) {
+    wchar_t tszPlatform[64];
+    if (SystemParametersInfo(SPI_GETPLATFORMTYPE,
+                             sizeof(tszPlatform)/sizeof(*tszPlatform),tszPlatform,0))
+      if (0 == _tcsicmp(reinterpret_cast<const wchar_t *> (platformString.utf16()), tszPlatform))
+            return true;
+    return false;
+}
+
+bool qt_wince_is_pocket_pc() {
+    return qt_wince_is_platform(QString::fromLatin1("PocketPC"));
+}
+
+bool qt_wince_is_smartphone() {
+       return qt_wince_is_platform(QString::fromLatin1("Smartphone"));
+}
+bool qt_wince_is_mobile() {
+     return (qt_wince_is_smartphone() || qt_wince_is_pocket_pc());
+}
+#endif
 #endif
 
 /*!
@@ -56,10 +90,15 @@ class tst_QItemView : public QObject
 {
     Q_OBJECT
 
-private slots:
+public:
+    tst_QItemView() {};
+    virtual ~tst_QItemView() {};
+
+public slots:
     void init();
     void cleanup();
 
+private slots:
     void nonDestructiveBasicTest_data();
     void nonDestructiveBasicTest();
 
@@ -249,16 +288,14 @@ void tst_QItemView::populate()
     const int baseInsert = 26;
 #endif
     for (int i = 0; i < 40; ++i) {
-        const QString iS = QString::number(i);
         parent = treeModel->index(0, 0, parent);
         treeModel->insertRows(0, baseInsert + i, parent);
         treeModel->insertColumns(0, baseInsert + i, parent);
         // Fill in some values to make it easier to debug
         for (int x = 0; x < treeModel->rowCount(); ++x) {
-            const QString xS = QString::number(x);
             for (int y = 0; y < treeModel->columnCount(); ++y) {
                 QModelIndex index = treeModel->index(x, y, parent);
-                treeModel->setData(index, xS + QLatin1Char('_') + QString::number(y) + QLatin1Char('_') + iS);
+                treeModel->setData(index, QString("%1_%2_%3").arg(x).arg(y).arg(i));
                 treeModel->setData(index, QVariant(QColor(Qt::blue)), Qt::TextColorRole);
             }
         }
@@ -276,6 +313,10 @@ void tst_QItemView::nonDestructiveBasicTest_data()
  */
 void tst_QItemView::nonDestructiveBasicTest()
 {
+#ifdef Q_OS_WINCE
+     QTest::qWait(400);
+#endif
+
     QFETCH(QString, viewType);
     QFETCH(int, vscroll);
     QFETCH(int, hscroll);
@@ -443,7 +484,11 @@ void tst_QItemView::spider()
     view->setModel(treeModel);
     view->show();
     QVERIFY(QTest::qWaitForWindowActive(view));
+#if defined(Q_OS_WINCE)
+    srandom(0);
+#else
     srandom(time(0));
+#endif
     touch(view->viewport(), Qt::NoModifier, Qt::Key_Left);
     touch(view->viewport(), Qt::ShiftModifier, Qt::Key_Enter);
     touch(view->viewport(), Qt::ControlModifier, Qt::Key_Backspace);

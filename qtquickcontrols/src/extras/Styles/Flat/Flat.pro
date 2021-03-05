@@ -61,8 +61,7 @@ FLAT_STYLE += \
     $$PWD/fonts/OpenSans-Semibold.ttf \
     $$PWD/fonts/LICENSE.txt \
 
-!static:RESOURCES += flatstyle.qrc
-else: QML_FILES += $$FLAT_STYLE
+RESOURCES += flatstyle.qrc
 
 CONFIG += no_cxx_module
 load(qml_plugin)

@@ -32,9 +32,16 @@ FenceNV::~FenceNV()
     SafeDelete(mFence);
 }
 
-Error FenceNV::set(GLenum condition)
+GLboolean FenceNV::isFence() const
 {
-    Error error = mFence->set(condition);
+    // GL_NV_fence spec:
+    // A name returned by GenFencesNV, but not yet set via SetFenceNV, is not the name of an existing fence.
+    return (mIsSet ? GL_TRUE : GL_FALSE);
+}
+
+Error FenceNV::setFence(GLenum condition)
+{
+    Error error = mFence->set();
     if (error.isError())
     {
         return error;
@@ -47,10 +54,10 @@ Error FenceNV::set(GLenum condition)
     return Error(GL_NO_ERROR);
 }
 
-Error FenceNV::test(GLboolean *outResult)
+Error FenceNV::testFence(GLboolean *outResult)
 {
     // Flush the command buffer by default
-    Error error = mFence->test(&mStatus);
+    Error error = mFence->test(true, &mStatus);
     if (error.isError())
     {
         return error;
@@ -60,23 +67,17 @@ Error FenceNV::test(GLboolean *outResult)
     return Error(GL_NO_ERROR);
 }
 
-Error FenceNV::finish()
+Error FenceNV::finishFence()
 {
     ASSERT(mIsSet);
 
-    gl::Error error = mFence->finish();
-    if (error.isError())
-    {
-        return error;
-    }
-
-    mStatus = GL_TRUE;
-
-    return Error(GL_NO_ERROR);
+    return mFence->finishFence(&mStatus);
 }
 
 FenceSync::FenceSync(rx::FenceSyncImpl *impl, GLuint id)
-    : RefCountObject(id), mFence(impl), mLabel(), mCondition(GL_NONE), mFlags(0)
+    : RefCountObject(id),
+      mFence(impl),
+      mCondition(GL_NONE)
 {
 }
 
@@ -85,26 +86,15 @@ FenceSync::~FenceSync()
     SafeDelete(mFence);
 }
 
-void FenceSync::setLabel(const std::string &label)
+Error FenceSync::set(GLenum condition)
 {
-    mLabel = label;
-}
-
-const std::string &FenceSync::getLabel() const
-{
-    return mLabel;
-}
-
-Error FenceSync::set(GLenum condition, GLbitfield flags)
-{
-    Error error = mFence->set(condition, flags);
+    Error error = mFence->set();
     if (error.isError())
     {
         return error;
     }
 
     mCondition = condition;
-    mFlags = flags;
     return Error(GL_NO_ERROR);
 }
 

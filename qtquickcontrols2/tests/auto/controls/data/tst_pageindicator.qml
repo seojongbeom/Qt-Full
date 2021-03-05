@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -65,119 +55,62 @@ TestCase {
         PageIndicator { }
     }
 
-    Component {
-        id: mouseArea
-        MouseArea { }
-    }
-
     function test_count() {
-        var control = createTemporaryObject(pageIndicator, testCase)
+        var control = pageIndicator.createObject(testCase)
         verify(control)
 
         compare(control.count, 0)
         control.count = 3
         compare(control.count, 3)
+
+        control.destroy()
     }
 
     function test_currentIndex() {
-        var control = createTemporaryObject(pageIndicator, testCase)
+        var control = pageIndicator.createObject(testCase)
         verify(control)
 
         compare(control.currentIndex, 0)
         control.currentIndex = 5
         compare(control.currentIndex, 5)
+
+        control.destroy()
     }
 
-    function test_interactive_data() {
-        return [
-            { tag: "mouse", touch: false },
-            { tag: "touch", touch: true }
-        ]
-    }
-
-    function test_interactive(data) {
-        var control = createTemporaryObject(pageIndicator, testCase, {count: 5, spacing: 10, padding: 10})
+    function test_interactive() {
+        var control = pageIndicator.createObject(testCase, {count: 5})
         verify(control)
 
         verify(!control.interactive)
         compare(control.currentIndex, 0)
 
-        var touch = touchEvent(control)
-
-        if (data.touch)
-            touch.press(0, control).commit().release(0, control).commit()
-        else
-            mouseClick(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mouseClick(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.currentIndex, 0)
 
         control.interactive = true
         verify(control.interactive)
 
-        if (data.touch)
-            touch.press(0, control).commit().release(0, control).commit()
-        else
-            mouseClick(control, control.width / 2, control.height / 2, Qt.LeftButton)
+        mouseClick(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.currentIndex, 2)
 
         // test also clicking outside delegates => the nearest should be selected
+        control.padding = 10
+        control.spacing = 10
+
         for (var i = 0; i < control.count; ++i) {
             var child = control.contentItem.children[i]
+            for (var x = -2; x <= child.width + 2; ++x) {
+                for (var y = -2; y <= child.height + 2; ++y) {
+                    control.currentIndex = -1
+                    compare(control.currentIndex, -1)
 
-            var points = [
-                Qt.point(child.width / 2, -2), // top
-                Qt.point(-2, child.height / 2), // left
-                Qt.point(child.width + 2, child.height / 2), // right
-                Qt.point(child.width / 2, child.height + 2), // bottom
-
-                Qt.point(-2, -2), // top-left
-                Qt.point(child.width + 2, -2), // top-right
-                Qt.point(-2, child.height + 2), // bottom-left
-                Qt.point(child.width + 2, child.height + 2), // bottom-right
-            ]
-
-            for (var j = 0; j < points.length; ++j) {
-                control.currentIndex = -1
-                compare(control.currentIndex, -1)
-
-                var point = points[j]
-                var pos = control.mapFromItem(child, x, y)
-                if (data.touch)
-                    touch.press(0, control, pos.x, pos.y).commit().release(0, control, pos.x, pos.y).commit()
-                else
+                    var pos = control.mapFromItem(child, x, y)
                     mouseClick(control, pos.x, pos.y, Qt.LeftButton)
-                compare(control.currentIndex, i)
+                    compare(control.currentIndex, i)
+                }
             }
         }
-    }
 
-    function test_mouseArea_data() {
-        return [
-            { tag: "interactive", interactive: true },
-            { tag: "non-interactive", interactive: false }
-        ]
-    }
-
-    // QTBUG-61785
-    function test_mouseArea(data) {
-        var ma = createTemporaryObject(mouseArea, testCase, {width: testCase.width, height: testCase.height})
-        verify(ma)
-
-        var control = pageIndicator.createObject(ma, {count: 5, interactive: data.interactive, width: testCase.width, height: testCase.height})
-        verify(control)
-
-        compare(control.interactive, data.interactive)
-
-        mousePress(control)
-        compare(ma.pressed, !data.interactive)
-
-        mouseRelease(control)
-        verify(!ma.pressed)
-
-        var touch = touchEvent(control)
-        touch.press(0, control).commit()
-        compare(ma.pressed, !data.interactive)
-
-        touch.release(0, control).commit()
-        verify(!ma.pressed)
+        control.destroy()
     }
 }

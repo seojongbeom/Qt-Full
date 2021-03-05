@@ -5,20 +5,18 @@ CONFIG += no_keywords
 
 QT += multimedia-private network
 
-LIBS += -framework CoreFoundation \
-        -framework Foundation \
-        -framework AudioToolbox \
+LIBS += -framework AudioToolbox \
         -framework CoreAudio \
         -framework QuartzCore \
+        -framework AVFoundation \
         -framework CoreMedia
 osx:LIBS += -framework AppKit \
             -framework AudioUnit
-ios:LIBS += -framework CoreGraphics \
-            -framework CoreVideo
-
-QMAKE_USE += avfoundation
+ios:LIBS += -framework CoreVideo
 
 OTHER_FILES += avfcamera.json
+
+DEFINES += QMEDIA_AVF_CAMERA
 
 HEADERS += \
     avfcameradebug.h \

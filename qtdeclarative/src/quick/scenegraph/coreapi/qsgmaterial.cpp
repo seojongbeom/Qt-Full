@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,13 +34,7 @@
 #include "qsgmaterial.h"
 #include "qsgrenderer_p.h"
 #include "qsgmaterialshader_p.h"
-#if QT_CONFIG(opengl)
-# include <private/qsgshadersourcebuilder_p.h>
-# include <private/qsgdefaultcontext_p.h>
-# include <private/qsgdefaultrendercontext_p.h>
-# include <QtGui/QOpenGLFunctions>
-# include <QtGui/QOpenGLContext>
-#endif
+#include <private/qsgshadersourcebuilder_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -64,17 +52,16 @@ void qsg_set_material_failure()
     qsg_material_failure = true;
 }
 #endif
-#if QT_CONFIG(opengl)
+
 const char *QSGMaterialShaderPrivate::loadShaderSource(QOpenGLShader::ShaderType type) const
 {
-    const QStringList files = m_sourceFiles[type];
+    QStringList files = m_sourceFiles[type];
     QSGShaderSourceBuilder builder;
-    for (const QString &file : files)
+    Q_FOREACH (const QString &file, files)
         builder.appendSourceFile(file);
     m_sources[type] = builder.source();
     return m_sources[type].constData();
 }
-#endif
 
 #ifndef QT_NO_DEBUG
 static const bool qsg_leak_check = !qEnvironmentVariableIsEmpty("QML_LEAK_CHECK");
@@ -227,7 +214,7 @@ QSGMaterialShader::~QSGMaterialShader()
     defines the attribute register position in the vertex shader.
  */
 
-#if QT_CONFIG(opengl)
+
 /*!
     \fn const char *QSGMaterialShader::vertexShader() const
 
@@ -263,7 +250,7 @@ const char *QSGMaterialShader::fragmentShader() const
 
     Returns the shader program used by this QSGMaterialShader.
  */
-#endif
+
 
 /*!
     \fn void QSGMaterialShader::initialize()
@@ -320,7 +307,6 @@ void QSGMaterialShader::updateState(const RenderState & /* state */, QSGMaterial
 {
 }
 
-#if QT_CONFIG(opengl)
 /*!
     Sets the GLSL source file for the shader stage \a type to \a sourceFile. The
     default implementation of the vertexShader() and fragmentShader() functions
@@ -364,8 +350,8 @@ void QSGMaterialShader::compile()
 {
     Q_ASSERT_X(!m_program.isLinked(), "QSGSMaterialShader::compile()", "Compile called multiple times!");
 
-    program()->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, vertexShader());
-    program()->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader());
+    program()->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShader());
+    program()->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader());
 
     char const *const *attr = attributeNames();
 #ifndef QT_NO_DEBUG
@@ -396,7 +382,7 @@ void QSGMaterialShader::compile()
     }
 }
 
-#endif
+
 
 /*!
     \class QSGMaterialShader::RenderState
@@ -419,10 +405,6 @@ void QSGMaterialShader::compile()
     \value DirtyMatrix Used to indicate that the matrix has changed and must be updated.
 
     \value DirtyOpacity Used to indicate that the opacity has changed and must be updated.
-
-    \value DirtyCachedMaterialData Used to indicate that the cached material data have changed and must be updated.
-
-    \value DirtyAll Used to indicate that everything needs to be updated.
  */
 
 
@@ -554,7 +536,7 @@ QRect QSGMaterialShader::RenderState::deviceRect() const
     return static_cast<const QSGRenderer *>(m_data)->deviceRect();
 }
 
-#if QT_CONFIG(opengl)
+
 
 /*!
     Returns the QOpenGLContext that is being used for rendering
@@ -562,15 +544,9 @@ QRect QSGMaterialShader::RenderState::deviceRect() const
 
 QOpenGLContext *QSGMaterialShader::RenderState::context() const
 {
-    // Only the QSGDefaultRenderContext will have an OpenGL Context to query
-    auto openGLRenderContext = static_cast<const QSGDefaultRenderContext *>(static_cast<const QSGRenderer *>(m_data)->context());
-    if (openGLRenderContext != nullptr)
-        return openGLRenderContext->openglContext();
-    else
-        return nullptr;
+    return static_cast<const QSGRenderer *>(m_data)->context()->openglContext();
 }
 
-#endif
 
 #ifndef QT_NO_DEBUG
 static int qt_material_count = 0;
@@ -685,6 +661,7 @@ QSGMaterial::~QSGMaterial()
     the full matrix of the geometry nodes for rendering.
 
     \value CustomCompileStep Starting with Qt 5.2, the scene graph will not always call
+
     QSGMaterialShader::compile() when its shader program is compiled and linked.
     Set this flag to enforce that the function is called.
 

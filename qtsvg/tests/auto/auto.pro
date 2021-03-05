@@ -4,7 +4,6 @@ qtHaveModule(widgets) {
         qsvgdevice \
         qsvggenerator \
         qsvgrenderer \
-        qsvgplugin \
         qicon_svg \
         cmake \
         installed_cmake

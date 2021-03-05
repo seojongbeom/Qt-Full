@@ -1,5 +1,5 @@
-module QtQuick.Controls
-plugin qtquickcontrols2plugin
-classname QtQuickControls2Plugin
-depends QtQuick.Templates 2.2
+module Qt.labs.controls
+plugin qtlabscontrolsplugin
+classname QtLabsControlsPlugin
+depends Qt.labs.templates 1.0
 designersupported

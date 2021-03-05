@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -119,7 +113,6 @@ QT_BEGIN_NAMESPACE
 */
 QTcpServerPrivate::QTcpServerPrivate()
  : port(0)
- , socketType(QAbstractSocket::UnknownSocketType)
  , state(QAbstractSocket::UnconnectedState)
  , socketEngine(0)
  , serverSocketError(QAbstractSocket::UnknownSocketError)
@@ -149,21 +142,13 @@ QNetworkProxy QTcpServerPrivate::resolveProxy(const QHostAddress &address, quint
         proxies << proxy;
     } else {
         // try the application settings instead
-        QNetworkProxyQuery query(port, QString(),
-                                 socketType == QAbstractSocket::SctpSocket ?
-                                 QNetworkProxyQuery::SctpServer :
-                                 QNetworkProxyQuery::TcpServer);
+        QNetworkProxyQuery query(port, QString(), QNetworkProxyQuery::TcpServer);
         proxies = QNetworkProxyFactory::proxyForQuery(query);
     }
 
     // return the first that we can use
-    for (const QNetworkProxy &p : qAsConst(proxies)) {
-        if (socketType == QAbstractSocket::TcpSocket &&
-            (p.capabilities() & QNetworkProxy::ListeningCapability) != 0)
-            return p;
-
-        if (socketType == QAbstractSocket::SctpSocket &&
-            (p.capabilities() & QNetworkProxy::SctpListeningCapability) != 0)
+    foreach (const QNetworkProxy &p, proxies) {
+        if (p.capabilities() & QNetworkProxy::ListeningCapability)
             return p;
     }
 
@@ -237,11 +222,9 @@ void QTcpServerPrivate::readNotification()
 QTcpServer::QTcpServer(QObject *parent)
     : QObject(*new QTcpServerPrivate, parent)
 {
-    Q_D(QTcpServer);
 #if defined(QTCPSERVER_DEBUG)
     qDebug("QTcpServer::QTcpServer(%p)", parent);
 #endif
-    d->socketType = QAbstractSocket::TcpSocket;
 }
 
 /*!
@@ -262,22 +245,13 @@ QTcpServer::~QTcpServer()
 }
 
 /*! \internal
-
-    Constructs a new server object with socket of type \a socketType. The \a
-    parent argument is passed to QObject's constructor.
 */
-QTcpServer::QTcpServer(QAbstractSocket::SocketType socketType, QTcpServerPrivate &dd,
-                       QObject *parent) : QObject(dd, parent)
+QTcpServer::QTcpServer(QTcpServerPrivate &dd, QObject *parent)
+    : QObject(dd, parent)
 {
-    Q_D(QTcpServer);
 #if defined(QTCPSERVER_DEBUG)
-    qDebug("QTcpServer::QTcpServer(%sSocket, QTcpServerPrivate == %p, parent == %p)",
-           socketType == QAbstractSocket::TcpSocket ? "Tcp"
-           : socketType == QAbstractSocket::UdpSocket ? "Udp"
-           : socketType == QAbstractSocket::SctpSocket ? "Sctp"
-           : "Unknown", &dd, parent);
+    qDebug("QTcpServer::QTcpServer(QTcpServerPrivate == %p, parent == %p)", &dd, parent);
 #endif
-    d->socketType = socketType;
 }
 
 /*!
@@ -308,7 +282,7 @@ bool QTcpServer::listen(const QHostAddress &address, quint16 port)
 #endif
 
     delete d->socketEngine;
-    d->socketEngine = QAbstractSocketEngine::createSocketEngine(d->socketType, proxy, this);
+    d->socketEngine = QAbstractSocketEngine::createSocketEngine(QAbstractSocket::TcpSocket, proxy, this);
     if (!d->socketEngine) {
         d->serverSocketError = QAbstractSocket::UnsupportedSocketOperationError;
         d->serverSocketErrorString = tr("Operation on socket is not supported");
@@ -318,7 +292,7 @@ bool QTcpServer::listen(const QHostAddress &address, quint16 port)
     //copy network session down to the socket engine (if it has been set)
     d->socketEngine->setProperty("_q_networksession", property("_q_networksession"));
 #endif
-    if (!d->socketEngine->initialize(d->socketType, proto)) {
+    if (!d->socketEngine->initialize(QAbstractSocket::TcpSocket, proto)) {
         d->serverSocketError = d->socketEngine->error();
         d->serverSocketErrorString = d->socketEngine->errorString();
         return false;
@@ -563,11 +537,8 @@ QTcpSocket *QTcpServer::nextPendingConnection()
     if (d->pendingConnections.isEmpty())
         return 0;
 
-    if (!d->socketEngine) {
-        qWarning("QTcpServer::nextPendingConnection() called while not listening");
-    } else if (!d->socketEngine->isReadNotificationEnabled()) {
+    if (!d->socketEngine->isReadNotificationEnabled())
         d->socketEngine->setReadNotificationEnabled(true);
-    }
 
     return d->pendingConnections.takeFirst();
 }

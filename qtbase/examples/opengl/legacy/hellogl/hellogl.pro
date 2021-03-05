@@ -14,4 +14,4 @@ QT           += opengl widgets
 target.path = $$[QT_INSTALL_EXAMPLES]/opengl/legacy/hellogl
 INSTALLS += target
 
-qtConfig(opengles.|angle): error("This example requires Qt to be configured with -opengl desktop")
+contains(QT_CONFIG, opengles.|angle):error("This example requires Qt to be configured with -opengl desktop")

@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,9 +34,9 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.controls 1.0
+import Qt.labs.templates 1.0 as T
 
 T.SwipeView {
     id: control
@@ -46,13 +46,15 @@ T.SwipeView {
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
                              contentItem.implicitHeight + topPadding + bottomPadding)
 
+    Accessible.role: Accessible.PageTabList
+
+    //! [contentItem]
     contentItem: ListView {
         model: control.contentModel
-        interactive: control.interactive
         currentIndex: control.currentIndex
 
         spacing: control.spacing
-        orientation: control.orientation
+        orientation: Qt.Horizontal
         snapMode: ListView.SnapOneItem
         boundsBehavior: Flickable.StopAtBounds
 
@@ -60,6 +62,6 @@ T.SwipeView {
         preferredHighlightBegin: 0
         preferredHighlightEnd: 0
         highlightMoveDuration: 250
-        maximumFlickVelocity: 4 * (control.orientation === Qt.Horizontal ? width : height)
     }
+    //! [contentItem]
 }

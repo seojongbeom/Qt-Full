@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2013 John Layt <jlayt@kde.org>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -98,7 +92,7 @@ static QByteArray ucalDefaultTimeZoneId()
     // If successful on first or second go, resize and return
     if (U_SUCCESS(status)) {
         result.resize(size);
-        return std::move(result).toUtf8();
+        return result.toUtf8();
     }
 
     return QByteArray();
@@ -305,7 +299,7 @@ QIcuTimeZonePrivate::~QIcuTimeZonePrivate()
     ucal_close(m_ucal);
 }
 
-QIcuTimeZonePrivate *QIcuTimeZonePrivate::clone() const
+QTimeZonePrivate *QIcuTimeZonePrivate::clone()
 {
     return new QIcuTimeZonePrivate(*this);
 }
@@ -332,7 +326,7 @@ QString QIcuTimeZonePrivate::displayName(QTimeZone::TimeType timeType,
 {
     // Return standard offset format name as ICU C api doesn't support it yet
     if (nameType == QTimeZone::OffsetName) {
-        const Data nowData = data(QDateTime::currentMSecsSinceEpoch());
+        const Data nowData = data(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
         // We can't use transitions reliably to find out right dst offset
         // Instead use dst offset api to try get it if needed
         if (timeType == QTimeZone::DaylightTime)

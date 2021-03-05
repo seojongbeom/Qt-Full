@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -135,8 +129,7 @@ DomUI::~DomUI()
 void DomUI::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("version")) {
             setAttributeVersion(attribute.value().toString());
@@ -784,8 +777,7 @@ DomInclude::~DomInclude()
 void DomInclude::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("location")) {
             setAttributeLocation(attribute.value().toString());
@@ -862,8 +854,7 @@ DomResources::~DomResources()
 void DomResources::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -945,8 +936,7 @@ DomResource::~DomResource()
 void DomResource::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("location")) {
             setAttributeLocation(attribute.value().toString());
@@ -1028,8 +1018,7 @@ DomActionGroup::~DomActionGroup()
 void DomActionGroup::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -1169,8 +1158,7 @@ DomAction::~DomAction()
 void DomAction::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -1275,8 +1263,7 @@ DomActionRef::~DomActionRef()
 void DomActionRef::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -1350,8 +1337,7 @@ DomButtonGroup::~DomButtonGroup()
 void DomButtonGroup::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -1597,8 +1583,7 @@ DomImage::~DomImage()
 void DomImage::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -1701,8 +1686,7 @@ DomImageData::~DomImageData()
 void DomImageData::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("format")) {
             setAttributeFormat(attribute.value().toString());
@@ -1848,8 +1832,7 @@ DomHeader::~DomHeader()
 void DomHeader::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("location")) {
             setAttributeLocation(attribute.value().toString());
@@ -2388,8 +2371,7 @@ DomPropertyData::~DomPropertyData()
 void DomPropertyData::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("type")) {
             setAttributeType(attribute.value().toString());
@@ -2555,8 +2537,7 @@ DomLayoutDefault::~DomLayoutDefault()
 void DomLayoutDefault::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("spacing")) {
             setAttributeSpacing(attribute.value().toInt());
@@ -2631,8 +2612,7 @@ DomLayoutFunction::~DomLayoutFunction()
 void DomLayoutFunction::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("spacing")) {
             setAttributeSpacing(attribute.value().toString());
@@ -2797,8 +2777,7 @@ DomLayout::~DomLayout()
 void DomLayout::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("class")) {
             setAttributeClass(attribute.value().toString());
@@ -2984,8 +2963,7 @@ DomLayoutItem::~DomLayoutItem()
 void DomLayoutItem::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("row")) {
             setAttributeRow(attribute.value().toInt());
@@ -3322,8 +3300,7 @@ DomItem::~DomItem()
 void DomItem::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("row")) {
             setAttributeRow(attribute.value().toInt());
@@ -3486,8 +3463,7 @@ DomWidget::~DomWidget()
 void DomWidget::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("class")) {
             setAttributeClass(attribute.value().toString());
@@ -3791,8 +3767,7 @@ DomSpacer::~DomSpacer()
 void DomSpacer::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -3882,8 +3857,7 @@ DomColor::~DomColor()
 void DomColor::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("alpha")) {
             setAttributeAlpha(attribute.value().toInt());
@@ -4012,8 +3986,7 @@ DomGradientStop::~DomGradientStop()
 void DomGradientStop::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("position")) {
             setAttributePosition(attribute.value().toDouble());
@@ -4159,8 +4132,7 @@ DomGradient::~DomGradient()
 void DomGradient::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("startx")) {
             setAttributeStartX(attribute.value().toDouble());
@@ -4340,8 +4312,7 @@ DomBrush::~DomBrush()
 void DomBrush::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("brushstyle")) {
             setAttributeBrushStyle(attribute.value().toString());
@@ -4496,8 +4467,7 @@ DomColorRole::~DomColorRole()
 void DomColorRole::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("role")) {
             setAttributeRole(attribute.value().toString());
@@ -5337,8 +5307,7 @@ DomLocale::~DomLocale()
 void DomLocale::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("language")) {
             setAttributeLanguage(attribute.value().toString());
@@ -5421,8 +5390,7 @@ DomSizePolicy::~DomSizePolicy()
 void DomSizePolicy::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("hsizetype")) {
             setAttributeHSizeType(attribute.value().toString());
@@ -6079,8 +6047,7 @@ DomStringList::~DomStringList()
 void DomStringList::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("notr")) {
             setAttributeNotr(attribute.value().toString());
@@ -6177,8 +6144,7 @@ DomResourcePixmap::~DomResourcePixmap()
 void DomResourcePixmap::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("resource")) {
             setAttributeResource(attribute.value().toString());
@@ -6286,8 +6252,7 @@ DomResourceIcon::~DomResourceIcon()
 void DomResourceIcon::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("theme")) {
             setAttributeTheme(attribute.value().toString());
@@ -6621,8 +6586,7 @@ DomString::~DomString()
 void DomString::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("notr")) {
             setAttributeNotr(attribute.value().toString());
@@ -7291,8 +7255,7 @@ DomProperty::~DomProperty()
 void DomProperty::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -8428,8 +8391,7 @@ DomConnectionHint::~DomConnectionHint()
 void DomConnectionHint::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("type")) {
             setAttributeType(attribute.value().toString());
@@ -8535,8 +8497,7 @@ DomScript::~DomScript()
 void DomScript::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("source")) {
             setAttributeSource(attribute.value().toString());
@@ -8929,8 +8890,7 @@ DomPropertyToolTip::~DomPropertyToolTip()
 void DomPropertyToolTip::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());
@@ -9000,8 +8960,7 @@ DomStringPropertySpecification::~DomStringPropertySpecification()
 void DomStringPropertySpecification::read(QXmlStreamReader &reader)
 {
 
-    const QXmlStreamAttributes attributes = reader.attributes();
-    for (const QXmlStreamAttribute &attribute : attributes) {
+    foreach (const QXmlStreamAttribute &attribute, reader.attributes()) {
         QStringRef name = attribute.name();
         if (name == QLatin1String("name")) {
             setAttributeName(attribute.value().toString());

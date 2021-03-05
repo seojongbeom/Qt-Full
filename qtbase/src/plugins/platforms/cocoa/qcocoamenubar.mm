@@ -1,43 +1,37 @@
 /****************************************************************************
 **
 ** Copyright (C) 2012 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author James Turner <james.turner@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
-#include <AppKit/AppKit.h>
+#include <Cocoa/Cocoa.h>
 
 #include "qcocoamenubar.h"
 #include "qcocoawindow.h"
@@ -52,7 +46,13 @@ QT_BEGIN_NAMESPACE
 
 static QList<QCocoaMenuBar*> static_menubars;
 
-QCocoaMenuBar::QCocoaMenuBar()
+static inline QCocoaMenuLoader *getMenuLoader()
+{
+    return [NSApp QT_MANGLE_NAMESPACE(qt_qcocoamenuLoader)];
+}
+
+QCocoaMenuBar::QCocoaMenuBar() :
+    m_window(0)
 {
     static_menubars.append(this);
 
@@ -78,7 +78,7 @@ QCocoaMenuBar::~QCocoaMenuBar()
     [m_nativeMenu release];
     static_menubars.removeOne(this);
 
-    if (!m_window.isNull() && m_window->menubar() == this) {
+    if (m_window && m_window->menubar() == this) {
         m_window->setMenubar(0);
 
         // Delete the children first so they do not cause
@@ -86,16 +86,14 @@ QCocoaMenuBar::~QCocoaMenuBar()
         // the menu bar was updated
         qDeleteAll(children());
         updateMenuBarImmediately();
-        resetKnownMenuItemsToQt();
     }
 }
 
 bool QCocoaMenuBar::needsImmediateUpdate()
 {
-    if (!m_window.isNull()) {
-        if (m_window->window()->isActive())
-            return true;
-    } else {
+    if (m_window && m_window->window()->isActive()) {
+        return true;
+    } else if (!m_window) {
         // Only update if the focus/active window has no
         // menubar, which means it'll be using this menubar.
         // This is to avoid a modification in a parentless
@@ -155,7 +153,7 @@ void QCocoaMenuBar::insertMenu(QPlatformMenu *platformMenu, QPlatformMenu *befor
         }
     }
 
-    syncMenu_helper(menu, false /*internaCall*/);
+    syncMenu(menu);
 
     if (needsImmediateUpdate())
         updateMenuBarImmediately();
@@ -183,16 +181,11 @@ void QCocoaMenuBar::removeMenu(QPlatformMenu *platformMenu)
 
 void QCocoaMenuBar::syncMenu(QPlatformMenu *menu)
 {
-    syncMenu_helper(menu, false /*internaCall*/);
-}
-
-void QCocoaMenuBar::syncMenu_helper(QPlatformMenu *menu, bool menubarUpdate)
-{
     QMacAutoReleasePool pool;
 
     QCocoaMenu *cocoaMenu = static_cast<QCocoaMenu *>(menu);
     Q_FOREACH (QCocoaMenuItem *item, cocoaMenu->items())
-        cocoaMenu->syncMenuItem_helper(item, menubarUpdate);
+        cocoaMenu->syncMenuItem(item);
 
     BOOL shouldHide = YES;
     if (cocoaMenu->isVisible()) {
@@ -227,11 +220,11 @@ void QCocoaMenuBar::handleReparent(QWindow *newParentWindow)
     qDebug() << "QCocoaMenuBar" << this << "handleReparent" << newParentWindow;
 #endif
 
-    if (!m_window.isNull())
-        m_window->setMenubar(nullptr);
+    if (m_window)
+        m_window->setMenubar(NULL);
 
-    if (newParentWindow == nullptr) {
-        m_window.clear();
+    if (newParentWindow == NULL) {
+        m_window = NULL;
     } else {
         newParentWindow->create();
         m_window = static_cast<QCocoaWindow*>(newParentWindow->handle());
@@ -252,7 +245,7 @@ QCocoaWindow *QCocoaMenuBar::findWindowForMenubar()
 QCocoaMenuBar *QCocoaMenuBar::findGlobalMenubar()
 {
     foreach (QCocoaMenuBar *mb, static_menubars) {
-        if (mb->m_window.isNull())
+        if (mb->m_window == NULL)
             return mb;
     }
 
@@ -309,16 +302,7 @@ void QCocoaMenuBar::resetKnownMenuItemsToQt()
     // Undo the effect of redirectKnownMenuItemsToFirstResponder():
     // set the menu items' actions to itemFired and their targets to
     // the QCocoaMenuDelegate.
-    foreach (QCocoaMenuBar *mb, static_menubars) {
-        foreach (QCocoaMenu *m, mb->m_menus) {
-            foreach (QCocoaMenuItem *i, m->items()) {
-                if (i->effectiveRole() >= QPlatformMenuItem::ApplicationSpecificRole) {
-                   [i->nsItem() setTarget:m->nsMenu().delegate];
-                   [i->nsItem() setAction:@selector(itemFired:)];
-                }
-            }
-        }
-    }
+    updateMenuBarImmediately();
 }
 
 void QCocoaMenuBar::updateMenuBarImmediately()
@@ -362,14 +346,14 @@ void QCocoaMenuBar::updateMenuBarImmediately()
         menu->setAttachedItem(item);
         menu->setMenuParent(mb);
         // force a sync?
-        mb->syncMenu_helper(menu, true /*menubarUpdate*/);
+        mb->syncMenu(menu);
         menu->propagateEnabledState(!disableForModal);
     }
 
-    QCocoaMenuLoader *loader = [QCocoaMenuLoader sharedMenuLoader];
+    QCocoaMenuLoader *loader = getMenuLoader();
     [loader ensureAppMenuInMenu:mb->nsMenu()];
 
-    NSMutableSet *mergedItems = [[NSMutableSet setWithCapacity:mb->merged().count()] retain];
+    NSMutableSet *mergedItems = [[NSMutableSet setWithCapacity:0] retain];
     foreach (QCocoaMenuItem *m, mb->merged()) {
         [mergedItems addObject:m->nsItem()];
         m->syncMerged();

@@ -1,10 +1,10 @@
-import QtQml 2.0
+import QtQuick 2.0
 
-QtObject {
-    property int width: 100
-    property int height: 62
+Rectangle {
+    width: 100
+    height: 62
 
-    property var timer: Timer {
+    Timer {
         running: true
         repeat: true
         interval: 50

@@ -1,21 +1,14 @@
 # OSX QTBUG-25300 QTBUG-45502
 [normalGeometry]
 ubuntu-14.04
-ubuntu-16.04
 [saveRestoreGeometry]
 ubuntu-14.04
-ubuntu-16.04
-b2qt
 [restoreVersion1Geometry]
-xcb
+ubuntu-14.04
 osx
 [updateWhileMinimized]
 ubuntu-14.04
-ubuntu-16.04
 rhel-7.1
-rhel-7.2
-rhel-7.3
-rhel-7.4
 osx
 [focusProxyAndInputMethods]
 linux
@@ -50,7 +43,6 @@ osx
 [showMinimizedKeepsFocus]
 osx-10.10
 osx-10.11 ci
-osx-10.12 ci
 [moveWindowInShowEvent:1]
 osx
 [moveWindowInShowEvent:2]
@@ -61,8 +53,6 @@ osx
 osx
 [maskedUpdate]
 osx
-opensuse-42.1
-opensuse-42.3
 [hideWhenFocusWidgetIsChild]
 osx-10.10
 [hideOpaqueChildWhileHidden]
@@ -79,5 +69,3 @@ osx-10.9
 ubuntu-14.04
 [moveChild:right]
 osx
-[activateWindow]
-osx-10.12 ci

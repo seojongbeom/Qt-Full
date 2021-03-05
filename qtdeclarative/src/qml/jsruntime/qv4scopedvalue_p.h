@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -68,53 +62,17 @@ namespace QV4 {
 
 struct ScopedValue;
 
-#define CHECK_EXCEPTION() \
-    do { \
-        if (scope.hasException()) { \
-            scope.result = QV4::Encode::undefined(); \
-            return; \
-        } \
-    } while (false)
-
-#define RETURN_UNDEFINED() \
-    do { \
-        scope.result = QV4::Encode::undefined(); \
-        return; \
-    } while (false)
-
-#define RETURN_RESULT(r) \
-    do { \
-        scope.result = r; \
-        return; \
-    } while (false)
-
-#define THROW_TYPE_ERROR() \
-    do { \
-        scope.result = scope.engine->throwTypeError(); \
-        return; \
-    } while (false)
-
-#define THROW_GENERIC_ERROR(str) \
-    do { \
-        scope.result = scope.engine->throwError(QString::fromUtf8(str)); \
-        return; \
-    } while (false)
-
 struct Scope {
     inline Scope(ExecutionContext *ctx)
-        : engine(ctx->engine())
-        , mark(engine->jsStackTop)
-        , result(*engine->jsAlloca(1))
+        : engine(ctx->d()->engine)
     {
-        result = Encode::undefined();
+        mark = engine->jsStackTop;
     }
 
     explicit Scope(ExecutionEngine *e)
         : engine(e)
-        , mark(engine->jsStackTop)
-        , result(*engine->jsAlloca(1))
     {
-        result = Encode::undefined();
+        mark = engine->jsStackTop;
     }
 
     ~Scope() {
@@ -129,7 +87,7 @@ struct Scope {
         engine->jsStackTop = mark;
     }
 
-    QML_NEARLY_ALWAYS_INLINE Value *alloc(int nValues) const {
+    Value *alloc(int nValues) {
         return engine->jsAlloca(nValues);
     }
 
@@ -139,7 +97,6 @@ struct Scope {
 
     ExecutionEngine *engine;
     Value *mark;
-    Value &result;
 
 private:
     Q_DISABLE_COPY(Scope)
@@ -221,72 +178,65 @@ struct Scoped
 {
     enum ConvertType { Convert };
 
-    QML_NEARLY_ALWAYS_INLINE void setPointer(const Managed *p) {
+    inline void setPointer(const Managed *p) {
         ptr->setM(p ? p->m() : 0);
     }
 
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope)
+    Scoped(const Scope &scope)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
+        ptr->setM(0);
     }
 
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const Value &v)
+    Scoped(const Scope &scope, const Value &v)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         setPointer(v.as<T>());
     }
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, Heap::Base *o)
+    Scoped(const Scope &scope, Heap::Base *o)
     {
         Value v;
         v = o;
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         setPointer(v.as<T>());
     }
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const ScopedValue &v)
+    Scoped(const Scope &scope, const ScopedValue &v)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         setPointer(v.ptr->as<T>());
     }
 
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const Value &v, ConvertType)
+    Scoped(const Scope &scope, const Value &v, ConvertType)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         ptr->setRawValue(value_convert<T>(scope.engine, v));
     }
 
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const Value *v)
+    Scoped(const Scope &scope, const Value *v)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         setPointer(v ? v->as<T>() : 0);
     }
 
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, T *t)
+    Scoped(const Scope &scope, T *t)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         setPointer(t);
     }
-
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const T *t)
+    Scoped(const Scope &scope, typename T::Data *t)
     {
-        ptr = scope.engine->jsAlloca(1);
-        setPointer(t);
-    }
-
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, typename T::Data *t)
-    {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         *ptr = t;
     }
 
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const ReturnedValue &v)
+    Scoped(const Scope &scope, const ReturnedValue &v)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         setPointer(QV4::Value::fromReturnedValue(v).as<T>());
     }
-
-    QML_NEARLY_ALWAYS_INLINE Scoped(const Scope &scope, const ReturnedValue &v, ConvertType)
+    Scoped(const Scope &scope, const ReturnedValue &v, ConvertType)
     {
-        ptr = scope.engine->jsAlloca(1);
+        ptr = scope.engine->jsStackTop++;
         ptr->setRawValue(value_convert<T>(scope.engine, QV4::Value::fromReturnedValue(v)));
     }
 
@@ -330,11 +280,7 @@ struct Scoped
     }
 
     T *operator->() {
-        return getPointer();
-    }
-
-    const T *operator->() const {
-        return getPointer();
+        return ptr->cast<T>();
     }
 
     bool operator!() const {
@@ -345,30 +291,25 @@ struct Scoped
     }
 
     T *getPointer() {
-        return reinterpret_cast<T *>(ptr);
+        return ptr->cast<T>();
     }
-
-    const T *getPointer() const {
-        return reinterpret_cast<T *>(ptr);
-    }
-
     Value *getRef() {
         return ptr;
     }
 
-    QML_NEARLY_ALWAYS_INLINE ReturnedValue asReturnedValue() const {
-        return ptr->rawValue();
+    ReturnedValue asReturnedValue() const {
+        return ptr->m() ? ptr->rawValue() : Encode::undefined();
     }
 
     Value *ptr;
 };
 
 struct ScopedCallData {
-    ScopedCallData(const Scope &scope, int argc = 0)
+    ScopedCallData(Scope &scope, int argc = 0)
     {
-        int size = int(offsetof(QV4::CallData, args)/sizeof(QV4::Value)) + qMax(argc , int(QV4::Global::ReservedArgumentCount));
+        int size = qMax(argc, (int)QV4::Global::ReservedArgumentCount) + qOffsetOf(QV4::CallData, args)/sizeof(QV4::Value);
         ptr = reinterpret_cast<CallData *>(scope.alloc(size));
-        ptr->tag = quint32(QV4::Value::ValueTypeInternal::Integer);
+        ptr->tag = QV4::Value::Integer_Type_Internal;
         ptr->argc = argc;
     }
 
@@ -402,6 +343,8 @@ struct ScopedProperty
     ScopedProperty(Scope &scope)
     {
         property = reinterpret_cast<Property*>(scope.alloc(sizeof(Property) / sizeof(Value)));
+        property->value = Encode::undefined();
+        property->set = Encode::undefined();
     }
 
     Property *operator->() { return property; }
@@ -413,19 +356,19 @@ struct ScopedProperty
 
 struct ExecutionContextSaver
 {
-    Scope scope; // this makes sure that a reference to context on the JS stack goes out of scope as soon as the context is not used anymore.
+    ExecutionEngine *engine;
     ExecutionContext *savedContext;
 
-    ExecutionContextSaver(const Scope &scope)
-        : scope(scope.engine)
+    ExecutionContextSaver(Scope &scope)
+        : engine(scope.engine)
     {
-        savedContext = scope.engine->currentContext;
+        savedContext = engine->currentContext;
     }
     ~ExecutionContextSaver()
     {
-        Q_ASSERT(scope.engine->jsStackTop > scope.engine->currentContext);
-        scope.engine->currentContext = savedContext;
-        scope.engine->current = savedContext->d();
+        Q_ASSERT(engine->jsStackTop > engine->currentContext);
+        engine->currentContext = savedContext;
+        engine->current = savedContext->d();
     }
 };
 

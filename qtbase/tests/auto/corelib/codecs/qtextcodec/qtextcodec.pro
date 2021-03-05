@@ -1,2 +1,4 @@
 TEMPLATE = subdirs
-SUBDIRS = test echo
+SUBDIRS = test
+
+!wince: SUBDIRS += echo

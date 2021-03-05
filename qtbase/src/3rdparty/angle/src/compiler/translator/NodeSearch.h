@@ -19,8 +19,7 @@ class NodeSearchTraverser : public TIntermTraverser
 {
   public:
     NodeSearchTraverser()
-        : TIntermTraverser(true, false, false),
-          mFound(false)
+        : mFound(false)
     {}
 
     bool found() const { return mFound; }
@@ -45,6 +44,28 @@ class FindDiscard : public NodeSearchTraverser<FindDiscard>
         {
           case EOpKill:
             mFound = true;
+            break;
+
+          default: break;
+        }
+
+        return !mFound;
+    }
+};
+
+class FindSideEffectRewriting : public NodeSearchTraverser<FindSideEffectRewriting>
+{
+  public:
+    virtual bool visitBinary(Visit visit, TIntermBinary *node)
+    {
+        switch (node->getOp())
+        {
+          case EOpLogicalOr:
+          case EOpLogicalAnd:
+            if (node->getRight()->hasSideEffects())
+            {
+                mFound = true;
+            }
             break;
 
           default: break;

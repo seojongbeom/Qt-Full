@@ -16,20 +16,20 @@ angle::Platform *currentPlatform = nullptr;
 }
 
 // static
-angle::Platform *ANGLE_APIENTRY ANGLEPlatformCurrent()
+ANGLE_EXPORT angle::Platform *ANGLEPlatformCurrent()
 {
     return currentPlatform;
 }
 
 // static
-void ANGLE_APIENTRY ANGLEPlatformInitialize(angle::Platform *platformImpl)
+ANGLE_EXPORT void ANGLEPlatformInitialize(angle::Platform *platformImpl)
 {
     ASSERT(platformImpl != nullptr);
     currentPlatform = platformImpl;
 }
 
 // static
-void ANGLE_APIENTRY ANGLEPlatformShutdown()
+ANGLE_EXPORT void ANGLEPlatformShutdown()
 {
     currentPlatform = nullptr;
 }

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -156,24 +150,24 @@
 
 #include "qmdiarea_p.h"
 
+#ifndef QT_NO_MDIAREA
+
 #include <QApplication>
 #include <QStyle>
-#if 0 /* Used to be included in Qt4 for Q_WS_MAC */ && QT_CONFIG(style_mac)
+#if defined(Q_DEAD_CODE_FROM_QT4_MAC) && !defined(QT_NO_STYLE_MAC)
 #include <private/qmacstyle_mac_p.h>
 #endif
 #include <QChildEvent>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QtAlgorithms>
+#include <QMutableVectorIterator>
 #include <QPainter>
 #include <QFontMetrics>
 #include <QStyleOption>
 #include <QDesktopWidget>
 #include <QDebug>
 #include <qmath.h>
-#if QT_CONFIG(menu)
-#include <qmenu.h>
-#endif
 #include <private/qlayoutengine_p.h>
 
 #include <algorithm>
@@ -185,7 +179,7 @@ using namespace QMdi;
 // Asserts in debug mode, gives warning otherwise.
 static bool sanityCheck(const QMdiSubWindow * const child, const char *where)
 {
-    if (Q_UNLIKELY(!child)) {
+    if (!child) {
         const char error[] = "null pointer";
         Q_ASSERT_X(false, where, error);
         qWarning("%s:%s", where, error);
@@ -196,13 +190,13 @@ static bool sanityCheck(const QMdiSubWindow * const child, const char *where)
 
 static bool sanityCheck(const QList<QWidget *> &widgets, const int index, const char *where)
 {
-    if (Q_UNLIKELY(index < 0 || index >= widgets.size())) {
+    if (index < 0 || index >= widgets.size()) {
         const char error[] = "index out of range";
         Q_ASSERT_X(false, where, error);
         qWarning("%s:%s", where, error);
         return false;
     }
-    if (Q_UNLIKELY(!widgets.at(index))) {
+    if (!widgets.at(index)) {
         const char error[] = "null pointer";
         Q_ASSERT_X(false, where, error);
         qWarning("%s:%s", where, error);
@@ -258,7 +252,7 @@ static inline QMdiArea *mdiAreaParent(QWidget *widget)
     return 0;
 }
 
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
 static inline QTabBar::Shape tabBarShapeFrom(QTabWidget::TabShape shape, QTabWidget::TabPosition position)
 {
     const bool rounded = (shape == QTabWidget::Rounded);
@@ -272,7 +266,7 @@ static inline QTabBar::Shape tabBarShapeFrom(QTabWidget::TabShape shape, QTabWid
         return rounded ? QTabBar::RoundedWest : QTabBar::TriangularWest;
     return QTabBar::RoundedNorth;
 }
-#endif // QT_CONFIG(tabwidget)
+#endif // QT_NO_TABWIDGET
 
 static inline QString tabTextFor(QMdiSubWindow *subWindow)
 {
@@ -386,7 +380,7 @@ void IconTiler::rearrange(QList<QWidget *> &widgets, const QRect &domain) const
         return;
 
     const int n = widgets.size();
-    const int width = qMax(widgets.at(0)->width(), 1);
+    const int width = widgets.at(0)->width();
     const int height = widgets.at(0)->height();
     const int ncols = qMax(domain.width() / width, 1);
     const int nrows = n / ncols + ((n % ncols) ? 1 : 0);
@@ -415,7 +409,7 @@ void IconTiler::rearrange(QList<QWidget *> &widgets, const QRect &domain) const
 int MinOverlapPlacer::accumulatedOverlap(const QRect &source, const QVector<QRect> &rects)
 {
     int accOverlap = 0;
-    for (const QRect &rect : rects) {
+    foreach (const QRect &rect, rects) {
         QRect intersection = source.intersected(rect);
         accOverlap += intersection.width() * intersection.height();
     }
@@ -432,7 +426,7 @@ QRect MinOverlapPlacer::findMinOverlapRect(const QVector<QRect> &source, const Q
 {
     int minAccOverlap = -1;
     QRect minAccOverlapRect;
-    for (const QRect &srcRect : source) {
+    foreach (const QRect &srcRect, source) {
         const int accOverlap = accumulatedOverlap(srcRect, rects);
         if (accOverlap < minAccOverlap || minAccOverlap == -1) {
             minAccOverlap = accOverlap;
@@ -461,7 +455,7 @@ QVector<QRect> MinOverlapPlacer::getCandidatePlacements(const QSize &size, const
     if (domain.bottom() - size.height() + 1 >= 0)
         ylist << domain.bottom() - size.height() + 1;
 
-    for (const QRect &rect : rects) {
+    foreach (const QRect &rect, rects) {
         xlist << rect.right() + 1;
         ylist << rect.bottom() + 1;
     }
@@ -486,16 +480,17 @@ QVector<QRect> MinOverlapPlacer::getCandidatePlacements(const QSize &size, const
 */
 QVector<QRect> MinOverlapPlacer::findNonInsiders(const QRect &domain, QVector<QRect> &source)
 {
-    const auto containedInDomain =
-            [domain](const QRect &srcRect) { return domain.contains(srcRect); };
-
-    const auto firstOut = std::stable_partition(source.begin(), source.end(), containedInDomain);
-
     QVector<QRect> result;
-    result.reserve(source.end() - firstOut);
-    std::copy(firstOut, source.end(), std::back_inserter(result));
+    result.reserve(source.size());
 
-    source.erase(firstOut, source.end());
+    QMutableVectorIterator<QRect> it(source);
+    while (it.hasNext()) {
+        const QRect srcRect = it.next();
+        if (!domain.contains(srcRect)) {
+            result << srcRect;
+            it.remove();
+        }
+    }
 
     return result;
 }
@@ -511,7 +506,7 @@ QVector<QRect> MinOverlapPlacer::findMaxOverlappers(const QRect &domain, const Q
     result.reserve(source.size());
 
     int maxOverlap = -1;
-    for (const QRect &srcRect : source) {
+    foreach (const QRect &srcRect, source) {
         QRect intersection = domain.intersected(srcRect);
         const int overlap = intersection.width() * intersection.height();
         if (overlap >= maxOverlap || maxOverlap == -1) {
@@ -556,7 +551,7 @@ QPoint MinOverlapPlacer::place(const QSize &size, const QVector<QRect> &rects,
 {
     if (size.isEmpty() || !domain.isValid())
         return QPoint();
-    for (const QRect &rect : rects) {
+    foreach (const QRect &rect, rects) {
         if (!rect.isValid())
             return QPoint();
     }
@@ -565,7 +560,7 @@ QPoint MinOverlapPlacer::place(const QSize &size, const QVector<QRect> &rects,
     return findBestPlacement(domain, rects, candidates);
 }
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
 class QMdiAreaTabBar : public QTabBar
 {
 public:
@@ -612,7 +607,7 @@ void QMdiAreaTabBar::contextMenuEvent(QContextMenuEvent *event)
         return;
     }
 
-#if QT_CONFIG(menu)
+#ifndef QT_NO_MENU
     QMdiSubWindowPrivate *subWindowPrivate = subWindow->d_func();
     if (!subWindowPrivate->systemMenu) {
         event->ignore();
@@ -640,7 +635,7 @@ void QMdiAreaTabBar::contextMenuEvent(QContextMenuEvent *event)
 
     // Restore action visibility.
     subWindowPrivate->updateActions();
-#endif // QT_CONFIG(menu)
+#endif // QT_NO_MENU
 }
 #endif // QT_NO_CONTEXTMENU
 
@@ -663,7 +658,7 @@ QMdiSubWindow *QMdiAreaTabBar::subWindowFromIndex(int index) const
 
     return subWindow;
 }
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 
 /*!
     \internal
@@ -673,20 +668,20 @@ QMdiAreaPrivate::QMdiAreaPrivate()
       regularTiler(0),
       iconTiler(0),
       placer(0),
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
       rubberBand(0),
 #endif
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
       tabBar(0),
 #endif
       activationOrder(QMdiArea::CreationOrder),
       viewMode(QMdiArea::SubWindowView),
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
       documentMode(false),
       tabsClosable(false),
       tabsMovable(false),
 #endif
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
       tabShape(QTabWidget::Rounded),
       tabPosition(QTabWidget::North),
 #endif
@@ -781,7 +776,7 @@ void QMdiAreaPrivate::_q_processWindowStateChanged(Qt::WindowStates oldState,
 
 void QMdiAreaPrivate::_q_currentTabChanged(int index)
 {
-#if !QT_CONFIG(tabbar)
+#ifdef QT_NO_TABBAR
     Q_UNUSED(index);
 #else
     if (!tabBar || index < 0)
@@ -800,28 +795,28 @@ void QMdiAreaPrivate::_q_currentTabChanged(int index)
     QMdiSubWindow *subWindow = childWindows.at(index);
     Q_ASSERT(subWindow);
     activateWindow(subWindow);
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 }
 
 void QMdiAreaPrivate::_q_closeTab(int index)
 {
-#if !QT_CONFIG(tabbar)
+#ifdef QT_NO_TABBAR
     Q_UNUSED(index);
 #else
     QMdiSubWindow *subWindow = childWindows.at(index);
     Q_ASSERT(subWindow);
     subWindow->close();
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 }
 
 void QMdiAreaPrivate::_q_moveTab(int from, int to)
 {
-#if !QT_CONFIG(tabbar)
+#ifdef QT_NO_TABBAR
     Q_UNUSED(from);
     Q_UNUSED(to);
 #else
     childWindows.move(from, to);
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 }
 
 /*!
@@ -859,7 +854,7 @@ void QMdiAreaPrivate::appendChild(QMdiSubWindow *child)
     indicesToActivatedChildren.prepend(childWindows.size() - 1);
     Q_ASSERT(indicesToActivatedChildren.size() == childWindows.size());
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     if (tabBar) {
         tabBar->addTab(child->windowIcon(), tabTextFor(child));
         updateTabBarGeometry();
@@ -943,7 +938,7 @@ void QMdiAreaPrivate::rearrange(Rearranger *rearranger)
         if (!sanityCheck(child, "QMdiArea::rearrange") || !child->isVisible())
             continue;
         if (rearranger->type() == Rearranger::IconTiler) {
-            if (child->isMinimized() && !child->isShaded())
+            if (child->isMinimized() && !child->isShaded() && !(child->windowFlags() & Qt::FramelessWindowHint))
                 widgets.append(child);
         } else {
             if (child->isMinimized() && !child->isShaded())
@@ -1037,7 +1032,7 @@ void QMdiAreaPrivate::activateHighlightedWindow()
         activateWindow(nextVisibleSubWindow(-1, QMdiArea::ActivationHistoryOrder));
     else
         activateWindow(childWindows.at(indexToHighlighted));
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     hideRubberBand();
 #endif
 }
@@ -1083,7 +1078,7 @@ void QMdiAreaPrivate::emitWindowActivated(QMdiSubWindow *activeWindow)
     aboutToBecomeActive = 0;
     Q_ASSERT(active->d_func()->isActive);
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     if (tabBar && tabBar->currentIndex() != indexToActiveWindow)
         tabBar->setCurrentIndex(indexToActiveWindow);
 #endif
@@ -1126,7 +1121,7 @@ void QMdiAreaPrivate::updateActiveWindow(int removedIndex, bool activeRemoved)
 {
     Q_ASSERT(indicesToActivatedChildren.size() == childWindows.size());
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     if (tabBar && removedIndex >= 0) {
         const QSignalBlocker blocker(tabBar);
         tabBar->removeTab(removedIndex);
@@ -1141,7 +1136,7 @@ void QMdiAreaPrivate::updateActiveWindow(int removedIndex, bool activeRemoved)
     }
 
     if (indexToHighlighted >= 0) {
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
         // Hide rubber band if highlighted window is removed.
         if (indexToHighlighted == removedIndex)
             hideRubberBand();
@@ -1244,8 +1239,7 @@ void QMdiAreaPrivate::internalRaise(QMdiSubWindow *mdiChild) const
 
     QMdiSubWindow *stackUnderChild = 0;
     if (!windowStaysOnTop(mdiChild)) {
-        const auto children = viewport->children(); // take a copy, as raising/stacking under changes the order
-        for (QObject *object : children) {
+        foreach (QObject *object, viewport->children()) {
             QMdiSubWindow *child = qobject_cast<QMdiSubWindow *>(object);
             if (!child || !childWindows.contains(child))
                 continue;
@@ -1400,7 +1394,7 @@ QMdiAreaPrivate::subWindowList(QMdiArea::WindowOrder order, bool reversed) const
                 list.prepend(child);
         }
     } else if (order == QMdiArea::StackingOrder) {
-        for (QObject *object : viewport->children()) {
+        foreach (QObject *object, viewport->children()) {
             QMdiSubWindow *child = qobject_cast<QMdiSubWindow *>(object);
             if (!child || !childWindows.contains(child))
                 continue;
@@ -1515,7 +1509,7 @@ void QMdiAreaPrivate::highlightNextSubWindow(int increaseFactor)
     if (!highlight)
         return;
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     if (!rubberBand) {
         rubberBand = new QRubberBand(QRubberBand::Rectangle, q);
         // For accessibility to identify this special widget.
@@ -1525,7 +1519,7 @@ void QMdiAreaPrivate::highlightNextSubWindow(int increaseFactor)
 #endif
 
     // Only highlight if we're not switching back to the previously active window (Ctrl-Tab once).
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     if (tabToPreviousTimerId == -1)
         showRubberBandFor(highlight);
 #endif
@@ -1534,23 +1528,20 @@ void QMdiAreaPrivate::highlightNextSubWindow(int increaseFactor)
     Q_ASSERT(indexToHighlighted >= 0);
 }
 
-#if QT_CONFIG(rubberband)
 void QMdiAreaPrivate::showRubberBandFor(QMdiSubWindow *subWindow)
 {
     if (!subWindow || !rubberBand)
         return;
 
-#if QT_CONFIG(tabbar)
     if (viewMode == QMdiArea::TabbedView)
         rubberBand->setGeometry(tabBar->tabRect(childWindows.indexOf(subWindow)));
     else
-#endif
         rubberBand->setGeometry(subWindow->geometry());
 
     rubberBand->raise();
     rubberBand->show();
 }
-#endif // QT_CONFIG(rubberBand)
+
 /*!
     \internal
     \since 4.4
@@ -1564,14 +1555,14 @@ void QMdiAreaPrivate::setViewMode(QMdiArea::ViewMode mode)
     // Just a guard since we cannot set viewMode = mode here.
     inViewModeChange = true;
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     if (mode == QMdiArea::TabbedView) {
         Q_ASSERT(!tabBar);
         tabBar = new QMdiAreaTabBar(q);
         tabBar->setDocumentMode(documentMode);
         tabBar->setTabsClosable(tabsClosable);
         tabBar->setMovable(tabsMovable);
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
         tabBar->setShape(tabBarShapeFrom(tabShape, tabPosition));
 #endif
 
@@ -1605,12 +1596,12 @@ void QMdiAreaPrivate::setViewMode(QMdiArea::ViewMode mode)
         QObject::connect(tabBar, SIGNAL(tabCloseRequested(int)), q, SLOT(_q_closeTab(int)));
         QObject::connect(tabBar, SIGNAL(tabMoved(int,int)), q, SLOT(_q_moveTab(int,int)));
     } else
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
     { // SubWindowView
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
         delete tabBar;
         tabBar = 0;
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 
         viewMode = mode;
         q->setViewportMargins(0, 0, 0, 0);
@@ -1625,7 +1616,7 @@ void QMdiAreaPrivate::setViewMode(QMdiArea::ViewMode mode)
     inViewModeChange = false;
 }
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
 /*!
     \internal
 */
@@ -1635,7 +1626,7 @@ void QMdiAreaPrivate::updateTabBarGeometry()
         return;
 
     Q_Q(QMdiArea);
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
     Q_ASSERT(tabBarShapeFrom(tabShape, tabPosition) == tabBar->shape());
 #endif
     const QSize tabBarSizeHint = tabBar->sizeHint();
@@ -1649,7 +1640,7 @@ void QMdiAreaPrivate::updateTabBarGeometry()
         areaWidth -= vbar->width();
 
     QRect tabBarRect;
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
     switch (tabPosition) {
     case QTabWidget::North:
         q->setViewportMargins(0, tabBarSizeHint.height(), 0, 0);
@@ -1676,7 +1667,7 @@ void QMdiAreaPrivate::updateTabBarGeometry()
     default:
         break;
     }
-#endif // QT_CONFIG(tabwidget)
+#endif // QT_NO_TABWIDGET
 
     tabBar->setGeometry(QStyle::visualRect(q->layoutDirection(), q->contentsRect(), tabBarRect));
 }
@@ -1692,12 +1683,12 @@ void QMdiAreaPrivate::refreshTabBar()
     tabBar->setDocumentMode(documentMode);
     tabBar->setTabsClosable(tabsClosable);
     tabBar->setMovable(tabsMovable);
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
     tabBar->setShape(tabBarShapeFrom(tabShape, tabPosition));
 #endif
     updateTabBarGeometry();
 }
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 
 /*!
     Constructs an empty mdi area. \a parent is passed to QWidget's
@@ -1752,7 +1743,7 @@ QSize QMdiArea::sizeHint() const
 
     QSize desktopSize = QApplication::desktop()->size();
     QSize size(desktopSize.width() * 2 / scaleFactor, desktopSize.height() * 2 / scaleFactor);
-    for (QMdiSubWindow *child : d_func()->childWindows) {
+    foreach (QMdiSubWindow *child, d_func()->childWindows) {
         if (!sanityCheck(child, "QMdiArea::sizeHint"))
             continue;
         size = size.expandedTo(child->sizeHint());
@@ -1770,7 +1761,7 @@ QSize QMdiArea::minimumSizeHint() const
                style()->pixelMetric(QStyle::PM_TitleBarHeight, 0, this));
     size = size.expandedTo(QAbstractScrollArea::minimumSizeHint());
     if (!d->scrollBarsEnabled()) {
-        for (QMdiSubWindow *child : d->childWindows) {
+        foreach (QMdiSubWindow *child, d->childWindows) {
             if (!sanityCheck(child, "QMdiArea::sizeHint"))
                 continue;
             size = size.expandedTo(child->minimumSizeHint());
@@ -1840,12 +1831,12 @@ void QMdiArea::setActiveSubWindow(QMdiSubWindow *window)
         return;
     }
 
-    if (Q_UNLIKELY(d->childWindows.isEmpty())) {
+    if (d->childWindows.isEmpty()) {
         qWarning("QMdiArea::setActiveSubWindow: workspace is empty");
         return;
     }
 
-    if (Q_UNLIKELY(d->childWindows.indexOf(window) == -1)) {
+    if (d->childWindows.indexOf(window) == -1) {
         qWarning("QMdiArea::setActiveSubWindow: window is not inside workspace");
         return;
     }
@@ -1969,7 +1960,7 @@ void QMdiArea::activatePreviousSubWindow()
 */
 QMdiSubWindow *QMdiArea::addSubWindow(QWidget *widget, Qt::WindowFlags windowFlags)
 {
-    if (Q_UNLIKELY(!widget)) {
+    if (!widget) {
         qWarning("QMdiArea::addSubWindow: null pointer to widget");
         return 0;
     }
@@ -1981,7 +1972,7 @@ QMdiSubWindow *QMdiArea::addSubWindow(QWidget *widget, Qt::WindowFlags windowFla
 
     // Widget is already a QMdiSubWindow
     if (child) {
-        if (Q_UNLIKELY(d->childWindows.indexOf(child) != -1)) {
+        if (d->childWindows.indexOf(child) != -1) {
             qWarning("QMdiArea::addSubWindow: window is already added");
             return child;
         }
@@ -2012,7 +2003,7 @@ QMdiSubWindow *QMdiArea::addSubWindow(QWidget *widget, Qt::WindowFlags windowFla
 */
 void QMdiArea::removeSubWindow(QWidget *widget)
 {
-    if (Q_UNLIKELY(!widget)) {
+    if (!widget) {
         qWarning("QMdiArea::removeSubWindow: null pointer to widget");
         return;
     }
@@ -2023,7 +2014,7 @@ void QMdiArea::removeSubWindow(QWidget *widget)
 
     if (QMdiSubWindow *child = qobject_cast<QMdiSubWindow *>(widget)) {
         int index = d->childWindows.indexOf(child);
-        if (Q_UNLIKELY(index == -1)) {
+        if (index == -1) {
             qWarning("QMdiArea::removeSubWindow: window is not inside workspace");
             return;
         }
@@ -2047,7 +2038,7 @@ void QMdiArea::removeSubWindow(QWidget *widget)
         }
     }
 
-    if (Q_UNLIKELY(!found))
+    if (!found)
         qWarning("QMdiArea::removeSubWindow: widget is not child of any window inside QMdiArea");
 }
 
@@ -2108,7 +2099,10 @@ void QMdiArea::setActivationOrder(WindowOrder order)
 void QMdiArea::setOption(AreaOption option, bool on)
 {
     Q_D(QMdiArea);
-    d->options.setFlag(option, on);
+    if (on && !(d->options & option))
+        d->options |= option;
+    else if (!on && (d->options & option))
+        d->options &= ~option;
 }
 
 /*!
@@ -2142,7 +2136,7 @@ void QMdiArea::setViewMode(ViewMode mode)
     d->setViewMode(mode);
 }
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
 /*!
     \property QMdiArea::documentMode
     \brief whether the tab bar is set to document mode in tabbed view mode.
@@ -2217,9 +2211,9 @@ void QMdiArea::setTabsMovable(bool movable)
     d->tabsMovable = movable;
     d->refreshTabBar();
 }
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
 /*!
     \property QMdiArea::tabShape
     \brief the shape of the tabs in tabbed view mode.
@@ -2271,7 +2265,7 @@ void QMdiArea::setTabPosition(QTabWidget::TabPosition position)
     d->tabPosition = position;
     d->refreshTabBar();
 }
-#endif // QT_CONFIG(tabwidget)
+#endif // QT_NO_TABWIDGET
 
 /*!
     \reimp
@@ -2298,7 +2292,7 @@ void QMdiArea::resizeEvent(QResizeEvent *resizeEvent)
         return;
     }
 
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     d->updateTabBarGeometry();
 #endif
 
@@ -2352,7 +2346,7 @@ void QMdiArea::timerEvent(QTimerEvent *timerEvent)
         d->tabToPreviousTimerId = -1;
         if (d->indexToHighlighted < 0)
             return;
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
         // We're not doing a "quick switch" ... show rubber band.
         Q_ASSERT(d->indexToHighlighted < d->childWindows.size());
         Q_ASSERT(d->rubberBand);
@@ -2497,7 +2491,7 @@ bool QMdiArea::event(QEvent *event)
 {
     Q_D(QMdiArea);
     switch (event->type()) {
-#if 0 // Used to be included in Qt4 for Q_WS_WIN
+#ifdef Q_DEAD_CODE_FROM_QT4_WIN
     // QWidgetPrivate::hide_helper activates another sub-window when closing a
     // modal dialog on Windows (see activateWindow() inside the ifdef).
     case QEvent::WindowUnblocked:
@@ -2536,7 +2530,7 @@ bool QMdiArea::event(QEvent *event)
         d->setActive(d->active, false, false);
         d->setChildActivationEnabled(false);
         break;
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     case QEvent::LayoutDirectionChange:
         d->updateTabBarGeometry();
         break;
@@ -2561,7 +2555,7 @@ bool QMdiArea::eventFilter(QObject *object, QEvent *event)
 
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         // Ingore key events without a Ctrl modifier (except for press/release on the modifier itself).
-#if 0 // Used to be included in Qt4 for Q_WS_MAC
+#ifdef Q_DEAD_CODE_FROM_QT4_MAC
         if (!(keyEvent->modifiers() & Qt::MetaModifier) && keyEvent->key() != Qt::Key_Meta)
 #else
         if (!(keyEvent->modifiers() & Qt::ControlModifier) && keyEvent->key() != Qt::Key_Control)
@@ -2580,7 +2574,7 @@ bool QMdiArea::eventFilter(QObject *object, QEvent *event)
         // 3) Ctrl-Shift-Tab (Tab, Tab, ...) -> iterate through all windows in the opposite
         //    direction (activatePreviousSubWindow())
         switch (keyEvent->key()) {
-#if 0 // Used to be included in Qt4 for Q_WS_MAC
+#ifdef Q_DEAD_CODE_FROM_QT4_MAC
         case Qt::Key_Meta:
 #else
         case Qt::Key_Control:
@@ -2595,7 +2589,7 @@ bool QMdiArea::eventFilter(QObject *object, QEvent *event)
             if (keyPress)
                 area->d_func()->highlightNextSubWindow(keyEvent->key() == Qt::Key_Tab ? 1 : -1);
             return true;
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
         case Qt::Key_Escape:
             area->d_func()->hideRubberBand();
             break;
@@ -2633,24 +2627,24 @@ bool QMdiArea::eventFilter(QObject *object, QEvent *event)
             d->isSubWindowsTiled = false;
         break;
     case QEvent::Show:
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
         if (d->tabBar) {
             const int tabIndex = d->childWindows.indexOf(subWindow);
             if (!d->tabBar->isTabEnabled(tabIndex))
                 d->tabBar->setTabEnabled(tabIndex, true);
         }
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
         // fall through
     case QEvent::Hide:
         d->isSubWindowsTiled = false;
         break;
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     case QEvent::Close:
         if (d->childWindows.indexOf(subWindow) == d->indexToHighlighted)
             d->hideRubberBand();
         break;
 #endif
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     case QEvent::WindowTitleChange:
     case QEvent::ModifiedChange:
         if (d->tabBar)
@@ -2660,7 +2654,7 @@ bool QMdiArea::eventFilter(QObject *object, QEvent *event)
         if (d->tabBar)
             d->tabBar->setTabIcon(d->childWindows.indexOf(subWindow), subWindow->windowIcon());
         break;
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
     default:
         break;
     }
@@ -2674,8 +2668,9 @@ void QMdiArea::paintEvent(QPaintEvent *paintEvent)
 {
     Q_D(QMdiArea);
     QPainter painter(d->viewport);
-    for (const QRect &exposedRect : paintEvent->region())
-        painter.fillRect(exposedRect, d->background);
+    const QVector<QRect> &exposedRects = paintEvent->region().rects();
+    for (int i = 0; i < exposedRects.size(); ++i)
+        painter.fillRect(exposedRects.at(i), d->background);
 }
 
 /*!
@@ -2700,3 +2695,5 @@ void QMdiArea::setupViewport(QWidget *viewport)
 QT_END_NAMESPACE
 
 #include "moc_qmdiarea.cpp"
+
+#endif // QT_NO_MDIAREA

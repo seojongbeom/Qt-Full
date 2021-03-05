@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -66,53 +56,11 @@ TestCase {
     }
 
     function test_defaults() {
-        var control = createTemporaryObject(drawer, testCase)
+        var control = drawer.createObject(testCase)
+        verify(!control.contentItem)
         compare(control.edge, Qt.LeftEdge)
         compare(control.position, 0.0)
-        compare(control.dragMargin, Qt.styleHints.startDragDistance)
-        compare(control.parent, ApplicationWindow.overlay)
-    }
-
-    function test_invalidEdge() {
-        var control = createTemporaryObject(drawer, testCase)
-        compare(control.edge, Qt.LeftEdge)
-
-        // Test an invalid value - it should warn and ignore it.
-        ignoreWarning(Qt.resolvedUrl("tst_drawer.qml") + ":65:9: QML Drawer: invalid edge value - valid values are: Qt.TopEdge, Qt.LeftEdge, Qt.RightEdge, Qt.BottomEdge")
-        control.edge = Drawer.Right
-        compare(control.edge, Qt.LeftEdge)
-    }
-
-    Component {
-        id: rectDrawer
-
-        Drawer {
-            Rectangle {
-                width: 200
-                height: 400
-                color: "steelblue"
-            }
-        }
-    }
-
-    function test_swipeVelocity() {
-        skip("QTBUG-52003");
-
-        var control = createTemporaryObject(rectDrawer, testCase)
-        verify(control.contentItem)
-        compare(control.edge, Qt.LeftEdge)
-        compare(control.position, 0.0)
-
-        var dragDistance = Math.max(20, Qt.styleHints.startDragDistance + 5)
-        var distance = dragDistance * 1.1
-        if (distance >= control.width * 0.7)
-            skip("This test requires a startDragDistance that is less than the opening threshold of the drawer")
-
-        mousePress(control, 0, 0, Qt.LeftButton)
-        mouseMove(control, distance, 0)
-        verify(control.position > 0)
-        tryCompare(control, "position", distance / control.contentItem.width)
-        mouseRelease(control, distance, 0, Qt.LeftButton)
-        tryCompare(control, "position", 1.0)
+        verify(control.animation)
+        control.destroy()
     }
 }

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -59,7 +64,6 @@ private slots:
     void construction();
     void loadMedia();
     void unloadMedia();
-    void loadMediaInLoadingState();
     void playPauseStop();
     void processEOS();
     void deleteLaterAtEOS();
@@ -200,10 +204,6 @@ QMediaContent tst_QMediaPlayerBackend::selectMediaFile(const QStringList& mediaC
 
 void tst_QMediaPlayerBackend::initTestCase()
 {
-    QMediaPlayer player;
-    if (!player.isAvailable())
-        QSKIP("Media player service is not available");
-
     const QString testFileName = QFINDTESTDATA("testdata/test.wav");
     QFileInfo wavFile(testFileName);
 
@@ -222,9 +222,7 @@ void tst_QMediaPlayerBackend::initTestCase()
 
     QStringList mediaCandidates;
     mediaCandidates << QFINDTESTDATA("testdata/colors.mp4");
-#ifndef SKIP_OGV_TEST
     mediaCandidates << QFINDTESTDATA("testdata/colors.ogv");
-#endif
     localVideoFile = selectMediaFile(mediaCandidates);
 
     mediaCandidates.clear();
@@ -326,16 +324,6 @@ void tst_QMediaPlayerBackend::unloadMedia()
     QVERIFY(!positionSpy.isEmpty());
 }
 
-void tst_QMediaPlayerBackend::loadMediaInLoadingState()
-{
-    const QUrl url("http://unavailable.media/");
-    QMediaPlayer player;
-    player.setMedia(QMediaContent(url));
-    player.play();
-    // Sets new media while old has not been finished.
-    player.setMedia(QMediaContent(url));
-    QTRY_COMPARE(player.mediaStatus(), QMediaPlayer::InvalidMedia);
-}
 
 void tst_QMediaPlayerBackend::playPauseStop()
 {
@@ -395,9 +383,7 @@ void tst_QMediaPlayerBackend::playPauseStop()
 
     stateSpy.clear();
     statusSpy.clear();
-    positionSpy.clear();
 
-    qint64 positionBeforePause = player.position();
     player.pause();
 
     QCOMPARE(player.state(), QMediaPlayer::PausedState);
@@ -405,11 +391,6 @@ void tst_QMediaPlayerBackend::playPauseStop()
 
     QCOMPARE(stateSpy.count(), 1);
     QCOMPARE(stateSpy.last()[0].value<QMediaPlayer::State>(), QMediaPlayer::PausedState);
-
-    QTest::qWait(2000);
-
-    QVERIFY(qAbs(player.position() - positionBeforePause) < 100);
-    QCOMPARE(positionSpy.count(), 0);
 
     stateSpy.clear();
     statusSpy.clear();
@@ -561,32 +542,6 @@ void tst_QMediaPlayerBackend::processEOS()
     QCOMPARE(stateSpy.count(), 0);
     QTRY_VERIFY(statusSpy.count() > 0 &&
         statusSpy.last()[0].value<QMediaPlayer::MediaStatus>() == QMediaPlayer::LoadedMedia);
-
-    player.play();
-    player.setPosition(900);
-    //wait up to 5 seconds for EOS
-    QTRY_COMPARE(player.mediaStatus(), QMediaPlayer::EndOfMedia);
-    QCOMPARE(player.state(), QMediaPlayer::StoppedState);
-    QCOMPARE(player.position(), player.duration());
-
-    stateSpy.clear();
-    statusSpy.clear();
-    positionSpy.clear();
-
-    // pause() should reset position to beginning and status to Buffered
-    player.pause();
-
-    QTRY_COMPARE(player.position(), 0);
-    QTRY_VERIFY(positionSpy.count() > 0);
-    QCOMPARE(positionSpy.first()[0].value<qint64>(), 0);
-
-    QCOMPARE(player.state(), QMediaPlayer::PausedState);
-    QTRY_COMPARE(player.mediaStatus(), QMediaPlayer::BufferedMedia);
-
-    QCOMPARE(stateSpy.count(), 1);
-    QCOMPARE(stateSpy.last()[0].value<QMediaPlayer::State>(), QMediaPlayer::PausedState);
-    QVERIFY(statusSpy.count() > 0);
-    QCOMPARE(statusSpy.last()[0].value<QMediaPlayer::MediaStatus>(), QMediaPlayer::BufferedMedia);
 }
 
 // Helper class for tst_QMediaPlayerBackend::deleteLaterAtEOS()
@@ -794,10 +749,6 @@ void tst_QMediaPlayerBackend::seekPauseSeek()
     player.pause();
     QTRY_COMPARE(player.state(), QMediaPlayer::PausedState); // it might take some time for the operation to be completed
     QTRY_VERIFY(!surface->m_frameList.isEmpty()); // we must see a frame at position 7000 here
-
-    // Make sure that the frame has a timestamp before testing - not all backends provides this
-    if (surface->m_frameList.back().startTime() < 0)
-        QSKIP("No timestamp");
 
     {
         QVideoFrame frame = surface->m_frameList.back();
@@ -1351,9 +1302,7 @@ void tst_QMediaPlayerBackend::surfaceTest_data()
     formatsYUV << QVideoFrame::Format_YUV420P
                << QVideoFrame::Format_YV12
                << QVideoFrame::Format_UYVY
-               << QVideoFrame::Format_YUYV
-               << QVideoFrame::Format_NV12
-               << QVideoFrame::Format_NV21;
+               << QVideoFrame::Format_YUYV;
 
     QTest::newRow("RGB formats")
             << formatsRGB;
@@ -1380,9 +1329,7 @@ void tst_QMediaPlayerBackend::surfaceTest()
     player.setMedia(localVideoFile);
     player.play();
     QTRY_VERIFY(player.position() >= 1000);
-    if (surface.error() == QAbstractVideoSurface::UnsupportedFormatError)
-        QSKIP("None of the pixel formats is supported by the backend");
-    QVERIFY2(surface.m_totalFrames >= 25, qPrintable(QString("Expected >= 25, got %1").arg(surface.m_totalFrames)));
+    QVERIFY(surface.m_totalFrames >= 25);
 }
 
 void tst_QMediaPlayerBackend::metadata()
@@ -1442,10 +1389,7 @@ QList<QVideoFrame::PixelFormat> TestVideoSurface::supportedPixelFormats(
 
 bool TestVideoSurface::start(const QVideoSurfaceFormat &format)
 {
-    if (!isFormatSupported(format)) {
-        setError(UnsupportedFormatError);
-        return false;
-    }
+    if (!isFormatSupported(format)) return false;
 
     return QAbstractVideoSurface::start(format);
 }

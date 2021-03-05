@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -33,7 +38,6 @@
 #include <QtCore/qpointer.h>
 #include <QtCore/qscopedpointer.h>
 #include <QtCore/qtextstream.h>
-#include <QtCore/qregexp.h>
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QOpenGLFunctions>
@@ -176,10 +180,10 @@ QFileInfoList findQmlFiles(const QString &dirName)
 
     QFileInfoList ret;
     if (dir.exists()) {
-        const QFileInfoList fileInfos = dir.entryInfoList(QStringList() << "*.qml",
-                                                          QDir::Files | QDir::AllDirs | QDir::NoDotAndDotDot);
+        QFileInfoList fileInfos = dir.entryInfoList(QStringList() << "*.qml",
+                                                    QDir::Files | QDir::AllDirs | QDir::NoDotAndDotDot);
 
-        for (const QFileInfo &fileInfo : fileInfos) {
+        foreach (QFileInfo fileInfo, fileInfos) {
             if (fileInfo.isDir())
                 ret += findQmlFiles(fileInfo.filePath());
             else if (fileInfo.fileName().length() > 0 && fileInfo.fileName().at(0).isLower())
@@ -197,9 +201,9 @@ static int displayOptionsDialog(Options *options)
     QFormLayout *layout = new QFormLayout(&dialog);
 
     QComboBox *qmlFileComboBox = new QComboBox(&dialog);
-    const QFileInfoList fileInfos = findQmlFiles(":/bundle") + findQmlFiles("./qmlscene-resources");
+    QFileInfoList fileInfos = findQmlFiles(":/bundle") + findQmlFiles("./qmlscene-resources");
 
-    for (const QFileInfo &fileInfo : fileInfos)
+    foreach (QFileInfo fileInfo, fileInfos)
         qmlFileComboBox->addItem(fileInfo.dir().dirName() + QLatin1Char('/') + fileInfo.fileName(), QVariant::fromValue(fileInfo));
 
     QCheckBox *originalCheckBox = new QCheckBox(&dialog);
@@ -290,7 +294,7 @@ static bool checkVersion(const QUrl &url)
 
 static void displayFileDialog(Options *options)
 {
-#if defined(QT_WIDGETS_LIB) && QT_CONFIG(filedialog)
+#if defined(QT_WIDGETS_LIB) && !defined(QT_NO_FILEDIALOG)
     QString fileName = QFileDialog::getOpenFileName(0, "Open QML file", QString(), "QML Files (*.qml)");
     if (!fileName.isEmpty()) {
         QFileInfo fi(fileName);
@@ -302,7 +306,7 @@ static void displayFileDialog(Options *options)
 #endif
 }
 
-#if QT_CONFIG(translation)
+#ifndef QT_NO_TRANSLATION
 static void loadTranslationFile(QTranslator &translator, const QString& directory)
 {
     translator.load(QLatin1String("qml_" )+QLocale::system().name(), directory + QLatin1String("/i18n"));
@@ -320,8 +324,8 @@ static void loadDummyDataFiles(QQmlEngine &engine, const QString& directory)
         QObject *dummyData = comp.create();
 
         if(comp.isError()) {
-            const QList<QQmlError> errors = comp.errors();
-            for (const QQmlError &error : errors)
+            QList<QQmlError> errors = comp.errors();
+            foreach (const QQmlError &error, errors)
                 fprintf(stderr, "%s\n", qPrintable(error.toString()));
         }
 
@@ -362,7 +366,7 @@ static void usage()
     puts(" ");
     exit(1);
 }
-#if QT_CONFIG(opengl)
+
 // Listen on GL context creation of the QQuickWindow in order to print diagnostic output.
 class DiagnosticGlContextCreationListener : public QObject {
     Q_OBJECT
@@ -390,9 +394,7 @@ private slots:
         context->doneCurrent();
         deleteLater();
     }
-
 };
-#endif
 
 static void setWindowTitle(bool verbose, const QObject *topLevel, QWindow *window)
 {
@@ -406,10 +408,8 @@ static void setWindowTitle(bool verbose, const QObject *topLevel, QWindow *windo
     if (verbose) {
         newTitle += QLatin1String(" [Qt ") + QLatin1String(QT_VERSION_STR) + QLatin1Char(' ')
             + QGuiApplication::platformName() + QLatin1Char(' ');
-#if QT_CONFIG(opengl)
         newTitle += QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGL
             ? QLatin1String("GL") : QLatin1String("GLES");
-#endif
         newTitle += QLatin1Char(']');
     }
     if (oldTitle != newTitle)
@@ -458,7 +458,7 @@ int main(int argc, char ** argv)
             options.applicationAttributes.append(Qt::AA_DisableHighDpiScaling);
     }
 
-    for (Qt::ApplicationAttribute a : qAsConst(options.applicationAttributes))
+    foreach (Qt::ApplicationAttribute a, options.applicationAttributes)
         QCoreApplication::setAttribute(a);
 #ifdef QT_WIDGETS_LIB
     QApplication app(argc, argv);
@@ -468,7 +468,6 @@ int main(int argc, char ** argv)
     app.setApplicationName("QtQmlViewer");
     app.setOrganizationName("QtProject");
     app.setOrganizationDomain("qt-project.org");
-    QCoreApplication::setApplicationVersion(QLatin1String(QT_VERSION_STR));
 
     const QStringList arguments = QCoreApplication::arguments();
     for (int i = 1, size = arguments.size(); i < size; ++i) {
@@ -510,7 +509,7 @@ int main(int argc, char ** argv)
         }
     }
 
-#if QT_CONFIG(translation)
+#ifndef QT_NO_TRANSLATION
     QTranslator translator;
     QTranslator qtTranslator;
     QString sysLocale = QLocale::system().name();
@@ -546,7 +545,7 @@ int main(int argc, char ** argv)
 
     if (!options.url.isEmpty()) {
         if (!options.versionDetection || checkVersion(options.url)) {
-#if QT_CONFIG(translation)
+#ifndef QT_NO_TRANSLATION
             QTranslator translator;
 #endif
 
@@ -560,13 +559,12 @@ int main(int argc, char ** argv)
                 engine.addPluginPath(pluginPaths.at(i));
             if (options.url.isLocalFile()) {
                 QFileInfo fi(options.url.toLocalFile());
-#if QT_CONFIG(translation)
+#ifndef QT_NO_TRANSLATION
                 loadTranslationFile(translator, fi.path());
 #endif
                 loadDummyDataFiles(engine, fi.path());
             }
             QObject::connect(&engine, SIGNAL(quit()), QCoreApplication::instance(), SLOT(quit()));
-            QObject::connect(&engine, &QQmlEngine::exit, QCoreApplication::instance(), &QCoreApplication::exit);
             component->loadUrl(options.url);
             while (component->isLoading())
                 QCoreApplication::processEvents();
@@ -599,10 +597,8 @@ int main(int argc, char ** argv)
 
             if (window) {
                 setWindowTitle(options.verbose, topLevel, window.data());
-#if QT_CONFIG(opengl)
                 if (options.verbose)
                     new DiagnosticGlContextCreationListener(window.data());
-#endif
                 QSurfaceFormat surfaceFormat = window->requestedFormat();
                 if (options.multisample)
                     surfaceFormat.setSamples(16);

@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -55,7 +52,9 @@
 #include <wrl.h>
 #include <windows.applicationmodel.h>
 #include <windows.management.deployment.h>
+#if _MSC_VER >= 1900
 #include <wincrypt.h>
+#endif
 
 using namespace Microsoft::WRL;
 using namespace Microsoft::WRL::Wrappers;
@@ -66,6 +65,7 @@ using namespace ABI::Windows::System;
 
 QT_USE_NAMESPACE
 
+#if _MSC_VER >= 1900
 // *********** Taken from MSDN Example code
 // https://msdn.microsoft.com/en-us/library/windows/desktop/jj835834%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 
@@ -297,6 +297,7 @@ bool signAppxPackage(PCCERT_CONTEXT signingCertContext, LPCWSTR packageFilePath)
     return true;
 }
 // ************ MSDN
+#endif // MSC_VER >= 1900
 
 bool AppxEngine::getManifestFile(const QString &fileName, QString *manifest)
 {
@@ -457,11 +458,13 @@ AppxEngine::AppxEngine(Runner *runner, AppxEnginePrivate *dd)
     d->packageFamilyName = QString::fromWCharArray(packageFamilyName);
     CoTaskMemFree(packageFamilyName);
 
+#if _MSC_VER >= 1900
     LPWSTR publisher;
     packageId->GetPublisher(&publisher);
     CHECK_RESULT_FATAL("Failed to retrieve publisher name from package.", return);
     d->publisherName = QString::fromWCharArray(publisher);
     CoTaskMemFree(publisher);
+#endif // _MSC_VER >= 1900
 
     ComPtr<IAppxManifestApplicationsEnumerator> applications;
     hr = d->manifestReader->GetApplications(&applications);
@@ -539,7 +542,7 @@ bool AppxEngine::installDependencies()
     qCDebug(lcWinRtRunner) << __FUNCTION__;
 
     QSet<QString> toInstall;
-    for (const QString &dependencyName : qAsConst(d->dependencies)) {
+    foreach (const QString &dependencyName, d->dependencies) {
         toInstall.insert(dependencyName);
         qCDebug(lcWinRtRunner).nospace()
             << "dependency to be installed: " << dependencyName;
@@ -718,6 +721,7 @@ bool AppxEngine::createPackage(const QString &packageFileName)
 
 bool AppxEngine::sign(const QString &fileName)
 {
+#if _MSC_VER >= 1900
     Q_D(const AppxEngine);
     BYTE buffer[256];
     DWORD bufferSize = 256;
@@ -796,4 +800,8 @@ bool AppxEngine::sign(const QString &fileName)
     }
 
     return signAppxPackage(context, wchar(fileName));
+#else // _MSC_VER < 1900
+    Q_UNUSED(fileName);
+    return true;
+#endif // _MSC_VER < 1900
 }

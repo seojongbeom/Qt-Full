@@ -1,19 +1,21 @@
 TARGET = QtQuick
 
 QT = core-private gui-private qml-private
-qtConfig(qml-network): \
-    QT_PRIVATE += network
+QT_PRIVATE =  network
 
 DEFINES   += QT_NO_URL_CAST_FROM_STRING QT_NO_INTEGER_EVENT_COORDINATES
 win32-msvc*:DEFINES *= _CRT_SECURE_NO_WARNINGS
 solaris-cc*:QMAKE_CXXFLAGS_RELEASE -= -O2
-win32:!winrt: LIBS += -luser32
-
-DEFINES += QT_NO_FOREACH
+win32:!wince:!winrt: LIBS += -luser32
 
 exists("qqml_enable_gcov") {
     QMAKE_CXXFLAGS = -fprofile-arcs -ftest-coverage -fno-elide-constructors
     LIBS_PRIVATE += -lgcov
+}
+
+greaterThan(QT_GCC_MAJOR_VERSION, 5):!qnx {
+    # Our code is bad. Temporary workaround. Fixed in 5.8
+    QMAKE_CXXFLAGS += -fno-delete-null-pointer-checks -fno-lifetime-dse
 }
 
 QMAKE_DOCS = $$PWD/doc/qtquick.qdocconf
@@ -30,9 +32,8 @@ ANDROID_BUNDLED_FILES += \
 include(util/util.pri)
 include(scenegraph/scenegraph.pri)
 include(items/items.pri)
-qtConfig(quick-designer): \
-    include(designer/designer.pri)
-qtConfig(accessibility) {
+!wince:include(designer/designer.pri)
+contains(QT_CONFIG, accessibility) {
     include(accessible/accessible.pri)
 }
 

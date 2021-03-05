@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -104,11 +104,28 @@
     care must be taken when deploying applications that use these
     libraries, particularly when the application is statically linked
     to them.
-    For more information, see \l{Third-Party Licenses Used in Qt}.
 
-    Some configurations of QtNetwork use OpenSSL at run-time. Deployment
+    The following table summarizes a few issues that
+    you should be aware of.
+
+    \table
+    \header \li Qt Library \li Dependency
+            \li Licensing Issue
+    \row    \li \l{QtHelp} \li CLucene
+    \li The version of clucene distributed with Qt is licensed
+    under the GNU LGPL version 2.1 or later. This has implications for
+    developers of closed source applications. Please see the
+    \l{Qt Help#License Information}{Qt Help} documentation for more information.
+
+    \row    \li \l{QtNetwork}  \li OpenSSL
+    \li Some configurations of QtNetwork use OpenSSL at run-time. Deployment
     of OpenSSL libraries is subject to both licensing and export restrictions.
-    For more information, see \l{Secure Sockets Layer (SSL) Classes}.
+    More information can be found in the \l{Secure Sockets Layer (SSL) Classes}
+    documentation.
+
+    \endtable
+
+    For more information, see \l{Third-Party Licenses Used in Qt}.
 
     \section1 Platform-Specific Notes
 
@@ -218,19 +235,21 @@
     For example, lets say the code contains the following:
 
     \code
-//@ANDROID-21
+//@ANDROID-12
     @Override
-    public void onActivityReenter(int resultCode, Intent data)
+    public boolean dispatchGenericMotionEvent(MotionEvent ev)
     {
-        // Do something
-        return super.onActivityReenter(resultCode, data);
+        if (QtApplication.m_delegateObject != null  && QtApplication.dispatchGenericMotionEvent != null)
+            return (Boolean) QtApplication.invokeDelegateMethod(QtApplication.dispatchGenericMotionEvent, ev);
+        else
+            return super.dispatchGenericMotionEvent(ev);
     }
-//@ANDROID-21
+//@ANDROID-12
     \endcode
 
-    If your minimum Android API level is 20 or lower, then the code should be removed before
-    building, since it's not a supported API on Android API level 20. However, if your minimum API
-    level is 21 or higher, it should be left in.
+    If your minimum Android API level is 11 or lower, then the code should be removed before
+    building, since it's not a supported API on Android API level 11. However, if your minimum API
+    level is 12 or higher, it should be left in.
 
     \section2 Resources
 
@@ -306,11 +325,11 @@
 
     Example:
     \code
-    % android update project --path $BUILD_TARGET --target android-16 --name QtApp
+    % android update project --path $BUILD_TARGET --target android-9 --name QtApp
     \endcode
 
     This example will create build files in \c{$BUILD_TARGET} for an \c APK named \c QtApp. The Java
-    code will be compiled against the \c{android-16} platform.
+    code will be compiled against the \c{android-9} platform.
 
     The project can then be built using the ant tool. If a release package is built it can
     be signed and aligned using \c jarsigner and \c zipalign.

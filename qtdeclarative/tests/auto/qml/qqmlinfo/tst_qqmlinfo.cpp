@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,7 +54,6 @@ private slots:
     void nonQmlContextedObject();
     void types();
     void chaining();
-    void messageTypes();
 
 private:
     QQmlEngine engine;
@@ -63,14 +67,14 @@ void tst_qqmlinfo::qmlObject()
     QVERIFY(object != 0);
 
     QString message = component.url().toString() + ":3:1: QML QtObject: Test Message";
-    QTest::ignoreMessage(QtInfoMsg, qPrintable(message));
+    QTest::ignoreMessage(QtWarningMsg, qPrintable(message));
     qmlInfo(object) << "Test Message";
 
     QObject *nested = qvariant_cast<QObject *>(object->property("nested"));
     QVERIFY(nested != 0);
 
     message = component.url().toString() + ":6:13: QML QtObject: Second Test Message";
-    QTest::ignoreMessage(QtInfoMsg, qPrintable(message));
+    QTest::ignoreMessage(QtWarningMsg, qPrintable(message));
     qmlInfo(nested) << "Second Test Message";
 }
 
@@ -87,11 +91,11 @@ void tst_qqmlinfo::nestedQmlObject()
     QVERIFY(nested2 != 0);
 
     QString message = component.url().toString() + ":5:13: QML NestedObject: Outer Object";
-    QTest::ignoreMessage(QtInfoMsg, qPrintable(message));
+    QTest::ignoreMessage(QtWarningMsg, qPrintable(message));
     qmlInfo(nested) << "Outer Object";
 
     message = testFileUrl("NestedObject.qml").toString() + ":6:14: QML QtObject: Inner Object";
-    QTest::ignoreMessage(QtInfoMsg, qPrintable(message));
+    QTest::ignoreMessage(QtWarningMsg, qPrintable(message));
     qmlInfo(nested2) << "Inner Object";
 }
 
@@ -108,28 +112,28 @@ void tst_qqmlinfo::nestedComponent()
     QVERIFY(nested2 != 0);
 
     QString message = component.url().toString() + ":10:9: QML NestedObject: Complex Object";
-    QTest::ignoreMessage(QtInfoMsg, qPrintable(message));
+    QTest::ignoreMessage(QtWarningMsg, qPrintable(message));
     qmlInfo(nested) << "Complex Object";
 
     message = component.url().toString() + ":16:9: QML Image: Simple Object";
-    QTest::ignoreMessage(QtInfoMsg, qPrintable(message));
+    QTest::ignoreMessage(QtWarningMsg, qPrintable(message));
     qmlInfo(nested2) << "Simple Object";
 }
 
 void tst_qqmlinfo::nonQmlObject()
 {
     QObject object;
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: QML QtObject: Test Message");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: QML QtObject: Test Message");
     qmlInfo(&object) << "Test Message";
 
     QTimer nonQmlObject;
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: QML QTimer: Test Message");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: QML QTimer: Test Message");
     qmlInfo(&nonQmlObject) << "Test Message";
 }
 
 void tst_qqmlinfo::nullObject()
 {
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: Null Object Test Message");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: Null Object Test Message");
     qmlInfo(0) << "Null Object Test Message";
 }
 
@@ -138,50 +142,50 @@ void tst_qqmlinfo::nonQmlContextedObject()
     QObject object;
     QQmlContext context(&engine);
     QQmlEngine::setContextForObject(&object, &context);
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: QML QtObject: Test Message");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: QML QtObject: Test Message");
     qmlInfo(&object) << "Test Message";
 }
 
 void tst_qqmlinfo::types()
 {
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: false");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: false");
     qmlInfo(0) << false;
 
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: 1.1");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: 1.1");
     qmlInfo(0) << 1.1;
 
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: 1.2");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: 1.2");
     qmlInfo(0) << 1.2f;
 
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: 15");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: 15");
     qmlInfo(0) << 15;
 
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: 'b'");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: 'b'");
     qmlInfo(0) << QChar('b');
 
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: \"Qt\"");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: \"Qt\"");
     qmlInfo(0) << QByteArray("Qt");
 
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: true");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: true");
     qmlInfo(0) << bool(true);
 
     //### do we actually want QUrl to show up in the output?
     //### why the extra space at the end?
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: QUrl(\"http://www.qt-project.org\") ");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: QUrl(\"http://www.qt-project.org\") ");
     qmlInfo(0) << QUrl("http://www.qt-project.org");
 
     //### should this be quoted?
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: hello");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: hello");
     qmlInfo(0) << QLatin1String("hello");
 
     //### should this be quoted?
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: World");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: World");
     QString str("Hello World");
     QStringRef ref(&str, 6, 5);
     qmlInfo(0) << ref;
 
     //### should this be quoted?
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: Quick");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: Quick");
     qmlInfo(0) << QString ("Quick");
 }
 
@@ -189,7 +193,7 @@ void tst_qqmlinfo::chaining()
 {
     QString str("Hello World");
     QStringRef ref(&str, 6, 5);
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: false 1.1 1.2 15 hello 'b' World \"Qt\" true Quick QUrl(\"http://www.qt-project.org\") ");
+    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: false 1.1 1.2 15 hello 'b' World \"Qt\" true Quick QUrl(\"http://www.qt-project.org\") ");
     qmlInfo(0) << false << ' '
                << 1.1 << ' '
                << 1.2f << ' '
@@ -201,19 +205,6 @@ void tst_qqmlinfo::chaining()
                << bool(true) << ' '
                << QString ("Quick") << ' '
                << QUrl("http://www.qt-project.org");
-}
-
-// Ensure that messages of different types are sent with the correct QtMsgType.
-void tst_qqmlinfo::messageTypes()
-{
-    QTest::ignoreMessage(QtDebugMsg, "<Unknown File>: debug");
-    qmlDebug(0) << QLatin1String("debug");
-
-    QTest::ignoreMessage(QtInfoMsg, "<Unknown File>: info");
-    qmlInfo(0) << QLatin1String("info");
-
-    QTest::ignoreMessage(QtWarningMsg, "<Unknown File>: warning");
-    qmlWarning(0) << QLatin1String("warning");
 }
 
 QTEST_MAIN(tst_qqmlinfo)

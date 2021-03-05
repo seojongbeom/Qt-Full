@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -57,13 +51,11 @@
 #include "directshowmetadatacontrol.h"
 #include "directshowplayerservice.h"
 
-#include <QtMultimedia/private/qtmultimedia-config_p.h>
-
-#if QT_CONFIG(wmsdk)
+#ifndef QT_NO_WMSDK
 #include <wmsdk.h>
 #endif
 
-#if QT_CONFIG(wshellitem)
+#ifndef QT_NO_SHELLITEM
 #include <ShlObj.h>
 #include <propkeydef.h>
 #include <private/qsystemlibrary_p.h>
@@ -87,7 +79,6 @@ DEFINE_PROPERTYKEY(PKEY_Media_AverageLevel, 0x09EDD5B6, 0xB301, 0x43C5, 0x99, 0x
 DEFINE_PROPERTYKEY(PKEY_Audio_ChannelCount, 0x64440490, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 7);
 DEFINE_PROPERTYKEY(PKEY_Audio_PeakValue, 0x2579E5D0, 0x1116, 0x4084, 0xBD, 0x9A, 0x9B, 0x4F, 0x7C, 0xB4, 0xDF, 0x5E, 100);
 DEFINE_PROPERTYKEY(PKEY_Audio_SampleRate, 0x64440490, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 5);
-DEFINE_PROPERTYKEY(PKEY_Audio_Format, 0x64440490, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 2);
 DEFINE_PROPERTYKEY(PKEY_Music_AlbumTitle, 0x56A3372E, 0xCE9C, 0x11D2, 0x9F, 0x0E, 0x00, 0x60, 0x97, 0xC6, 0x86, 0xF6, 4);
 DEFINE_PROPERTYKEY(PKEY_Music_AlbumArtist, 0x56A3372E, 0xCE9C, 0x11D2, 0x9F, 0x0E, 0x00, 0x60, 0x97, 0xC6, 0x86, 0xF6, 13);
 DEFINE_PROPERTYKEY(PKEY_Music_Artist, 0x56A3372E, 0xCE9C, 0x11D2, 0x9F, 0x0E, 0x00, 0x60, 0x97, 0xC6, 0x86, 0xF6, 2);
@@ -105,116 +96,13 @@ DEFINE_PROPERTYKEY(PKEY_Video_VerticalAspectRatio, 0x64440491, 0x4C8B, 0x11D1, 0
 DEFINE_PROPERTYKEY(PKEY_Video_FrameRate, 0x64440491, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 6);
 DEFINE_PROPERTYKEY(PKEY_Video_EncodingBitrate, 0x64440491, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 8);
 DEFINE_PROPERTYKEY(PKEY_Video_Director, 0x64440492, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 20);
-DEFINE_PROPERTYKEY(PKEY_Video_Compression, 0x64440491, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 10);
 DEFINE_PROPERTYKEY(PKEY_Media_Writer, 0x64440492, 0x4C8B, 0x11D1, 0x8B, 0x70, 0x08, 0x00, 0x36, 0xB1, 0x1A, 0x03, 23);
-
-static QString nameForGUIDString(const QString &guid)
-{
-    // Audio formats
-    if (guid == "{00001610-0000-0010-8000-00AA00389B71}" || guid == "{000000FF-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG AAC Audio");
-    else if (guid == "{00001600-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG ADTS AAC Audio");
-    else if (guid == "{00000092-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Dolby AC-3 SPDIF");
-    else if (guid == "{E06D802C-DB46-11CF-B4D1-00805F6CBBEA}" || guid == "{00002000-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Dolby AC-3");
-    else if (guid == "{A7FB87AF-2D02-42FB-A4D4-05CD93843BDD}")
-        return QStringLiteral("Dolby Digital Plus");
-    else if (guid == "{00000009-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("DRM");
-    else if (guid == "{00000008-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Digital Theater Systems Audio (DTS)");
-    else if (guid == "{00000003-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("IEEE Float Audio");
-    else if (guid == "{00000055-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG Audio Layer-3 (MP3)");
-    else if (guid == "{00000050-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG-1 Audio");
-    else if (guid == "{2E6D7033-767A-494D-B478-F29D25DC9037}")
-        return QStringLiteral("MPEG Audio Layer 1/2");
-    else if (guid == "{0000000A-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Audio Voice");
-    else if (guid == "{00000001-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Uncompressed PCM Audio");
-    else if (guid == "{00000164-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Audio 9 SPDIF");
-    else if (guid == "{00000161-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Audio 8 (WMA2)");
-    else if (guid == "{00000162-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Audio 9 (WMA3");
-    else if (guid == "{00000163-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Audio 9 Lossless");
-    else if (guid == "{8D2FD10B-5841-4a6b-8905-588FEC1ADED9}")
-        return QStringLiteral("Vorbis");
-    else if (guid == "{0000F1AC-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Free Lossless Audio Codec (FLAC)");
-    else if (guid == "{00006C61-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Apple Lossless Audio Codec (ALAC)");
-
-    // Video formats
-    if (guid == "{35327664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("DVCPRO 25 (DV25)");
-    else if (guid == "{30357664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("DVCPRO 50 (DV50)");
-    else if (guid == "{20637664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("DVC/DV Video");
-    else if (guid == "{31687664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("DVCPRO 100 (DVH1)");
-    else if (guid == "{64687664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("HD-DVCR (DVHD)");
-    else if (guid == "{64737664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("SDL-DVCR (DVSD)");
-    else if (guid == "{6C737664-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("SD-DVCR (DVSL)");
-    else if (guid == "{33363248-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("H.263 Video");
-    else if (guid == "{34363248-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("H.264 Video");
-    else if (guid == "{35363248-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("H.265 Video");
-    else if (guid == "{43564548-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("High Efficiency Video Coding (HEVC)");
-    else if (guid == "{3253344D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG-4 part 2 Video (M4S2)");
-    else if (guid == "{47504A4D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Motion JPEG (MJPG)");
-    else if (guid == "{3334504D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Microsoft MPEG 4 version 3 (MP43)");
-    else if (guid == "{5334504D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("ISO MPEG 4 version 1 (MP4S)");
-    else if (guid == "{5634504D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG-4 part 2 Video (MP4V)");
-    else if (guid == "{E06D8026-DB46-11CF-B4D1-00805F6CBBEA}")
-        return QStringLiteral("MPEG-2 Video");
-    else if (guid == "{3147504D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("MPEG-1 Video");
-    else if (guid == "{3153534D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Screen 1 (MSS1)");
-    else if (guid == "{3253534D-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Video 9 Screen (MSS2)");
-    else if (guid == "{31564D57-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Video 7 (WMV1)");
-    else if (guid == "{32564D57-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Video 8 (WMV2)");
-    else if (guid == "{33564D57-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Video 9 (WMV3)");
-    else if (guid == "{31435657-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("Windows Media Video VC1 (WVC1)");
-    else if (guid == "{30385056-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("VP8 Video");
-    else if (guid == "{30395056-0000-0010-8000-00AA00389B71}")
-        return QStringLiteral("VP9 Video");
-
-    else
-        return QStringLiteral("Unknown codec");
-}
 
 typedef HRESULT (WINAPI *q_SHCreateItemFromParsingName)(PCWSTR, IBindCtx *, const GUID&, void **);
 static q_SHCreateItemFromParsingName sHCreateItemFromParsingName = 0;
 #endif
 
-#if QT_CONFIG(wmsdk)
+#ifndef QT_NO_WMSDK
 
 namespace
 {
@@ -396,7 +284,7 @@ static QVariant getValue(IWMHeaderInfo *header, const wchar_t *key)
 }
 #endif
 
-#if QT_CONFIG(wshellitem)
+#ifndef QT_NO_SHELLITEM
 static QVariant convertValue(const PROPVARIANT& var)
 {
     QVariant value;
@@ -496,7 +384,7 @@ void DirectShowMetaDataControl::updateMetadata(IFilterGraph2 *graph, IBaseFilter
 {
     m_metadata.clear();
 
-#if QT_CONFIG(wshellitem)
+#ifndef QT_NO_SHELLITEM
     if (!sHCreateItemFromParsingName) {
         QSystemLibrary lib(QStringLiteral("shell32"));
         sHCreateItemFromParsingName = (q_SHCreateItemFromParsingName)(lib.resolve("SHCreateItemFromParsingName"));
@@ -602,10 +490,6 @@ void DirectShowMetaDataControl::updateMetadata(IFilterGraph2 *graph, IBaseFilter
                             m_metadata.insert(QMediaMetaData::Director, convertValue(var));
                         } else if (IsEqualPropertyKey(key, PKEY_Media_Writer)) {
                             m_metadata.insert(QMediaMetaData::Writer, convertValue(var));
-                        } else if (IsEqualPropertyKey(key, PKEY_Video_Compression)) {
-                            m_metadata.insert(QMediaMetaData::VideoCodec, nameForGUIDString(convertValue(var).toString()));
-                        } else if (IsEqualPropertyKey(key, PKEY_Audio_Format)) {
-                            m_metadata.insert(QMediaMetaData::AudioCodec, nameForGUIDString(convertValue(var).toString()));
                         }
 
                         PropVariantClear(&var);
@@ -623,10 +507,11 @@ void DirectShowMetaDataControl::updateMetadata(IFilterGraph2 *graph, IBaseFilter
         goto send_event;
 #endif
 
-#if QT_CONFIG(wmsdk)
-    if (IWMHeaderInfo *info = com_cast<IWMHeaderInfo>(source, IID_IWMHeaderInfo)) {
-        const auto keys = *qt_wmMetaDataKeys();
-        for (const QWMMetaDataKey &key : keys) {
+#ifndef QT_NO_WMSDK
+    IWMHeaderInfo *info = com_cast<IWMHeaderInfo>(source, IID_IWMHeaderInfo);
+
+    if (info) {
+        Q_FOREACH (const QWMMetaDataKey &key, *qt_wmMetaDataKeys()) {
             QVariant var = getValue(info, key.wmName);
             if (var.isValid()) {
                 if (key.qtName == QMediaMetaData::Duration) {

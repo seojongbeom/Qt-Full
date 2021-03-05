@@ -1,26 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
+**
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 3 as published by the Free Software
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** packaging of this file. Please review the following information to
+** ensure the GNU Lesser General Public License version 3 requirements
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -36,10 +44,10 @@ class tst_QQuickTreeModelAdaptor : public QObject
     Q_OBJECT
 
 public:
-    void compareData(int row, QQuickTreeModelAdaptor1 &tma, const QModelIndex &idx, TestModel &model, bool expanded = false);
-    void compareModels(QQuickTreeModelAdaptor1 &tma, TestModel &model);
-    void expandAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor1 &tma, bool expandable, int expectedRowCountDifference);
-    void collapseAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor1 &tma, bool expandable, int expectedRowCountDifference);
+    void compareData(int row, QQuickTreeModelAdaptor &tma, const QModelIndex &idx, TestModel &model, bool expanded = false);
+    void compareModels(QQuickTreeModelAdaptor &tma, TestModel &model);
+    void expandAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor &tma, bool expandable, int expectedRowCountDifference);
+    void collapseAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor &tma, bool expandable, int expectedRowCountDifference);
 
 private slots:
     void initTestCase();
@@ -88,18 +96,18 @@ void tst_QQuickTreeModelAdaptor::cleanup()
 {
 }
 
-void tst_QQuickTreeModelAdaptor::compareData(int row, QQuickTreeModelAdaptor1 &tma, const QModelIndex &modelIdx, TestModel &model, bool expanded)
+void tst_QQuickTreeModelAdaptor::compareData(int row, QQuickTreeModelAdaptor &tma, const QModelIndex &modelIdx, TestModel &model, bool expanded)
 {
     const QModelIndex &tmaIdx = tma.index(row);
     const int indexDepth = model.level(modelIdx) - model.level(tma.rootIndex()) - 1;
     QCOMPARE(tma.mapToModel(tmaIdx), modelIdx);
     QCOMPARE(tma.data(tmaIdx, Qt::DisplayRole).toString(), model.displayData(modelIdx));
-    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor1::DepthRole).toInt(), indexDepth);
-    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor1::ExpandedRole).toBool(), expanded);
-    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor1::HasChildrenRole).toBool(), model.hasChildren(modelIdx));
+    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor::DepthRole).toInt(), indexDepth);
+    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor::ExpandedRole).toBool(), expanded);
+    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor::HasChildrenRole).toBool(), model.hasChildren(modelIdx));
 }
 
-void tst_QQuickTreeModelAdaptor::expandAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor1 &tma, bool expandable,
+void tst_QQuickTreeModelAdaptor::expandAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor &tma, bool expandable,
                                                   int expectedRowCountDifference)
 {
     QSignalSpy rowsAboutToBeInsertedSpy(&tma, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)));
@@ -111,7 +119,7 @@ void tst_QQuickTreeModelAdaptor::expandAndTest(const QModelIndex &idx, QQuickTre
     QCOMPARE(tma.isExpanded(idx), expandable);
 
     const QModelIndex &tmaIdx = tma.index(tma.itemIndex(idx));
-    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor1::ExpandedRole).toBool(), expandable);
+    QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor::ExpandedRole).toBool(), expandable);
 
     if (expandable && expectedRowCountDifference != 0) {
         // Rows were added below the parent
@@ -133,7 +141,7 @@ void tst_QQuickTreeModelAdaptor::expandAndTest(const QModelIndex &idx, QQuickTre
         const QVariantList &dataChangedArgs = dataChangedSpy.first();
         QCOMPARE(dataChangedArgs.at(0).toModelIndex(), tmaIdx);
         QCOMPARE(dataChangedArgs.at(1).toModelIndex(), tmaIdx);
-        QCOMPARE(dataChangedArgs.at(2).value<QVector<int> >(), QVector<int>(1, QQuickTreeModelAdaptor1::ExpandedRole));
+        QCOMPARE(dataChangedArgs.at(2).value<QVector<int> >(), QVector<int>(1, QQuickTreeModelAdaptor::ExpandedRole));
     } else {
         QCOMPARE(tma.rowCount(), oldRowCount);
         QCOMPARE(rowsAboutToBeInsertedSpy.count(), 0);
@@ -141,7 +149,7 @@ void tst_QQuickTreeModelAdaptor::expandAndTest(const QModelIndex &idx, QQuickTre
     }
 }
 
-void tst_QQuickTreeModelAdaptor::collapseAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor1 &tma,
+void tst_QQuickTreeModelAdaptor::collapseAndTest(const QModelIndex &idx, QQuickTreeModelAdaptor &tma,
                                                  bool expandable, int expectedRowCountDifference)
 {
     QSignalSpy rowsAboutToBeRemovedSpy(&tma, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)));
@@ -154,7 +162,7 @@ void tst_QQuickTreeModelAdaptor::collapseAndTest(const QModelIndex &idx, QQuickT
 
     const QModelIndex &tmaIdx = tma.index(tma.itemIndex(idx));
     if (tmaIdx.isValid())
-        QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor1::ExpandedRole).toBool(), false);
+        QCOMPARE(tma.data(tmaIdx, QQuickTreeModelAdaptor::ExpandedRole).toBool(), false);
 
     if (expandable && expectedRowCountDifference != 0) {
         // Rows were removed below the parent
@@ -174,7 +182,7 @@ void tst_QQuickTreeModelAdaptor::collapseAndTest(const QModelIndex &idx, QQuickT
         const QVariantList &dataChangedArgs = dataChangedSpy.first();
         QCOMPARE(dataChangedArgs.at(0).toModelIndex(), tmaIdx);
         QCOMPARE(dataChangedArgs.at(1).toModelIndex(), tmaIdx);
-        QCOMPARE(dataChangedArgs.at(2).value<QVector<int> >(), QVector<int>(1, QQuickTreeModelAdaptor1::ExpandedRole));
+        QCOMPARE(dataChangedArgs.at(2).value<QVector<int> >(), QVector<int>(1, QQuickTreeModelAdaptor::ExpandedRole));
     } else {
         QCOMPARE(tma.rowCount(), oldRowCount);
         QCOMPARE(rowsAboutToBeRemovedSpy.count(), 0);
@@ -182,7 +190,7 @@ void tst_QQuickTreeModelAdaptor::collapseAndTest(const QModelIndex &idx, QQuickT
     }
 }
 
-void tst_QQuickTreeModelAdaptor::compareModels(QQuickTreeModelAdaptor1 &tma, TestModel &model)
+void tst_QQuickTreeModelAdaptor::compareModels(QQuickTreeModelAdaptor &tma, TestModel &model)
 {
     QModelIndex parent = tma.rootIndex();
     QStack<QModelIndex> parents;
@@ -215,7 +223,7 @@ void tst_QQuickTreeModelAdaptor::compareModels(QQuickTreeModelAdaptor1 &tma, Tes
 void tst_QQuickTreeModelAdaptor::setModel()
 {
     TestModel model(5, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
 
     QSignalSpy modelChangedSpy(&tma, SIGNAL(modelChanged(QAbstractItemModel*)));
     tma.setModel(&model);
@@ -235,7 +243,7 @@ void tst_QQuickTreeModelAdaptor::setModel()
 void tst_QQuickTreeModelAdaptor::modelDestroyed()
 {
     TestModel *model = new TestModel(5, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
 
     QSignalSpy modelChangedSpy(&tma, SIGNAL(modelChanged(QAbstractItemModel*)));
     tma.setModel(model);
@@ -253,7 +261,7 @@ void tst_QQuickTreeModelAdaptor::modelDestroyed()
 void tst_QQuickTreeModelAdaptor::modelReset()
 {
     TestModel model(5, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     QSignalSpy modelAboutToBeResetSpy(&tma, SIGNAL(modelAboutToBeReset()));
@@ -283,7 +291,7 @@ void tst_QQuickTreeModelAdaptor::rootIndex()
 {
     TestModel model(5, 1);
 
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     QVERIFY(!tma.rootIndex().isValid());
@@ -317,7 +325,7 @@ void tst_QQuickTreeModelAdaptor::dataAccess()
 {
     TestModel model(5, 1);
 
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     QCOMPARE(tma.rowCount(), model.rowCount());
@@ -339,7 +347,7 @@ void tst_QQuickTreeModelAdaptor::dataChange()
 {
     TestModel model(5, 1);
 
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     QSignalSpy dataChangedSpy(&tma, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)));
@@ -382,7 +390,7 @@ void tst_QQuickTreeModelAdaptor::groupedDataChange()
     const QModelIndex &topLeftIdx = model.index(1, 0);
     const QModelIndex &bottomRightIdx = model.index(7, 0);
 
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     QSignalSpy dataChangedSpy(&tma, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)));
@@ -494,7 +502,7 @@ void tst_QQuickTreeModelAdaptor::expandAndCollapse()
     const QModelIndex &parentIdx = model.index(parentRow, 0);
     bool expandable = model.hasChildren(parentIdx);
 
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     expandAndTest(parentIdx, tma, expandable, model.rowCount(parentIdx));
@@ -513,7 +521,7 @@ void tst_QQuickTreeModelAdaptor::expandAndCollapse2ndLevel()
         const QModelIndex &parentIdx = model.index(expandRows[i], 0);
         QVERIFY(model.hasChildren(parentIdx));
 
-        QQuickTreeModelAdaptor1 tma;
+        QQuickTreeModelAdaptor tma;
         tma.setModel(&model);
 
         tma.expand(parentIdx);
@@ -569,7 +577,7 @@ void tst_QQuickTreeModelAdaptor::layoutChange()
     const QModelIndex &idx = model.index(0, 0);
     const QModelIndex &idx2 = model.index(2, 0);
 
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     // Nothing expanded
@@ -688,7 +696,7 @@ void tst_QQuickTreeModelAdaptor::removeRows()
     QFETCH(int, expectedRemovedCount);
 
     TestModel model(ModelRowCount, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     const QModelIndex &expandParentIdx = expandParentRow == -1 ? QModelIndex() : model.index(expandParentRow, 0);
@@ -727,7 +735,7 @@ void tst_QQuickTreeModelAdaptor::removeRows()
 void tst_QQuickTreeModelAdaptor::removeRowsChildrenAndParent()
 {
     TestModel model(ModelRowCount, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     // Expand the first node
@@ -769,7 +777,7 @@ void tst_QQuickTreeModelAdaptor::removeRowsChildrenAndParent()
 void tst_QQuickTreeModelAdaptor::removeChildrenMoveParent()
 {
     TestModel model(ModelRowCount, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     // Expand the first node
@@ -812,7 +820,7 @@ void tst_QQuickTreeModelAdaptor::removeChildrenMoveParent()
 void tst_QQuickTreeModelAdaptor::removeChildrenRelayoutParent()
 {
     TestModel model(ModelRowCount, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     // Expand the first node
@@ -880,7 +888,7 @@ void tst_QQuickTreeModelAdaptor::insertRows()
     QFETCH(int, expectedInsertedCount);
 
     TestModel model(ModelRowCount, 1);
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     const QModelIndex &expandParentIdx = expandParentRow == -1 ? QModelIndex() : model.index(expandParentRow, 0);
@@ -1041,7 +1049,7 @@ void tst_QQuickTreeModelAdaptor::moveRows()
 
     TestModel model(ModelRowCount, 1);
     model.alternateChildlessRows = false;
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     const QModelIndex &expandParentIdx = expandParentRow == -1 ? QModelIndex() : model.index(expandParentRow, 0);
@@ -1157,7 +1165,7 @@ void tst_QQuickTreeModelAdaptor::reparentOnSameRow()
 {
     TestModel model(2, 1);
     model.alternateChildlessRows = false;
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     const QModelIndex &destParent = model.index(0, 0);
@@ -1175,8 +1183,8 @@ void tst_QQuickTreeModelAdaptor::reparentOnSameRow()
 
     QModelIndex movedIndex = tma.index(3, 0, QModelIndex());
     QVERIFY(movedIndex.isValid());
-    QCOMPARE(movedIndex.data(QQuickTreeModelAdaptor1::DepthRole).toInt(), 1);
-    QCOMPARE(tma.data(movedIndex, QQuickTreeModelAdaptor1::ModelIndexRole).toModelIndex(), model.index(2, 0, destParent));
+    QCOMPARE(movedIndex.data(QQuickTreeModelAdaptor::DepthRole).toInt(), 1);
+    QCOMPARE(tma.data(movedIndex, QQuickTreeModelAdaptor::ModelIndexRole).toModelIndex(), model.index(2, 0, destParent));
 
     // at least DepthRole and ModeIndexRole changes should have happened for the affected row
     bool depthChanged = false;
@@ -1184,9 +1192,9 @@ void tst_QQuickTreeModelAdaptor::reparentOnSameRow()
     QList<QList<QVariant> > &changes = dataChangedSpy;
     foreach (QList<QVariant> change, changes) {
         if (change.at(0) == movedIndex) {
-            if (change.at(2).value<QVector<int> >().contains(QQuickTreeModelAdaptor1::DepthRole))
+            if (change.at(2).value<QVector<int> >().contains(QQuickTreeModelAdaptor::DepthRole))
                 depthChanged = true;
-            if (change.at(2).value<QVector<int> >().contains(QQuickTreeModelAdaptor1::ModelIndexRole))
+            if (change.at(2).value<QVector<int> >().contains(QQuickTreeModelAdaptor::ModelIndexRole))
                 modelIndexChanged = true;
         }
     }
@@ -1210,7 +1218,7 @@ void tst_QQuickTreeModelAdaptor::selectionForRowRange()
 
     TestModel model(ModelRowCount, 1);
     model.alternateChildlessRows = false;
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     // NOTE: Some selections may look a bit cryptic. Insert a call to
@@ -1378,7 +1386,7 @@ void tst_QQuickTreeModelAdaptor::hasChildrenEmit()
 {
     TestModel model(1, 1);
     model.alternateChildlessRows = false;
-    QQuickTreeModelAdaptor1 tma;
+    QQuickTreeModelAdaptor tma;
     tma.setModel(&model);
 
     QModelIndex root = model.index(0,0);

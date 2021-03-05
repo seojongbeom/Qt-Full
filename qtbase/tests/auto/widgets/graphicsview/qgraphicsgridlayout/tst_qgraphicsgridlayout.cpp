@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -36,6 +41,12 @@
 class tst_QGraphicsGridLayout : public QObject
 {
     Q_OBJECT
+
+public slots:
+    void initTestCase();
+    void cleanupTestCase();
+    void init();
+    void cleanup();
 
 private slots:
     void qgraphicsgridlayout_data();
@@ -150,8 +161,7 @@ public:
         m_fnConstraint = fnConstraint;
     }
 
-    // Initializer {} is a workaround for gcc bug 68949
-    QSizeF m_sizeHints[Qt::NSizeHints] {};
+    QSizeF m_sizeHints[Qt::NSizeHints];
     QSizeF (*m_fnConstraint)(Qt::SizeHint, const QSizeF &);
 
 };
@@ -281,10 +291,8 @@ struct ItemDesc
     int m_rowSpan;
     int m_colSpan;
     QSizePolicy m_sizePolicy;
-
-    // Initializer {} is a workaround for gcc bug 68949
-    QSizeF m_sizeHints[Qt::NSizeHints] {};
-    QSizeF m_sizes[Qt::NSizeHints] {};
+    QSizeF m_sizeHints[Qt::NSizeHints];
+    QSizeF m_sizes[Qt::NSizeHints];
     Qt::Alignment m_align;
 
     Qt::Orientation m_constraintOrientation;
@@ -295,6 +303,32 @@ typedef QList<ItemDesc> ItemList;
 Q_DECLARE_METATYPE(ItemList);
 
 typedef QList<QSizeF> SizeList;
+
+
+// This will be called before the first test function is executed.
+// It is only called once.
+void tst_QGraphicsGridLayout::initTestCase()
+{
+}
+
+// This will be called after the last test function is executed.
+// It is only called once.
+void tst_QGraphicsGridLayout::cleanupTestCase()
+{
+}
+
+// This will be called before each test function is executed.
+void tst_QGraphicsGridLayout::init()
+{
+#ifdef Q_OS_WINCE //disable magic for WindowsCE
+    qApp->setAutoMaximizeThreshold(-1);
+#endif
+}
+
+// This will be called after every test function.
+void tst_QGraphicsGridLayout::cleanup()
+{
+}
 
 void tst_QGraphicsGridLayout::qgraphicsgridlayout_data()
 {
@@ -417,10 +451,9 @@ void tst_QGraphicsGridLayout::addItem_data()
         int column = b;
         int rowSpan = c;
         int columnSpan = d;
-        const QByteArray name = '(' + QByteArray::number(a) + ',' + QByteArray::number(b)
-            + ',' + QByteArray::number(c) + ',' + QByteArray::number(d);
+        QString name = QString::fromLatin1("(%1,%2,%3,%4").arg(a).arg(b).arg(c).arg(d);
         Qt::Alignment alignment = Qt::AlignLeft;
-        QTest::newRow(name.constData()) << row << column << rowSpan << columnSpan << alignment;
+        QTest::newRow(name.toLatin1()) << row << column << rowSpan << columnSpan << alignment;
     }}}}
 }
 
@@ -1074,9 +1107,8 @@ void tst_QGraphicsGridLayout::itemAt()
         if (i >= 0 && i < layout->count()) {
             QVERIFY(layout->itemAt(i));
         } else {
-            const QByteArray message = "QGraphicsGridLayout::itemAt: invalid index " + QByteArray::number(i);
-            QTest::ignoreMessage(QtWarningMsg, message.constData());
-            QCOMPARE(layout->itemAt(i), nullptr);
+            QTest::ignoreMessage(QtWarningMsg, QString::fromLatin1("QGraphicsGridLayout::itemAt: invalid index %1").arg(i).toLatin1().constData());
+            QCOMPARE(layout->itemAt(i), static_cast<QGraphicsLayoutItem*>(0));
         }
     }
     delete widget;
@@ -1105,7 +1137,7 @@ void tst_QGraphicsGridLayout::removeAt()
     QGraphicsLayoutItem *item0 = layout->itemAt(0);
     QCOMPARE(item0->parentLayoutItem(), static_cast<QGraphicsLayoutItem *>(layout));
     layout->removeAt(0);
-    QCOMPARE(item0->parentLayoutItem(), nullptr);
+    QCOMPARE(item0->parentLayoutItem(), static_cast<QGraphicsLayoutItem *>(0));
     QCOMPARE(layout->count(), 0);
     QTest::ignoreMessage(QtWarningMsg, QString::fromLatin1("QGraphicsGridLayout::removeAt: invalid index 0").toLatin1().constData());
     layout->removeAt(0);

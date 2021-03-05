@@ -18,12 +18,8 @@ img {
     height: auto;
 }
 
-.content .border img {
-    box-shadow:3px 3px 8px 3px rgba(200,200,200,0.5)
-}
+.content {
 
-.content .border .player {
-    box-shadow:3px 3px 8px 3px rgba(200,200,200,0.5)
 }
 
 .content .indexboxcont li {
@@ -779,24 +775,4 @@ div.multi-column div {
     margin-top: 1em;
     margin-right: 4em;
     width: 24em;
-}
-
-.mainContent .video {
-  width:40%;
-  max-width:640px;
-  margin: 15px 0 0 15px;
-  position:relative;
-  display:table
-}
-
-.mainContent .video > .vspan {
-  padding-top:60%;
-  display:block
-}
-.mainContent .video iframe {
-  width:100%;
-  height:100%;
-  position:absolute;
-  top:0;
-  left:0
 }

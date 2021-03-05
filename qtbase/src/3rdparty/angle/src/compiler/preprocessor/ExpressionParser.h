@@ -7,31 +7,21 @@
 #ifndef COMPILER_PREPROCESSOR_EXPRESSIONPARSER_H_
 #define COMPILER_PREPROCESSOR_EXPRESSIONPARSER_H_
 
-#include "DiagnosticsBase.h"
 #include "pp_utils.h"
 
 namespace pp
 {
 
+class Diagnostics;
 class Lexer;
 struct Token;
 
 class ExpressionParser
 {
   public:
-    struct ErrorSettings
-    {
-        Diagnostics::ID unexpectedIdentifier;
-        bool integerLiteralsMustFit32BitSignedRange;
-    };
-
     ExpressionParser(Lexer *lexer, Diagnostics *diagnostics);
 
-    bool parse(Token *token,
-               int *result,
-               bool parsePresetToken,
-               const ErrorSettings &errorSettings,
-               bool *valid);
+    bool parse(Token *token, int *result);
 
   private:
     PP_DISALLOW_COPY_AND_ASSIGN(ExpressionParser);

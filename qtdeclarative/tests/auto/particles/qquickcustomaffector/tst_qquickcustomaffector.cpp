@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -59,11 +64,11 @@ void tst_qquickcustomaffector::test_basic()
     ensureAnimTime(600, system->m_animation);
 
     QVERIFY(extremelyFuzzyCompare(system->groupData[0]->size(), 500, 10));
-    for (QQuickParticleData *d : qAsConst(system->groupData[0]->data)) {
+    foreach (QQuickParticleData *d, system->groupData[0]->data) {
         if (d->t == -1)
             continue; //Particle data unused
         //in CI the whole simulation often happens at once, so dead particles end up missing out
-        if (!d->stillAlive(system))
+        if (!d->stillAlive())
             continue; //parameters no longer get set once you die
 
         QCOMPARE(d->x, 100.f);
@@ -92,23 +97,22 @@ void tst_qquickcustomaffector::test_move()
     ensureAnimTime(600, system->m_animation);
 
     QVERIFY(extremelyFuzzyCompare(system->groupData[0]->size(), 500, 10));
-    for (QQuickParticleData *d : qAsConst(system->groupData[0]->data)) {
+    foreach (QQuickParticleData *d, system->groupData[0]->data) {
         if (d->t == -1)
             continue; //Particle data unused
-        if (!d->stillAlive(system))
+        if (!d->stillAlive())
             continue; //parameters no longer get set once you die
 
-        QVERIFY2(myFuzzyCompare(d->curX(system), 50.0), QByteArray::number(d->curX(system)));
-        QVERIFY2(myFuzzyCompare(d->curY(system), 50.0), QByteArray::number(d->curY(system)));
-        QVERIFY2(myFuzzyCompare(d->curVX(system), 50.0), QByteArray::number(d->curVX(system)));
-        QVERIFY2(myFuzzyCompare(d->curVY(system), 50.0), QByteArray::number(d->curVY(system)));
-        QVERIFY2(myFuzzyCompare(d->curAX(), 50.0), QByteArray::number(d->curAX()));
-        QVERIFY2(myFuzzyCompare(d->curAY(), 50.0), QByteArray::number(d->curAY()));
+        QVERIFY(myFuzzyCompare(d->curX(), 50.0));
+        QVERIFY(myFuzzyCompare(d->curY(), 50.0));
+        QVERIFY(myFuzzyCompare(d->curVX(), 50.0));
+        QVERIFY(myFuzzyCompare(d->curVY(), 50.0));
+        QVERIFY(myFuzzyCompare(d->curAX(), 50.0));
+        QVERIFY(myFuzzyCompare(d->curAY(), 50.0));
         QCOMPARE(d->lifeSpan, 0.5f);
         QCOMPARE(d->size, 32.f);
         QCOMPARE(d->endSize, 32.f);
-        QVERIFY2(myFuzzyLEQ(d->t, ((qreal)system->timeInt/1000.0)),
-                 QString::fromLatin1("%1 <= %2 / 1000").arg(d->t).arg(system->timeInt).toUtf8());
+        QVERIFY(myFuzzyLEQ(d->t, ((qreal)system->timeInt/1000.0)));
     }
     delete view;
 }

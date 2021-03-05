@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,34 +34,53 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.TextField {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            placeholderText ? placeholder.implicitWidth + leftPadding + rightPadding : 0)
-                            || contentWidth + leftPadding + rightPadding
-    implicitHeight: Math.max(contentHeight + topPadding + bottomPadding,
-                             background ? background.implicitHeight : 0,
-                             placeholder.implicitHeight + topPadding + bottomPadding)
+                            placeholder.implicitWidth + leftPadding + rightPadding)
+    implicitHeight: Math.max(background ? background.implicitHeight : 0,
+                             placeholder.implicitHeight + 1 + topPadding + bottomPadding)
 
     topPadding: 8
     bottomPadding: 16
 
-    color: enabled ? Material.foreground : Material.hintTextColor
+    color: enabled ? Material.primaryTextColor : Material.hintTextColor
     selectionColor: Material.accentColor
     selectedTextColor: Material.primaryHighlightedTextColor
     verticalAlignment: TextInput.AlignVCenter
+    cursorDelegate: Rectangle {
+        id: cursor
+        color: control.Material.accentColor
+        width: 2
+        visible: control.activeFocus && control.selectionStart === control.selectionEnd
 
-    cursorDelegate: CursorDelegate { }
+        Connections {
+            target: control
+            onCursorPositionChanged: {
+                // keep a moving cursor visible
+                cursor.opacity = 1
+                timer.restart()
+            }
+        }
 
-    PlaceholderText {
+        Timer {
+            id: timer
+            running: control.activeFocus
+            repeat: true
+            interval: Qt.styleHints.cursorFlashTime
+            onTriggered: cursor.opacity = !cursor.opacity ? 1 : 0
+            // force the cursor visible when gaining focus
+            onRunningChanged: cursor.opacity = 1
+        }
+    }
+
+    //! [placeholder]
+    Text {
         id: placeholder
         x: control.leftPadding
         y: control.topPadding
@@ -70,16 +89,20 @@ T.TextField {
         text: control.placeholderText
         font: control.font
         color: control.Material.hintTextColor
+        horizontalAlignment: control.horizontalAlignment
         verticalAlignment: control.verticalAlignment
         elide: Text.ElideRight
-        visible: !control.length && !control.preeditText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
+        visible: !control.displayText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
 
     }
+    //! [placeholder]
 
+    //! [background]
     background: Rectangle {
         y: control.height - height - control.bottomPadding / 2
         implicitWidth: 120
         height: control.activeFocus ? 2 : 1
         color: control.activeFocus ? control.Material.accentColor : control.Material.hintTextColor
     }
+    //! [background]
 }

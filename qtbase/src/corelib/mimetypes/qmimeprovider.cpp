@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Copyright (C) 2015 Klaralvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author David Faure <david.faure@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -63,7 +57,7 @@ QT_BEGIN_NAMESPACE
 
 static QString fallbackParent(const QString &mimeTypeName)
 {
-    const QStringRef myGroup = mimeTypeName.leftRef(mimeTypeName.indexOf(QLatin1Char('/')));
+    const QString myGroup = mimeTypeName.left(mimeTypeName.indexOf(QLatin1Char('/')));
     // All text/* types are subclasses of text/plain.
     if (myGroup == QLatin1String("text") && mimeTypeName != QLatin1String("text/plain"))
         return QLatin1String("text/plain");
@@ -205,7 +199,7 @@ bool QMimeBinaryProvider::isValid()
         return false;
 
     // We found exactly one file; is it the user-modified mimes, or a system file?
-    const QString foundFile = m_cacheFiles.constFirst()->file.fileName();
+    const QString foundFile = m_cacheFiles.first()->file.fileName();
     const QString localCacheFile = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1String("/mime/mime.cache");
 
     return foundFile != localCacheFile;
@@ -217,23 +211,21 @@ bool QMimeBinaryProvider::isValid()
 bool QMimeBinaryProvider::CacheFileList::checkCacheChanged()
 {
     bool somethingChanged = false;
-    for (CacheFile *cacheFile : qAsConst(*this)) {
+    QMutableListIterator<CacheFile *> it(*this);
+    while (it.hasNext()) {
+        CacheFile *cacheFile = it.next();
         QFileInfo fileInfo(cacheFile->file);
-        if (!fileInfo.exists() || fileInfo.lastModified() > cacheFile->m_mtime) {
-            // Deletion can't happen by just running update-mime-database.
-            // But the user could use rm -rf :-)
-            cacheFile->reload(); // will mark itself as invalid on failure
+        if (!fileInfo.exists()) { // This can't happen by just running update-mime-database. But the user could use rm -rf :-)
+            delete cacheFile;
+            it.remove();
+            somethingChanged = true;
+        } else if (fileInfo.lastModified() > cacheFile->m_mtime) {
+            if (!cacheFile->reload()) {
+                delete cacheFile;
+                it.remove();
+            }
             somethingChanged = true;
         }
-    }
-    if (somethingChanged) {
-        auto deleteIfNoLongerValid = [](CacheFile *cacheFile) -> bool {
-            const bool invalid = !cacheFile->isValid();
-            if (invalid)
-                delete cacheFile;
-            return invalid;
-        };
-        erase(std::remove_if(begin(), end(), deleteIfNoLongerValid), end());
     }
     return somethingChanged;
 }
@@ -250,7 +242,7 @@ void QMimeBinaryProvider::checkCache()
     // Then check if new cache files appeared
     const QStringList cacheFileNames = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QLatin1String("mime/mime.cache"));
     if (cacheFileNames != m_cacheFileNames) {
-        for (const QString &cacheFileName : cacheFileNames) {
+        foreach (const QString &cacheFileName, cacheFileNames) {
             CacheFile *cacheFile = m_cacheFiles.findCacheFile(cacheFileName);
             if (!cacheFile) {
                 //qDebug() << "new file:" << cacheFileName;
@@ -287,28 +279,27 @@ QMimeType QMimeBinaryProvider::mimeTypeForName(const QString &name)
     return mimeTypeForNameUnchecked(name);
 }
 
-QMimeGlobMatchResult QMimeBinaryProvider::findByFileName(const QString &fileName)
+QStringList QMimeBinaryProvider::findByFileName(const QString &fileName, QString *foundSuffix)
 {
     checkCache();
-    QMimeGlobMatchResult result;
     if (fileName.isEmpty())
-        return result;
+        return QStringList();
     const QString lowerFileName = fileName.toLower();
+    QMimeGlobMatchResult result;
     // TODO this parses in the order (local, global). Check that it handles "NOGLOBS" correctly.
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
-        // Check literals (e.g. "Makefile")
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         matchGlobList(result, cacheFile, cacheFile->getUint32(PosLiteralListOffset), fileName);
-        // Check complex globs (e.g. "callgrind.out[0-9]*")
         matchGlobList(result, cacheFile, cacheFile->getUint32(PosGlobListOffset), fileName);
-        // Check the very common *.txt cases with the suffix tree
         const int reverseSuffixTreeOffset = cacheFile->getUint32(PosReverseSuffixTreeOffset);
         const int numRoots = cacheFile->getUint32(reverseSuffixTreeOffset);
         const int firstRootOffset = cacheFile->getUint32(reverseSuffixTreeOffset + 4);
-        matchSuffixTree(result, cacheFile, numRoots, firstRootOffset, lowerFileName, lowerFileName.length() - 1, false);
+        matchSuffixTree(result, cacheFile, numRoots, firstRootOffset, lowerFileName, fileName.length() - 1, false);
         if (result.m_matchingMimeTypes.isEmpty())
             matchSuffixTree(result, cacheFile, numRoots, firstRootOffset, fileName, fileName.length() - 1, true);
     }
-    return result;
+    if (foundSuffix)
+        *foundSuffix = result.m_foundSuffix;
+    return result.m_matchingMimeTypes;
 }
 
 void QMimeBinaryProvider::matchGlobList(QMimeGlobMatchResult &result, CacheFile *cacheFile, int off, const QString &fileName)
@@ -366,8 +357,7 @@ bool QMimeBinaryProvider::matchSuffixTree(QMimeGlobMatchResult &result, QMimeBin
                     const int weight = flagsAndWeight & 0xff;
                     const bool caseSensitive = flagsAndWeight & 0x100;
                     if (caseSensitiveCheck || !caseSensitive) {
-                        result.addMatch(QLatin1String(mimeType), weight,
-                                        QLatin1Char('*') + fileName.midRef(charPos + 1));
+                        result.addMatch(QLatin1String(mimeType), weight, QLatin1Char('*') + fileName.mid(charPos+1));
                         success = true;
                     }
                 }
@@ -409,7 +399,7 @@ bool QMimeBinaryProvider::matchMagicRule(QMimeBinaryProvider::CacheFile *cacheFi
 QMimeType QMimeBinaryProvider::findByMagic(const QByteArray &data, int *accuracyPtr)
 {
     checkCache();
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         const int magicListOffset = cacheFile->getUint32(PosMagicListOffset);
         const int numMatches = cacheFile->getUint32(magicListOffset);
         //const int maxExtent = cacheFile->getUint32(magicListOffset + 4);
@@ -437,7 +427,7 @@ QStringList QMimeBinaryProvider::parents(const QString &mime)
     checkCache();
     const QByteArray mimeStr = mime.toLatin1();
     QStringList result;
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         const int parentListOffset = cacheFile->getUint32(PosParentListOffset);
         const int numEntries = cacheFile->getUint32(parentListOffset);
 
@@ -477,7 +467,7 @@ QString QMimeBinaryProvider::resolveAlias(const QString &name)
 {
     checkCache();
     const QByteArray input = name.toLatin1();
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         const int aliasListOffset = cacheFile->getUint32(PosAliasListOffset);
         const int numEntries = cacheFile->getUint32(aliasListOffset);
         int begin = 0;
@@ -508,7 +498,7 @@ QStringList QMimeBinaryProvider::listAliases(const QString &name)
     checkCache();
     QStringList result;
     const QByteArray input = name.toLatin1();
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         const int aliasListOffset = cacheFile->getUint32(PosAliasListOffset);
         const int numEntries = cacheFile->getUint32(aliasListOffset);
         for (int pos = 0; pos < numEntries; ++pos) {
@@ -534,14 +524,14 @@ void QMimeBinaryProvider::loadMimeTypeList()
         // Unfortunately mime.cache doesn't have a full list of all mimetypes.
         // So we have to parse the plain-text files called "types".
         const QStringList typesFilenames = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QLatin1String("mime/types"));
-        for (const QString &typeFilename : typesFilenames) {
+        foreach (const QString &typeFilename, typesFilenames) {
             QFile file(typeFilename);
             if (file.open(QIODevice::ReadOnly)) {
-                QTextStream stream(&file);
-                stream.setCodec("ISO 8859-1");
-                QString line;
-                while (stream.readLineInto(&line))
-                    m_mimetypeNames.insert(line);
+                while (!file.atEnd()) {
+                    QByteArray line = file.readLine();
+                    line.chop(1);
+                    m_mimetypeNames.insert(QString::fromLatin1(line.constData(), line.size()));
+                }
             }
         }
     }
@@ -563,7 +553,7 @@ QList<QMimeType> QMimeBinaryProvider::allMimeTypes()
 void QMimeBinaryProvider::loadMimeTypePrivate(QMimeTypePrivate &data)
 {
 #ifdef QT_NO_XMLSTREAMREADER
-    qWarning("Cannot load mime type since QXmlStreamReader is not available.");
+    qWarning() << "Cannot load mime type since QXmlStreamReader is not available.";
     return;
 #else
     if (data.loaded)
@@ -573,9 +563,10 @@ void QMimeBinaryProvider::loadMimeTypePrivate(QMimeTypePrivate &data)
 
     const QString file = data.name + QLatin1String(".xml");
     // shared-mime-info since 1.3 lowercases the xml files
-    QStringList mimeFiles = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QLatin1String("mime/") + file.toLower());
-    if (mimeFiles.isEmpty())
-        mimeFiles = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QLatin1String("mime/") + file); // pre-1.3
+    QStringList mimeFiles = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QString::fromLatin1("mime/") + file.toLower());
+    if (mimeFiles.isEmpty()) {
+        mimeFiles = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QString::fromLatin1("mime/") + file); // pre-1.3
+    }
     if (mimeFiles.isEmpty()) {
         qWarning() << "No file found for" << file << ", even though update-mime-info said it would exist.\n"
                       "Either it was just removed, or the directory doesn't have executable permission..."
@@ -583,7 +574,9 @@ void QMimeBinaryProvider::loadMimeTypePrivate(QMimeTypePrivate &data)
         return;
     }
 
+    QString comment;
     QString mainPattern;
+    const QString preferredLanguage = QLocale().name();
 
     for (QStringList::const_reverse_iterator it = mimeFiles.crbegin(), end = mimeFiles.crend(); it != end; ++it) { // global first, then local.
         QFile qfile(*it);
@@ -632,7 +625,7 @@ void QMimeBinaryProvider::loadMimeTypePrivate(QMimeTypePrivate &data)
     // Let's assume that shared-mime-info is at least version 0.70
     // Otherwise we would need 1) a version check, and 2) code for parsing patterns from the globs file.
 #if 1
-    if (!mainPattern.isEmpty() && (data.globPatterns.isEmpty() || data.globPatterns.constFirst() != mainPattern)) {
+    if (!mainPattern.isEmpty() && (data.globPatterns.isEmpty() || data.globPatterns.first() != mainPattern)) {
         // ensure it's first in the list of patterns
         data.globPatterns.removeAll(mainPattern);
         data.globPatterns.prepend(mainPattern);
@@ -640,7 +633,7 @@ void QMimeBinaryProvider::loadMimeTypePrivate(QMimeTypePrivate &data)
 #else
     const bool globsInXml = sharedMimeInfoVersion() >= QT_VERSION_CHECK(0, 70, 0);
     if (globsInXml) {
-        if (!mainPattern.isEmpty() && data.globPatterns.constFirst() != mainPattern) {
+        if (!mainPattern.isEmpty() && data.globPatterns.first() != mainPattern) {
             // ensure it's first in the list of patterns
             data.globPatterns.removeAll(mainPattern);
             data.globPatterns.prepend(mainPattern);
@@ -683,7 +676,7 @@ void QMimeBinaryProvider::loadIcon(QMimeTypePrivate &data)
 {
     checkCache();
     const QByteArray inputMime = data.name.toLatin1();
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         const QString icon = iconForMime(cacheFile, PosIconsListOffset, inputMime);
         if (!icon.isEmpty()) {
             data.iconName = icon;
@@ -696,7 +689,7 @@ void QMimeBinaryProvider::loadGenericIcon(QMimeTypePrivate &data)
 {
     checkCache();
     const QByteArray inputMime = data.name.toLatin1();
-    for (CacheFile *cacheFile : qAsConst(m_cacheFiles)) {
+    foreach (CacheFile *cacheFile, m_cacheFiles) {
         const QString icon = iconForMime(cacheFile, PosGenericIconsListOffset, inputMime);
         if (!icon.isEmpty()) {
             data.genericIconName = icon;
@@ -729,11 +722,12 @@ QMimeType QMimeXMLProvider::mimeTypeForName(const QString &name)
     return m_nameMimeTypeMap.value(name);
 }
 
-QMimeGlobMatchResult QMimeXMLProvider::findByFileName(const QString &fileName)
+QStringList QMimeXMLProvider::findByFileName(const QString &fileName, QString *foundSuffix)
 {
     ensureLoaded();
 
-    return m_mimeTypeGlobs.matchingGlobs(fileName);
+    const QStringList matchingMimeTypes = m_mimeTypeGlobs.matchingGlobs(fileName, foundSuffix);
+    return matchingMimeTypes;
 }
 
 QMimeType QMimeXMLProvider::findByMagic(const QByteArray &data, int *accuracyPtr)
@@ -742,7 +736,7 @@ QMimeType QMimeXMLProvider::findByMagic(const QByteArray &data, int *accuracyPtr
 
     QString candidate;
 
-    for (const QMimeMagicRuleMatcher &matcher : qAsConst(m_magicMatchers)) {
+    foreach (const QMimeMagicRuleMatcher &matcher, m_magicMatchers) {
         if (matcher.matches(data)) {
             const int priority = matcher.priority();
             if (priority > *accuracyPtr) {
@@ -762,7 +756,7 @@ void QMimeXMLProvider::ensureLoaded()
 
         const QStringList packageDirs = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QLatin1String("mime/packages"), QStandardPaths::LocateDirectory);
         //qDebug() << "packageDirs=" << packageDirs;
-        for (const QString &packageDir : packageDirs) {
+        foreach (const QString &packageDir, packageDirs) {
             QDir dir(packageDir);
             const QStringList files = dir.entryList(QDir::Files | QDir::NoDotAndDotDot);
             //qDebug() << static_cast<const void *>(this) << packageDir << files;
@@ -791,7 +785,7 @@ void QMimeXMLProvider::ensureLoaded()
 
         //qDebug() << "Loading" << m_allFiles;
 
-        for (const QString &file : qAsConst(allFiles))
+        foreach (const QString &file, allFiles)
             load(file);
     }
 }
@@ -810,7 +804,7 @@ bool QMimeXMLProvider::load(const QString &fileName, QString *errorMessage)
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         if (errorMessage)
-            *errorMessage = QLatin1String("Cannot open ") + fileName + QLatin1String(": ") + file.errorString();
+            *errorMessage = QString::fromLatin1("Cannot open %1: %2").arg(fileName, file.errorString());
         return false;
     }
 

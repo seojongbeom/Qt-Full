@@ -7,3 +7,4 @@ QT += multimedia-private testlib network
 CONFIG += testcase
 
 TESTDATA += data/*
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

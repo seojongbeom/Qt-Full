@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,8 +45,9 @@
 // We mean it.
 //
 #include "qquickparticlepainter_p.h"
-#include <private/qquickopenglshadereffectnode_p.h>
-#include <private/qquickopenglshadereffect_p.h>
+#include <private/qquickshadereffectnode_p.h>
+#include <private/qquickshadereffect_p.h>
+#include <QSignalMapper>
 
 QT_BEGIN_NAMESPACE
 
@@ -83,35 +78,33 @@ Q_SIGNALS:
     void vertexShaderChanged();
 
 protected:
-    void initialize(int gIdx, int pIdx) override;
-    void commit(int gIdx, int pIdx) override;
+    virtual void initialize(int gIdx, int pIdx);
+    virtual void commit(int gIdx, int pIdx);
 
-    QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *) override;
-    QQuickOpenGLShaderEffectNode *prepareNextFrame(QQuickOpenGLShaderEffectNode *rootNode);
-    void reset() override;
+    QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *);
+    QQuickShaderEffectNode *prepareNextFrame(QQuickShaderEffectNode *rootNode);
+    void reset();
     void resize(int oldCount, int newCount);
-    void componentComplete() override;
-    QQuickOpenGLShaderEffectNode *buildCustomNodes();
+    virtual void componentComplete();
+    QQuickShaderEffectNode *buildCustomNodes();
 
-    void sceneGraphInvalidated() override;
-    void itemChange(ItemChange change, const ItemChangeData &value) override;
+    void sceneGraphInvalidated();
+    void itemChange(ItemChange change, const ItemChangeData &value);
 
 private Q_SLOTS:
     void sourceDestroyed(QObject *object);
-
-private:
     void propertyChanged(int mappedId);
 
-    typedef QQuickOpenGLShaderEffectMaterialKey Key;
-    typedef QQuickOpenGLShaderEffectMaterial::UniformData UniformData;
+private:
+    typedef QQuickShaderEffectMaterialKey Key;
+    typedef QQuickShaderEffectMaterial::UniformData UniformData;
 
-    void buildData(QQuickOpenGLShaderEffectNode *rootNode);
+    void buildData(QQuickShaderEffectNode *rootNode);
     void updateVertexShader();
 
-    QQuickOpenGLShaderEffectCommon m_common;
-    const QMetaObject *m_myMetaObject;
+    QQuickShaderEffectCommon m_common;
 
-    QHash<int, QQuickOpenGLShaderEffectNode*> m_nodes;
+    QHash<int, QQuickShaderEffectNode*> m_nodes;
     qreal m_lastTime;
 
     uint m_dirtyUniforms : 1;

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -36,7 +41,6 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QDebug>
 #include <QtCore/QCommandLineParser>
-#include <QtCore/QTemporaryFile>
 
 static const char commandTextC[] =
         "The following commands are available:\n"
@@ -66,44 +70,63 @@ static const char *features[] = {
     "creating",
     "binding",
     "handlingsignal",
-    "inputevents",
-    "debugmessages"
+    "inputevents"
 };
-
-Q_STATIC_ASSERT(sizeof(features) ==
-                QQmlProfilerDefinitions::MaximumProfileFeature * sizeof(char *));
 
 QmlProfilerApplication::QmlProfilerApplication(int &argc, char **argv) :
     QCoreApplication(argc, argv),
     m_runMode(LaunchMode),
     m_process(0),
     m_hostName(QLatin1String("127.0.0.1")),
-    m_port(0),
+    m_port(3768),
     m_pendingRequest(REQUEST_NONE),
     m_verbose(false),
     m_recording(true),
     m_interactive(false),
-    m_qmlProfilerClient(&m_connection, &m_profilerData),
-    m_connectionAttempts(0)
+    m_qmlProfilerClient(&m_connection),
+    m_v8profilerClient(&m_connection),
+    m_connectionAttempts(0),
+    m_qmlDataReady(false),
+    m_v8DataReady(false)
 {
     m_connectTimer.setInterval(1000);
-    connect(&m_connectTimer, &QTimer::timeout, this, &QmlProfilerApplication::tryToConnect);
+    connect(&m_connectTimer, SIGNAL(timeout()), this, SLOT(tryToConnect()));
 
-    connect(&m_connection, &QQmlDebugConnection::connected,
-            this, &QmlProfilerApplication::connected);
-    connect(&m_connection, &QQmlDebugConnection::disconnected,
-            this, &QmlProfilerApplication::disconnected);
+    connect(&m_connection, SIGNAL(connected()), this, SLOT(connected()));
+    connect(&m_connection, SIGNAL(stateChanged(QAbstractSocket::SocketState)), this, SLOT(connectionStateChanged(QAbstractSocket::SocketState)));
+    connect(&m_connection, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(connectionError(QAbstractSocket::SocketError)));
 
-    connect(&m_qmlProfilerClient, &QmlProfilerClient::enabledChanged,
-            this, &QmlProfilerApplication::traceClientEnabledChanged);
-    connect(&m_qmlProfilerClient, &QmlProfilerClient::recordingStarted,
-            this, &QmlProfilerApplication::notifyTraceStarted);
-    connect(&m_qmlProfilerClient, &QmlProfilerClient::error,
-            this, &QmlProfilerApplication::logError);
+    connect(&m_qmlProfilerClient, SIGNAL(enabledChanged()), this, SLOT(traceClientEnabled()));
+    connect(&m_qmlProfilerClient, SIGNAL(range(QQmlProfilerDefinitions::RangeType,QQmlProfilerDefinitions::BindingType,qint64,qint64,QStringList,QmlEventLocation)),
+            &m_profilerData, SLOT(addQmlEvent(QQmlProfilerDefinitions::RangeType,QQmlProfilerDefinitions::BindingType,qint64,qint64,QStringList,QmlEventLocation)));
+    connect(&m_qmlProfilerClient, SIGNAL(traceFinished(qint64)), &m_profilerData, SLOT(setTraceEndTime(qint64)));
+    connect(&m_qmlProfilerClient, SIGNAL(traceStarted(qint64)), &m_profilerData, SLOT(setTraceStartTime(qint64)));
+    connect(&m_qmlProfilerClient, SIGNAL(traceStarted(qint64)), this, SLOT(notifyTraceStarted()));
+    connect(&m_qmlProfilerClient, SIGNAL(frame(qint64,int,int,int)), &m_profilerData, SLOT(addFrameEvent(qint64,int,int,int)));
+    connect(&m_qmlProfilerClient, SIGNAL(sceneGraphFrame(QQmlProfilerDefinitions::SceneGraphFrameType,
+                                         qint64,qint64,qint64,qint64,qint64,qint64)),
+            &m_profilerData, SLOT(addSceneGraphFrameEvent(QQmlProfilerDefinitions::SceneGraphFrameType,
+                                  qint64,qint64,qint64,qint64,qint64,qint64)));
+    connect(&m_qmlProfilerClient, SIGNAL(pixmapCache(QQmlProfilerDefinitions::PixmapEventType,qint64,
+                                                     QmlEventLocation,int,int,int)),
+            &m_profilerData, SLOT(addPixmapCacheEvent(QQmlProfilerDefinitions::PixmapEventType,qint64,
+                                                      QmlEventLocation,int,int,int)));
+    connect(&m_qmlProfilerClient, SIGNAL(memoryAllocation(QQmlProfilerDefinitions::MemoryType,qint64,
+                                                          qint64)),
+            &m_profilerData, SLOT(addMemoryEvent(QQmlProfilerDefinitions::MemoryType,qint64,
+                                                 qint64)));
+    connect(&m_qmlProfilerClient, SIGNAL(inputEvent(QQmlProfilerDefinitions::EventType,qint64)),
+            &m_profilerData, SLOT(addInputEvent(QQmlProfilerDefinitions::EventType,qint64)));
 
-    connect(&m_profilerData, &QmlProfilerData::error, this, &QmlProfilerApplication::logError);
-    connect(&m_profilerData, &QmlProfilerData::dataReady,
-            this, &QmlProfilerApplication::traceFinished);
+    connect(&m_qmlProfilerClient, SIGNAL(complete()), this, SLOT(qmlComplete()));
+
+    connect(&m_v8profilerClient, SIGNAL(enabledChanged()), this, SLOT(profilerClientEnabled()));
+    connect(&m_v8profilerClient, SIGNAL(range(int,QString,QString,int,double,double)),
+            &m_profilerData, SLOT(addV8Event(int,QString,QString,int,double,double)));
+    connect(&m_v8profilerClient, SIGNAL(complete()), this, SLOT(v8Complete()));
+
+    connect(&m_profilerData, SIGNAL(error(QString)), this, SLOT(logError(QString)));
+    connect(&m_profilerData, SIGNAL(dataReady()), this, SLOT(traceFinished()));
 
 }
 
@@ -205,7 +228,6 @@ void QmlProfilerApplication::parseArguments()
     if (parser.isSet(attach)) {
         m_hostName = parser.value(attach);
         m_runMode = AttachMode;
-        m_port = 3768;
     }
 
     if (parser.isSet(port)) {
@@ -215,10 +237,6 @@ void QmlProfilerApplication::parseArguments()
             logError(tr("'%1' is not a valid port.").arg(parser.value(port)));
             parser.showHelp(1);
         }
-    } else if (m_port == 0) {
-        QTemporaryFile file;
-        if (file.open())
-            m_socketFile = file.fileName();
     }
 
     m_outputFile = parser.value(output);
@@ -263,7 +281,7 @@ void QmlProfilerApplication::parseArguments()
 
 int QmlProfilerApplication::exec()
 {
-    QTimer::singleShot(0, this, &QmlProfilerApplication::run);
+    QTimer::singleShot(0, this, SLOT(run()));
     return QCoreApplication::exec();
 }
 
@@ -276,8 +294,8 @@ quint64 QmlProfilerApplication::parseFeatures(const QStringList &featureList, co
                                               bool exclude)
 {
     quint64 features = exclude ? std::numeric_limits<quint64>::max() : 0;
-    const QStringList givenFeatures = values.split(QLatin1Char(','));
-    for (const QString &f : givenFeatures) {
+    QStringList givenFeatures = values.split(QLatin1Char(','));
+    foreach (const QString &f, givenFeatures) {
         int index =  featureList.indexOf(f);
         if (index < 0) {
             logError(tr("Unknown feature '%1'").arg(f));
@@ -298,6 +316,7 @@ void QmlProfilerApplication::flush()
     if (m_recording) {
         m_pendingRequest = REQUEST_FLUSH;
         m_qmlProfilerClient.sendRecordingStatus(false);
+        m_v8profilerClient.sendRecordingStatus(false);
     } else {
         if (m_profilerData.save(m_interactiveOutputFile)) {
             m_profilerData.clear();
@@ -349,7 +368,7 @@ bool QmlProfilerApplication::checkOutputFile(PendingRequest pending)
 
 void QmlProfilerApplication::userCommand(const QString &command)
 {
-    auto args = command.splitRef(QChar::Space, QString::SkipEmptyParts);
+    QStringList args = command.split(QChar::Space, QString::SkipEmptyParts);
     if (args.isEmpty()) {
         prompt();
         return;
@@ -388,6 +407,7 @@ void QmlProfilerApplication::userCommand(const QString &command)
     if (cmd == Constants::CMD_RECORD || cmd == Constants::CMD_RECORD2) {
         m_pendingRequest = REQUEST_TOGGLE_RECORDING;
         m_qmlProfilerClient.sendRecordingStatus(!m_recording);
+        m_v8profilerClient.sendRecordingStatus(!m_recording);
     } else if (cmd == Constants::CMD_QUIT || cmd == Constants::CMD_QUIT2) {
         m_pendingRequest = REQUEST_QUIT;
         if (m_recording) {
@@ -403,7 +423,7 @@ void QmlProfilerApplication::userCommand(const QString &command)
         } else if (m_profilerData.isEmpty()) {
             prompt(tr("No data was recorded so far."));
         } else {
-            m_interactiveOutputFile = args.length() > 0 ? args.at(0).toString() : m_outputFile;
+            m_interactiveOutputFile = args.length() > 0 ? args[0] : m_outputFile;
             if (checkOutputFile(REQUEST_OUTPUT_FILE))
                 output();
         }
@@ -420,7 +440,7 @@ void QmlProfilerApplication::userCommand(const QString &command)
         if (!m_recording && m_profilerData.isEmpty()) {
             prompt(tr("No data was recorded so far."));
         } else {
-            m_interactiveOutputFile = args.length() > 0 ? args.at(0).toString() : m_outputFile;
+            m_interactiveOutputFile = args.length() > 0 ? args[0] : m_outputFile;
             if (checkOutputFile(REQUEST_FLUSH_FILE))
                 flush();
         }
@@ -454,21 +474,16 @@ void QmlProfilerApplication::outputData()
 void QmlProfilerApplication::run()
 {
     if (m_runMode == LaunchMode) {
-        if (!m_socketFile.isEmpty()) {
-            logStatus(QString::fromLatin1("Listening on %1 ...").arg(m_socketFile));
-            m_connection.startLocalServer(m_socketFile);
-        }
         m_process = new QProcess(this);
         QStringList arguments;
-        arguments << QString::fromLatin1("-qmljsdebugger=%1:%2,block,services:CanvasFrameRate")
-                     .arg(QLatin1String(m_socketFile.isEmpty() ? "port" : "file"))
-                     .arg(m_socketFile.isEmpty() ? QString::number(m_port) : m_socketFile);
+        arguments << QString::fromLatin1("-qmljsdebugger=port:%1,block,services:CanvasFrameRate")
+                     .arg(m_port);
         arguments << m_programArguments;
 
         m_process->setProcessChannelMode(QProcess::MergedChannels);
-        connect(m_process, &QIODevice::readyRead, this, &QmlProfilerApplication::processHasOutput);
-        connect(m_process, static_cast<void(QProcess::*)(int)>(&QProcess::finished),
-                this, [this](int){ processFinished(); });
+        connect(m_process, SIGNAL(readyRead()), this, SLOT(processHasOutput()));
+        connect(m_process, SIGNAL(finished(int,QProcess::ExitStatus)), this,
+                SLOT(processFinished()));
         logStatus(QString("Starting '%1 %2' ...").arg(m_programPath,
                                                       arguments.join(QLatin1Char(' '))));
         m_process->start(m_programPath, arguments);
@@ -477,6 +492,7 @@ void QmlProfilerApplication::run()
                                                            m_process->errorString()));
             exit(1);
         }
+
     }
     m_connectTimer.start();
 }
@@ -487,18 +503,15 @@ void QmlProfilerApplication::tryToConnect()
     ++ m_connectionAttempts;
 
     if (!m_verbose && !(m_connectionAttempts % 5)) {// print every 5 seconds
-        if (m_verbose) {
-            if (m_socketFile.isEmpty())
-                logError(QString::fromLatin1("Could not connect to %1:%2 for %3 seconds ...")
-                         .arg(m_hostName).arg(m_port).arg(m_connectionAttempts));
-            else
-                logError(QString::fromLatin1("No connection received on %1 for %2 seconds ...")
-                         .arg(m_socketFile).arg(m_connectionAttempts));
-        }
+        if (!m_verbose)
+            logError(QString("Could not connect to %1:%2 for %3 seconds ...").arg(
+                         m_hostName, QString::number(m_port),
+                         QString::number(m_connectionAttempts)));
     }
 
-    if (m_socketFile.isEmpty()) {
-        logStatus(QString::fromLatin1("Connecting to %1:%2 ...").arg(m_hostName).arg(m_port));
+    if (m_connection.state() == QAbstractSocket::UnconnectedState) {
+        logStatus(QString("Connecting to %1:%2 ...").arg(m_hostName,
+                                                         QString::number(m_port)));
         m_connection.connectToHost(m_hostName, m_port);
     }
 }
@@ -506,28 +519,22 @@ void QmlProfilerApplication::tryToConnect()
 void QmlProfilerApplication::connected()
 {
     m_connectTimer.stop();
-    QString endpoint = m_socketFile.isEmpty() ?
-                QString::fromLatin1("%1:%2").arg(m_hostName).arg(m_port) :
-                m_socketFile;
-    prompt(tr("Connected to %1. Wait for profile data or type a command (type 'help' to show list "
-              "of commands).\nRecording Status: %2")
-           .arg(endpoint).arg(m_recording ? tr("on") : tr("off")));
+    prompt(tr("Connected to host:port %1:%2. Wait for profile data or type a command (type 'help' "
+              "to show list of commands).\nRecording Status: %3")
+           .arg(m_hostName).arg((m_port)).arg(m_recording ? tr("on") : tr("off")));
 }
 
-void QmlProfilerApplication::disconnected()
+void QmlProfilerApplication::connectionStateChanged(
+        QAbstractSocket::SocketState state)
 {
-    if (m_runMode == AttachMode) {
-        int exitCode = 0;
-        if (m_recording) {
-            logError("Connection dropped while recording, last trace is damaged!");
-            exitCode = 2;
-        }
+    if (m_verbose)
+        qDebug() << state;
+}
 
-        if (!m_interactive )
-            exit(exitCode);
-        else
-            m_qmlProfilerClient.clearPendingData();
-    }
+void QmlProfilerApplication::connectionError(QAbstractSocket::SocketError error)
+{
+    if (m_verbose)
+        qDebug() << error;
 }
 
 void QmlProfilerApplication::processHasOutput()
@@ -555,23 +562,34 @@ void QmlProfilerApplication::processFinished()
     }
     if (!m_interactive)
         exit(exitCode);
-    else
-        m_qmlProfilerClient.clearPendingData();
 }
 
-void QmlProfilerApplication::traceClientEnabledChanged(bool enabled)
+void QmlProfilerApplication::traceClientEnabled()
 {
-    if (enabled) {
-        logStatus("Trace client is attached.");
-        // blocked server is waiting for recording message from both clients
-        // once the last one is connected, both messages should be sent
-        m_qmlProfilerClient.sendRecordingStatus(m_recording);
-    }
+    logStatus("Trace client is attached.");
+    // blocked server is waiting for recording message from both clients
+    // once the last one is connected, both messages should be sent
+    m_qmlProfilerClient.sendRecordingStatus(m_recording);
+    m_v8profilerClient.sendRecordingStatus(m_recording);
+}
+
+void QmlProfilerApplication::profilerClientEnabled()
+{
+    logStatus("Profiler client is attached.");
+
+    // blocked server is waiting for recording message from both clients
+    // once the last one is connected, both messages should be sent
+    m_qmlProfilerClient.sendRecordingStatus(m_recording);
+    m_v8profilerClient.sendRecordingStatus(m_recording);
 }
 
 void QmlProfilerApplication::traceFinished()
 {
     m_recording = false; // only on "Complete" we know that the trace is really finished.
+
+    // after receiving both notifications, reset the flags
+    m_qmlDataReady = false;
+    m_v8DataReady = false;
 
     if (m_pendingRequest == REQUEST_FLUSH) {
         flush();
@@ -581,8 +599,6 @@ void QmlProfilerApplication::traceFinished()
     } else {
         prompt(tr("Application stopped recording."), false);
     }
-
-    m_qmlProfilerClient.clearPendingData();
 }
 
 void QmlProfilerApplication::prompt(const QString &line, bool ready)
@@ -609,4 +625,22 @@ void QmlProfilerApplication::logStatus(const QString &status)
         return;
     QTextStream err(stderr);
     err << status << endl;
+}
+
+void QmlProfilerApplication::qmlComplete()
+{
+    m_qmlDataReady = true;
+    if (m_v8profilerClient.state() != QQmlDebugClient::Enabled ||
+            m_v8DataReady) {
+        m_profilerData.complete();
+    }
+}
+
+void QmlProfilerApplication::v8Complete()
+{
+    m_v8DataReady = true;
+    if (m_qmlProfilerClient.state() != QQmlDebugClient::Enabled ||
+            m_qmlDataReady) {
+        m_profilerData.complete();
+    }
 }

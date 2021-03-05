@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -71,12 +76,10 @@ TabBar::TabBar(QWidget *parent)
     setContextMenuPolicy(Qt::CustomContextMenu);
     setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred,
         QSizePolicy::TabWidget));
-    connect(this, &QTabBar::currentChanged,
-            this, &TabBar::slotCurrentChanged);
-    connect(this, &QTabBar::tabCloseRequested,
-            this, &TabBar::slotTabCloseRequested);
-    connect(this, &QWidget::customContextMenuRequested,
-            this, &TabBar::slotCustomContextMenuRequested);
+    connect(this, SIGNAL(currentChanged(int)), this, SLOT(slotCurrentChanged(int)));
+    connect(this, SIGNAL(tabCloseRequested(int)), this, SLOT(slotTabCloseRequested(int)));
+    connect(this, SIGNAL(customContextMenuRequested(QPoint)), this,
+        SLOT(slotCustomContextMenuRequested(QPoint)));
 }
 
 TabBar::~TabBar()
@@ -147,9 +150,8 @@ void TabBar::slotCustomContextMenuRequested(const QPoint &pos)
     if (tab < 0)
         return;
 
-    QMenu menu(QString(), this);
-    menu.addAction(tr("New &Tab"), OpenPagesManager::instance(),
-                   &OpenPagesManager::createBlankPage);
+    QMenu menu(QLatin1String(""), this);
+    menu.addAction(tr("New &Tab"), OpenPagesManager::instance(), SLOT(createPage()));
 
     const bool enableAction = count() > 1;
     QAction *closePage = menu.addAction(tr("&Close Tab"));
@@ -201,11 +203,13 @@ CentralWidget::CentralWidget(QWidget *parent)
     vboxLayout->addWidget(m_findWidget);
     m_findWidget->hide();
 
-    connect(m_findWidget, &FindWidget::findNext, this, &CentralWidget::findNext);
-    connect(m_findWidget, &FindWidget::findPrevious, this, &CentralWidget::findPrevious);
-    connect(m_findWidget, &FindWidget::find, this, &CentralWidget::find);
-    connect(m_findWidget, &FindWidget::escapePressed, this, &CentralWidget::activateTab);
-    connect(m_tabBar, &TabBar::addBookmark, this, &CentralWidget::addBookmark);
+    connect(m_findWidget, SIGNAL(findNext()), this, SLOT(findNext()));
+    connect(m_findWidget, SIGNAL(findPrevious()), this, SLOT(findPrevious()));
+    connect(m_findWidget, SIGNAL(find(QString,bool,bool)), this,
+        SLOT(find(QString,bool,bool)));
+    connect(m_findWidget, SIGNAL(escapePressed()), this, SLOT(activateTab()));
+    connect(m_tabBar, SIGNAL(addBookmark(QString,QString)), this,
+        SIGNAL(addBookmark(QString,QString)));
 }
 
 CentralWidget::~CentralWidget()
@@ -289,11 +293,11 @@ void CentralWidget::addPage(HelpViewer *page, bool fromSearch)
     const int index = m_stackedWidget->addWidget(page);
     m_tabBar->setTabData(m_tabBar->addNewTab(page->title()),
         QVariant::fromValue(viewerAt(index)));
-    connect(page, &HelpViewer::titleChanged, m_tabBar, &TabBar::titleChanged);
+    connect (page, SIGNAL(titleChanged()), m_tabBar, SLOT(titleChanged()));
 
     if (fromSearch) {
-        connect(currentHelpViewer(), &HelpViewer::loadFinished,
-                this, &CentralWidget::highlightSearchTerms);
+        connect(currentHelpViewer(), SIGNAL(loadFinished(bool)), this,
+            SLOT(highlightSearchTerms()));
     }
 }
 
@@ -324,8 +328,8 @@ void CentralWidget::setCurrentPage(HelpViewer *page)
 void CentralWidget::connectTabBar()
 {
     TRACE_OBJ
-    connect(m_tabBar, &TabBar::currentTabChanged, OpenPagesManager::instance(),
-            QOverload<HelpViewer *>::of(&OpenPagesManager::setCurrentPage));
+    connect(m_tabBar, SIGNAL(currentTabChanged(HelpViewer*)),
+        OpenPagesManager::instance(), SLOT(setCurrentPage(HelpViewer*)));
 }
 
 // -- public slots
@@ -421,8 +425,8 @@ void CentralWidget::printPreview()
 #if !defined(QT_NO_PRINTER) && !defined(QT_NO_PRINTDIALOG)
     initPrinter();
     QPrintPreviewDialog preview(m_printer, this);
-    connect(&preview, &QPrintPreviewDialog::paintRequested,
-            this, &CentralWidget::printPreviewToPrinter);
+    connect(&preview, SIGNAL(paintRequested(QPrinter*)),
+        SLOT(printPreview(QPrinter*)));
     preview.exec();
 #endif
 }
@@ -438,8 +442,8 @@ void CentralWidget::setSource(const QUrl &url)
 void CentralWidget::setSourceFromSearch(const QUrl &url)
 {
     TRACE_OBJ
-    connect(currentHelpViewer(), &HelpViewer::loadFinished,
-            this, &CentralWidget::highlightSearchTerms);
+    connect(currentHelpViewer(), SIGNAL(loadFinished(bool)), this,
+        SLOT(highlightSearchTerms()));
     currentHelpViewer()->setSource(url);
     currentHelpViewer()->setFocus(Qt::OtherFocusReason);
 }
@@ -527,11 +531,10 @@ void CentralWidget::focusInEvent(QFocusEvent * /* event */)
     // otherwise it's the central widget. This is needed, so an embedding
     // program can just set the focus to the central widget and it does
     // The Right Thing(TM)
-    QWidget *receiver = m_stackedWidget;
+    QObject *receiver = m_stackedWidget;
     if (HelpViewer *viewer = currentHelpViewer())
         receiver = viewer;
-    QTimer::singleShot(1, receiver,
-                       QOverload<>::of(&QWidget::setFocus));
+    QTimer::singleShot(1, receiver, SLOT(setFocus()));
 }
 
 // -- private slots
@@ -541,16 +544,30 @@ void CentralWidget::highlightSearchTerms()
     TRACE_OBJ
     QHelpSearchEngine *searchEngine =
         HelpEngineWrapper::instance().searchEngine();
-    const QStringList &words = searchEngine->searchInput().split(QRegExp("\\W+"), QString::SkipEmptyParts);
+    QList<QHelpSearchQuery> queryList = searchEngine->query();
+
+    QStringList terms;
+    foreach (const QHelpSearchQuery &query, queryList) {
+        switch (query.fieldName) {
+            default: break;
+            case QHelpSearchQuery::ALL: {
+            case QHelpSearchQuery::PHRASE:
+            case QHelpSearchQuery::DEFAULT:
+            case QHelpSearchQuery::ATLEAST:
+                foreach (QString term, query.wordList)
+                    terms.append(term.remove(QLatin1Char('"')));
+            }
+        }
+    }
 
     HelpViewer *viewer = currentHelpViewer();
-    for (const QString &word : words)
-        viewer->findText(word, 0, false, true);
-    disconnect(viewer, &HelpViewer::loadFinished,
-               this, &CentralWidget::highlightSearchTerms);
+    foreach (const QString& term, terms)
+        viewer->findText(term, 0, false, true);
+    disconnect(viewer, SIGNAL(loadFinished(bool)), this,
+        SLOT(highlightSearchTerms()));
 }
 
-void CentralWidget::printPreviewToPrinter(QPrinter *p)
+void CentralWidget::printPreview(QPrinter *p)
 {
     TRACE_OBJ
 #ifndef QT_NO_PRINTER
@@ -591,19 +608,17 @@ void CentralWidget::connectSignals(HelpViewer *page)
 {
     TRACE_OBJ
 #if defined(BROWSER_QTWEBKIT)
-    connect(page, &HelpViewer::printRequested,
-            this, &CentralWidget::print);
+    connect(page, SIGNAL(printRequested()), this, SLOT(print()));
 #endif
-    connect(page, &HelpViewer::copyAvailable,
-            this, &CentralWidget::copyAvailable);
-    connect(page, &HelpViewer::forwardAvailable,
-            this, &CentralWidget::forwardAvailable);
-    connect(page, &HelpViewer::backwardAvailable,
-            this, &CentralWidget::backwardAvailable);
-    connect(page, &HelpViewer::sourceChanged,
-            this, &CentralWidget::handleSourceChanged);
-    connect(page, QOverload<const QString &>::of(&HelpViewer::highlighted),
-            this, &CentralWidget::slotHighlighted);
+    connect(page, SIGNAL(copyAvailable(bool)), this,
+        SIGNAL(copyAvailable(bool)));
+    connect(page, SIGNAL(forwardAvailable(bool)), this,
+        SIGNAL(forwardAvailable(bool)));
+    connect(page, SIGNAL(backwardAvailable(bool)), this,
+        SIGNAL(backwardAvailable(bool)));
+    connect(page, SIGNAL(sourceChanged(QUrl)), this,
+        SLOT(handleSourceChanged(QUrl)));
+    connect(page, SIGNAL(highlighted(QString)), this, SLOT(slotHighlighted(QString)));
 }
 
 bool CentralWidget::eventFilter(QObject *object, QEvent *e)

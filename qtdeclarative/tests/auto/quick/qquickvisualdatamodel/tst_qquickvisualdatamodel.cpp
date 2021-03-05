@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -97,19 +102,14 @@ public:
     };
 
     SingleRoleModel(const QStringList &list = QStringList(), const QByteArray &role = "name", QObject *parent = 0)
-        : QAbstractItemModel(parent), m_role(role)
-    {
+        : QAbstractItemModel(parent) {
+        QHash<int, QByteArray> roles;
+        roles.insert(Qt::DisplayRole , role);
+        setRoleNames(roles);
         foreach (const QString &string, list)
             trunk.children.append(Node(string));
     }
     ~SingleRoleModel() {}
-
-    QHash<int,QByteArray> roleNames() const
-    {
-        QHash<int,QByteArray> roles;
-        roles.insert(Qt::DisplayRole, m_role);
-        return roles;
-    }
 
     Branch *branchForIndex(const QModelIndex &index) const {
         return index.isValid()
@@ -235,7 +235,6 @@ public slots:
     }
 
 private:
-    const QByteArray m_role;
     Branch trunk;
 };
 
@@ -4013,7 +4012,7 @@ void tst_qquickvisualdatamodel::asynchronousInsert()
     connect(visualModel, SIGNAL(createdItem(int,QObject*)), &requester, SLOT(createdItem(int,QObject*)));
     connect(visualModel, SIGNAL(destroyingItem(QObject*)), &requester, SLOT(destroyingItem(QObject*)));
 
-    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, QQmlIncubator::Asynchronous));
+    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, true));
     QVERIFY(!item);
 
     QVERIFY(!requester.itemInitialized);
@@ -4025,7 +4024,7 @@ void tst_qquickvisualdatamodel::asynchronousInsert()
         newItems.append(qMakePair(QLatin1String("New item") + QString::number(i), QString(QLatin1String(""))));
     model.insertItems(insertIndex, newItems);
 
-    item = qobject_cast<QQuickItem*>(visualModel->object(completeIndex));
+    item = qobject_cast<QQuickItem*>(visualModel->object(completeIndex, false));
     QVERIFY(item);
 
     QCOMPARE(requester.itemInitialized, item);
@@ -4078,7 +4077,7 @@ void tst_qquickvisualdatamodel::asynchronousRemove()
     connect(visualModel, SIGNAL(createdItem(int,QObject*)), &requester, SLOT(createdItem(int,QObject*)));
     connect(visualModel, SIGNAL(destroyingItem(QObject*)), &requester, SLOT(destroyingItem(QObject*)));
 
-    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, QQmlIncubator::Asynchronous));
+    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, true));
     QVERIFY(!item);
 
     QVERIFY(!requester.itemInitialized);
@@ -4099,7 +4098,7 @@ void tst_qquickvisualdatamodel::asynchronousRemove()
         QVERIFY(!requester.itemCreated);
         QVERIFY(!requester.itemDestroyed);
     } else {
-        item = qobject_cast<QQuickItem*>(visualModel->object(completeIndex));
+        item = qobject_cast<QQuickItem*>(visualModel->object(completeIndex, false));
         QVERIFY(item);
 
         QCOMPARE(requester.itemInitialized, item);
@@ -4157,7 +4156,7 @@ void tst_qquickvisualdatamodel::asynchronousMove()
     connect(visualModel, SIGNAL(createdItem(int,QObject*)), &requester, SLOT(createdItem(int,QObject*)));
     connect(visualModel, SIGNAL(destroyingItem(QObject*)), &requester, SLOT(destroyingItem(QObject*)));
 
-    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, QQmlIncubator::Asynchronous));
+    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, true));
     QVERIFY(!item);
 
     QVERIFY(!requester.itemInitialized);
@@ -4166,7 +4165,7 @@ void tst_qquickvisualdatamodel::asynchronousMove()
 
     model.moveItems(from, to, count);
 
-    item = qobject_cast<QQuickItem*>(visualModel->object(completeIndex));
+    item = qobject_cast<QQuickItem*>(visualModel->object(completeIndex, false));
     QVERIFY(item);
 
 
@@ -4200,7 +4199,7 @@ void tst_qquickvisualdatamodel::asynchronousCancel()
     QQmlDelegateModel *visualModel = qobject_cast<QQmlDelegateModel*>(c.create());
     QVERIFY(visualModel);
 
-    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, QQmlIncubator::Asynchronous));
+    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(requestIndex, true));
     QVERIFY(!item);
     QCOMPARE(controller.incubatingObjectCount(), 1);
 
@@ -4225,7 +4224,7 @@ void tst_qquickvisualdatamodel::invalidContext()
     QQmlDelegateModel *visualModel = qobject_cast<QQmlDelegateModel*>(c.create(context.data()));
     QVERIFY(visualModel);
 
-    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(4));
+    QQuickItem *item = qobject_cast<QQuickItem*>(visualModel->object(4, false));
     QVERIFY(item);
     visualModel->release(item);
 
@@ -4233,7 +4232,7 @@ void tst_qquickvisualdatamodel::invalidContext()
 
     model.insertItem(4, "new item", "");
 
-    item = qobject_cast<QQuickItem*>(visualModel->object(4));
+    item = qobject_cast<QQuickItem*>(visualModel->object(4, false));
     QVERIFY(!item);
 }
 

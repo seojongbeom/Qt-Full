@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -712,6 +706,9 @@ bool QFileInfo::exists(const QString &file)
 /*!
     Refreshes the information about the file, i.e. reads in information
     from the file system the next time a cached property is fetched.
+
+   \note On Windows CE, there might be a delay for the file system driver
+    to detect changes on the file.
 */
 void QFileInfo::refresh()
 {
@@ -864,12 +861,12 @@ QString QFileInfo::suffix() const
     \b{Note:} The QDir returned always corresponds to the object's
     parent directory, even if the QFileInfo represents a directory.
 
-    For each of the following, dir() returns the QDir
+    For each of the following, dir() returns a QDir for
     \c{"~/examples/191697"}.
 
     \snippet fileinfo/main.cpp 0
 
-    For each of the following, dir() returns the QDir
+    For each of the following, dir() returns a QDir for
     \c{"."}.
 
     \snippet fileinfo/main.cpp 1
@@ -1056,16 +1053,12 @@ bool QFileInfo::isBundle() const
 }
 
 /*!
-    Returns \c true if this object points to a symbolic link;
-    otherwise returns \c false.
+    Returns \c true if this object points to a symbolic link (or to a
+    shortcut on Windows); otherwise returns \c false.
 
-    Symbolic links exist on Unix (including \macos and iOS) and Windows
-    and are typically created by the \c{ln -s} or \c{mklink} commands,
-    respectively. Opening a symbolic link effectively opens
-    the \l{symLinkTarget()}{link's target}.
-
-    In addition, true will be returned for shortcuts (\c *.lnk files) on
-    Windows. Opening those will open the \c .lnk file itself.
+    On Unix (including \macos and iOS), opening a symlink effectively opens
+    the \l{symLinkTarget()}{link's target}. On Windows, it opens the \c
+    .lnk file itself.
 
     Example:
 
@@ -1120,8 +1113,8 @@ bool QFileInfo::isRoot() const
     \fn QString QFileInfo::symLinkTarget() const
     \since 4.2
 
-    Returns the absolute path to the file or directory a symbolic link
-    points to, or an empty string if the object isn't a symbolic
+    Returns the absolute path to the file or directory a symlink (or shortcut
+    on Windows) points to, or a an empty string if the object isn't a symbolic
     link.
 
     This name may not represent an existing file; it is only a string.
@@ -1299,7 +1292,7 @@ qint64 QFileInfo::size() const
 }
 
 /*!
-    Returns the date and local time when the file was created.
+    Returns the date and time when the file was created.
 
     On most Unix systems, this function returns the time of the last
     status change. A status change occurs when the file is created,
@@ -1320,13 +1313,13 @@ QDateTime QFileInfo::created() const
         if (!d->cache_enabled || !d->metaData.hasFlags(QFileSystemMetaData::CreationTime))
             if (!QFileSystemEngine::fillMetaData(d->fileEntry, d->metaData, QFileSystemMetaData::CreationTime))
                 return QDateTime();
-        return d->metaData.creationTime().toLocalTime();
+        return d->metaData.creationTime();
     }
-    return d->getFileTime(QAbstractFileEngine::CreationTime).toLocalTime();
+    return d->getFileTime(QAbstractFileEngine::CreationTime);
 }
 
 /*!
-    Returns the date and local time when the file was last modified.
+    Returns the date and time when the file was last modified.
 
     \sa created(), lastRead()
 */
@@ -1339,13 +1332,13 @@ QDateTime QFileInfo::lastModified() const
         if (!d->cache_enabled || !d->metaData.hasFlags(QFileSystemMetaData::ModificationTime))
             if (!QFileSystemEngine::fillMetaData(d->fileEntry, d->metaData, QFileSystemMetaData::ModificationTime))
                 return QDateTime();
-        return d->metaData.modificationTime().toLocalTime();
+        return d->metaData.modificationTime();
     }
-    return d->getFileTime(QAbstractFileEngine::ModificationTime).toLocalTime();
+    return d->getFileTime(QAbstractFileEngine::ModificationTime);
 }
 
 /*!
-    Returns the date and local time when the file was last read (accessed).
+    Returns the date and time when the file was last read (accessed).
 
     On platforms where this information is not available, returns the
     same as lastModified().
@@ -1361,9 +1354,9 @@ QDateTime QFileInfo::lastRead() const
         if (!d->cache_enabled || !d->metaData.hasFlags(QFileSystemMetaData::AccessTime))
             if (!QFileSystemEngine::fillMetaData(d->fileEntry, d->metaData, QFileSystemMetaData::AccessTime))
                 return QDateTime();
-        return d->metaData.accessTime().toLocalTime();
+        return d->metaData.accessTime();
     }
-    return d->getFileTime(QAbstractFileEngine::AccessTime).toLocalTime();
+    return d->getFileTime(QAbstractFileEngine::AccessTime);
 }
 
 /*!

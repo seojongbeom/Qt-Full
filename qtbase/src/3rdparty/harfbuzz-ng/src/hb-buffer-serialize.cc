@@ -36,12 +36,11 @@ static const char *serialize_formats[] = {
 /**
  * hb_buffer_serialize_list_formats:
  *
- * Returns a list of supported buffer serialization formats.
+ * 
  *
  * Return value: (transfer none):
- * A string array of buffer serialization formats. Should not be freed.
  *
- * Since: 0.9.7
+ * Since: 0.9.2
  **/
 const char **
 hb_buffer_serialize_list_formats (void)
@@ -51,17 +50,14 @@ hb_buffer_serialize_list_formats (void)
 
 /**
  * hb_buffer_serialize_format_from_string:
- * @str: (array length=len) (element-type uint8_t): a string to parse
- * @len: length of @str, or -1 if string is %NULL terminated
+ * @str: 
+ * @len: 
  *
- * Parses a string into an #hb_buffer_serialize_format_t. Does not check if
- * @str is a valid buffer serialization format, use
- * hb_buffer_serialize_list_formats() to get the list of supported formats.
+ * 
  *
  * Return value: 
- * The parsed #hb_buffer_serialize_format_t.
  *
- * Since: 0.9.7
+ * Since: 0.9.2
  **/
 hb_buffer_serialize_format_t
 hb_buffer_serialize_format_from_string (const char *str, int len)
@@ -72,15 +68,13 @@ hb_buffer_serialize_format_from_string (const char *str, int len)
 
 /**
  * hb_buffer_serialize_format_to_string:
- * @format: an #hb_buffer_serialize_format_t to convert.
+ * @format: 
  *
- * Converts @format to the string corresponding it, or %NULL if it is not a valid
- * #hb_buffer_serialize_format_t.
+ * 
  *
- * Return value: (transfer none):
- * A %NULL terminated string corresponding to @format. Should not be freed.
+ * Return value: 
  *
- * Since: 0.9.7
+ * Since: 0.9.2
  **/
 const char *
 hb_buffer_serialize_format_to_string (hb_buffer_serialize_format_t format)
@@ -248,51 +242,24 @@ _hb_buffer_serialize_glyphs_text (hb_buffer_t *buffer,
   return end - start;
 }
 
+/* Returns number of items, starting at start, that were serialized. */
 /**
  * hb_buffer_serialize_glyphs:
- * @buffer: an #hb_buffer_t buffer.
- * @start: the first item in @buffer to serialize.
- * @end: the last item in @buffer to serialize.
- * @buf: (out) (array length=buf_size) (element-type uint8_t): output string to
- *       write serialized buffer into.
- * @buf_size: the size of @buf.
- * @buf_consumed: (out) (allow-none): if not %NULL, will be set to the number of byes written into @buf.
- * @font: (allow-none): the #hb_font_t used to shape this buffer, needed to
- *        read glyph names and extents. If %NULL, and empty font will be used.
- * @format: the #hb_buffer_serialize_format_t to use for formatting the output.
- * @flags: the #hb_buffer_serialize_flags_t that control what glyph properties
- *         to serialize.
+ * @buffer: a buffer.
+ * @start: 
+ * @end: 
+ * @buf: (array length=buf_size):
+ * @buf_size: 
+ * @buf_consumed: (out):
+ * @font: 
+ * @format: 
+ * @flags: 
  *
- * Serializes @buffer into a textual representation of its glyph content,
- * useful for showing the contents of the buffer, for example during debugging.
- * There are currently two supported serialization formats:
- *
- * ## text
- * A human-readable, plain text format.
- * The serialized glyphs will look something like:
- *
- * ```
- * [uni0651=0@518,0+0|uni0628=0+1897]
- * ```
- * - The serialized glyphs are delimited with `[` and `]`.
- * - Glyphs are separated with `|`
- * - Each glyph starts with glyph name, or glyph index if
- *   #HB_BUFFER_SERIALIZE_FLAG_NO_GLYPH_NAMES flag is set. Then,
- *   - If #HB_BUFFER_SERIALIZE_FLAG_NO_CLUSTERS is not set, `=` then #hb_glyph_info_t.cluster.
- *   - If #HB_BUFFER_SERIALIZE_FLAG_NO_POSITIONS is not set, the #hb_glyph_position_t in the format:
- *     - If both #hb_glyph_position_t.x_offset and #hb_glyph_position_t.y_offset are not 0, `@x_offset,y_offset`. Then,
- *     - `+x_advance`, then `,y_advance` if #hb_glyph_position_t.y_advance is not 0. Then,
- *   - If #HB_BUFFER_SERIALIZE_FLAG_GLYPH_EXTENTS is set, the
- *     #hb_glyph_extents_t in the format
- *     `&lt;x_bearing,y_bearing,width,height&gt;`
- *
- * ## json
- * TODO.
+ * 
  *
  * Return value: 
- * The number of serialized items.
  *
- * Since: 0.9.7
+ * Since: 0.9.2
  **/
 unsigned int
 hb_buffer_serialize_glyphs (hb_buffer_t *buffer,
@@ -300,8 +267,8 @@ hb_buffer_serialize_glyphs (hb_buffer_t *buffer,
 			    unsigned int end,
 			    char *buf,
 			    unsigned int buf_size,
-			    unsigned int *buf_consumed,
-			    hb_font_t *font,
+			    unsigned int *buf_consumed, /* May be NULL */
+			    hb_font_t *font, /* May be NULL */
 			    hb_buffer_serialize_format_t format,
 			    hb_buffer_serialize_flags_t flags)
 {
@@ -314,9 +281,6 @@ hb_buffer_serialize_glyphs (hb_buffer_t *buffer,
 
   assert ((!buffer->len && buffer->content_type == HB_BUFFER_CONTENT_TYPE_INVALID) ||
 	  buffer->content_type == HB_BUFFER_CONTENT_TYPE_GLYPHS);
-
-  if (!buffer->have_positions)
-    flags |= HB_BUFFER_SERIALIZE_FLAG_NO_POSITIONS;
 
   if (unlikely (start == end))
     return 0;
@@ -391,7 +355,7 @@ parse_int (const char *pp, const char *end, int32_t *pv)
 
 /**
  * hb_buffer_deserialize_glyphs:
- * @buffer: an #hb_buffer_t buffer.
+ * @buffer: a buffer.
  * @buf: (array length=buf_len):
  * @buf_len: 
  * @end_ptr: (out):
@@ -402,7 +366,7 @@ parse_int (const char *pp, const char *end, int32_t *pv)
  *
  * Return value: 
  *
- * Since: 0.9.7
+ * Since: 0.9.2
  **/
 hb_bool_t
 hb_buffer_deserialize_glyphs (hb_buffer_t *buffer,

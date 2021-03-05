@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,18 +46,18 @@
 
 QT_BEGIN_NAMESPACE
 
-QQuickMenuBase1::QQuickMenuBase1(QObject *parent, int type)
-    : QObject(parent), m_visible(true), m_type(static_cast<QQuickMenuItemType1::MenuItemType>(type))
+QQuickMenuBase::QQuickMenuBase(QObject *parent, int type)
+    : QObject(parent), m_visible(true), m_type(static_cast<QQuickMenuItemType::MenuItemType>(type))
     , m_parentMenu(0), m_container(0), m_platformItem(0), m_visualItem(0)
 {
-    if (type >= 0 && QGuiApplication::platformName() != QStringLiteral("xcb")) { // QTBUG-51372)
+    if (type >= 0) {
         m_platformItem = QGuiApplicationPrivate::platformTheme()->createPlatformMenuItem();
         if (m_platformItem)
             m_platformItem->setRole(QPlatformMenuItem::TextHeuristicRole);
     }
 }
 
-QQuickMenuBase1::~QQuickMenuBase1()
+QQuickMenuBase::~QQuickMenuBase()
 {
     if (parentMenu())
         parentMenu()->removeItem(this);
@@ -71,7 +68,7 @@ QQuickMenuBase1::~QQuickMenuBase1()
     }
 }
 
-void QQuickMenuBase1::setVisible(bool v)
+void QQuickMenuBase::setVisible(bool v)
 {
     if (v != m_visible) {
         m_visible = v;
@@ -85,19 +82,19 @@ void QQuickMenuBase1::setVisible(bool v)
     }
 }
 
-QObject *QQuickMenuBase1::parentMenuOrMenuBar() const
+QObject *QQuickMenuBase::parentMenuOrMenuBar() const
 {
     if (!m_parentMenu)
         return parent();
     return m_parentMenu;
 }
 
-QQuickMenu1 *QQuickMenuBase1::parentMenu() const
+QQuickMenu1 *QQuickMenuBase::parentMenu() const
 {
     return m_parentMenu;
 }
 
-void QQuickMenuBase1::setParentMenu(QQuickMenu1 *parentMenu)
+void QQuickMenuBase::setParentMenu(QQuickMenu1 *parentMenu)
 {
     if (m_platformItem && m_parentMenu && m_parentMenu->platformMenu())
         m_parentMenu->platformMenu()->removeMenuItem(m_platformItem);
@@ -105,17 +102,17 @@ void QQuickMenuBase1::setParentMenu(QQuickMenu1 *parentMenu)
     m_parentMenu = parentMenu;
 }
 
-QQuickMenuItemContainer1 *QQuickMenuBase1::container() const
+QQuickMenuItemContainer *QQuickMenuBase::container() const
 {
     return m_container;
 }
 
-void QQuickMenuBase1::setContainer(QQuickMenuItemContainer1 *c)
+void QQuickMenuBase::setContainer(QQuickMenuItemContainer *c)
 {
     m_container = c;
 }
 
-void QQuickMenuBase1::syncWithPlatformMenu()
+void QQuickMenuBase::syncWithPlatformMenu()
 {
     QQuickMenu1 *menu = parentMenu();
     if (menu && menu->platformMenu() && platformItem()
@@ -123,19 +120,19 @@ void QQuickMenuBase1::syncWithPlatformMenu()
         menu->platformMenu()->syncMenuItem(platformItem());
 }
 
-QQuickItem *QQuickMenuBase1::visualItem() const
+QQuickItem *QQuickMenuBase::visualItem() const
 {
     return m_visualItem;
 }
 
-void QQuickMenuBase1::setVisualItem(QQuickItem *item)
+void QQuickMenuBase::setVisualItem(QQuickItem *item)
 {
     m_visualItem = item;
 }
 
 /*!
     \qmltype MenuSeparator
-    \instantiates QQuickMenuSeparator1
+    \instantiates QQuickMenuSeparator
     \inqmlmodule QtQuick.Controls
     \ingroup menus
     \ingroup controls
@@ -189,15 +186,15 @@ void QQuickMenuBase1::setVisualItem(QQuickItem *item)
     This property is read-only and constant, and its value is \c MenuItemType.Separator.
 */
 
-QQuickMenuSeparator1::QQuickMenuSeparator1(QObject *parent)
-    : QQuickMenuBase1(parent, QQuickMenuItemType1::Separator)
+QQuickMenuSeparator::QQuickMenuSeparator(QObject *parent)
+    : QQuickMenuBase(parent, QQuickMenuItemType::Separator)
 {
     if (platformItem())
         platformItem()->setIsSeparator(true);
 }
 
-QQuickMenuText1::QQuickMenuText1(QObject *parent, QQuickMenuItemType1::MenuItemType type)
-    : QQuickMenuBase1(parent, type), m_action(new QQuickAction1(this))
+QQuickMenuText::QQuickMenuText(QObject *parent, QQuickMenuItemType::MenuItemType type)
+    : QQuickMenuBase(parent, type), m_action(new QQuickAction(this))
 {
     connect(m_action, SIGNAL(enabledChanged()), this, SLOT(updateEnabled()));
     connect(m_action, SIGNAL(textChanged()), this, SLOT(updateText()));
@@ -207,57 +204,57 @@ QQuickMenuText1::QQuickMenuText1(QObject *parent, QQuickMenuItemType1::MenuItemT
     connect(m_action, SIGNAL(iconSourceChanged()), this, SIGNAL(iconSourceChanged()));
 }
 
-QQuickMenuText1::~QQuickMenuText1()
+QQuickMenuText::~QQuickMenuText()
 {
     delete m_action;
 }
 
-bool QQuickMenuText1::enabled() const
+bool QQuickMenuText::enabled() const
 {
     return action()->isEnabled();
 }
 
-void QQuickMenuText1::setEnabled(bool e)
+void QQuickMenuText::setEnabled(bool e)
 {
     action()->setEnabled(e);
 }
 
-QString QQuickMenuText1::text() const
+QString QQuickMenuText::text() const
 {
     return m_action->text();
 }
 
-void QQuickMenuText1::setText(const QString &t)
+void QQuickMenuText::setText(const QString &t)
 {
     m_action->setText(t);
 }
 
-QUrl QQuickMenuText1::iconSource() const
+QUrl QQuickMenuText::iconSource() const
 {
     return m_action->iconSource();
 }
 
-void QQuickMenuText1::setIconSource(const QUrl &iconSource)
+void QQuickMenuText::setIconSource(const QUrl &iconSource)
 {
     m_action->setIconSource(iconSource);
 }
 
-QString QQuickMenuText1::iconName() const
+QString QQuickMenuText::iconName() const
 {
     return m_action->iconName();
 }
 
-void QQuickMenuText1::setIconName(const QString &iconName)
+void QQuickMenuText::setIconName(const QString &iconName)
 {
     m_action->setIconName(iconName);
 }
 
-QIcon QQuickMenuText1::icon() const
+QIcon QQuickMenuText::icon() const
 {
     return m_action->icon();
 }
 
-void QQuickMenuText1::updateText()
+void QQuickMenuText::updateText()
 {
     if (platformItem()) {
         platformItem()->setText(text());
@@ -266,7 +263,7 @@ void QQuickMenuText1::updateText()
     emit __textChanged();
 }
 
-void QQuickMenuText1::updateEnabled()
+void QQuickMenuText::updateEnabled()
 {
     if (platformItem()) {
         platformItem()->setEnabled(enabled());
@@ -275,7 +272,7 @@ void QQuickMenuText1::updateEnabled()
     emit enabledChanged();
 }
 
-void QQuickMenuText1::updateIcon()
+void QQuickMenuText::updateIcon()
 {
     if (platformItem()) {
         platformItem()->setIcon(icon());
@@ -343,7 +340,7 @@ void QQuickMenuText1::updateIcon()
     For instance, \c "\&Open" will bind the \c Alt-O shortcut to the
     \c "Open" menu item. Note that not all platforms support mnemonics.
 
-    Defaults to an empty string.
+    Defaults to the empty string.
 
     \sa Action::text
 */
@@ -358,7 +355,7 @@ void QQuickMenuText1::updateIcon()
     \qmlproperty url MenuItem::iconSource
 
     Sets the icon file or resource url for the \l MenuItem icon.
-    Overrides the item's bound action \c iconSource property. Defaults to an empty URL.
+    Overrides the item's bound action \c iconSource property. Defaults to the empty URL.
 
     \sa iconName, Action::iconSource
 */
@@ -368,9 +365,7 @@ void QQuickMenuText1::updateIcon()
 
     Sets the icon name for the \l MenuItem icon. This will pick the icon
     with the given name from the current theme. Overrides the item's bound
-    action \c iconName property. Defaults to an empty string.
-
-    \include icons.qdocinc iconName
+    action \c iconName property. Defaults to the empty string.
 
     \sa iconSource, Action::iconName
 */
@@ -462,7 +457,7 @@ void QQuickMenuText1::updateIcon()
 */
 
 QQuickMenuItem1::QQuickMenuItem1(QObject *parent)
-    : QQuickMenuText1(parent, QQuickMenuItemType1::Item), m_boundAction(0)
+    : QQuickMenuText(parent, QQuickMenuItemType::Item), m_boundAction(0)
 {
     connect(this, SIGNAL(__textChanged()), this, SIGNAL(textChanged()));
 
@@ -483,12 +478,12 @@ QQuickMenuItem1::~QQuickMenuItem1()
 
 void QQuickMenuItem1::setParentMenu(QQuickMenu1 *parentMenu)
 {
-    QQuickMenuText1::setParentMenu(parentMenu);
+    QQuickMenuText::setParentMenu(parentMenu);
     if (parentMenu)
         connect(this, SIGNAL(triggered()), parentMenu, SLOT(updateSelectedIndex()));
 }
 
-void QQuickMenuItem1::bindToAction(QQuickAction1 *action)
+void QQuickMenuItem1::bindToAction(QQuickAction *action)
 {
     m_boundAction = action;
 
@@ -524,7 +519,7 @@ void QQuickMenuItem1::unbindFromAction(QObject *o)
     if (o == m_boundAction)
         m_boundAction = 0;
 
-    QQuickAction1 *action = qobject_cast<QQuickAction1 *>(o);
+    QQuickAction *action = qobject_cast<QQuickAction *>(o);
     if (!action)
         return;
 
@@ -543,14 +538,14 @@ void QQuickMenuItem1::unbindFromAction(QObject *o)
     disconnect(action, SIGNAL(iconSourceChanged()), this, SIGNAL(iconSourceChanged()));
 }
 
-QQuickAction1 *QQuickMenuItem1::action() const
+QQuickAction *QQuickMenuItem1::action() const
 {
     if (m_boundAction)
         return m_boundAction;
-    return QQuickMenuText1::action();
+    return QQuickMenuText::action();
 }
 
-void QQuickMenuItem1::setBoundAction(QQuickAction1 *a)
+void QQuickMenuItem1::setBoundAction(QQuickAction *a)
 {
     if (a == m_boundAction)
         return;
@@ -563,7 +558,7 @@ void QQuickMenuItem1::setBoundAction(QQuickAction1 *a)
 
 QString QQuickMenuItem1::text() const
 {
-    QString ownText = QQuickMenuText1::text();
+    QString ownText = QQuickMenuText::text();
     if (!ownText.isNull())
         return ownText;
     return m_boundAction ? m_boundAction->text() : QString();
@@ -571,7 +566,7 @@ QString QQuickMenuItem1::text() const
 
 QUrl QQuickMenuItem1::iconSource() const
 {
-    QUrl ownIconSource = QQuickMenuText1::iconSource();
+    QUrl ownIconSource = QQuickMenuText::iconSource();
     if (!ownIconSource.isEmpty())
         return ownIconSource;
     return m_boundAction ? m_boundAction->iconSource() : QUrl();
@@ -579,7 +574,7 @@ QUrl QQuickMenuItem1::iconSource() const
 
 QString QQuickMenuItem1::iconName() const
 {
-    QString ownIconName = QQuickMenuText1::iconName();
+    QString ownIconName = QQuickMenuText::iconName();
     if (!ownIconName.isEmpty())
         return ownIconName;
     return m_boundAction ? m_boundAction->iconName() : QString();
@@ -587,7 +582,7 @@ QString QQuickMenuItem1::iconName() const
 
 QIcon QQuickMenuItem1::icon() const
 {
-    QIcon ownIcon = QQuickMenuText1::icon();
+    QIcon ownIcon = QQuickMenuText::icon();
     if (!ownIcon.isNull())
         return ownIcon;
     return m_boundAction ? m_boundAction->icon() : QIcon();
@@ -606,7 +601,6 @@ void QQuickMenuItem1::setShortcut(const QVariant &shortcut)
 
 void QQuickMenuItem1::updateShortcut()
 {
-#if QT_CONFIG(shortcut)
     if (platformItem()) {
         QKeySequence sequence;
         QVariant var = shortcut();
@@ -618,7 +612,6 @@ void QQuickMenuItem1::updateShortcut()
         syncWithPlatformMenu();
     }
     emit shortcutChanged();
-#endif // QT_CONFIG(shortcut)
 }
 
 bool QQuickMenuItem1::checkable() const

@@ -53,7 +53,9 @@
 
 #   if defined(ANGLE_ENABLE_D3D9)
 #       include <d3d9.h>
+#      if !defined(ANGLE_TRANSLATOR_IMPLEMENTATION)
 #       include <d3dcompiler.h>
+#      endif
 #   endif
 
 #   if defined(ANGLE_ENABLE_D3D11)
@@ -70,7 +72,9 @@
 #       include <d3d11_1.h>
 #       include <dxgi1_2.h>
 #      endif
+#      if !defined(ANGLE_TRANSLATOR_IMPLEMENTATION)
 #       include <d3dcompiler.h>
+#      endif
 #   endif
 
 #   if defined(ANGLE_ENABLE_WINDOWS_STORE)
@@ -81,6 +85,11 @@
 #          endif
 #           include <dxgidebug.h>
 #       endif
+#   endif
+
+#   if defined(_MSC_VER) && (_MSC_VER <= 1600)
+#       define final
+#       define override
 #   endif
 
 #   undef near

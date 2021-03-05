@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -66,7 +56,6 @@ class QPushButton;
 class QSlider;
 class QVideoProbe;
 class QVideoWidget;
-class QAudioProbe;
 QT_END_NAMESPACE
 
 class PlaylistModel;
@@ -100,16 +89,16 @@ private slots:
     void playlistPositionChanged(int);
 
     void statusChanged(QMediaPlayer::MediaStatus status);
-    void stateChanged(QMediaPlayer::State state);
     void bufferingProgress(int progress);
     void videoAvailableChanged(bool available);
 
     void displayErrorMessage();
 
+#ifndef PLAYER_NO_COLOROPTIONS
     void showColorDialog();
+#endif
 
 private:
-    void clearHistogram();
     void setTrackInfo(const QString &info);
     void setStatusInfo(const QString &info);
     void handleCursor(QMediaPlayer::MediaStatus status);
@@ -122,14 +111,14 @@ private:
     QSlider *slider;
     QLabel *labelDuration;
     QPushButton *fullScreenButton;
+#ifndef PLAYER_NO_COLOROPTIONS
     QPushButton *colorButton;
     QDialog *colorDialog;
+#endif
 
     QLabel *labelHistogram;
-    HistogramWidget *videoHistogram;
-    HistogramWidget *audioHistogram;
-    QVideoProbe *videoProbe;
-    QAudioProbe *audioProbe;
+    HistogramWidget *histogram;
+    QVideoProbe *probe;
 
     PlaylistModel *playlistModel;
     QAbstractItemView *playlistView;

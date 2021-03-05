@@ -1,9 +1,7 @@
 TEMPLATE=subdirs
-QT_FOR_CONFIG += network-private gui-private
 
 SUBDIRS = bearerex \
 filetest \
-embeddedintoforeignwindow \
 foreignwindows \
 gestures \
 highdpi \
@@ -52,18 +50,21 @@ xembed-widgets \
 shortcuts \
 dialogs \
 windowtransparency \
-unc \
-qtabbar
+unc
 
-!qtConfig(openssl): SUBDIRS -= qssloptions
+!contains(QT_CONFIG, openssl):!contains(QT_CONFIG, openssl-linked):SUBDIRS -= qssloptions
 
-qtConfig(opengl) {
+contains(QT_CONFIG, opengl) {
     SUBDIRS += qopengltextureblitter
-    qtConfig(egl): SUBDIRS += qopenglcontext
+    contains(QT_CONFIG, egl): SUBDIRS += qopenglcontext
 }
 
-win32: SUBDIRS -= network_remote_stresstest network_stresstest
+win32 {
+    SUBDIRS -= network_remote_stresstest network_stresstest
+    # disable some tests on wince because of missing dependencies
+    wince: SUBDIRS -= lance windowmodality
+}
 
 lessThan(QT_MAJOR_VERSION, 5): SUBDIRS -= bearerex lance qnetworkaccessmanager/qget qmimedatabase qnetworkreply \
 qpainfo qscreen  socketengine xembed-raster xembed-widgets windowtransparency \
-embeddedintoforeignwindow foreignwindows
+foreignwindows

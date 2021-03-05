@@ -1,8 +1,6 @@
 TARGET = qxcb
 
-QT += core-private gui-private xcb_qpa_lib-private
-
-DEFINES += QT_NO_FOREACH
+QT += core-private gui-private platformsupport-private xcb_qpa_lib-private
 
 SOURCES = \
     qxcbmain.cpp

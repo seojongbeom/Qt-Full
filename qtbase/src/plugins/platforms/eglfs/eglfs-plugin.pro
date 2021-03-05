@@ -1,17 +1,10 @@
 TARGET = qeglfs
 
-QT += eglfsdeviceintegration-private
-
-CONFIG += egl
-
-# Avoid X11 header collision, use generic EGL native types
-DEFINES += QT_EGL_NO_X11
+QT += platformsupport-private eglfs_device_lib-private
 
 SOURCES += $$PWD/qeglfsmain.cpp
 
 OTHER_FILES += $$PWD/eglfs.json
-
-INCLUDEPATH += $$PWD/api
 
 PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = QEglFSIntegrationPlugin

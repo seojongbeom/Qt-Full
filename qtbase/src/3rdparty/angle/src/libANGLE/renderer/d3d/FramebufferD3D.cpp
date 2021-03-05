@@ -8,7 +8,6 @@
 
 #include "libANGLE/renderer/d3d/FramebufferD3D.h"
 
-#include "common/BitSetIterator.h"
 #include "libANGLE/formatutils.h"
 #include "libANGLE/Framebuffer.h"
 #include "libANGLE/FramebufferAttachment.h"
@@ -54,7 +53,7 @@ ClearParameters GetClearParameters(const gl::State &state, GLbitfield mask)
     const gl::Framebuffer *framebufferObject = state.getDrawFramebuffer();
     if (mask & GL_COLOR_BUFFER_BIT)
     {
-        if (framebufferObject->hasEnabledDrawBuffer())
+        if (framebufferObject->hasEnabledColorAttachment())
         {
             for (unsigned int i = 0; i < ArraySize(clearParams.clearColor); i++)
             {
@@ -86,28 +85,67 @@ ClearParameters GetClearParameters(const gl::State &state, GLbitfield mask)
 }
 
 FramebufferD3D::FramebufferD3D(const gl::Framebuffer::Data &data, RendererD3D *renderer)
-    : FramebufferImpl(data), mRenderer(renderer)
+    : FramebufferImpl(data),
+      mRenderer(renderer),
+      mColorAttachmentsForRender(mData.mColorAttachments.size(), nullptr),
+      mInvalidateColorAttachmentCache(true)
 {
+    ASSERT(mRenderer != nullptr);
 }
 
 FramebufferD3D::~FramebufferD3D()
 {
 }
 
+void FramebufferD3D::setColorAttachment(size_t, const gl::FramebufferAttachment *)
+{
+    mInvalidateColorAttachmentCache = true;
+}
+
+void FramebufferD3D::setDepthAttachment(const gl::FramebufferAttachment *)
+{
+}
+
+void FramebufferD3D::setStencilAttachment(const gl::FramebufferAttachment *)
+{
+}
+
+void FramebufferD3D::setDepthStencilAttachment(const gl::FramebufferAttachment *)
+{
+}
+
+void FramebufferD3D::setDrawBuffers(size_t, const GLenum *)
+{
+    mInvalidateColorAttachmentCache = true;
+}
+
+void FramebufferD3D::setReadBuffer(GLenum)
+{
+}
+
+gl::Error FramebufferD3D::invalidate(size_t, const GLenum *)
+{
+    // No-op in D3D
+    return gl::Error(GL_NO_ERROR);
+}
+
+gl::Error FramebufferD3D::invalidateSub(size_t, const GLenum *, const gl::Rectangle &)
+{
+    // No-op in D3D
+    return gl::Error(GL_NO_ERROR);
+}
+
 gl::Error FramebufferD3D::clear(const gl::Data &data, GLbitfield mask)
 {
     const gl::State &state = *data.state;
     ClearParameters clearParams = GetClearParameters(state, mask);
-    return clear(data, clearParams);
+    return clear(state, clearParams);
 }
 
-gl::Error FramebufferD3D::clearBufferfv(const gl::Data &data,
-                                        GLenum buffer,
-                                        GLint drawbuffer,
-                                        const GLfloat *values)
+gl::Error FramebufferD3D::clearBufferfv(const gl::State &state, GLenum buffer, GLint drawbuffer, const GLfloat *values)
 {
     // glClearBufferfv can be called to clear the color buffer or depth buffer
-    ClearParameters clearParams = GetClearParameters(*data.state, 0);
+    ClearParameters clearParams = GetClearParameters(state, 0);
 
     if (buffer == GL_COLOR)
     {
@@ -125,16 +163,13 @@ gl::Error FramebufferD3D::clearBufferfv(const gl::Data &data,
         clearParams.depthClearValue = values[0];
     }
 
-    return clear(data, clearParams);
+    return clear(state, clearParams);
 }
 
-gl::Error FramebufferD3D::clearBufferuiv(const gl::Data &data,
-                                         GLenum buffer,
-                                         GLint drawbuffer,
-                                         const GLuint *values)
+gl::Error FramebufferD3D::clearBufferuiv(const gl::State &state, GLenum buffer, GLint drawbuffer, const GLuint *values)
 {
     // glClearBufferuiv can only be called to clear a color buffer
-    ClearParameters clearParams = GetClearParameters(*data.state, 0);
+    ClearParameters clearParams = GetClearParameters(state, 0);
     for (unsigned int i = 0; i < ArraySize(clearParams.clearColor); i++)
     {
         clearParams.clearColor[i] = (drawbuffer == static_cast<int>(i));
@@ -142,16 +177,13 @@ gl::Error FramebufferD3D::clearBufferuiv(const gl::Data &data,
     clearParams.colorUIClearValue = gl::ColorUI(values[0], values[1], values[2], values[3]);
     clearParams.colorClearType = GL_UNSIGNED_INT;
 
-    return clear(data, clearParams);
+    return clear(state, clearParams);
 }
 
-gl::Error FramebufferD3D::clearBufferiv(const gl::Data &data,
-                                        GLenum buffer,
-                                        GLint drawbuffer,
-                                        const GLint *values)
+gl::Error FramebufferD3D::clearBufferiv(const gl::State &state, GLenum buffer, GLint drawbuffer, const GLint *values)
 {
     // glClearBufferiv can be called to clear the color buffer or stencil buffer
-    ClearParameters clearParams = GetClearParameters(*data.state, 0);
+    ClearParameters clearParams = GetClearParameters(state, 0);
 
     if (buffer == GL_COLOR)
     {
@@ -169,23 +201,19 @@ gl::Error FramebufferD3D::clearBufferiv(const gl::Data &data,
         clearParams.stencilClearValue = values[1];
     }
 
-    return clear(data, clearParams);
+    return clear(state, clearParams);
 }
 
-gl::Error FramebufferD3D::clearBufferfi(const gl::Data &data,
-                                        GLenum buffer,
-                                        GLint drawbuffer,
-                                        GLfloat depth,
-                                        GLint stencil)
+gl::Error FramebufferD3D::clearBufferfi(const gl::State &state, GLenum buffer, GLint drawbuffer, GLfloat depth, GLint stencil)
 {
     // glClearBufferfi can only be called to clear a depth stencil buffer
-    ClearParameters clearParams   = GetClearParameters(*data.state, 0);
+    ClearParameters clearParams = GetClearParameters(state, 0);
     clearParams.clearDepth = true;
     clearParams.depthClearValue = depth;
     clearParams.clearStencil = true;
     clearParams.stencilClearValue = stencil;
 
-    return clear(data, clearParams);
+    return clear(state, clearParams);
 }
 
 GLenum FramebufferD3D::getImplementationColorReadFormat() const
@@ -198,7 +226,7 @@ GLenum FramebufferD3D::getImplementationColorReadFormat() const
     }
 
     RenderTargetD3D *attachmentRenderTarget = NULL;
-    gl::Error error = readAttachment->getRenderTarget(&attachmentRenderTarget);
+    gl::Error error = GetAttachmentRenderTarget(readAttachment, &attachmentRenderTarget);
     if (error.isError())
     {
         return GL_NONE;
@@ -220,7 +248,7 @@ GLenum FramebufferD3D::getImplementationColorReadType() const
     }
 
     RenderTargetD3D *attachmentRenderTarget = NULL;
-    gl::Error error = readAttachment->getRenderTarget(&attachmentRenderTarget);
+    gl::Error error = GetAttachmentRenderTarget(readAttachment, &attachmentRenderTarget);
     if (error.isError())
     {
         return GL_NONE;
@@ -236,15 +264,17 @@ gl::Error FramebufferD3D::readPixels(const gl::State &state, const gl::Rectangle
 {
     const gl::PixelPackState &packState = state.getPackState();
 
+    if (packState.rowLength != 0 || packState.skipRows != 0 || packState.skipPixels != 0)
+    {
+        UNIMPLEMENTED();
+        return gl::Error(GL_INVALID_OPERATION, "invalid pixel store parameters in readPixels");
+    }
+
     GLenum sizedInternalFormat = gl::GetSizedInternalFormat(format, type);
     const gl::InternalFormat &sizedFormatInfo = gl::GetInternalFormatInfo(sizedInternalFormat);
-    GLuint outputPitch =
-        sizedFormatInfo.computeRowPitch(type, area.width, packState.alignment, packState.rowLength);
-    GLsizei outputSkipBytes = sizedFormatInfo.computeSkipPixels(
-        outputPitch, 0, 0, packState.skipRows, packState.skipPixels);
+    GLuint outputPitch = sizedFormatInfo.computeRowPitch(type, area.width, packState.alignment, 0);
 
-    return readPixelsImpl(area, format, type, outputPitch, packState,
-                          reinterpret_cast<uint8_t *>(pixels) + outputSkipBytes);
+    return readPixels(area, format, type, outputPitch, packState, reinterpret_cast<uint8_t*>(pixels));
 }
 
 gl::Error FramebufferD3D::blit(const gl::State &state, const gl::Rectangle &sourceArea, const gl::Rectangle &destArea,
@@ -261,7 +291,7 @@ gl::Error FramebufferD3D::blit(const gl::State &state, const gl::Rectangle &sour
     bool blitStencil = false;
     if ((mask & GL_STENCIL_BUFFER_BIT) &&
         sourceFramebuffer->getStencilbuffer() != nullptr &&
-        mData.getStencilAttachment() != nullptr)
+        mData.mStencilAttachment != nullptr)
     {
         blitStencil = true;
     }
@@ -269,7 +299,7 @@ gl::Error FramebufferD3D::blit(const gl::State &state, const gl::Rectangle &sour
     bool blitDepth = false;
     if ((mask & GL_DEPTH_BUFFER_BIT) &&
         sourceFramebuffer->getDepthbuffer() != nullptr &&
-        mData.getDepthAttachment() != nullptr)
+        mData.mDepthAttachment != nullptr)
     {
         blitDepth = true;
     }
@@ -288,99 +318,146 @@ gl::Error FramebufferD3D::blit(const gl::State &state, const gl::Rectangle &sour
     return gl::Error(GL_NO_ERROR);
 }
 
-bool FramebufferD3D::checkStatus() const
+GLenum FramebufferD3D::checkStatus() const
 {
-    // if we have both a depth and stencil buffer, they must refer to the same object
-    // since we only support packed_depth_stencil and not separate depth and stencil
-    if (mData.getDepthAttachment() != nullptr && mData.getStencilAttachment() != nullptr &&
-        mData.getDepthStencilAttachment() == nullptr)
-    {
-        return false;
-    }
-
     // D3D11 does not allow for overlapping RenderTargetViews, so ensure uniqueness
-    const auto &colorAttachments = mData.getColorAttachments();
-    for (size_t colorAttachment = 0; colorAttachment < colorAttachments.size(); colorAttachment++)
+    for (size_t colorAttachment = 0; colorAttachment < mData.mColorAttachments.size(); colorAttachment++)
     {
-        const gl::FramebufferAttachment &attachment = colorAttachments[colorAttachment];
-        if (attachment.isAttached())
+        const gl::FramebufferAttachment *attachment = mData.mColorAttachments[colorAttachment];
+        if (attachment != nullptr)
         {
             for (size_t prevColorAttachment = 0; prevColorAttachment < colorAttachment; prevColorAttachment++)
             {
-                const gl::FramebufferAttachment &prevAttachment = colorAttachments[prevColorAttachment];
-                if (prevAttachment.isAttached() &&
-                    (attachment.id() == prevAttachment.id() &&
-                     attachment.type() == prevAttachment.type()))
+                const gl::FramebufferAttachment *prevAttachment = mData.mColorAttachments[prevColorAttachment];
+                if (prevAttachment != nullptr &&
+                    (attachment->id() == prevAttachment->id() &&
+                     attachment->type() == prevAttachment->type()))
                 {
-                    return false;
+                    return GL_FRAMEBUFFER_UNSUPPORTED;
                 }
             }
         }
     }
 
-    // D3D requires all render targets to have the same dimensions.
-    if (!mData.attachmentsHaveSameDimensions())
-    {
-        return false;
-    }
-
-    return true;
+    return GL_FRAMEBUFFER_COMPLETE;
 }
 
-void FramebufferD3D::syncState(const gl::Framebuffer::DirtyBits &dirtyBits)
+const gl::AttachmentList &FramebufferD3D::getColorAttachmentsForRender(const Workarounds &workarounds) const
 {
-    bool invalidateColorAttachmentCache = false;
-
-    if (!mColorAttachmentsForRender.valid())
+    if (!workarounds.mrtPerfWorkaround)
     {
-        invalidateColorAttachmentCache = true;
+        return mData.mColorAttachments;
     }
 
-    for (auto dirtyBit : angle::IterateBitSet(dirtyBits))
+    if (!mInvalidateColorAttachmentCache)
     {
-        if ((dirtyBit >= gl::Framebuffer::DIRTY_BIT_COLOR_ATTACHMENT_0 &&
-             dirtyBit < gl::Framebuffer::DIRTY_BIT_COLOR_ATTACHMENT_MAX) ||
-            dirtyBit == gl::Framebuffer::DIRTY_BIT_DRAW_BUFFERS)
-        {
-            invalidateColorAttachmentCache = true;
-        }
-    }
-
-    if (!invalidateColorAttachmentCache)
-    {
-        return;
+        return mColorAttachmentsForRender;
     }
 
     // Does not actually free memory
-    gl::AttachmentList colorAttachmentsForRender;
+    mColorAttachmentsForRender.clear();
 
-    const auto &colorAttachments = mData.getColorAttachments();
-    const auto &drawBufferStates = mData.getDrawBufferStates();
-    const auto &workarounds      = mRenderer->getWorkarounds();
-
-    for (size_t attachmentIndex = 0; attachmentIndex < colorAttachments.size(); ++attachmentIndex)
+    for (size_t attachmentIndex = 0; attachmentIndex < mData.mColorAttachments.size(); ++attachmentIndex)
     {
-        GLenum drawBufferState = drawBufferStates[attachmentIndex];
-        const gl::FramebufferAttachment &colorAttachment = colorAttachments[attachmentIndex];
+        GLenum drawBufferState = mData.mDrawBufferStates[attachmentIndex];
+        gl::FramebufferAttachment *colorAttachment = mData.mColorAttachments[attachmentIndex];
 
-        if (colorAttachment.isAttached() && drawBufferState != GL_NONE)
+        if (colorAttachment != nullptr && drawBufferState != GL_NONE)
         {
             ASSERT(drawBufferState == GL_BACK || drawBufferState == (GL_COLOR_ATTACHMENT0_EXT + attachmentIndex));
-            colorAttachmentsForRender.push_back(&colorAttachment);
-        }
-        else if (!workarounds.mrtPerfWorkaround)
-        {
-            colorAttachmentsForRender.push_back(nullptr);
+            mColorAttachmentsForRender.push_back(colorAttachment);
         }
     }
 
-    mColorAttachmentsForRender = std::move(colorAttachmentsForRender);
+    mInvalidateColorAttachmentCache = false;
+    return mColorAttachmentsForRender;
 }
 
-const gl::AttachmentList &FramebufferD3D::getColorAttachmentsForRender() const
+gl::Error GetAttachmentRenderTarget(const gl::FramebufferAttachment *attachment, RenderTargetD3D **outRT)
 {
-    ASSERT(mColorAttachmentsForRender.valid());
-    return mColorAttachmentsForRender.value();
+    if (attachment->type() == GL_TEXTURE)
+    {
+        gl::Texture *texture = attachment->getTexture();
+        ASSERT(texture);
+        TextureD3D *textureD3D = GetImplAs<TextureD3D>(texture);
+        const gl::ImageIndex *index = attachment->getTextureImageIndex();
+        ASSERT(index);
+        return textureD3D->getRenderTarget(*index, outRT);
+    }
+    else if (attachment->type() == GL_RENDERBUFFER)
+    {
+        gl::Renderbuffer *renderbuffer = attachment->getRenderbuffer();
+        ASSERT(renderbuffer);
+        RenderbufferD3D *renderbufferD3D = RenderbufferD3D::makeRenderbufferD3D(renderbuffer->getImplementation());
+        *outRT = renderbufferD3D->getRenderTarget();
+        return gl::Error(GL_NO_ERROR);
+    }
+    else if (attachment->type() == GL_FRAMEBUFFER_DEFAULT)
+    {
+        const gl::DefaultAttachment *defaultAttachment = static_cast<const gl::DefaultAttachment *>(attachment);
+        const egl::Surface *surface = defaultAttachment->getSurface();
+        ASSERT(surface);
+        const SurfaceD3D *surfaceD3D = GetImplAs<SurfaceD3D>(surface);
+        ASSERT(surfaceD3D);
+
+        if (defaultAttachment->getBinding() == GL_BACK)
+        {
+            *outRT = surfaceD3D->getSwapChain()->getColorRenderTarget();
+        }
+        else
+        {
+            *outRT = surfaceD3D->getSwapChain()->getDepthStencilRenderTarget();
+        }
+        return gl::Error(GL_NO_ERROR);
+    }
+    else
+    {
+        UNREACHABLE();
+        return gl::Error(GL_INVALID_OPERATION);
+    }
 }
 
-}  // namespace rx
+// Note: RenderTarget serials should ideally be in the RenderTargets themselves.
+unsigned int GetAttachmentSerial(const gl::FramebufferAttachment *attachment)
+{
+    if (attachment->type() == GL_TEXTURE)
+    {
+        gl::Texture *texture = attachment->getTexture();
+        ASSERT(texture);
+        TextureD3D *textureD3D = GetImplAs<TextureD3D>(texture);
+        const gl::ImageIndex *index = attachment->getTextureImageIndex();
+        ASSERT(index);
+        return textureD3D->getRenderTargetSerial(*index);
+    }
+    else if (attachment->type() == GL_RENDERBUFFER)
+    {
+        gl::Renderbuffer *renderbuffer = attachment->getRenderbuffer();
+        ASSERT(renderbuffer);
+        RenderbufferD3D *renderbufferD3D = RenderbufferD3D::makeRenderbufferD3D(renderbuffer->getImplementation());
+        return renderbufferD3D->getRenderTargetSerial();
+    }
+    else if (attachment->type() == GL_FRAMEBUFFER_DEFAULT)
+    {
+        const gl::DefaultAttachment *defaultAttachment = static_cast<const gl::DefaultAttachment *>(attachment);
+        const egl::Surface *surface = defaultAttachment->getSurface();
+        ASSERT(surface);
+        const SurfaceD3D *surfaceD3D = GetImplAs<SurfaceD3D>(surface);
+        ASSERT(surfaceD3D);
+
+        if (defaultAttachment->getBinding() == GL_BACK)
+        {
+            return surfaceD3D->getSwapChain()->getColorRenderTarget()->getSerial();
+        }
+        else
+        {
+            return surfaceD3D->getSwapChain()->getDepthStencilRenderTarget()->getSerial();
+        }
+    }
+    else
+    {
+        UNREACHABLE();
+        return 0;
+    }
+}
+
+}

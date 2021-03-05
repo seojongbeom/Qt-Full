@@ -35,6 +35,8 @@
 #include "hb-ot-head-table.hh"
 #include "hb-ot-maxp-table.hh"
 
+#include "hb-cache-private.hh"
+
 #include <string.h>
 
 

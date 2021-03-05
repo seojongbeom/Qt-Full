@@ -1,5 +1,4 @@
 TEMPLATE=subdirs
-QT_FOR_CONFIG += xmlpatterns-private
 SUBDIRS=\
            checkxmlfiles                \
            cmake                        \
@@ -31,7 +30,8 @@ SUBDIRS=\
            xmlpatternsxqts              \
            xmlpatternsxslts             \
 
-qtConfig(xml-schema) {
+load(qfeatures)
+!contains(QT_DISABLED_FEATURES, xmlschema) {
     SUBDIRS += qxmlschema               \
                qxmlschemavalidator      \
                xmlpatternsschema        \

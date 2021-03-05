@@ -19,8 +19,7 @@ PRIVATE_HEADERS += \
            audio/qaudiodevicefactory_p.h \
            audio/qwavedecoder_p.h \
            audio/qsamplecache_p.h \
-           audio/qaudiohelpers_p.h \
-           audio/qaudiosystempluginext_p.h
+           audio/qaudiohelpers_p.h
 
 SOURCES += \
            audio/qaudio.cpp \
@@ -40,11 +39,22 @@ SOURCES += \
            audio/qaudiodecoder.cpp \
            audio/qaudiohelpers.cpp
 
-qtConfig(pulseaudio) {
-    QMAKE_USE_FOR_PRIVATE += pulseaudio
-    PRIVATE_HEADERS += audio/qsoundeffect_pulse_p.h
-    SOURCES += audio/qsoundeffect_pulse_p.cpp
+unix:!mac {
+    config_pulseaudio {
+        CONFIG += link_pkgconfig
+        PKGCONFIG_PRIVATE += libpulse
+
+        DEFINES += QT_MULTIMEDIA_PULSEAUDIO
+        PRIVATE_HEADERS += audio/qsoundeffect_pulse_p.h
+        SOURCES += audio/qsoundeffect_pulse_p.cpp
+        !maemo*:DEFINES += QTM_PULSEAUDIO_DEFAULTBUFFER
+    } else {
+        DEFINES += QT_MULTIMEDIA_QAUDIO
+        PRIVATE_HEADERS += audio/qsoundeffect_qaudio_p.h
+        SOURCES += audio/qsoundeffect_qaudio_p.cpp
+    }
 } else {
+    DEFINES += QT_MULTIMEDIA_QAUDIO
     PRIVATE_HEADERS += audio/qsoundeffect_qaudio_p.h
     SOURCES += audio/qsoundeffect_qaudio_p.cpp
 }

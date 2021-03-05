@@ -1,58 +1,47 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include "qplatformdefs.h"
-#include <QtPrintSupport/private/qtprintsupportglobal_p.h>
+
+#ifndef QT_NO_PRINTDIALOG
 
 #include "private/qabstractprintdialog_p.h"
-#if QT_CONFIG(messagebox)
 #include <QtWidgets/qmessagebox.h>
-#endif
 #include "qprintdialog.h"
-#if QT_CONFIG(filedialog)
 #include "qfiledialog.h"
-#endif
 #include <QtCore/qdir.h>
 #include <QtGui/qevent.h>
-#if QT_CONFIG(filesystemmodel)
 #include <QtWidgets/qfilesystemmodel.h>
-#endif
 #include <QtWidgets/qstyleditemdelegate.h>
 #include <QtPrintSupport/qprinter.h>
 
@@ -63,18 +52,14 @@
 
 #include <QtWidgets/qdialogbuttonbox.h>
 
-#if QT_CONFIG(completer)
-#include <private/qcompleter_p.h>
-#endif
+#include "private/qfscompleter_p.h"
 #include "ui_qprintpropertieswidget.h"
 #include "ui_qprintsettingsoutput.h"
 #include "ui_qprintwidget.h"
 
-#if QT_CONFIG(cups)
+#ifndef QT_NO_CUPS
 #include <private/qcups_p.h>
-#if QT_CONFIG(cupsjobwidget)
 #include "qcupsjobwidget_p.h"
-#endif
 #endif
 
 /*
@@ -137,7 +122,7 @@ private:
     friend class QUnixPrintWidgetPrivate;
     Ui::QPrintPropertiesWidget widget;
     QDialogButtonBox *m_buttons;
-#if QT_CONFIG(cupsjobwidget)
+#ifndef QT_NO_CUPS
     QCupsJobWidget *m_jobOptions;
 #endif
 };
@@ -209,7 +194,7 @@ public:
     void selectPrinter(const QPrinter::OutputFormat outputFormat);
 
     void _q_togglePageSetCombo(bool);
-#if QT_CONFIG(messagebox)
+#ifndef QT_NO_MESSAGEBOX
     void _q_checkFields();
 #endif
     void _q_collapseOrExpandDialog();
@@ -255,7 +240,7 @@ QPrintPropertiesDialog::QPrintPropertiesDialog(QAbstractPrintDialog *parent)
     connect(m_buttons->button(QDialogButtonBox::Ok), SIGNAL(clicked()), this, SLOT(accept()));
     connect(m_buttons->button(QDialogButtonBox::Cancel), SIGNAL(clicked()), this, SLOT(reject()));
 
-#if QT_CONFIG(cupsjobwidget)
+#ifndef QT_NO_CUPS
     m_jobOptions = new QCupsJobWidget();
     widget.tabs->addTab(m_jobOptions, tr("Job Options"));
 #endif
@@ -268,7 +253,7 @@ QPrintPropertiesDialog::~QPrintPropertiesDialog()
 void QPrintPropertiesDialog::applyPrinterProperties(QPrinter *p)
 {
     widget.pageSetup->setPrinter(p);
-#if QT_CONFIG(cupsjobwidget)
+#ifndef QT_NO_CUPS
     m_jobOptions->setPrinter(p);
 #endif
 }
@@ -276,7 +261,7 @@ void QPrintPropertiesDialog::applyPrinterProperties(QPrinter *p)
 void QPrintPropertiesDialog::setupPrinter() const
 {
     widget.pageSetup->setupPrinter();
-#if QT_CONFIG(cupsjobwidget)
+#ifndef QT_NO_CUPS
     m_jobOptions->setupPrinter();
 #endif
 }
@@ -319,7 +304,7 @@ void QPrintDialogPrivate::init()
     options.grayscale->setIconSize(QSize(32, 32));
     options.grayscale->setIcon(QIcon(QLatin1String(":/qt-project.org/dialogs/qprintdialog/images/status-gray-scale.png")));
 
-#if QT_CONFIG(cups)
+#ifndef QT_NO_CUPS
     // Add Page Set widget if CUPS is available
     options.pageSetCombo->addItem(tr("All Pages"), QVariant::fromValue(QCUPSSupport::AllPages));
     options.pageSetCombo->addItem(tr("Odd Pages"), QVariant::fromValue(QCUPSSupport::OddPages));
@@ -343,7 +328,7 @@ void QPrintDialogPrivate::init()
     lay->addWidget(bottom);
     lay->addWidget(buttons);
 
-#if !QT_CONFIG(messagebox)
+#ifdef QT_NO_MESSAGEBOX
     QObject::connect(buttons, SIGNAL(accepted()), q, SLOT(accept()));
 #else
     QObject::connect(buttons, SIGNAL(accepted()), q, SLOT(_q_checkFields()));
@@ -441,7 +426,7 @@ void QPrintDialogPrivate::setupPrinter()
         }
     }
 
-#if QT_CONFIG(cups)
+#ifndef QT_NO_CUPS
     // page set
     if (p->printRange() == QPrinter::AllPages || p->printRange() == QPrinter::PageRange) {
         //If the application is selecting pages and the first page number is even then need to adjust the odd-even accordingly
@@ -502,14 +487,14 @@ void QPrintDialogPrivate::_q_collapseOrExpandDialog()
     }
 }
 
-#if QT_CONFIG(messagebox)
+#ifndef QT_NO_MESSAGEBOX
 void QPrintDialogPrivate::_q_checkFields()
 {
     Q_Q(QPrintDialog);
     if (top->d->checkFields())
         q->accept();
 }
-#endif // QT_CONFIG(messagebox)
+#endif // QT_NO_MESSAGEBOX
 
 
 void QPrintDialogPrivate::updateWidgets()
@@ -524,7 +509,7 @@ void QPrintDialogPrivate::updateWidgets()
     options.printCurrentPage->setVisible(q->isOptionEnabled(QPrintDialog::PrintCurrentPage));
     options.collate->setVisible(q->isOptionEnabled(QPrintDialog::PrintCollateCopies));
 
-#if QT_CONFIG(cups)
+#ifndef QT_NO_CUPS
     // Don't display Page Set if only Selection or Current Page are enabled
     if (!q->isOptionEnabled(QPrintDialog::PrintPageRange)
         && (q->isOptionEnabled(QPrintDialog::PrintSelection) || q->isOptionEnabled(QPrintDialog::PrintCurrentPage))) {
@@ -668,22 +653,22 @@ QUnixPrintWidgetPrivate::QUnixPrintWidgetPrivate(QUnixPrintWidget *p, QPrinter *
     widget.setupUi(parent);
 
     int currentPrinterIndex = 0;
+    QStringList printers;
+    QString defaultPrinter;
     QPlatformPrinterSupport *ps = QPlatformPrinterSupportPlugin::get();
     if (ps) {
-        const QStringList printers = ps->availablePrintDeviceIds();
-        const QString defaultPrinter = ps->defaultPrintDeviceId();
+        printers = ps->availablePrintDeviceIds();
+        defaultPrinter = ps->defaultPrintDeviceId();
+    }
 
-        widget.printers->addItems(printers);
-
-        const QString selectedPrinter = prn && !prn->printerName().isEmpty() ? prn->printerName() : defaultPrinter;
-        const int idx = printers.indexOf(selectedPrinter);
-
-        if (idx >= 0)
-            currentPrinterIndex = idx;
+    for (int i = 0; i < printers.size(); ++i) {
+        widget.printers->addItem(printers.at(i));
+        if (printers.at(i) == defaultPrinter)
+            currentPrinterIndex = i;
     }
     widget.properties->setEnabled(true);
 
-#if QT_CONFIG(filesystemmodel) && QT_CONFIG(completer)
+#if !defined(QT_NO_FILESYSTEMMODEL) && !defined(QT_NO_COMPLETER)
     QFileSystemModel *fsm = new QFileSystemModel(widget.filename);
     fsm->setRootPath(QDir::homePath());
     widget.filename->setCompleter(new QCompleter(fsm, widget.filename));
@@ -790,7 +775,7 @@ void QUnixPrintWidgetPrivate::setOptionsPane(QPrintDialogPrivate *pane)
 void QUnixPrintWidgetPrivate::_q_btnBrowseClicked()
 {
     QString filename = widget.filename->text();
-#if QT_CONFIG(filedialog)
+#ifndef QT_NO_FILEDIALOG
     filename = QFileDialog::getSaveFileName(parent, QPrintDialog::tr("Print To File ..."), filename,
                                             QString(), 0, QFileDialog::DontConfirmOverwrite);
 #else
@@ -834,9 +819,12 @@ void QUnixPrintWidgetPrivate::applyPrinterProperties()
         widget.filename->setText( printer->outputFileName() );
     QString printerName = printer->printerName();
     if (!printerName.isEmpty()) {
-        const int i = widget.printers->findText(printerName);
-        if (i >= 0)
-            widget.printers->setCurrentIndex(i);
+        for (int i = 0; i < widget.printers->count(); ++i) {
+            if (widget.printers->itemText(i) == printerName) {
+                widget.printers->setCurrentIndex(i);
+                break;
+            }
+        }
     }
     // PDF printer not added to the dialog yet, we'll handle those cases in QUnixPrintWidgetPrivate::updateWidget
 
@@ -844,7 +832,7 @@ void QUnixPrintWidgetPrivate::applyPrinterProperties()
         propertiesDialog->applyPrinterProperties(printer);
 }
 
-#if QT_CONFIG(messagebox)
+#ifndef QT_NO_MESSAGEBOX
 bool QUnixPrintWidgetPrivate::checkFields()
 {
     if (widget.filename->isEnabled()) {
@@ -875,7 +863,7 @@ bool QUnixPrintWidgetPrivate::checkFields()
         }
     }
 
-#if QT_CONFIG(cups)
+#ifndef QT_NO_CUPS
     if (propertiesDialogShown) {
         QCUPSSupport::PagesPerSheet pagesPerSheet = propertiesDialog->widget.pageSetup->m_ui.pagesPerSheetCombo
                                                                     ->currentData().value<QCUPSSupport::PagesPerSheet>();
@@ -895,7 +883,7 @@ bool QUnixPrintWidgetPrivate::checkFields()
     // Every test passed. Accept the dialog.
     return true;
 }
-#endif // QT_CONFIG(messagebox)
+#endif // QT_NO_MESSAGEBOX
 
 void QUnixPrintWidgetPrivate::setupPrinterProperties()
 {
@@ -991,3 +979,6 @@ QT_END_NAMESPACE
 
 #include "moc_qprintdialog.cpp"
 #include "qprintdialog_unix.moc"
+
+#endif // QT_NO_PRINTDIALOG
+

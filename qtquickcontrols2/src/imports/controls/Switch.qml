@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,38 +34,73 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.Switch {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            (label ? label.implicitWidth : 0) +
+                            (indicator ? indicator.implicitWidth : 0) +
+                            (label && indicator ? spacing : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
+                             Math.max(label ? label.implicitHeight : 0,
                                       indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 6
     spacing: 6
 
-    indicator: SwitchIndicator {
+    //! [indicator]
+    indicator: Item {
         x: text ? (control.mirrored ? control.width - width - control.rightPadding : control.leftPadding) : control.leftPadding + (control.availableWidth - width) / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        control: control
-    }
+        implicitWidth: 56
+        implicitHeight: 28
 
-    contentItem: Text {
-        leftPadding: control.indicator && !control.mirrored ? control.indicator.width + control.spacing : 0
-        rightPadding: control.indicator && control.mirrored ? control.indicator.width + control.spacing : 0
+        Rectangle {
+            y: parent.height / 2 - height / 2
+            width: 56
+            height: 16
+            radius: 8
+            border.width: 1
+            color: control.checked ? "#353637" : "transparent"
+            border.color: control.checked ? "transparent" : "#353637"
+        }
+
+        Rectangle {
+            x: Math.max(0, Math.min(parent.width - width, control.visualPosition * parent.width - (width / 2)))
+            y: (parent.height - height) / 2
+            width: 28
+            height: 28
+            radius: 16
+            color: control.pressed ? "#e4e4e4" : "#f6f6f6"
+            border.width: 1
+            border.color: control.pressed ? "#26282a" : "#353637"
+
+            Behavior on x {
+                enabled: !control.pressed
+                SmoothedAnimation { velocity: 200 }
+            }
+        }
+    }
+    //! [indicator]
+
+    //! [label]
+    label: Text {
+        x: control.mirrored ? control.leftPadding : (indicator.x + indicator.width + control.spacing)
+        y: control.topPadding
+        width: control.availableWidth - indicator.width - control.spacing
+        height: control.availableHeight
 
         text: control.text
         font: control.font
-        color: control.enabled ? Default.textDarkColor : Default.textDisabledColor
+        color: control.enabled ? "#26282a" : "#bdbebf"
         elide: Text.ElideRight
+        visible: control.text
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 }

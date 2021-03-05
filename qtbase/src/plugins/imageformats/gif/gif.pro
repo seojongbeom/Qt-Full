@@ -1,8 +1,9 @@
 TARGET  = qgif
 
-SOURCES += main.cpp qgifhandler.cpp
-HEADERS += main.h qgifhandler_p.h
-
+include(../../../gui/image/qgifhandler.pri)
+INCLUDEPATH += ../../../gui/image
+SOURCES += $$PWD/main.cpp
+HEADERS += $$PWD/main.h
 OTHER_FILES += gif.json
 
 PLUGIN_TYPE = imageformats

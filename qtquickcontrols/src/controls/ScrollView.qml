@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -191,7 +188,7 @@ FocusScope {
     /*! \internal */
     property Style __style: styleLoader.item
 
-    activeFocusOnTab: false
+    activeFocusOnTab: true
 
     onContentItemChanged: {
 
@@ -281,21 +278,9 @@ FocusScope {
 
             horizontalMinimumValue: 0
             horizontalMaximumValue: flickableItem ? flickableItem.contentWidth - viewport.width : 0
-            onHorizontalMaximumValueChanged: {
-                wheelArea.horizontalRecursionGuard = true
-                //if horizontalMaximumValue changed, horizontalValue may be actually synced with
-                wheelArea.horizontalValue = flickableItem.contentX - flickableItem.originX;
-                wheelArea.horizontalRecursionGuard = false
-            }
 
             verticalMinimumValue: 0
             verticalMaximumValue: flickableItem ? flickableItem.contentHeight - viewport.height + __viewTopMargin : 0
-            onVerticalMaximumValueChanged: {
-                wheelArea.verticalRecursionGuard = true
-                //if verticalMaximumValue changed, verticalValue may be actually synced with
-                wheelArea.verticalValue = flickableItem.contentY - flickableItem.originY;
-                wheelArea.verticalRecursionGuard = false
-            }
 
             // The default scroll speed for typical angle-based mouse wheels. The value
             // comes originally from QTextEdit, which sets 20px steps by default, as well as

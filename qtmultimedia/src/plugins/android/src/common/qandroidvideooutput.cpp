@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -86,12 +80,11 @@ void OpenGLResourcesDeleter::deleteShaderProgramHelper(void *prog)
 class AndroidTextureVideoBuffer : public QAbstractVideoBuffer
 {
 public:
-    AndroidTextureVideoBuffer(QAndroidTextureVideoOutput *output, const QSize &size)
+    AndroidTextureVideoBuffer(QAndroidTextureVideoOutput *output)
         : QAbstractVideoBuffer(GLTextureHandle)
-        , m_mapMode(NotMapped)
         , m_output(output)
-        , m_size(size)
         , m_textureUpdated(false)
+        , m_mapMode(NotMapped)
     {
     }
 
@@ -101,7 +94,8 @@ public:
 
     uchar *map(MapMode mode, int *numBytes, int *bytesPerLine)
     {
-        if (m_mapMode == NotMapped && mode == ReadOnly && updateFrame()) {
+        if (m_mapMode == NotMapped && mode == ReadOnly) {
+            updateFrame();
             m_mapMode = mode;
             m_image = m_output->m_fbo->toImage();
 
@@ -126,41 +120,24 @@ public:
     QVariant handle() const
     {
         AndroidTextureVideoBuffer *that = const_cast<AndroidTextureVideoBuffer*>(this);
-        if (!that->updateFrame())
-            return QVariant();
-
+        that->updateFrame();
         return m_output->m_fbo->texture();
     }
 
 private:
-    bool updateFrame()
+    void updateFrame()
     {
-        // Even though the texture was updated in a previous call, we need to re-check
-        // that this has not become a stale buffer, e.g., if the output size changed or
-        // has since became invalid.
-        if (!m_output->m_nativeSize.isValid())
-            return false;
-
-        // Size changed
-        if (m_output->m_nativeSize != m_size)
-            return false;
-
-        // In the unlikely event that we don't have a valid fbo, but have a valid size,
-        // force an update.
-        const bool forceUpdate = !m_output->m_fbo;
-
-        if (m_textureUpdated && !forceUpdate)
-            return true;
-
-        // update the video texture (called from the render thread)
-        return (m_textureUpdated = m_output->renderFrameToFbo());
+        if (!m_textureUpdated) {
+            // update the video texture (called from the render thread)
+            m_output->renderFrameToFbo();
+            m_textureUpdated = true;
+        }
     }
 
-    MapMode m_mapMode;
     QAndroidTextureVideoOutput *m_output;
-    QImage m_image;
-    QSize m_size;
     bool m_textureUpdated;
+    MapMode m_mapMode;
+    QImage m_image;
 };
 
 QAndroidTextureVideoOutput::QAndroidTextureVideoOutput(QObject *parent)
@@ -284,6 +261,7 @@ AndroidSurfaceTexture *QAndroidTextureVideoOutput::surfaceTexture()
 void QAndroidTextureVideoOutput::setVideoSize(const QSize &size)
 {
      QMutexLocker locker(&m_mutex);
+
     if (m_nativeSize == size)
         return;
 
@@ -313,7 +291,7 @@ void QAndroidTextureVideoOutput::onFrameAvailable()
     if (!m_nativeSize.isValid() || !m_surface)
         return;
 
-    QAbstractVideoBuffer *buffer = new AndroidTextureVideoBuffer(this, m_nativeSize);
+    QAbstractVideoBuffer *buffer = new AndroidTextureVideoBuffer(this);
     QVideoFrame frame(buffer, m_nativeSize, QVideoFrame::Format_BGR32);
 
     if (m_surface->isActive() && (m_surface->surfaceFormat().pixelFormat() != frame.pixelFormat()
@@ -332,12 +310,12 @@ void QAndroidTextureVideoOutput::onFrameAvailable()
         m_surface->present(frame);
 }
 
-bool QAndroidTextureVideoOutput::renderFrameToFbo()
+void QAndroidTextureVideoOutput::renderFrameToFbo()
 {
     QMutexLocker locker(&m_mutex);
 
     if (!m_nativeSize.isValid() || !m_surfaceTexture)
-        return false;
+        return;
 
     createGLResources();
 
@@ -392,8 +370,6 @@ bool QAndroidTextureVideoOutput::renderFrameToFbo()
         glEnable(GL_SCISSOR_TEST);
     if (blendEnabled)
         glEnable(GL_BLEND);
-
-    return true;
 }
 
 void QAndroidTextureVideoOutput::createGLResources()

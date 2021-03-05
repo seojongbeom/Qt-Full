@@ -9,18 +9,18 @@
 #ifndef LIBANGLE_RENDERER_TEXTUREIMPL_H_
 #define LIBANGLE_RENDERER_TEXTUREIMPL_H_
 
-#include <stdint.h>
+#include "libANGLE/Error.h"
+#include "libANGLE/ImageIndex.h"
+
+#include "common/angleutils.h"
 
 #include "angle_gl.h"
-#include "common/angleutils.h"
-#include "libANGLE/Error.h"
-#include "libANGLE/FramebufferAttachment.h"
-#include "libANGLE/ImageIndex.h"
+
+#include <stdint.h>
 
 namespace egl
 {
 class Surface;
-class Image;
 }
 
 namespace gl
@@ -31,17 +31,16 @@ struct Offset;
 struct Rectangle;
 class Framebuffer;
 struct PixelUnpackState;
-struct TextureState;
+struct SamplerState;
 }
 
 namespace rx
 {
 
-class TextureImpl : public FramebufferAttachmentObjectImpl
+class TextureImpl : angle::NonCopyable
 {
   public:
-    TextureImpl() {}
-    virtual ~TextureImpl() {}
+    virtual ~TextureImpl() {};
 
     virtual void setUsage(GLenum usage) = 0;
 
@@ -51,9 +50,9 @@ class TextureImpl : public FramebufferAttachmentObjectImpl
                                   const gl::PixelUnpackState &unpack, const uint8_t *pixels) = 0;
 
     virtual gl::Error setCompressedImage(GLenum target, size_t level, GLenum internalFormat, const gl::Extents &size,
-                                         const gl::PixelUnpackState &unpack, size_t imageSize, const uint8_t *pixels) = 0;
+                                         const gl::PixelUnpackState &unpack, const uint8_t *pixels) = 0;
     virtual gl::Error setCompressedSubImage(GLenum target, size_t level, const gl::Box &area, GLenum format,
-                                            const gl::PixelUnpackState &unpack, size_t imageSize, const uint8_t *pixels) = 0;
+                                            const gl::PixelUnpackState &unpack, const uint8_t *pixels) = 0;
 
     virtual gl::Error copyImage(GLenum target, size_t level, const gl::Rectangle &sourceArea, GLenum internalFormat,
                                 const gl::Framebuffer *source) = 0;
@@ -62,9 +61,7 @@ class TextureImpl : public FramebufferAttachmentObjectImpl
 
     virtual gl::Error setStorage(GLenum target, size_t levels, GLenum internalFormat, const gl::Extents &size) = 0;
 
-    virtual gl::Error setEGLImageTarget(GLenum target, egl::Image *image) = 0;
-
-    virtual gl::Error generateMipmaps(const gl::TextureState &textureState) = 0;
+    virtual gl::Error generateMipmaps() = 0;
 
     virtual void bindTexImage(egl::Surface *surface) = 0;
     virtual void releaseTexImage() = 0;

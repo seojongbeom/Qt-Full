@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -61,10 +66,8 @@ static QStandardItemModel *testModel(QObject *parent = 0)
     QStandardItemModel *model = new QStandardItemModel(10, 10, parent);
 
     for (int row = 0; row < 10; ++row) {
-        const QString prefix = QLatin1String("item ") + QString::number(row)
-            + QLatin1Char(' ');
         for (int col = 0; col < 10; ++col)
-            model->setData(model->index(row, col), prefix + QString::number(col));
+            model->setData(model->index(row, col), QString("item %1 %2").arg(row).arg(col));
     }
 
     return model;
@@ -79,7 +82,7 @@ void tst_QDataWidgetMapper::setModel()
 {
     QDataWidgetMapper mapper;
 
-    QCOMPARE(mapper.model(), nullptr);
+    QCOMPARE(mapper.model(), (QAbstractItemModel *)0);
 
     { // let the model go out of scope firstma
         QStandardItemModel model;
@@ -87,7 +90,7 @@ void tst_QDataWidgetMapper::setModel()
         QCOMPARE(mapper.model(), static_cast<QAbstractItemModel *>(&model));
     }
 
-    QCOMPARE(mapper.model(), nullptr);
+    QCOMPARE(mapper.model(), (QAbstractItemModel *)0);
 
     { // let the mapper go out of scope first
         QStandardItemModel model2;
@@ -263,7 +266,7 @@ void tst_QDataWidgetMapper::addMapping()
         QCOMPARE(edit2.text(), QString("item 0 2"));
     } // let the edit go out of scope
 
-    QCOMPARE(mapper.mappedWidgetAt(2), nullptr);
+    QCOMPARE(mapper.mappedWidgetAt(2), (QWidget *)0);
     mapper.toLast();
 }
 
@@ -400,7 +403,7 @@ void tst_QDataWidgetMapper::mappedWidgetAt()
     QLineEdit lineEdit1;
     QLineEdit lineEdit2;
 
-    QCOMPARE(mapper.mappedWidgetAt(432312), nullptr);
+    QCOMPARE(mapper.mappedWidgetAt(432312), (QWidget*)0);
 
     mapper.addMapping(&lineEdit1, 1);
     mapper.addMapping(&lineEdit2, 2);
@@ -410,7 +413,7 @@ void tst_QDataWidgetMapper::mappedWidgetAt()
 
     mapper.addMapping(&lineEdit2, 4242);
 
-    QCOMPARE(mapper.mappedWidgetAt(2), nullptr);
+    QCOMPARE(mapper.mappedWidgetAt(2), (QWidget*)0);
     QCOMPARE(mapper.mappedWidgetAt(4242), static_cast<QWidget *>(&lineEdit2));
 }
 

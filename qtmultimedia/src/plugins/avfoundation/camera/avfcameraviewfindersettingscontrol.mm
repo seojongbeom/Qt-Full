@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,6 +41,7 @@
 #include <QtMultimedia/qabstractvideosurface.h>
 
 #include <QtCore/qvariant.h>
+#include <QtCore/qsysinfo.h>
 #include <QtCore/qvector.h>
 #include <QtCore/qdebug.h>
 #include <QtCore/qlist.h>
@@ -96,36 +91,57 @@ QList<QCameraViewfinderSettings> AVFCameraViewfinderSettingsControl2::supportedV
     if (!pixelFormats.size())
         pixelFormats << QVideoFrame::Format_Invalid; // The default value.
 
-    if (!captureDevice.formats || !captureDevice.formats.count) {
-        qDebugCamera() << Q_FUNC_INFO << "no capture device formats found";
-        return supportedSettings;
-    }
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_7, QSysInfo::MV_IOS_7_0)) {
+        if (!captureDevice.formats || !captureDevice.formats.count) {
+            qDebugCamera() << Q_FUNC_INFO << "no capture device formats found";
+            return supportedSettings;
+        }
 
-    const QVector<AVCaptureDeviceFormat *> formats(qt_unique_device_formats(captureDevice,
-                                                   m_service->session()->defaultCodec()));
-    for (int i = 0; i < formats.size(); ++i) {
-        AVCaptureDeviceFormat *format = formats[i];
+        const QVector<AVCaptureDeviceFormat *> formats(qt_unique_device_formats(captureDevice,
+                                                       m_service->session()->defaultCodec()));
+        for (int i = 0; i < formats.size(); ++i) {
+            AVCaptureDeviceFormat *format = formats[i];
 
-        const QSize res(qt_device_format_resolution(format));
-        if (res.isNull() || !res.isValid())
-            continue;
-        const QSize par(qt_device_format_pixel_aspect_ratio(format));
-        if (par.isNull() || !par.isValid())
-            continue;
+            const QSize res(qt_device_format_resolution(format));
+            if (res.isNull() || !res.isValid())
+                continue;
+            const QSize par(qt_device_format_pixel_aspect_ratio(format));
+            if (par.isNull() || !par.isValid())
+                continue;
 
-        framerates = qt_device_format_framerates(format);
-        if (!framerates.size())
-            framerates << AVFPSRange(); // The default value.
+            framerates = qt_device_format_framerates(format);
+            if (!framerates.size())
+                framerates << AVFPSRange(); // The default value.
 
-        for (int i = 0; i < pixelFormats.size(); ++i) {
-            for (int j = 0; j < framerates.size(); ++j) {
-                QCameraViewfinderSettings newSet;
-                newSet.setResolution(res);
-                newSet.setPixelAspectRatio(par);
-                newSet.setPixelFormat(pixelFormats[i]);
-                newSet.setMinimumFrameRate(framerates[j].first);
-                newSet.setMaximumFrameRate(framerates[j].second);
-                supportedSettings << newSet;
+            for (int i = 0; i < pixelFormats.size(); ++i) {
+                for (int j = 0; j < framerates.size(); ++j) {
+                    QCameraViewfinderSettings newSet;
+                    newSet.setResolution(res);
+                    newSet.setPixelAspectRatio(par);
+                    newSet.setPixelFormat(pixelFormats[i]);
+                    newSet.setMinimumFrameRate(framerates[j].first);
+                    newSet.setMaximumFrameRate(framerates[j].second);
+                    supportedSettings << newSet;
+                }
+            }
+        }
+    } else {
+#else
+    {
+#endif
+        AVCaptureConnection *connection = videoConnection();
+        if (connection) {
+            // TODO: resolution and PAR.
+            framerates << qt_connection_framerates(connection);
+            for (int i = 0; i < pixelFormats.size(); ++i) {
+                for (int j = 0; j < framerates.size(); ++j) {
+                    QCameraViewfinderSettings newSet;
+                    newSet.setPixelFormat(pixelFormats[i]);
+                    newSet.setMinimumFrameRate(framerates[j].first);
+                    newSet.setMaximumFrameRate(framerates[j].second);
+                    supportedSettings << newSet;
+                }
             }
         }
     }
@@ -148,21 +164,25 @@ QCameraViewfinderSettings AVFCameraViewfinderSettingsControl2::viewfinderSetting
         return settings;
     }
 
-    if (!captureDevice.activeFormat) {
-        qDebugCamera() << Q_FUNC_INFO << "no active capture device format";
-        return settings;
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_7, QSysInfo::MV_IOS_7_0)) {
+        if (!captureDevice.activeFormat) {
+            qDebugCamera() << Q_FUNC_INFO << "no active capture device format";
+            return settings;
+        }
+
+        const QSize res(qt_device_format_resolution(captureDevice.activeFormat));
+        const QSize par(qt_device_format_pixel_aspect_ratio(captureDevice.activeFormat));
+        if (res.isNull() || !res.isValid() || par.isNull() || !par.isValid()) {
+            qDebugCamera() << Q_FUNC_INFO << "failed to obtain resolution/pixel aspect ratio";
+            return settings;
+        }
+
+        settings.setResolution(res);
+        settings.setPixelAspectRatio(par);
     }
-
-    const QSize res(qt_device_format_resolution(captureDevice.activeFormat));
-    const QSize par(qt_device_format_pixel_aspect_ratio(captureDevice.activeFormat));
-    if (res.isNull() || !res.isValid() || par.isNull() || !par.isValid()) {
-        qDebugCamera() << Q_FUNC_INFO << "failed to obtain resolution/pixel aspect ratio";
-        return settings;
-    }
-
-    settings.setResolution(res);
-    settings.setPixelAspectRatio(par);
-
+#endif
+    // TODO: resolution and PAR before 7.0.
     const AVFPSRange fps = qt_current_framerates(captureDevice, videoConnection());
     settings.setMinimumFrameRate(fps.first);
     settings.setMaximumFrameRate(fps.second);
@@ -205,10 +225,6 @@ QVideoFrame::PixelFormat AVFCameraViewfinderSettingsControl2::QtPixelFormatFromC
     case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
     case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
         return QVideoFrame::Format_NV12;
-    case kCVPixelFormatType_422YpCbCr8:
-        return QVideoFrame::Format_UYVY;
-    case kCVPixelFormatType_422YpCbCr8_yuvs:
-        return QVideoFrame::Format_YUYV;
     default:
         return QVideoFrame::Format_Invalid;
     }
@@ -228,12 +244,6 @@ bool AVFCameraViewfinderSettingsControl2::CVPixelFormatFromQtFormat(QVideoFrame:
         break;
     case QVideoFrame::Format_NV12:
         conv = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
-        break;
-    case QVideoFrame::Format_UYVY:
-        conv = kCVPixelFormatType_422YpCbCr8;
-        break;
-    case QVideoFrame::Format_YUYV:
-        conv = kCVPixelFormatType_422YpCbCr8_yuvs;
         break;
     // These two formats below are not supported
     // by QSGVideoNodeFactory_RGB, so for now I have to
@@ -259,30 +269,35 @@ AVCaptureDeviceFormat *AVFCameraViewfinderSettingsControl2::findBestFormatMatch(
     if (!captureDevice || settings.isNull())
         return nil;
 
-    const QSize &resolution = settings.resolution();
-    if (!resolution.isNull() && resolution.isValid()) {
-        // Either the exact match (including high resolution for images on iOS)
-        // or a format with a resolution close to the requested one.
-        return qt_find_best_resolution_match(captureDevice, resolution,
-                                             m_service->session()->defaultCodec());
-    }
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_7, QSysInfo::MV_IOS_7_0)) {
 
-    // No resolution requested, what about framerates?
-    if (!qt_framerates_sane(settings)) {
-        qDebugCamera() << Q_FUNC_INFO << "invalid framerate requested (min/max):"
-                       << settings.minimumFrameRate() << settings.maximumFrameRate();
-        return nil;
-    }
+        const QSize &resolution = settings.resolution();
+        if (!resolution.isNull() && resolution.isValid()) {
+            // Either the exact match (including high resolution for images on iOS)
+            // or a format with a resolution close to the requested one.
+            return qt_find_best_resolution_match(captureDevice, resolution,
+                                                 m_service->session()->defaultCodec());
+        }
 
-    const qreal minFPS(settings.minimumFrameRate());
-    const qreal maxFPS(settings.maximumFrameRate());
-    if (minFPS || maxFPS)
-        return qt_find_best_framerate_match(captureDevice,
-                                            m_service->session()->defaultCodec(),
-                                            maxFPS ? maxFPS : minFPS);
-    // Ignore PAR for the moment (PAR without resolution can
-    // pick a format with really bad resolution).
-    // No need to test pixel format, just return settings.
+        // No resolution requested, what about framerates?
+        if (!qt_framerates_sane(settings)) {
+            qDebugCamera() << Q_FUNC_INFO << "invalid framerate requested (min/max):"
+                           << settings.minimumFrameRate() << settings.maximumFrameRate();
+            return nil;
+        }
+
+        const qreal minFPS(settings.minimumFrameRate());
+        const qreal maxFPS(settings.maximumFrameRate());
+        if (minFPS || maxFPS)
+            return qt_find_best_framerate_match(captureDevice,
+                                                m_service->session()->defaultCodec(),
+                                                maxFPS ? maxFPS : minFPS);
+        // Ignore PAR for the moment (PAR without resolution can
+        // pick a format with really bad resolution).
+        // No need to test pixel format, just return settings.
+    }
+#endif
 
     return nil;
 }
@@ -364,6 +379,7 @@ bool AVFCameraViewfinderSettingsControl2::applySettings(const QCameraViewfinderS
 
     bool activeFormatChanged = false;
 
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
     AVCaptureDeviceFormat *match = findBestFormatMatch(settings);
     if (match) {
         activeFormatChanged = qt_set_active_format(captureDevice, match, false);
@@ -371,6 +387,7 @@ bool AVFCameraViewfinderSettingsControl2::applySettings(const QCameraViewfinderS
         qDebugCamera() << Q_FUNC_INFO << "matching device format not found";
         // We still can update the pixel format at least.
     }
+#endif
 
     AVCaptureVideoDataOutput *videoOutput = m_service->videoOutput() ? m_service->videoOutput()->videoDataOutput() : 0;
     if (videoOutput) {

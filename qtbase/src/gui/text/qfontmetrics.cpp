@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -151,7 +145,7 @@ extern void qt_format_text(const QFont& font, const QRectF &_r,
     metrics that are compatible with a certain paint device.
 */
 QFontMetrics::QFontMetrics(const QFont &font)
-    : d(font.d)
+    : d(font.d.data())
 {
 }
 
@@ -177,7 +171,7 @@ QFontMetrics::QFontMetrics(const QFont &font, QPaintDevice *paintdevice)
         d->dpi = dpi;
         d->screen = screen;
     } else {
-        d = font.d;
+        d = font.d.data();
     }
 
 }
@@ -186,7 +180,7 @@ QFontMetrics::QFontMetrics(const QFont &font, QPaintDevice *paintdevice)
     Constructs a copy of \a fm.
 */
 QFontMetrics::QFontMetrics(const QFontMetrics &fm)
-    : d(fm.d)
+    : d(fm.d.data())
 {
 }
 
@@ -203,7 +197,7 @@ QFontMetrics::~QFontMetrics()
 */
 QFontMetrics &QFontMetrics::operator=(const QFontMetrics &fm)
 {
-    d = fm.d;
+    d = fm.d.data();
     return *this;
 }
 
@@ -274,24 +268,6 @@ int QFontMetrics::ascent() const
     return qRound(engine->ascent());
 }
 
-/*!
-    Returns the cap height of the font.
-
-    \since 5.8
-
-    The cap height of a font is the height of a capital letter above
-    the baseline. It specifically is the height of capital letters
-    that are flat - such as H or I - as opposed to round letters such
-    as O, or pointed letters like A, both of which may display overshoot.
-
-    \sa ascent()
-*/
-int QFontMetrics::capHeight() const
-{
-    QFontEngine *engine = d->engineForScript(QChar::Script_Common);
-    Q_ASSERT(engine != 0);
-    return qRound(engine->capHeight());
-}
 
 /*!
     Returns the descent of the font.
@@ -1016,7 +992,7 @@ int QFontMetrics::lineWidth() const
     from the given \a fontMetrics object.
 */
 QFontMetricsF::QFontMetricsF(const QFontMetrics &fontMetrics)
-    : d(fontMetrics.d)
+    : d(fontMetrics.d.data())
 {
 }
 
@@ -1027,7 +1003,7 @@ QFontMetricsF::QFontMetricsF(const QFontMetrics &fontMetrics)
 */
 QFontMetricsF &QFontMetricsF::operator=(const QFontMetrics &other)
 {
-    d = other.d;
+    d = other.d.data();
     return *this;
 }
 
@@ -1055,7 +1031,7 @@ QFontMetricsF &QFontMetricsF::operator=(const QFontMetrics &other)
     metrics that are compatible with a certain paint device.
 */
 QFontMetricsF::QFontMetricsF(const QFont &font)
-    : d(font.d)
+    : d(font.d.data())
 {
 }
 
@@ -1081,7 +1057,7 @@ QFontMetricsF::QFontMetricsF(const QFont &font, QPaintDevice *paintdevice)
         d->dpi = dpi;
         d->screen = screen;
     } else {
-        d = font.d;
+        d = font.d.data();
     }
 
 }
@@ -1090,7 +1066,7 @@ QFontMetricsF::QFontMetricsF(const QFont &font, QPaintDevice *paintdevice)
     Constructs a copy of \a fm.
 */
 QFontMetricsF::QFontMetricsF(const QFontMetricsF &fm)
-    : d(fm.d)
+    : d(fm.d.data())
 {
 }
 
@@ -1107,7 +1083,7 @@ QFontMetricsF::~QFontMetricsF()
 */
 QFontMetricsF &QFontMetricsF::operator=(const QFontMetricsF &fm)
 {
-    d = fm.d;
+    d = fm.d.data();
     return *this;
 }
 
@@ -1153,24 +1129,6 @@ qreal QFontMetricsF::ascent() const
     return engine->ascent().toReal();
 }
 
-/*!
-    Returns the cap height of the font.
-
-    \since 5.8
-
-    The cap height of a font is the height of a capital letter above
-    the baseline. It specifically is the height of capital letters
-    that are flat - such as H or I - as opposed to round letters such
-    as O, or pointed letters like A, both of which may display overshoot.
-
-    \sa ascent()
-*/
-qreal QFontMetricsF::capHeight() const
-{
-    QFontEngine *engine = d->engineForScript(QChar::Script_Common);
-    Q_ASSERT(engine != 0);
-    return engine->capHeight().toReal();
-}
 
 /*!
     Returns the descent of the font.

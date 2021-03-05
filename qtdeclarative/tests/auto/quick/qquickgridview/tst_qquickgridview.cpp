@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,8 +50,6 @@
 #include "../shared/visualtestutil.h"
 #include <QtGui/qguiapplication.h>
 #include "qplatformdefs.h"
-
-#include <math.h>
 
 Q_DECLARE_METATYPE(QQuickGridView::Flow)
 Q_DECLARE_METATYPE(Qt::LayoutDirection)
@@ -153,8 +156,6 @@ private slots:
     void multipleTransitions();
     void multipleTransitions_data();
     void multipleDisplaced();
-    void regression_QTBUG_57225();
-    void regression_QTBUG_57225_data();
 
     void inserted_leftToRight_RtL_TtB();
     void inserted_leftToRight_RtL_TtB_data();
@@ -210,11 +211,7 @@ private slots:
     void contentHeightWithDelayRemove();
 
     void QTBUG_45640();
-    void QTBUG_49218();
     void QTBUG_48870_fastModelUpdates();
-
-    void keyNavigationEnabled();
-    void releaseItems();
 
 private:
     QList<int> toIntList(const QVariantList &list);
@@ -5801,65 +5798,6 @@ void tst_QQuickGridView::multipleDisplaced()
     delete window;
 }
 
-void tst_QQuickGridView::regression_QTBUG_57225()
-{
-    QFETCH(int, initialCount);
-    QFETCH(int, removeIndex);
-    QFETCH(int, removeCount);
-    QFETCH(int, expectedDisplaceTransitions);
-
-    // deleting all visible items should not cause a repositioning of said items.
-
-    QaimModel model;
-    for (int i = 0; i < initialCount; i++)
-        model.addItem("Original item" + QString::number(i), "");
-
-    QQuickView *window = createView();
-    QQmlContext *ctxt = window->rootContext();
-    ctxt->setContextProperty("testModel", &model);
-    window->setSource(testFileUrl("qtbug57225.qml"));
-    window->show();
-    QVERIFY(QTest::qWaitForWindowExposed(window));
-
-    QQuickGridView *gridview = findItem<QQuickGridView>(window->rootObject(), "grid");
-    QVERIFY(gridview != 0);
-    QTRY_COMPARE(QQuickItemPrivate::get(gridview)->polishScheduled, false);
-
-    model.removeItems(removeIndex, removeCount);
-    QTRY_VERIFY(gridview->property("animationDone").toBool());
-
-    // verify that none of the removed items has moved to a negative position
-    QPoint minimumPosition = gridview->property("minimumPosition").toPoint();
-    QVERIFY(minimumPosition.x() >= 0);
-    QVERIFY(minimumPosition.y() >= 0);
-
-    // wait some more time to let the displaced transition happen
-    QTest::qWait(window->rootObject()->property("duration").toInt());
-    QTRY_VERIFY2(gridview->property("displaceTransitionsDone").toInt() >= expectedDisplaceTransitions,
-                 QByteArray::number(gridview->property("displaceTransitionsDone").toInt()).constData());
-
-    delete window;
-}
-
-void tst_QQuickGridView::regression_QTBUG_57225_data()
-{
-    QTest::addColumn<int>("initialCount");
-    QTest::addColumn<int>("removeIndex");
-    QTest::addColumn<int>("removeCount");
-    QTest::addColumn<int>("expectedDisplaceTransitions");
-
-    // no displace transitions should happen
-    QTest::newRow("remove all visible items") <<
-        20 << 0 << 8 << 0;
-
-    // check that the removal animation is performed
-    QTest::newRow("remove items in between") <<
-        20 << 1 << 2 << 3;
-
-    QTest::newRow("remove items in between - 2") <<
-        20 << 2 << 3 << 1;
-}
-
 void tst_QQuickGridView::cacheBuffer()
 {
     QQuickView *window = createView();
@@ -6630,101 +6568,6 @@ void tst_QQuickGridView::QTBUG_45640()
     delete window;
 }
 
-void tst_QQuickGridView::QTBUG_49218()
-{
-    QQuickView *window = createView();
-    window->setSource(testFileUrl("qtbug49218.qml"));
-    window->show();
-    QVERIFY(QTest::qWaitForWindowExposed(window));
-
-    QQuickItem *rootItem = qobject_cast<QQuickItem*>(window->rootObject());
-    QQuickGridView *gridview = qobject_cast<QQuickGridView *>(rootItem->childItems().first());
-    QVERIFY(gridview != 0);
-
-    auto processEventsAndForceLayout = [&gridview] () {
-        for (int pass = 0; pass < 2; ++pass) {
-            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-            gridview->forceLayout();
-        }
-    };
-    QMetaObject::invokeMethod(rootItem, "scrollToTop");
-    processEventsAndForceLayout();
-    QMetaObject::invokeMethod(rootItem, "changeModel");
-    processEventsAndForceLayout();
-    QMetaObject::invokeMethod(rootItem, "changeModel");
-    processEventsAndForceLayout();
-    QMetaObject::invokeMethod(rootItem, "scrollToTop");
-    processEventsAndForceLayout();
-
-    QCOMPARE(gridview->indexAt(gridview->cellWidth() - 10, gridview->cellHeight() - 10), 0);
-    delete window;
-}
-
-void tst_QQuickGridView::keyNavigationEnabled()
-{
-    QScopedPointer<QQuickView> window(createView());
-    window->setSource(testFileUrl("keyNavigationEnabled.qml"));
-    window->show();
-    window->requestActivate();
-    QVERIFY(QTest::qWaitForWindowActive(window.data()));
-
-    QQuickGridView *gridView = qobject_cast<QQuickGridView *>(window->rootObject());
-    QVERIFY(gridView);
-    QCOMPARE(gridView->isKeyNavigationEnabled(), true);
-
-    gridView->setFocus(true);
-    QVERIFY(gridView->hasActiveFocus());
-
-    gridView->setHighlightMoveDuration(0);
-
-    // If keyNavigationEnabled is not explicitly set to true, respect the original behavior
-    // of disabling both mouse and keyboard interaction.
-    QSignalSpy enabledSpy(gridView, SIGNAL(keyNavigationEnabledChanged()));
-    gridView->setInteractive(false);
-    QCOMPARE(enabledSpy.count(), 1);
-    QCOMPARE(gridView->isKeyNavigationEnabled(), false);
-
-    flick(window.data(), QPoint(200, 175), QPoint(200, 50), 100);
-    QVERIFY(!gridView->isMoving());
-    QCOMPARE(gridView->contentY(), 0.0);
-    QCOMPARE(gridView->currentIndex(), 0);
-
-    QTest::keyClick(window.data(), Qt::Key_Right);
-    QCOMPARE(gridView->currentIndex(), 0);
-
-    // Check that isKeyNavigationEnabled implicitly follows the value of interactive.
-    gridView->setInteractive(true);
-    QCOMPARE(enabledSpy.count(), 2);
-    QCOMPARE(gridView->isKeyNavigationEnabled(), true);
-
-    // Change it back again for the next check.
-    gridView->setInteractive(false);
-    QCOMPARE(enabledSpy.count(), 3);
-    QCOMPARE(gridView->isKeyNavigationEnabled(), false);
-
-    // Setting keyNavigationEnabled to true shouldn't enable mouse interaction.
-    gridView->setKeyNavigationEnabled(true);
-    QCOMPARE(enabledSpy.count(), 4);
-    flick(window.data(), QPoint(200, 175), QPoint(200, 50), 100);
-    QVERIFY(!gridView->isMoving());
-    QCOMPARE(gridView->contentY(), 0.0);
-    QCOMPARE(gridView->currentIndex(), 0);
-
-    // Should now work.
-    QTest::keyClick(window.data(), Qt::Key_Right);
-    QCOMPARE(gridView->currentIndex(), 1);
-
-    // Changing interactive now shouldn't result in keyNavigationEnabled changing,
-    // since we broke the "binding".
-    gridView->setInteractive(true);
-    QCOMPARE(enabledSpy.count(), 4);
-
-    // Keyboard interaction shouldn't work now.
-    gridView->setKeyNavigationEnabled(false);
-    QTest::keyClick(window.data(), Qt::Key_Right);
-    QCOMPARE(gridView->currentIndex(), 1);
-}
-
 void tst_QQuickGridView::QTBUG_48870_fastModelUpdates()
 {
     StressTestModel model;
@@ -6759,18 +6602,6 @@ void tst_QQuickGridView::QTBUG_48870_fastModelUpdates()
                 flick(window.data(), QPoint(100, 200), QPoint(100, 400), 100);
         }
     }
-}
-
-void tst_QQuickGridView::releaseItems()
-{
-    QScopedPointer<QQuickView> view(createView());
-    view->setSource(testFileUrl("releaseItems.qml"));
-
-    QQuickGridView *gridview = qobject_cast<QQuickGridView *>(view->rootObject());
-    QVERIFY(gridview);
-
-    // don't crash (QTBUG-61294)
-    gridview->setModel(123);
 }
 
 QTEST_MAIN(tst_QQuickGridView)

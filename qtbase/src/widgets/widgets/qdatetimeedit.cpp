@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,7 +46,7 @@
 #include <qset.h>
 #include <qstyle.h>
 
-#include <algorithm>
+#ifndef QT_NO_DATETIMEEDIT
 
 //#define QDATETIMEEDIT_QDTEDEBUG
 #ifdef QDATETIMEEDIT_QDTEDEBUG
@@ -73,8 +67,6 @@ QT_BEGIN_NAMESPACE
 
   \ingroup basicwidgets
   \inmodule QtWidgets
-
-  \image windows-datetimeedit.png
 
   QDateTimeEdit allows the user to edit dates by using the keyboard or
   the arrow keys to increase and decrease date and time values. The
@@ -102,6 +94,15 @@ QT_BEGIN_NAMESPACE
   Additionally, you can supply a custom calendar widget for use as the
   calendar pop-up by calling the setCalendarWidget() function. The existing
   calendar widget can be retrieved with calendarWidget().
+
+  \table 100%
+  \row \li \inlineimage windowsvista-datetimeedit.png Screenshot of a Windows Vista style date time editing widget
+       \li A date time editing widget shown in the \l{Windows Vista Style Widget Gallery}{Windows Vista widget style}.
+  \row \li \inlineimage macintosh-datetimeedit.png Screenshot of a Macintosh style date time editing widget
+       \li A date time editing widget shown in the \l{Macintosh Style Widget Gallery}{Macintosh widget style}.
+  \row \li \inlineimage fusion-datetimeedit.png Screenshot of a Fusion style date time editing widget
+       \li A date time editing widget shown in the \l{Fusion Style Widget Gallery}{Fusion widget style}.
+  \endtable
 
   \sa QDateEdit, QTimeEdit, QDate, QTime
 */
@@ -239,10 +240,9 @@ void QDateTimeEdit::setDateTime(const QDateTime &datetime)
     Q_D(QDateTimeEdit);
     if (datetime.isValid()) {
         d->clearCache();
-        const QDate date = datetime.date();
         if (!(d->sections & DateSections_Mask))
-            setDateRange(date, date);
-        d->setValue(QDateTime(date, datetime.time(), d->spec), EmitIfChanged);
+            setDateRange(datetime.date(), datetime.date());
+        d->setValue(QDateTime(datetime.date(), datetime.time(), d->spec), EmitIfChanged);
     }
 }
 
@@ -760,17 +760,17 @@ QCalendarWidget *QDateTimeEdit::calendarWidget() const
 void QDateTimeEdit::setCalendarWidget(QCalendarWidget *calendarWidget)
 {
     Q_D(QDateTimeEdit);
-    if (Q_UNLIKELY(!calendarWidget)) {
+    if (!calendarWidget) {
         qWarning("QDateTimeEdit::setCalendarWidget: Cannot set a null calendar widget");
         return;
     }
 
-    if (Q_UNLIKELY(!d->calendarPopup)) {
+    if (!d->calendarPopup) {
         qWarning("QDateTimeEdit::setCalendarWidget: calendarPopup is set to false");
         return;
     }
 
-    if (Q_UNLIKELY(!(d->display & QDateTimeParser::DateSectionMask))) {
+    if (!(d->display & QDateTimeParser::DateSectionMask)) {
         qWarning("QDateTimeEdit::setCalendarWidget: no date sections specified");
         return;
     }
@@ -855,6 +855,14 @@ QString QDateTimeEdit::displayFormat() const
     return isRightToLeft() ? d->unreversedFormat : d->displayFormat;
 }
 
+template<typename C> static inline C reverse(const C &l)
+{
+    C ret;
+    for (int i=l.size() - 1; i>=0; --i)
+        ret.append(l.at(i));
+    return ret;
+}
+
 void QDateTimeEdit::setDisplayFormat(const QString &format)
 {
     Q_D(QDateTimeEdit);
@@ -868,8 +876,8 @@ void QDateTimeEdit::setDisplayFormat(const QString &format)
                 d->displayFormat += d->sectionNode(i).format();
             }
             d->displayFormat += d->separators.at(0);
-            std::reverse(d->separators.begin(), d->separators.end());
-            std::reverse(d->sectionNodes.begin(), d->sectionNodes.end());
+            d->separators = reverse(d->separators);
+            d->sectionNodes = reverse(d->sectionNodes);
         }
 
         d->formatExplicitlySet = true;
@@ -1104,7 +1112,6 @@ void QDateTimeEdit::keyPressEvent(QKeyEvent *event)
                        && !(event->modifiers() & ~(Qt::ShiftModifier|Qt::KeypadModifier));
             break;
         }
-        Q_FALLTHROUGH();
     case Qt::Key_Left:
     case Qt::Key_Right:
         if (event->key() == Qt::Key_Left || event->key() == Qt::Key_Right) {
@@ -1117,7 +1124,7 @@ void QDateTimeEdit::keyPressEvent(QKeyEvent *event)
                 select = false;
                 break;
             }
-#if 0 // Used to be included in Qt4 for Q_WS_MAC
+#ifdef Q_DEAD_CODE_FROM_QT4_MAC
             else
 #ifdef QT_KEYPAD_NAVIGATION
                 if (!QApplication::keypadNavigationEnabled())
@@ -1192,7 +1199,7 @@ void QDateTimeEdit::keyPressEvent(QKeyEvent *event)
   \reimp
 */
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
 void QDateTimeEdit::wheelEvent(QWheelEvent *event)
 {
     QAbstractSpinBox::wheelEvent(event);
@@ -1496,8 +1503,6 @@ void QDateTimeEdit::mousePressEvent(QMouseEvent *event)
   \ingroup basicwidgets
   \inmodule QtWidgets
 
-  \image windows-timeedit.png
-
   Many of the properties and functions provided by QTimeEdit are implemented in
   QDateTimeEdit. These are the relevant properties of this class:
 
@@ -1510,6 +1515,15 @@ void QDateTimeEdit::mousePressEvent(QMouseEvent *event)
   \li \l{QDateTimeEdit::displayFormat}{displayFormat} contains a string that is used
      to format the time displayed in the widget.
   \endlist
+
+  \table 100%
+  \row \li \inlineimage windowsvista-timeedit.png Screenshot of a Windows Vista style time editing widget
+       \li A time editing widget shown in the \l{Windows Vista Style Widget Gallery}{Windows Vista widget style}.
+  \row \li \inlineimage macintosh-timeedit.png Screenshot of a Macintosh style time editing widget
+       \li A time editing widget shown in the \l{Macintosh Style Widget Gallery}{Macintosh widget style}.
+  \row \li \inlineimage fusion-timeedit.png Screenshot of a Fusion style time editing widget
+       \li A time editing widget shown in the \l{Fusion Style Widget Gallery}{Fusion widget style}.
+  \endtable
 
   \sa QDateEdit, QDateTimeEdit
 */
@@ -1566,8 +1580,6 @@ QTimeEdit::~QTimeEdit()
   \ingroup basicwidgets
   \inmodule QtWidgets
 
-  \image windows-dateedit.png
-
   Many of the properties and functions provided by QDateEdit are implemented in
   QDateTimeEdit. These are the relevant properties of this class:
 
@@ -1580,6 +1592,15 @@ QTimeEdit::~QTimeEdit()
   \li \l{QDateTimeEdit::displayFormat}{displayFormat} contains a string that is used
      to format the date displayed in the widget.
   \endlist
+
+  \table 100%
+  \row \li \inlineimage windowsvista-dateedit.png Screenshot of a Windows Vista style date editing widget
+       \li A date editing widget shown in the \l{Windows Vista Style Widget Gallery}{Windows Vista widget style}.
+  \row \li \inlineimage macintosh-dateedit.png Screenshot of a Macintosh style date editing widget
+       \li A date editing widget shown in the \l{Macintosh Style Widget Gallery}{Macintosh widget style}.
+  \row \li \inlineimage fusion-dateedit.png Screenshot of a Fusion style date editing widget
+       \li A date editing widget shown in the \l{Fusion Style Widget Gallery}{Fusion widget style}.
+  \endtable
 
   \sa QTimeEdit, QDateTimeEdit
 */
@@ -1749,18 +1770,15 @@ void QDateTimeEditPrivate::setSelected(int sectionIndex, bool forward)
 
 int QDateTimeEditPrivate::sectionAt(int pos) const
 {
-    if (pos < separators.first().size())
+    if (pos < separators.first().size()) {
         return (pos == 0 ? FirstSectionIndex : NoSectionIndex);
-
-    const QString text = displayText();
-    const int textSize = text.size();
-    if (textSize - pos < separators.last().size() + 1) {
+    } else if (displayText().size() - pos < separators.last().size() + 1) {
         if (separators.last().size() == 0) {
             return sectionNodes.count() - 1;
         }
-        return (pos == textSize ? LastSectionIndex : NoSectionIndex);
+        return (pos == displayText().size() ? LastSectionIndex : NoSectionIndex);
     }
-    updateCache(value, text);
+    updateCache(value, displayText());
 
     for (int i=0; i<sectionNodes.size(); ++i) {
         const int tmp = sectionPos(i);
@@ -1781,14 +1799,12 @@ int QDateTimeEditPrivate::sectionAt(int pos) const
 int QDateTimeEditPrivate::closestSection(int pos, bool forward) const
 {
     Q_ASSERT(pos >= 0);
-    if (pos < separators.first().size())
+    if (pos < separators.first().size()) {
         return forward ? 0 : FirstSectionIndex;
-
-    const QString text = displayText();
-    if (text.size() - pos < separators.last().size() + 1)
+    } else if (displayText().size() - pos < separators.last().size() + 1) {
         return forward ? LastSectionIndex : sectionNodes.size() - 1;
-
-    updateCache(value, text);
+    }
+    updateCache(value, displayText());
     for (int i=0; i<sectionNodes.size(); ++i) {
         const int tmp = sectionPos(sectionNodes.at(i));
         if (pos < tmp + sectionSize(i)) {
@@ -1847,7 +1863,7 @@ void QDateTimeEditPrivate::clearSection(int index)
     const QSignalBlocker blocker(edit);
     QString t = edit->text();
     const int pos = sectionPos(index);
-    if (Q_UNLIKELY(pos == -1)) {
+    if (pos == -1) {
         qWarning("QDateTimeEdit: Internal error (%s:%d)", __FILE__, __LINE__);
         return;
     }
@@ -2640,13 +2656,11 @@ void QCalendarPopup::mouseReleaseEvent(QMouseEvent*)
 
 bool QCalendarPopup::event(QEvent *event)
 {
-#if QT_CONFIG(shortcut)
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->matches(QKeySequence::Cancel))
             dateChanged = false;
     }
-#endif
     return QWidget::event(event);
 }
 
@@ -2672,3 +2686,5 @@ void QCalendarPopup::hideEvent(QHideEvent *)
 QT_END_NAMESPACE
 #include "moc_qdatetimeedit.cpp"
 #include "moc_qdatetimeedit_p.cpp"
+
+#endif // QT_NO_DATETIMEEDIT

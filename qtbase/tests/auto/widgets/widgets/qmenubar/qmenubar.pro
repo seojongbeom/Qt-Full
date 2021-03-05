@@ -1,6 +1,6 @@
 CONFIG += testcase
 TARGET = tst_qmenubar
-QT += widgets testlib testlib-private
+QT += widgets testlib
 SOURCES += tst_qmenubar.cpp
 
 macos: {

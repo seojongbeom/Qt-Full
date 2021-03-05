@@ -1,9 +1,9 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += xmlpatterns-private
 
+load(qfeatures)
 !android|android_app {
     SUBDIRS += xmlpatterns
-    qtConfig(xml-schema) {
+    !contains(QT_DISABLED_FEATURES, xmlschema) {
         SUBDIRS += xmlpatternsvalidator
     }
 }

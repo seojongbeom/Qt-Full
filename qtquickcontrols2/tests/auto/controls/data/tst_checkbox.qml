@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -62,18 +52,18 @@ TestCase {
 
     Component {
         id: checkBox
-        CheckBox { }
-    }
+        CheckBox {
+            id: control
 
-    Component {
-        id: signalSequenceSpy
-        SignalSequenceSpy {
-            signals: ["pressed", "released", "canceled", "clicked", "toggled", "pressedChanged", "checkedChanged", "checkStateChanged"]
+            property ControlSpy spy: ControlSpy {
+                target: control
+                signals: ["pressed", "released", "canceled", "clicked", "pressedChanged", "checkedChanged", "checkStateChanged"]
+            }
         }
     }
 
     function test_text() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
         verify(control)
 
         compare(control.text, "")
@@ -81,242 +71,177 @@ TestCase {
         compare(control.text, "CheckBox")
         control.text = ""
         compare(control.text, "")
+
+        control.destroy()
     }
 
     function test_checked() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
         verify(control)
 
-        var sequenceSpy = signalSequenceSpy.createObject(control, {target: control})
-
-        sequenceSpy.expectedSequence = []
+        control.spy.expectedSequence = []
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
-        sequenceSpy.expectedSequence = [["checkStateChanged", { "checked": true, "checkState": Qt.Checked }],
+        control.spy.expectedSequence = [["checkStateChanged", { "checked": true, "checkState": Qt.Checked }],
                                         ["checkedChanged", { "checked": true, "checkState": Qt.Checked }]]
         control.checked = true
         compare(control.checked, true)
         compare(control.checkState, Qt.Checked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
-        sequenceSpy.expectedSequence = [["checkStateChanged", { "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["checkStateChanged", { "checked": false, "checkState": Qt.Unchecked }],
                                         ["checkedChanged", { "checked": false, "checkState": Qt.Unchecked }]]
         control.checked = false
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
+
+        control.destroy()
     }
 
     function test_checkState() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
         verify(control)
 
-        var sequenceSpy = signalSequenceSpy.createObject(control, {target: control})
-
-        sequenceSpy.expectedSequence = []
+        control.spy.expectedSequence = []
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
-        sequenceSpy.expectedSequence = [["checkStateChanged", { "checked": true, "checkState": Qt.Checked }],
+        control.spy.expectedSequence = [["checkStateChanged", { "checked": true, "checkState": Qt.Checked }],
                                         ["checkedChanged", { "checked": true, "checkState": Qt.Checked }]]
         control.checkState = Qt.Checked
         compare(control.checked, true)
         compare(control.checkState, Qt.Checked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
-        sequenceSpy.expectedSequence = [["checkStateChanged", { "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["checkStateChanged", { "checked": false, "checkState": Qt.Unchecked }],
                                         ["checkedChanged", { "checked": false, "checkState": Qt.Unchecked }]]
         control.checkState = Qt.Unchecked
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
+
+        control.destroy()
     }
 
     function test_mouse() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
         verify(control)
 
-        var sequenceSpy = signalSequenceSpy.createObject(control, {target: control})
-
         // check
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
                                         "pressed"]
         mousePress(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.pressed, true)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        "toggled",
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
+                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }]]
         mouseRelease(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.checked, true)
         compare(control.checkState, Qt.Checked)
         compare(control.pressed, false)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // uncheck
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
                                         "pressed"]
         mousePress(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.pressed, true)
-        verify(sequenceSpy.success)
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        "toggled",
+        verify(control.spy.success)
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
+                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
         mouseRelease(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
         compare(control.pressed, false)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // release outside
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
                                         "pressed"]
         mousePress(control, control.width / 2, control.height / 2, Qt.LeftButton)
         compare(control.pressed, true)
-        verify(sequenceSpy.success)
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
-        mouseMove(control, control.width * 2, control.height * 2, 0)
+        verify(control.spy.success)
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
+        mouseMove(control, control.width * 2, control.height * 2, 0, Qt.LeftButton)
         compare(control.pressed, false)
-        verify(sequenceSpy.success)
-        sequenceSpy.expectedSequence = [["canceled", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
+        verify(control.spy.success)
+        control.spy.expectedSequence = [["canceled", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
         mouseRelease(control, control.width * 2, control.height * 2, Qt.LeftButton)
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
         compare(control.pressed, false)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // right button
-        sequenceSpy.expectedSequence = []
+        control.spy.expectedSequence = []
         mousePress(control, control.width / 2, control.height / 2, Qt.RightButton)
         compare(control.pressed, false)
         mouseRelease(control, control.width / 2, control.height / 2, Qt.RightButton)
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
         compare(control.pressed, false)
-        verify(sequenceSpy.success)
-    }
+        verify(control.spy.success)
 
-    function test_touch() {
-        var control = createTemporaryObject(checkBox, testCase)
-        verify(control)
-
-        var touch = touchEvent(control)
-
-        var sequenceSpy = signalSequenceSpy.createObject(control, {target: control})
-
-        // check
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
-                                        "pressed"]
-        touch.press(0, control, control.width / 2, control.height / 2).commit()
-        compare(control.pressed, true)
-        verify(sequenceSpy.success)
-
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        "toggled",
-                                        "released",
-                                        "clicked"]
-        touch.release(0, control, control.width / 2, control.height / 2).commit()
-        compare(control.checked, true)
-        compare(control.checkState, Qt.Checked)
-        compare(control.pressed, false)
-        verify(sequenceSpy.success)
-
-        // uncheck
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
-                                        "pressed"]
-        touch.press(0, control, control.width / 2, control.height / 2).commit()
-        compare(control.pressed, true)
-        verify(sequenceSpy.success)
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        "toggled",
-                                        "released",
-                                        "clicked"]
-        touch.release(0, control, control.width / 2, control.height / 2).commit()
-        compare(control.checked, false)
-        compare(control.checkState, Qt.Unchecked)
-        compare(control.pressed, false)
-        verify(sequenceSpy.success)
-
-        // release outside
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
-                                        "pressed"]
-        touch.press(0, control, control.width / 2, control.height / 2).commit()
-        compare(control.pressed, true)
-        verify(sequenceSpy.success)
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
-        touch.move(0, control, control.width * 2, control.height * 2).commit()
-        compare(control.pressed, false)
-        verify(sequenceSpy.success)
-        sequenceSpy.expectedSequence = [["canceled", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
-        touch.release(0, control, control.width * 2, control.height * 2).commit()
-        compare(control.checked, false)
-        compare(control.checkState, Qt.Unchecked)
-        compare(control.pressed, false)
-        verify(sequenceSpy.success)
+        control.destroy()
     }
 
     function test_keys() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
         verify(control)
 
-        var sequenceSpy = signalSequenceSpy.createObject(control, {target: control})
-
-        sequenceSpy.expectedSequence = []
+        control.spy.expectedSequence = []
         control.forceActiveFocus()
         verify(control.activeFocus)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // check
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        "toggled",
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
+                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }]]
         keyClick(Qt.Key_Space)
         compare(control.checked, true)
         compare(control.checkState, Qt.Checked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // uncheck
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        "toggled",
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
+                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
         keyClick(Qt.Key_Space)
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // no change
-        sequenceSpy.expectedSequence = []
+        control.spy.expectedSequence = []
         var keys = [Qt.Key_Enter, Qt.Key_Return, Qt.Key_Escape, Qt.Key_Tab]
         for (var i = 0; i < keys.length; ++i) {
-            sequenceSpy.reset()
+            control.spy.reset()
             keyClick(keys[i])
             compare(control.checked, false)
-            verify(sequenceSpy.success)
+            verify(control.spy.success)
         }
+
+        control.destroy()
     }
 
     Component {
@@ -328,7 +253,7 @@ TestCase {
     }
 
     function test_checked_binding() {
-        var container = createTemporaryObject(checkedBoundBoxes, testCase)
+        var container = checkedBoundBoxes.createObject(testCase)
         verify(container)
 
         compare(container.cb1.checked, false)
@@ -347,6 +272,8 @@ TestCase {
         compare(container.cb1.checkState, Qt.Unchecked)
         compare(container.cb2.checked, false)
         compare(container.cb2.checkState, Qt.Unchecked)
+
+        container.destroy()
     }
 
     Component {
@@ -358,7 +285,7 @@ TestCase {
     }
 
     function test_checkState_binding() {
-        var container = createTemporaryObject(checkStateBoundBoxes, testCase)
+        var container = checkStateBoundBoxes.createObject(testCase)
         verify(container)
 
         compare(container.cb1.checked, false)
@@ -389,14 +316,14 @@ TestCase {
 
         compare(container.cb1.tristate, true)
         compare(container.cb2.tristate, true)
+
+        container.destroy()
     }
 
     function test_tristate() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
 
-        var sequenceSpy = signalSequenceSpy.createObject(control, {target: control})
-
-        sequenceSpy.expectedSequence = []
+        control.spy.expectedSequence = []
         control.forceActiveFocus()
         verify(control.activeFocus)
 
@@ -404,94 +331,97 @@ TestCase {
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
 
-        sequenceSpy.expectedSequence = [["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
+        control.spy.expectedSequence = [["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
                                         ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }]]
         control.checkState = Qt.PartiallyChecked
         compare(control.tristate, true)
         compare(control.checked, true)
         compare(control.checkState, Qt.PartiallyChecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // key: partial -> checked
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.PartiallyChecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.PartiallyChecked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }]]
         keyClick(Qt.Key_Space)
         compare(control.checked, true)
         compare(control.checkState, Qt.Checked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // key: checked -> unchecked
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
+                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
         keyClick(Qt.Key_Space)
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // key: unchecked -> partial
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
+                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }]]
         keyClick(Qt.Key_Space)
         compare(control.checked, true)
         compare(control.checkState, Qt.PartiallyChecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // mouse: partial -> checked
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.PartiallyChecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.PartiallyChecked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }]]
         mouseClick(control)
         compare(control.checked, true)
         compare(control.checkState, Qt.Checked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // mouse: checked -> unchecked
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": true, "checkState": Qt.Checked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": true, "checkState": Qt.Checked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
+                                        ["checkedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }]]
         mouseClick(control)
         compare(control.checked, false)
         compare(control.checkState, Qt.Unchecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
 
         // mouse: unchecked -> partial
-        sequenceSpy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
+        control.spy.expectedSequence = [["pressedChanged", { "pressed": true, "checked": false, "checkState": Qt.Unchecked }],
                                         "pressed",
                                         ["pressedChanged", { "pressed": false, "checked": false, "checkState": Qt.Unchecked }],
-                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
-                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
                                         "released",
-                                        "clicked"]
+                                        "clicked",
+                                        ["checkStateChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }],
+                                        ["checkedChanged", { "pressed": false, "checked": true, "checkState": Qt.PartiallyChecked }]]
         mouseClick(control)
         compare(control.checked, true)
         compare(control.checkState, Qt.PartiallyChecked)
-        verify(sequenceSpy.success)
+        verify(control.spy.success)
+
+        control.destroy()
     }
 
     function test_baseline() {
-        var control = createTemporaryObject(checkBox, testCase)
+        var control = checkBox.createObject(testCase)
         verify(control)
-        compare(control.baselineOffset, control.contentItem.y + control.contentItem.baselineOffset)
+        compare(control.baselineOffset, control.label.y + control.label.baselineOffset)
+        control.destroy()
     }
 }

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,9 +39,7 @@
 #include <private/qquickitem_p.h>
 #include <QtQuick/private/qquickevents_p_p.h>
 #include <private/qquickitemchangelistener_p.h>
-#include <private/qquickpixmapcache_p.h>
 #include <private/qv8engine_p.h>
-#include <private/qv4scopedvalue_p.h>
 #include <QtCore/qmimedata.h>
 #include <QtQml/qqmlinfo.h>
 #include <QtGui/qdrag.h>
@@ -55,7 +47,7 @@
 #include <QtGui/qstylehints.h>
 #include <QtGui/qguiapplication.h>
 
-#if QT_CONFIG(draganddrop)
+#ifndef QT_NO_DRAGANDDROP
 
 QT_BEGIN_NAMESPACE
 
@@ -82,7 +74,7 @@ public:
     {
     }
 
-    void itemGeometryChanged(QQuickItem *, QQuickGeometryChange, const QRectF &) Q_DECL_OVERRIDE;
+    void itemGeometryChanged(QQuickItem *, const QRectF &, const QRectF &) Q_DECL_OVERRIDE;
     void itemParentChanged(QQuickItem *, QQuickItem *parent) Q_DECL_OVERRIDE;
     void updatePosition();
     void restartDrag();
@@ -111,8 +103,6 @@ public:
     bool eventQueued : 1;
     bool overrideActions : 1;
     QPointF hotSpot;
-    QUrl imageSource;
-    QQuickPixmap pixmapLoader;
     QStringList keys;
     QVariantMap externalMimeData;
     QQuickDrag::DragType dragType;
@@ -148,10 +138,9 @@ public:
     \sa {Qt Quick Examples - Drag and Drop}, {Qt Quick Examples - externaldraganddrop}
 */
 
-void QQuickDragAttachedPrivate::itemGeometryChanged(QQuickItem *, QQuickGeometryChange change,
-                                                    const QRectF &)
+void QQuickDragAttachedPrivate::itemGeometryChanged(QQuickItem *, const QRectF &newGeometry, const QRectF &oldGeometry)
 {
-    if (!change.positionChange() || !active || itemMoved)
+    if (newGeometry.topLeft() == oldGeometry.topLeft() || !active || itemMoved)
         return;
     updatePosition();
 }
@@ -307,7 +296,7 @@ void QQuickDragAttached::setActive(bool active)
     Q_D(QQuickDragAttached);
     if (d->active != active) {
         if (d->inEvent)
-            qmlWarning(this) << "active cannot be changed from within a drag event handler";
+            qmlInfo(this) << "active cannot be changed from within a drag event handler";
         else if (active) {
             if (d->dragType == QQuickDrag::Internal) {
                 d->start(d->supportedActions);
@@ -409,43 +398,6 @@ void QQuickDragAttached::setHotSpot(const QPointF &hotSpot)
             d->updatePosition();
 
         emit hotSpotChanged();
-    }
-}
-
-/*!
-    \qmlattachedproperty QUrl QtQuick::Drag::imageSource
-    \since 5.8
-
-    This property holds the URL of the image which will be used to represent
-    the data during the drag and drop operation. Changing this property after
-    the drag operation has started will have no effect.
-
-    The example below uses an item's contents as a drag image:
-
-    \snippet qml/externaldrag.qml 0
-
-    \sa Item::grabToImage()
-*/
-
-QUrl QQuickDragAttached::imageSource() const
-{
-    Q_D(const QQuickDragAttached);
-    return d->imageSource;
-}
-
-void QQuickDragAttached::setImageSource(const QUrl &url)
-{
-    Q_D(QQuickDragAttached);
-    if (d->imageSource != url) {
-        d->imageSource = url;
-
-        if (url.isEmpty()) {
-            d->pixmapLoader.clear();
-        } else {
-            d->pixmapLoader.load(qmlEngine(this), url);
-        }
-
-        Q_EMIT imageSourceChanged();
     }
 }
 
@@ -629,7 +581,7 @@ void QQuickDragAttached::start(QQmlV4Function *args)
 {
     Q_D(QQuickDragAttached);
     if (d->inEvent) {
-        qmlWarning(this) << "start() cannot be called from within a drag event handler";
+        qmlInfo(this) << "start() cannot be called from within a drag event handler";
         return;
     }
 
@@ -675,7 +627,7 @@ int QQuickDragAttached::drop()
     Qt::DropAction acceptedAction = Qt::IgnoreAction;
 
     if (d->inEvent) {
-        qmlWarning(this) << "drop() cannot be called from within a drag event handler";
+        qmlInfo(this) << "drop() cannot be called from within a drag event handler";
         return acceptedAction;
     }
 
@@ -722,7 +674,7 @@ void QQuickDragAttached::cancel()
     Q_D(QQuickDragAttached);
 
     if (d->inEvent) {
-        qmlWarning(this) << "cancel() cannot be called from within a drag event handler";
+        qmlInfo(this) << "cancel() cannot be called from within a drag event handler";
         return;
     }
 
@@ -764,15 +716,15 @@ Qt::DropAction QQuickDragAttachedPrivate::startDrag(Qt::DropActions supportedAct
     QDrag *drag = new QDrag(source ? source : q);
     QMimeData *mimeData = new QMimeData();
 
-    for (auto it = externalMimeData.cbegin(), end = externalMimeData.cend(); it != end; ++it)
-        mimeData->setData(it.key(), it.value().toString().toUtf8());
-
-    drag->setMimeData(mimeData);
-    if (pixmapLoader.isReady()) {
-        drag->setPixmap(QPixmap::fromImage(pixmapLoader.image()));
+    Q_FOREACH (const QString &key, externalMimeData.keys()) {
+        mimeData->setData(key, externalMimeData[key].toString().toUtf8());
     }
 
-    drag->setHotSpot(hotSpot.toPoint());
+    drag->setMimeData(mimeData);
+
+    // TODO: how to handle drag image?
+    // drag->setPixmap(iconPixmap);
+
     emit q->dragStarted();
 
     Qt::DropAction dropAction = drag->exec(supportedActions);
@@ -810,12 +762,12 @@ void QQuickDragAttached::startDrag(QQmlV4Function *args)
     Q_D(QQuickDragAttached);
 
     if (d->inEvent) {
-        qmlWarning(this) << "startDrag() cannot be called from within a drag event handler";
+        qmlInfo(this) << "startDrag() cannot be called from within a drag event handler";
         return;
     }
 
     if (!d->active) {
-        qmlWarning(this) << "startDrag() drag must be active";
+        qmlInfo(this) << "startDrag() drag must be active";
         return;
     }
 
@@ -996,6 +948,4 @@ QQuickDragAttached *QQuickDrag::qmlAttachedProperties(QObject *obj)
 
 QT_END_NAMESPACE
 
-#include "moc_qquickdrag_p.cpp"
-
-#endif // draganddrop
+#endif // QT_NO_DRAGANDDROP

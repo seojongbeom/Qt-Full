@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -28,26 +33,18 @@
 
 #include <qtest.h>
 
-#if QT_CONFIG(opengl)
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
-#endif
 
 #include <QtQuick>
 #include <QtQml>
 
-#if QT_CONFIG(opengl)
 #include <private/qopenglcontext_p.h>
-#endif
-
 #include <private/qsgcontext_p.h>
 #include <private/qsgrenderloop_p.h>
 
 #include "../../shared/util.h"
-#include "../shared/visualtestutil.h"
-
-using namespace QQuickVisualTestUtil;
 
 class PerPixelRect : public QQuickItem
 {
@@ -105,9 +102,9 @@ private slots:
 
     void render_data();
     void render();
-#if QT_CONFIG(opengl)
+
     void hideWithOtherContext();
-#endif
+
     void createTextureFromImage_data();
     void createTextureFromImage();
 
@@ -130,7 +127,6 @@ void tst_SceneGraph::initTestCase()
     QSGRenderLoop *loop = QSGRenderLoop::instance();
     qDebug() << "RenderLoop:        " << loop;
 
-#if QT_CONFIG(opengl)
     QOpenGLContext context;
     context.setFormat(loop->sceneGraphContext()->defaultSurfaceFormat());
     context.create();
@@ -163,7 +159,6 @@ void tst_SceneGraph::initTestCase()
     qDebug() << "Broken Mipmap:    " << m_brokenMipmapSupport;
 
     context.doneCurrent();
-#endif
 }
 
 QQuickView *tst_SceneGraph::createView(const QString &file, QWindow *parent, int x, int y, int w, int h)
@@ -179,22 +174,55 @@ QQuickView *tst_SceneGraph::createView(const QString &file, QWindow *parent, int
 // Assumes the images are opaque white...
 bool containsSomethingOtherThanWhite(const QImage &image)
 {
-    QImage img;
-    if (image.format() != QImage::Format_ARGB32_Premultiplied
-             || image.format() != QImage::Format_RGB32)
-        img = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    else
-        img = image;
-
-    int w = img.width();
-    int h = img.height();
+    Q_ASSERT(image.format() == QImage::Format_ARGB32_Premultiplied
+             || image.format() == QImage::Format_RGB32);
+    int w = image.width();
+    int h = image.height();
     for (int y=0; y<h; ++y) {
-        const uint *pixels = (const uint *) img.constScanLine(y);
+        const uint *pixels = (const uint *) image.constScanLine(y);
         for (int x=0; x<w; ++x)
             if (pixels[x] != 0xffffffff)
                 return true;
     }
     return false;
+}
+
+// When running on native Nvidia graphics cards on linux, the
+// distance field glyph pixels have a measurable, but not visible
+// pixel error. Use a custom compare function to avoid
+//
+// This was GT-216 with the ubuntu "nvidia-319" driver package.
+// llvmpipe does not show the same issue.
+//
+bool compareImages(const QImage &ia, const QImage &ib)
+{
+    if (ia.size() != ib.size())
+        qDebug() << "images are of different size" << ia.size() << ib.size();
+    Q_ASSERT(ia.size() == ib.size());
+    Q_ASSERT(ia.format() == ib.format());
+
+    int w = ia.width();
+    int h = ia.height();
+    const int tolerance = 5;
+    for (int y=0; y<h; ++y) {
+        const uint *as= (const uint *) ia.constScanLine(y);
+        const uint *bs= (const uint *) ib.constScanLine(y);
+        for (int x=0; x<w; ++x) {
+            uint a = as[x];
+            uint b = bs[x];
+
+            // No tolerance for error in the alpha.
+            if ((a & 0xff000000) != (b & 0xff000000))
+                return false;
+            if (qAbs(qRed(a) - qRed(b)) > tolerance)
+                return false;
+            if (qAbs(qRed(a) - qRed(b)) > tolerance)
+                return false;
+            if (qAbs(qRed(a) - qRed(b)) > tolerance)
+                return false;
+        }
+    }
+    return true;
 }
 
 void tst_SceneGraph::manyWindows_data()
@@ -222,26 +250,24 @@ void tst_SceneGraph::manyWindows_data()
     QTest::newRow("rects,subwindow,sharing") << QStringLiteral("manyWindows_rects.qml") << false << true;
 }
 
-#if QT_CONFIG(opengl)
 struct ShareContextResetter {
 public:
     ~ShareContextResetter() { qt_gl_set_global_share_context(0); }
 };
-#endif
 
 void tst_SceneGraph::manyWindows()
 {
     QFETCH(QString, file);
     QFETCH(bool, toplevel);
     QFETCH(bool, shared);
-#if QT_CONFIG(opengl)
+
     QOpenGLContext sharedGLContext;
     ShareContextResetter cleanup; // To avoid dangling pointer in case of test-failure.
     if (shared) {
         QVERIFY(sharedGLContext.create());
         qt_gl_set_global_share_context(&sharedGLContext);
     }
-#endif
+
     QScopedPointer<QWindow> parent;
     if (!toplevel) {
         parent.reset(new QWindow());
@@ -430,13 +456,6 @@ void tst_SceneGraph::render_data()
 
 void tst_SceneGraph::render()
 {
-    QQuickView dummy;
-    dummy.show();
-    QTest::qWaitForWindowExposed(&dummy);
-    if (dummy.rendererInterface()->graphicsApi() != QSGRendererInterface::OpenGL)
-        QSKIP("Skipping complex rendering tests due to not running with OpenGL");
-    dummy.hide();
-
     QFETCH(QString, file);
     QFETCH(QList<Sample>, baseStage);
     QFETCH(QList<Sample>, finalStage);
@@ -479,7 +498,6 @@ void tst_SceneGraph::render()
     }
 }
 
-#if QT_CONFIG(opengl)
 // Testcase for QTBUG-34898. We make another context current on another surface
 // in the GUI thread and hide the QQuickWindow while the other context is
 // current on the other window.
@@ -500,9 +518,6 @@ void tst_SceneGraph::hideWithOtherContext()
         view.show();
         QVERIFY(QTest::qWaitForWindowExposed(&view));
 
-        if (view.rendererInterface()->graphicsApi() != QSGRendererInterface::OpenGL)
-            QSKIP("Skipping OpenGL context test due to not running with OpenGL");
-
         renderingOnMainThread = view.openglContext()->thread() == QGuiApplication::instance()->thread();
 
         // Make the local context current on the local window...
@@ -515,7 +530,6 @@ void tst_SceneGraph::hideWithOtherContext()
     // GL calls to a new frame (see QOpenGLContext docs).
     QVERIFY(!renderingOnMainThread || QOpenGLContext::currentContext() != &context);
 }
-#endif
 
 void tst_SceneGraph::createTextureFromImage_data()
 {
@@ -541,10 +555,6 @@ void tst_SceneGraph::createTextureFromImage()
     QFETCH(bool, expectedAlpha);
 
     QQuickView view;
-    view.show();
-    QTest::qWaitForWindowExposed(&view);
-    QTRY_VERIFY(view.isSceneGraphInitialized());
-
     QScopedPointer<QSGTexture> texture(view.createTextureFromImage(image, (QQuickWindow::CreateTextureOptions) flags));
     QCOMPARE(texture->hasAlphaChannel(), expectedAlpha);
 }

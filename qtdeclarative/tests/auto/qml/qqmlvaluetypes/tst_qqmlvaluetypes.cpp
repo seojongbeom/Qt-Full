@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -30,7 +35,6 @@
 #include <QQmlEngine>
 #include <QQmlComponent>
 #include <QDebug>
-#include <QJSValueIterator>
 #include <private/qquickvaluetypes_p.h>
 #include <private/qqmlglobal_p.h>
 #include "../../shared/util.h"
@@ -90,7 +94,6 @@ private slots:
     void customValueTypeInQml();
     void gadgetInheritance();
     void toStringConversion();
-    void enumerableProperties();
     void enumProperties();
 
 private:
@@ -323,7 +326,6 @@ void tst_qqmlvaluetypes::locale()
         QScopedPointer<QObject> object(component.create());
         QVERIFY(!object.isNull());
 
-#if QT_CONFIG(im)
         QVERIFY(QQml_guiProvider()->inputMethod());
         QInputMethod *inputMethod = qobject_cast<QInputMethod*>(QQml_guiProvider()->inputMethod());
         QLocale locale = inputMethod->locale();
@@ -350,7 +352,6 @@ void tst_qqmlvaluetypes::locale()
         }
         QCOMPARE(weekDays, locale.weekdays());
         QCOMPARE(object->property("zeroDigit").toString().at(0), locale.zeroDigit());
-#endif // im
     }
 }
 
@@ -908,15 +909,6 @@ void tst_qqmlvaluetypes::color()
         QCOMPARE((float)object->property("v_g").toDouble(), (float)0.88);
         QCOMPARE((float)object->property("v_b").toDouble(), (float)0.6);
         QCOMPARE((float)object->property("v_a").toDouble(), (float)0.34);
-
-        QCOMPARE(qRound(object->property("hsv_h").toDouble() * 100), 43);
-        QCOMPARE(qRound(object->property("hsv_s").toDouble() * 100), 77);
-        QCOMPARE(qRound(object->property("hsv_v").toDouble() * 100), 88);
-
-        QCOMPARE(qRound(object->property("hsl_h").toDouble() * 100), 43);
-        QCOMPARE(qRound(object->property("hsl_s").toDouble() * 100), 74);
-        QCOMPARE(qRound(object->property("hsl_l").toDouble() * 100), 54);
-
         QColor comparison;
         comparison.setRedF(0.2);
         comparison.setGreenF(0.88);
@@ -937,30 +929,6 @@ void tst_qqmlvaluetypes::color()
         newColor.setGreenF(0.38);
         newColor.setBlueF(0.3);
         newColor.setAlphaF(0.7);
-        QCOMPARE(object->color(), newColor);
-
-        delete object;
-    }
-
-    {
-        QQmlComponent component(&engine, testFileUrl("color_write_HSV.qml"));
-        MyTypeObject *object = qobject_cast<MyTypeObject *>(component.create());
-        QVERIFY(object != 0);
-
-        QColor newColor;
-        newColor.setHsvF(0.43, 0.77, 0.88, 0.7);
-        QCOMPARE(object->color(), newColor);
-
-        delete object;
-    }
-
-    {
-        QQmlComponent component(&engine, testFileUrl("color_write_HSL.qml"));
-        MyTypeObject *object = qobject_cast<MyTypeObject *>(component.create());
-        QVERIFY(object != 0);
-
-        QColor newColor;
-        newColor.setHslF(0.43, 0.74, 0.54, 0.7);
         QCOMPARE(object->color(), newColor);
 
         delete object;
@@ -1486,7 +1454,7 @@ void tst_qqmlvaluetypes::groupedInterceptors()
 
     QQmlComponent component(&engine, testFileUrl(qmlfile));
     QObject *object = component.create();
-    QVERIFY2(object != nullptr, qPrintable(component.errorString()));
+    QVERIFY(object != 0);
 
     QColor initialColor = object->property("color").value<QColor>();
     QVERIFY(fuzzyCompare(initialColor.redF(), expectedInitialColor.redF()));
@@ -1683,25 +1651,6 @@ void tst_qqmlvaluetypes::toStringConversion()
 
     stringConversion = method.callWithInstance(value);
     QCOMPARE(stringConversion.toString(), StringLessGadget_to_QString(g));
-}
-
-void tst_qqmlvaluetypes::enumerableProperties()
-{
-    QJSEngine engine;
-    DerivedGadget g;
-    QJSValue value = engine.toScriptValue(g);
-    QSet<QString> names;
-    QJSValueIterator it(value);
-    while (it.hasNext()) {
-        it.next();
-        const QString name = it.name();
-        QVERIFY(!names.contains(name));
-        names.insert(name);
-    }
-
-    QCOMPARE(names.count(), 2);
-    QVERIFY(names.contains(QStringLiteral("baseProperty")));
-    QVERIFY(names.contains(QStringLiteral("derivedProperty")));
 }
 
 struct GadgetWithEnum

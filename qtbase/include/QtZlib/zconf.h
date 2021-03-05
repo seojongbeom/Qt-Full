@@ -1,1 +1,1 @@
-#include "../../src/3rdparty/zlib/src/zconf.h"
+#include "../../src/3rdparty/zlib/zconf.h"

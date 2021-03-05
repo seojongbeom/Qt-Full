@@ -32,14 +32,6 @@
         <translation>Powielona domyślna właściwość</translation>
     </message>
     <message>
-        <source>Duplicate alias name</source>
-        <translation>Powielona nazwa aliasu</translation>
-    </message>
-    <message>
-        <source>Alias names cannot begin with an upper case letter</source>
-        <translation>Nazwa aliasu nie może rozpoczynać się wielką literą</translation>
-    </message>
-    <message>
         <source>Property value set multiple times</source>
         <translation>Wartość właściwości ustawiona wielokrotnie</translation>
     </message>
@@ -80,10 +72,6 @@
     <message>
         <source>id is not unique</source>
         <translation>Wartość &quot;id&quot; nie jest unikatowa</translation>
-    </message>
-    <message>
-        <source>Circular alias reference detected</source>
-        <translation>Wykryto zapętlenie w referencji aliasu</translation>
     </message>
     <message>
         <source>Invalid alias reference. Unable to find id &quot;%1&quot;</source>
@@ -189,74 +177,6 @@
     <message>
         <source>Connections: script expected</source>
         <translation>Połączenia: oczekiwano skryptu</translation>
-    </message>
-</context>
-<context>
-    <name>QQmlDebugServerImpl</name>
-    <message>
-        <source>QML Debugger: Invalid argument &quot;%1&quot; detected. Ignoring the same.</source>
-        <translation>Debugger QML: wykryto niepoprawny argument &quot;%1&quot;, zostanie on zignorowany.</translation>
-    </message>
-    <message>
-        <source>QML Debugger: Ignoring &quot;-qmljsdebugger=%1&quot;.</source>
-        <translation>Debugger QML: &quot;-qmljsdebugger=%1&quot; zostanie zignorowane.</translation>
-    </message>
-    <message>
-        <source>The format is &quot;-qmljsdebugger=[file:&lt;file&gt;|port:&lt;port_from&gt;][,&lt;port_to&gt;][,host:&lt;ip address&gt;][,block][,services:&lt;service&gt;][,&lt;service&gt;]*&quot;</source>
-        <translation>Formatem jest &quot;-qmljsdebugger=[file:&lt;plik&gt;|port:&lt;z portu&gt;][,&lt;do portu&gt;][,host:&lt;adres ip&gt;][,block][,services:&lt;serwis&gt;][,&lt;service&gt;]*&quot;</translation>
-    </message>
-    <message>
-        <source>&quot;file:&quot; can be used to specify the name of a file the debugger will try to connect to using a QLocalSocket. If &quot;file:&quot; is given any &quot;host:&quot; and&quot;port:&quot; arguments will be ignored.</source>
-        <translation>&quot;file:&quot; służy do podania nazwy pliku, do którego debugger będzie próbował się podłączyć używając QLocalSocket. Jeśli wraz z &quot;file:&quot; podano również &quot;host:&quot; lub &quot;port:&quot;, argumenty te zostaną zignorowane.</translation>
-    </message>
-    <message>
-        <source>&quot;host:&quot; and &quot;port:&quot; can be used to specify an address and a single port or a range of ports the debugger will try to bind to with a QTcpServer.</source>
-        <translation>&quot;host:&quot; i &quot;port:&quot; służą do podania adresu i pojedynczego portu lub zakresu portów, przez które debugger będzie próbował nawiązać połączenie przy użyciu QTcpServer.</translation>
-    </message>
-    <message>
-        <source>&quot;block&quot; makes the debugger and some services wait for clients to be connected and ready before the first QML engine starts.</source>
-        <translation>&quot;block&quot; nakazuje debuggerowi i niektórym serwisom oczekiwanie na połączenie i gotowość klientów przed pierwszym uruchomieniem silnika QML.</translation>
-    </message>
-    <message>
-        <source>&quot;services:&quot; can be used to specify which debug services the debugger should load. Some debug services interact badly with others. The V4 debugger should not be loaded when using the QML profiler as it will force any V4 engines to use the JavaScript interpreter rather than the JIT. The following debug services are available by default:</source>
-        <translation>&quot;services:&quot; służą do podania nazw serwisów, które debugger powinien załadować. Niektóre serwisy nie współdziałają dobrze ze sobą. Debugger V4 nie powinien być załadowany kiedy używany jest profiler QML, ponieważ zmusza on wszystkie silniki V4 do używania interpretera JavaScript zamiast JIT. Następujące serwisy są domyślnie dostępne:</translation>
-    </message>
-    <message>
-        <source>The QML debugger</source>
-        <translation>Debugger QML</translation>
-    </message>
-    <message>
-        <source>The V4 debugger</source>
-        <translation>Debugger V4</translation>
-    </message>
-    <message>
-        <source>The QML inspector</source>
-        <translation>Inspektor QML</translation>
-    </message>
-    <message>
-        <source>The QML profiler</source>
-        <translation>Profiler QML</translation>
-    </message>
-    <message>
-        <source>Allows the client to delay the starting and stopping of
-		  QML engines until other services are ready. QtCreator
-		  uses this service with the QML profiler in order to
-		  profile multiple QML engines at the same time.</source>
-        <translation>Pozwala klientom na opóźnione uruchomienie bądź zatrzymanie
-		  silników QML do momentu gdy inne serwisy są gotowe. QtCreator
-		  używa tego serwisu do profilowania wielu silników QML jednocześnie.</translation>
-    </message>
-    <message>
-        <source>Sends qDebug() and similar messages over the QML debug
-		  connection. QtCreator uses this for showing debug
-		  messages in the debugger console.</source>
-        <translation>Wysyła komunikaty qDebug() i podobne przez połączenie debugowe QML.
-		  QtCreator używa go do pokazywania komunikatów
-		  debugowych w konsoli debuggera.</translation>
-    </message>
-    <message>
-        <source>Other services offered by qmltooling plugins that implement QQmlDebugServiceFactory and which can be found in the standard plugin paths will also be available and can be specified. If no &quot;services&quot; argument is given, all services found this way, including the default ones, are loaded.</source>
-        <translation>Inne serwisy, dostępne we wtyczkach qmltooling, które implementują QQmlDebugServiceFactory i które mogą być odnalezione w standardowych ścieżkach do wtyczek, również mogą zostać podane. Jeśli nie podano argumentu &quot;services&quot;, wszystkie serwisy odnalezione w ten sposób, włącznie z domyślnymi, zostaną załadowane.</translation>
     </message>
 </context>
 <context>
@@ -408,20 +328,12 @@
         <translation>SQL: nie można utworzyć bazy danych, praca offline jest wyłączona.</translation>
     </message>
     <message>
-        <source>LocalStorage: can&apos;t create path %1</source>
-        <translation>LocalStorage: nie można utworzyć ścieżki %1</translation>
-    </message>
-    <message>
         <source>SQL: database version mismatch</source>
         <translation>SQL: niezgodność wersji bazy danych</translation>
     </message>
 </context>
 <context>
     <name>QQmlEnumTypeResolver</name>
-    <message>
-        <source>Invalid property assignment: Enum value &quot;%1&quot; cannot start with a lowercase letter</source>
-        <translation>Niepoprawne przypisanie wartości: wartość typu wyliczeniowego &quot;%1&quot; nie może rozpoczynać się od małej litery</translation>
-    </message>
     <message>
         <source>Invalid property assignment: &quot;%1&quot; is a read-only property</source>
         <translation>Niepoprawne przypisanie wartości: &quot;%1&quot; jest właściwością tylko do odczytu</translation>
@@ -431,7 +343,7 @@
     <name>QQmlImportDatabase</name>
     <message>
         <source>&quot;%1&quot; is ambiguous. Found in %2 and in %3</source>
-        <translation>&quot;%1&quot; jest niejednoznaczny. Znaleziono w %2 i w %3</translation>
+        <translation>&quot;%1&quot; jest niejednoznanczy. Znaleziono w %2 i w %3</translation>
     </message>
     <message>
         <source>- %1 is not a namespace</source>
@@ -467,7 +379,7 @@
     </message>
     <message>
         <source>module does not support the designer &quot;%1&quot;</source>
-        <translation>moduł nie obsługuje Designera &quot;%1&quot;</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>plugin cannot be loaded for module &quot;%1&quot;: %2</source>
@@ -530,11 +442,11 @@
     <name>QQmlListModel</name>
     <message>
         <source>unable to enable dynamic roles as this model is not empty!</source>
-        <translation>nie można włączyć dynamicznych roli, ponieważ ten model nie jest pusty.</translation>
+        <translation>nie można włączyć dynamicznych roli ponieważ ten model nie jest pusty.</translation>
     </message>
     <message>
         <source>unable to enable static roles as this model is not empty!</source>
-        <translation>nie można włączyć statycznych roli, ponieważ ten model nie jest pusty.</translation>
+        <translation>nie można włączyć statycznych roli ponieważ ten model nie jest pusty.</translation>
     </message>
     <message>
         <source>dynamic role setting must be made from the main thread, before any worker scripts are created</source>
@@ -710,20 +622,16 @@
         <translation>Przypadkowy znak nowej linii w literale łańcuchowym</translation>
     </message>
     <message>
-        <source>End of file reached at escape sequence</source>
-        <translation>Osiągnięto koniec pliku wewnątrz sekwencji specjalnej</translation>
-    </message>
-    <message>
         <source>Illegal unicode escape sequence</source>
-        <translation>Niepoprawny znak w sekwencji specjalnej</translation>
+        <translation>Niepoprawny znak w sekwencji escape</translation>
     </message>
     <message>
         <source>Illegal hexadecimal escape sequence</source>
-        <translation>Niepoprawna szesnastkowa sekwencja specjalna</translation>
+        <translation>Niepoprawna szestastkowa sekwencja escape</translation>
     </message>
     <message>
         <source>Octal escape sequences are not allowed</source>
-        <translation>Ósemkowe sekwencje specjalne są niedozwolone</translation>
+        <translation>Ósemkowe sekwencje escape są niedozwolone</translation>
     </message>
     <message>
         <source>Unclosed string at end of line</source>
@@ -802,7 +710,7 @@
     </message>
 </context>
 <context>
-    <name>QQmlPropertyCacheCreatorBase</name>
+    <name>QQmlPropertyCacheCreator</name>
     <message>
         <source>Fully dynamic types cannot declare new properties.</source>
         <translation>Typy w pełni dynamiczne nie mogą deklarować nowych właściwości.</translation>
@@ -967,20 +875,12 @@
         <translation>Niepoprawne przypisanie wartości: oczekiwano wartości boolowskiej</translation>
     </message>
     <message>
-        <source>Invalid property assignment: 2D vector expected</source>
-        <translation>Niepoprawne przypisanie wartości: oczekiwano wektora 2D</translation>
-    </message>
-    <message>
         <source>Invalid property assignment: 3D vector expected</source>
         <translation>Niepoprawne przypisanie wartości: oczekiwano wektora 3D</translation>
     </message>
     <message>
         <source>Invalid property assignment: 4D vector expected</source>
         <translation>Niepoprawne przypisanie wartości: oczekiwano wektora 3D</translation>
-    </message>
-    <message>
-        <source>Invalid property assignment: quaternion expected</source>
-        <translation>Niepoprawne przypisanie wartości: oczekiwano kwaternionu</translation>
     </message>
     <message>
         <source>Invalid property assignment: regular expression expected; use /pattern/ syntax</source>
@@ -1043,14 +943,14 @@
     </message>
 </context>
 <context>
-    <name>QQmlTypeData</name>
+    <name>QQmlTypeCompiler</name>
     <message>
         <source>Composite Singleton Type %1 is not creatable.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Element is not creatable.</source>
-        <translation type="unfinished">Nie można utworzyć elementu (&quot;creatable&quot; wyłączone).</translation>
+        <translation>Nie można utworzyć elementu (&quot;creatable&quot; wyłączone).</translation>
     </message>
 </context>
 <context>
@@ -1078,10 +978,6 @@
     <message>
         <source>qmldir defines type as singleton, but no pragma Singleton found in type %1.</source>
         <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>No such file or directory</source>
-        <translation>Brak pliku lub katalogu</translation>
     </message>
     <message>
         <source>module &quot;%1&quot; is not installed</source>
@@ -1235,13 +1131,6 @@
     </message>
 </context>
 <context>
-    <name>QQuickGraphicsInfo</name>
-    <message>
-        <source>GraphicsInfo is only available via attached properties</source>
-        <translation>&quot;OpenGLInfo&quot; jest dostępny jedynie poprzez dołączone właściwości</translation>
-    </message>
-</context>
-<context>
     <name>QQuickItemView</name>
     <message>
         <source>ItemView is an abstract base class</source>
@@ -1269,12 +1158,12 @@
 <context>
     <name>QQuickLayoutMirroringAttached</name>
     <message>
-        <source>LayoutMirroring is only available via attached properties</source>
-        <translation>&quot;LayoutMirroring&quot; dostępny jest tylko poprzez dołączone właściwości</translation>
+        <source>LayoutDirection attached property only works with Items</source>
+        <translation>Dołączona właściwość &quot;LayoutDirection&quot; działa tylko z &quot;Item&quot;</translation>
     </message>
     <message>
-        <source>LayoutDirection attached property only works with Items and Windows</source>
-        <translation>Dołączona właściwość &quot;LayoutDirection&quot; działa tylko z &quot;Item&quot; lub z &quot;Window&quot;</translation>
+        <source>LayoutMirroring is only available via attached properties</source>
+        <translation>&quot;LayoutMirroring&quot; dostępny jest tylko poprzez dołączone właściwości</translation>
     </message>
 </context>
 <context>
@@ -1282,13 +1171,6 @@
     <message>
         <source>setSource: value is not an object</source>
         <translation>setSource: wartość nie jest obiektem</translation>
-    </message>
-</context>
-<context>
-    <name>QQuickMouseEvent</name>
-    <message>
-        <source>MouseEvent is only available within handlers in MouseArea</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1378,6 +1260,10 @@
         <source>Cannot open: %1</source>
         <translation>Nie można otworzyć: %1</translation>
     </message>
+    <message>
+        <source>Invalid image data: %1</source>
+        <translation>Niepoprawne dane obrazu: %1</translation>
+    </message>
 </context>
 <context>
     <name>QQuickPropertyAnimation</name>
@@ -1427,13 +1313,6 @@
     </message>
 </context>
 <context>
-    <name>QQuickTouchPoint</name>
-    <message>
-        <source>PointingDeviceUniqueId is only available via read-only properties</source>
-        <translation>PointingDeviceUniqueId jest dostępny jedynie poprzez właściwości tylko do odczytu</translation>
-    </message>
-</context>
-<context>
     <name>QQuickViewTransitionAttached</name>
     <message>
         <source>ViewTransition is only available via attached properties</source>
@@ -1448,10 +1327,7 @@ This is most likely caused by not having the necessary graphics drivers installe
 
 Install a driver providing OpenGL 2.0 or higher, or, if this is not possible, make sure the ANGLE Open GL ES 2.0 emulation libraries (%3, %4 and d3dcompiler_*.dll) are available in the application executable&apos;s directory or in a location listed in PATH.</source>
         <extracomment>%1 Context type (Open GL, EGL), %2 format, ANGLE %3, %4 library names</extracomment>
-        <translation>Błąd tworzenia kontekstu %1 w formacie %2.
-Najprawdopodobniej jest to spowodowane brakiem wymaganych sterowników graficznych.
-
-Zainstaluj sterownik obsługujący OpenGL w wersji 2.0 lub wyższej, lub jeśli to niemożliwe upewnij się, że biblioteki emulatora ANGLE Open GL ES 2.0 (%3, %4 i d3dcompiler_*.dll) są dostępne w katalogu z plikiem wykonywalnym aplikacji lub w jednej ze ścieżek wymienionych w PATH.</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Failed to create %1 context for format %2</source>
@@ -1524,21 +1400,6 @@ Zainstaluj sterownik obsługujący OpenGL w wersji 2.0 lub wyższej, lub jeśli 
     <message>
         <source>Incorrectly specified signal assignment</source>
         <translation>Przypisanie sygnału błędnie podane</translation>
-    </message>
-</context>
-<context>
-    <name>SignalTransition</name>
-    <message>
-        <source>Specified signal does not exist.</source>
-        <translation>Podany sygnał nie istnieje.</translation>
-    </message>
-    <message>
-        <source>Cannot assign to non-existent property &quot;%1&quot;</source>
-        <translation>Nie można przypisać wartości do nieistniejącej właściwości &quot;%1&quot;</translation>
-    </message>
-    <message>
-        <source>SignalTransition: script expected</source>
-        <translation>SignalTransition: oczekiwano skryptu</translation>
     </message>
 </context>
 <context>

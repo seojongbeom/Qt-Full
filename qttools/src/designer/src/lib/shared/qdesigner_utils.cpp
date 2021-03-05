@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -172,9 +177,11 @@ namespace qdesigner_internal
 
     QStringList DesignerMetaFlags::flags(int ivalue) const
     {
+        typedef MetaEnum<uint>::KeyToValueMap::const_iterator KeyToValueMapIterator;
         QStringList rc;
         const uint v = static_cast<uint>(ivalue);
-        for (auto it = keyToValueMap().constBegin(), cend = keyToValueMap().constEnd(); it != cend; ++it )  {
+        const KeyToValueMapIterator cend = keyToValueMap().constEnd();
+        for (KeyToValueMapIterator it = keyToValueMap().constBegin();it != cend; ++it )  {
             const uint itemValue = it.value();
             // Check for equality first as flag values can be 0 or -1, too. Takes preference over a bitwise flag
             if (v == itemValue) {
@@ -222,7 +229,8 @@ namespace qdesigner_internal
         uint flags = 0;
         bool valueOk = true;
         QStringList keys = s.split(QString(QLatin1Char('|')));
-        for (auto it = keys.constBegin(), cend = keys.constEnd(); it != cend; ++it) {
+        const QStringList::iterator cend = keys.end();
+        for (QStringList::iterator it = keys.begin(); it != cend; ++it) {
             const uint flagValue = keyToValue(*it, &valueOk);
             if (!valueOk) {
                 flags = 0;
@@ -247,8 +255,10 @@ namespace qdesigner_internal
        metaEnum(me)
     {
     }
-
-    PropertySheetEnumValue::PropertySheetEnumValue() = default;
+    PropertySheetEnumValue::PropertySheetEnumValue() :
+       value(0)
+    {
+    }
 
     // ---------------- PropertySheetFlagValue
     PropertySheetFlagValue::PropertySheetFlagValue(int v, const DesignerMetaFlags &mf) :
@@ -257,7 +267,10 @@ namespace qdesigner_internal
     {
     }
 
-    PropertySheetFlagValue::PropertySheetFlagValue() = default;
+    PropertySheetFlagValue::PropertySheetFlagValue() :
+        value(0)
+    {
+    }
 
     // ---------------- PropertySheetPixmapValue
     PropertySheetPixmapValue::PropertySheetPixmapValue(const QString &path) : m_path(path)
@@ -336,13 +349,11 @@ namespace qdesigner_internal
     {
         if (const int themeCmp = m_data->m_theme.compare(other.m_data->m_theme))
             return themeCmp < 0;
-        auto itThis = m_data->m_paths.cbegin();
-        auto itThisEnd = m_data->m_paths.cend();
-        auto itOther = other.m_data->m_paths.cbegin();
-        auto itOtherEnd = other.m_data->m_paths.cend();
-        while (itThis != itThisEnd && itOther != itOtherEnd) {
-            const ModeStateKey thisPair = itThis.key();
-            const ModeStateKey otherPair = itOther.key();
+        QMapIterator<ModeStateKey, PropertySheetPixmapValue> itThis(m_data->m_paths);
+        QMapIterator<ModeStateKey, PropertySheetPixmapValue> itOther(other.m_data->m_paths);
+        while (itThis.hasNext() && itOther.hasNext()) {
+            const ModeStateKey thisPair = itThis.next().key();
+            const ModeStateKey otherPair = itOther.next().key();
             if (thisPair < otherPair)
                 return true;
             else if (otherPair < thisPair)
@@ -352,10 +363,8 @@ namespace qdesigner_internal
                 return true;
             if (crc > 0)
                 return false;
-            ++itThis;
-            ++itOther;
         }
-        if (itOther != itOtherEnd)
+        if (itOther.hasNext())
             return true;
         return false;
     }
@@ -413,7 +422,9 @@ namespace qdesigner_internal
 
     QIcon DesignerIconCache::icon(const PropertySheetIconValue &value) const
     {
-        const auto it = m_cache.constFind(value);
+        typedef PropertySheetIconValue::ModeStateToPixmapMap::const_iterator ModeStateToPixmapMapConstIt;
+
+        QMap<PropertySheetIconValue, QIcon>::const_iterator it = m_cache.constFind(value);
         if (it != m_cache.constEnd())
             return it.value();
 
@@ -429,8 +440,9 @@ namespace qdesigner_internal
 
         QIcon icon;
         const PropertySheetIconValue::ModeStateToPixmapMap &paths = value.paths();
-        for (auto it = paths.constBegin(), cend = paths.constEnd(); it != cend; ++it) {
-            const auto pair = it.key();
+        const ModeStateToPixmapMapConstIt cend = paths.constEnd();
+        for (ModeStateToPixmapMapConstIt it = paths.constBegin(); it != cend; ++it) {
+            const QPair<QIcon::Mode, QIcon::State> pair = it.key();
             icon.addFile(it.value().path(), QSize(), pair.first, pair.second);
         }
         m_cache.insert(value, icon);
@@ -607,8 +619,11 @@ namespace qdesigner_internal
 
     uint PropertySheetIconValue::mask() const
     {
+        typedef ModeStateToPixmapMap::const_iterator ModeStateToPixmapMapConstIt;
+
         uint flags = 0;
-        for (auto it = m_data->m_paths.constBegin(), cend = m_data->m_paths.constEnd(); it != cend; ++it)
+        const ModeStateToPixmapMapConstIt cend = m_data->m_paths.constEnd();
+        for (ModeStateToPixmapMapConstIt it = m_data->m_paths.constBegin(); it != cend; ++it)
             flags |= iconStateToSubPropertyFlag(it.key().first, it.key().second);
         if (!m_data->m_theme.isEmpty())
             flags |= ThemeIconMask;
@@ -665,11 +680,14 @@ namespace qdesigner_internal
 
     QDESIGNER_SHARED_EXPORT QDebug operator<<(QDebug d, const PropertySheetIconValue &p)
     {
+        typedef PropertySheetIconValue::ModeStateToPixmapMap::const_iterator ModeStateToPixmapMapConstIt;
+
         QDebug nospace = d.nospace();
         nospace << "PropertySheetIconValue theme='" << p.theme() << "' ";
 
         const PropertySheetIconValue::ModeStateToPixmapMap &paths = p.paths();
-        for (auto it = paths.constBegin(), cend = paths.constEnd(); it != cend; ++it)
+        const ModeStateToPixmapMapConstIt cend = paths.constEnd();
+        for (ModeStateToPixmapMapConstIt it = paths.constBegin(); it != cend; ++it)
             nospace << " mode=" << it.key().first << ",state=" << it.key().second
                        << ",'" << it.value().path() << '\'';
         nospace << " mask=0x" << QString::number(p.mask(), 16);

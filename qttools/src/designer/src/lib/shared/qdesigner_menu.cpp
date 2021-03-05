@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -569,8 +574,7 @@ void QDesignerMenu::paintEvent(QPaintEvent *event)
 
     QAction *current = currentAction();
 
-    const QList<QAction *> &actionList = actions();
-    for (QAction *a : actionList) {
+    foreach (QAction *a, actions()) {
         const QRect g = actionGeometry(a);
 
         if (qobject_cast<SpecialMenuAction*>(a)) {
@@ -617,9 +621,13 @@ QDesignerMenu *QDesignerMenu::findRootMenu() const
 
 QDesignerMenu *QDesignerMenu::findActivatedMenu() const
 {
-    if (QDesignerMenu *activeDesignerMenu = qobject_cast<QDesignerMenu *>(QApplication::activeWindow())) {
-        if (activeDesignerMenu == this || findChildren<QDesignerMenu *>().contains(activeDesignerMenu))
-            return activeDesignerMenu;
+    QList<QDesignerMenu*> candidates;
+    candidates.append(const_cast<QDesignerMenu*>(this));
+    candidates += findChildren<QDesignerMenu*>();
+
+    foreach (QDesignerMenu *m, candidates) {
+        if (m == qApp->activeWindow())
+            return m;
     }
 
     return 0;
@@ -655,12 +663,12 @@ bool QDesignerMenu::eventFilter(QObject *object, QEvent *event)
                 QApplication::activePopupWidget()->close();
             }
 
-            Q_FALLTHROUGH(); // fall through
+        // fall through
         case QEvent::KeyPress:
         case QEvent::KeyRelease:
         case QEvent::MouseMove:
             dispatch = (object != m_editor);
-            Q_FALLTHROUGH(); // no break
+            // no break
 
         case QEvent::Enter:
         case QEvent::Leave:
@@ -852,9 +860,9 @@ void QDesignerMenu::closeMenuChain()
         w = w->parentWidget();
 
     if (w) {
-        const QList<QMenu *> &menus = w->findChildren<QMenu *>();
-        for (QMenu *subMenu : menus)
+        foreach (QMenu *subMenu, w->findChildren<QMenu*>()) {
             subMenu->hide();
+        }
     }
 
     m_lastSubMenuIndex = -1;
@@ -1028,8 +1036,7 @@ QDesignerMenu *QDesignerMenu::findOrCreateSubMenu(QAction *action)
 
 bool QDesignerMenu::canCreateSubMenu(QAction *action) const // ### improve it's a bit too slow
 {
-    const QWidgetList &associatedWidgets = action->associatedWidgets();
-    for (const QWidget *aw : associatedWidgets) {
+    foreach (const QWidget *aw, action->associatedWidgets())
         if (aw != this) {
             if (const QMenu *m = qobject_cast<const QMenu *>(aw)) {
                 if (m->actions().contains(action))
@@ -1040,7 +1047,6 @@ bool QDesignerMenu::canCreateSubMenu(QAction *action) const // ### improve it's 
                         return false; // sorry
             }
         }
-    }
     return true;
 }
 
@@ -1309,9 +1315,9 @@ QAction *QDesignerMenu::safeActionAt(int index) const
 void QDesignerMenu::hideSubMenu()
 {
     m_lastSubMenuIndex = -1;
-    const QList<QMenu *> &menus = findChildren<QMenu *>();
-    for (QMenu *subMenu : menus)
+    foreach (QMenu *subMenu, findChildren<QMenu*>()) {
         subMenu->hide();
+    }
 }
 
 void QDesignerMenu::deleteAction()

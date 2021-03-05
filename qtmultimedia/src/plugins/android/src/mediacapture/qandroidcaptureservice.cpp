@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Ruslan Baratov
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,7 +45,6 @@
 #include "qandroidcameraexposurecontrol.h"
 #include "qandroidcameraflashcontrol.h"
 #include "qandroidcamerafocuscontrol.h"
-#include "qandroidviewfindersettingscontrol.h"
 #include "qandroidcameralockscontrol.h"
 #include "qandroidcameraimageprocessingcontrol.h"
 #include "qandroidimageencodercontrol.h"
@@ -82,7 +74,6 @@ QAndroidCaptureService::QAndroidCaptureService(const QString &service, QObject *
         m_cameraExposureControl = new QAndroidCameraExposureControl(m_cameraSession);
         m_cameraFlashControl = new QAndroidCameraFlashControl(m_cameraSession);
         m_cameraFocusControl = new QAndroidCameraFocusControl(m_cameraSession);
-        m_viewfinderSettingsControl2 = new QAndroidViewfinderSettingsControl2(m_cameraSession);
         m_cameraLocksControl = new QAndroidCameraLocksControl(m_cameraSession);
         m_cameraImageProcessingControl = new QAndroidCameraImageProcessingControl(m_cameraSession);
         m_imageEncoderControl = new QAndroidImageEncoderControl(m_cameraSession);
@@ -99,7 +90,6 @@ QAndroidCaptureService::QAndroidCaptureService(const QString &service, QObject *
         m_cameraExposureControl = 0;
         m_cameraFlashControl = 0;
         m_cameraFocusControl = 0;
-        m_viewfinderSettingsControl2 = 0;
         m_cameraLocksControl = 0;
         m_cameraImageProcessingControl = 0;
         m_imageEncoderControl = 0;
@@ -138,7 +128,6 @@ QAndroidCaptureService::~QAndroidCaptureService()
     delete m_cameraExposureControl;
     delete m_cameraFlashControl;
     delete m_cameraFocusControl;
-    delete m_viewfinderSettingsControl2;
     delete m_cameraLocksControl;
     delete m_cameraImageProcessingControl;
     delete m_imageEncoderControl;
@@ -185,9 +174,6 @@ QMediaControl *QAndroidCaptureService::requestControl(const char *name)
 
     if (qstrcmp(name, QCameraFocusControl_iid) == 0)
         return m_cameraFocusControl;
-
-    if (qstrcmp(name, QCameraViewfinderSettingsControl2_iid) == 0)
-        return m_viewfinderSettingsControl2;
 
     if (qstrcmp(name, QCameraLocksControl_iid) == 0)
         return m_cameraLocksControl;

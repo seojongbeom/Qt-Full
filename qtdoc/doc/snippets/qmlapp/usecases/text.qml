@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -77,15 +67,11 @@ Item {
             // For text to wrap, a width has to be explicitly provided
             width: root.width
 
-            // This setting makes the text wrap at word boundaries when it goes
-            // past the width of the Text object
+            // This setting makes the text wrap at word boundaries when it goes past the width of the Text object
             wrapMode: Text.WordWrap
 
-            // You can use \ to escape quotation marks, or to add new lines (\n).
-            //  Use \\ to get a \ in the string
-            text: 'I am the very model of a modern major general. I\'ve information \
-                  vegetable, animal and mineral. I know the kings of england and I \
-                  quote the fights historical; from Marathon to Waterloo in order categorical.'
+            // You can use \ to escape quotation marks, or to add new lines (\n). Use \\ to get a \ in the string
+            text: 'I am the very model of a modern major general. I\'ve information vegetable, animal and mineral. I know the kings of england and I quote the fights historical; from Marathon to Waterloo in order categorical.'
 
             // color can be set on the entire element with this property
             color: "white"
@@ -112,6 +98,7 @@ Item {
 
             // StyledText format supports fewer tags, but is more efficient than RichText
             textFormat: Text.StyledText
+
         }
     }
 }

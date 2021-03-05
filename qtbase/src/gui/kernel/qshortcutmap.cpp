@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -89,7 +83,6 @@ struct QShortcutEntry
     QObject *owner;
     QShortcutMap::ContextMatcher contextMatcher;
 };
-Q_DECLARE_TYPEINFO(QShortcutEntry, Q_MOVABLE_TYPE);
 
 #ifdef Dump_QShortcutMap
 /*! \internal
@@ -124,7 +117,7 @@ public:
     }
     QShortcutMap *q_ptr;                        // Private's parent
 
-    QVector<QShortcutEntry> sequences;          // All sequences!
+    QList<QShortcutEntry> sequences;            // All sequences!
 
     int currentId;                              // Global shortcut ID number
     int ambigCount;                             // Index of last enabled ambiguous dispatch
@@ -163,7 +156,7 @@ int QShortcutMap::addShortcut(QObject *owner, const QKeySequence &key, Qt::Short
     Q_D(QShortcutMap);
 
     QShortcutEntry newEntry(owner, key, context, --(d->currentId), true, matcher);
-    const auto it = std::upper_bound(d->sequences.begin(), d->sequences.end(), newEntry);
+    QList<QShortcutEntry>::iterator it = std::upper_bound(d->sequences.begin(), d->sequences.end(), newEntry);
     d->sequences.insert(it, newEntry); // Insert sorted
 #if defined(DEBUG_QSHORTCUTMAP)
     qDebug().nospace()
@@ -191,7 +184,7 @@ int QShortcutMap::removeShortcut(int id, QObject *owner, const QKeySequence &key
     bool allIds = id == 0;
 
     // Special case, remove everything
-    if (allOwners && allKeys && allIds) {
+    if (allOwners && allKeys && id == 0) {
         itemsRemoved = d->sequences.size();
         d->sequences.clear();
         return itemsRemoved;
@@ -353,9 +346,9 @@ bool QShortcutMap::tryShortcut(QKeyEvent *e)
         // shouldn't say that we handled the event.
         return identicalMatches > 0;
     }
+    default:
+        Q_UNREACHABLE();
     }
-    Q_UNREACHABLE();
-    return false;
 }
 
 /*! \internal
@@ -375,7 +368,7 @@ QKeySequence::SequenceMatch QShortcutMap::nextState(QKeyEvent *e)
     QKeySequence::SequenceMatch result = QKeySequence::NoMatch;
 
     // We start fresh each time..
-    d->identicals.clear();
+    d->identicals.resize(0);
 
     result = find(e);
     if (result == QKeySequence::NoMatch && (e->modifiers() & Qt::KeypadModifier)) {
@@ -409,8 +402,8 @@ bool QShortcutMap::hasShortcutForKeySequence(const QKeySequence &seq) const
 {
     Q_D(const QShortcutMap);
     QShortcutEntry entry(seq); // needed for searching
-    const auto itEnd = d->sequences.cend();
-    auto it = std::lower_bound(d->sequences.cbegin(), itEnd, entry);
+    QList<QShortcutEntry>::ConstIterator itEnd = d->sequences.constEnd();
+    QList<QShortcutEntry>::ConstIterator it = std::lower_bound(d->sequences.constBegin(), itEnd, entry);
 
     for (;it != itEnd; ++it) {
         if (matches(entry.keyseq, (*it).keyseq) == QKeySequence::ExactMatch && (*it).correctContext() && (*it).enabled) {
@@ -448,7 +441,7 @@ QKeySequence::SequenceMatch QShortcutMap::find(QKeyEvent *e, int ignoredModifier
     }
 
     // Looking for new identicals, scrap old
-    d->identicals.clear();
+    d->identicals.resize(0);
 
     bool partialFound = false;
     bool identicalDisabledFound = false;
@@ -456,8 +449,9 @@ QKeySequence::SequenceMatch QShortcutMap::find(QKeyEvent *e, int ignoredModifier
     int result = QKeySequence::NoMatch;
     for (int i = d->newEntries.count()-1; i >= 0 ; --i) {
         QShortcutEntry entry(d->newEntries.at(i)); // needed for searching
-        const auto itEnd = d->sequences.constEnd();
-        auto it = std::lower_bound(d->sequences.constBegin(), itEnd, entry);
+        QList<QShortcutEntry>::ConstIterator itEnd = d->sequences.constEnd();
+        QList<QShortcutEntry>::ConstIterator it =
+             std::lower_bound(d->sequences.constBegin(), itEnd, entry);
 
         int oneKSResult = QKeySequence::NoMatch;
         int tempRes = QKeySequence::NoMatch;

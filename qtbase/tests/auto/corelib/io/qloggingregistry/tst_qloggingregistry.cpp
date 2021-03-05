@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -197,32 +202,23 @@ private slots:
         // Check whether QT_LOGGING_CONF is picked up from environment
         //
 
-        Q_ASSERT(!qApp); // Rules should not require an app to resolve
-
-        qputenv("QT_LOGGING_RULES", "qt.foo.bar=true");
-        QLoggingCategory qtEnabledByLoggingRule("qt.foo.bar");
-        QCOMPARE(qtEnabledByLoggingRule.isDebugEnabled(), true);
-        QLoggingCategory qtDisabledByDefault("qt.foo.baz");
-        QCOMPARE(qtDisabledByDefault.isDebugEnabled(), false);
-
-        QLoggingRegistry &registry = *QLoggingRegistry::instance();
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::ApiRules].size(), 0);
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::ConfigRules].size(), 0);
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::EnvironmentRules].size(), 1);
-
-        qunsetenv("QT_LOGGING_RULES");
         qputenv("QT_LOGGING_CONF", QFINDTESTDATA("qtlogging.ini").toLocal8Bit());
-        registry.initializeRules();
 
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::ApiRules].size(), 0);
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::ConfigRules].size(), 0);
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::EnvironmentRules].size(), 1);
+        QLoggingRegistry registry;
+        registry.init();
+
+        QCOMPARE(registry.apiRules.size(), 0);
+        QCOMPARE(registry.configRules.size(), 0);
+        QCOMPARE(registry.envRules.size(), 1);
+
+        QCOMPARE(registry.rules.size(), 1);
 
         // check that QT_LOGGING_RULES take precedence
         qputenv("QT_LOGGING_RULES", "Digia.*=true");
-        registry.initializeRules();
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::EnvironmentRules].size(), 2);
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::EnvironmentRules].at(1).enabled, true);
+        registry.init();
+        QCOMPARE(registry.envRules.size(), 2);
+        QCOMPARE(registry.envRules.at(1).enabled, true);
+        QCOMPARE(registry.rules.size(), 2);
     }
 
     void QLoggingRegistry_config()
@@ -246,8 +242,8 @@ private slots:
         file.close();
 
         QLoggingRegistry registry;
-        registry.initializeRules();
-        QCOMPARE(registry.ruleSets[QLoggingRegistry::ConfigRules].size(), 1);
+        registry.init();
+        QCOMPARE(registry.configRules.size(), 1);
 
         // remove file again
         QVERIFY(file.remove());
@@ -269,9 +265,10 @@ private slots:
         QLoggingRegistry *registry = QLoggingRegistry::instance();
 
         // empty all rules , check default
-        registry->ruleSets[QLoggingRegistry::ApiRules].clear();
-        registry->ruleSets[QLoggingRegistry::ConfigRules].clear();
-        registry->ruleSets[QLoggingRegistry::EnvironmentRules].clear();
+        registry->rules.clear();
+        registry->apiRules.clear();
+        registry->configRules.clear();
+        registry->envRules.clear();
         registry->updateRules();
 
         QVERIFY(cat.isWarningEnabled());
@@ -279,7 +276,7 @@ private slots:
         // set Config rule
         QLoggingSettingsParser parser;
         parser.setContent("[Rules]\nDigia.*=false");
-        registry->ruleSets[QLoggingRegistry::ConfigRules] = parser.rules();
+        registry->configRules=parser.rules();
         registry->updateRules();
 
         QVERIFY(!cat.isWarningEnabled());
@@ -291,7 +288,7 @@ private slots:
 
         // set Env rule, should overwrite Config one
         parser.setContent("Digia.*=false");
-        registry->ruleSets[QLoggingRegistry::EnvironmentRules] = parser.rules();
+        registry->envRules=parser.rules();
         registry->updateRules();
 
         QVERIFY(!cat.isWarningEnabled());
@@ -312,6 +309,6 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(tst_QLoggingRegistry)
+QTEST_MAIN(tst_QLoggingRegistry)
 
 #include "tst_qloggingregistry.moc"

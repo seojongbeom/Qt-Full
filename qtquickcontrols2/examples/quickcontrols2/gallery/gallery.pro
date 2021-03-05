@@ -1,16 +1,15 @@
 TEMPLATE = app
 TARGET = gallery
-QT += quick quickcontrols2
+QT += quick
 
 SOURCES += \
     gallery.cpp
 
+OTHER_FILES += \
+    gallery.qml
+
 RESOURCES += \
-    gallery.qml \
-    qtquickcontrols2.conf \
-    $$files(images/*.png) \
-    $$files(images/+material/*.png) \
-    $$files(pages/*.qml)
+    gallery.qrc
 
 target.path = $$[QT_INSTALL_EXAMPLES]/quickcontrols2/gallery
 INSTALLS += target

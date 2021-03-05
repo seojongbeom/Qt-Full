@@ -1,48 +1,41 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
-#include "qqmlnativedebugconnector.h"
-#include "qqmldebugpacket.h"
-
+#include <private/qqmldebugconnector_p.h>
 #include <private/qhooks_p.h>
 
-#include <QtQml/qjsengine.h>
+#include <qqmlengine.h>
+
 #include <QtCore/qdebug.h>
 #include <QtCore/qjsonarray.h>
 #include <QtCore/qjsondocument.h>
@@ -72,7 +65,7 @@ Q_DECL_EXPORT void qt_qmlDebugConnectorOpen();
 // member to some other place.
 Q_DECL_EXPORT void qt_qmlDebugSetStreamVersion(int version)
 {
-    QQmlNativeDebugConnector::setDataStreamVersion(version);
+    QQmlDebugStream::s_dataStreamVersion = version;
 }
 
 
@@ -179,25 +172,55 @@ Q_DECL_EXPORT void qt_qmlDebugConnectorOpen()
 
 QT_BEGIN_NAMESPACE
 
+class QQmlNativeDebugConnector : public QQmlDebugConnector
+{
+    Q_OBJECT
+
+public:
+    QQmlNativeDebugConnector();
+    ~QQmlNativeDebugConnector();
+
+    bool blockingMode() const;
+    QQmlDebugService *service(const QString &name) const;
+    void addEngine(QQmlEngine *engine);
+    void removeEngine(QQmlEngine *engine);
+    bool addService(const QString &name, QQmlDebugService *service);
+    bool removeService(const QString &name);
+    bool open(const QVariantHash &configuration);
+
+private slots:
+    void sendMessage(const QString &name, const QByteArray &message);
+    void sendMessages(const QString &name, const QList<QByteArray> &messages);
+
+private:
+    void announceObjectAvailability(const QString &objectType, QObject *object, bool available);
+
+    QVector<QQmlDebugService *> m_services;
+    bool m_blockingMode;
+};
+
 QQmlNativeDebugConnector::QQmlNativeDebugConnector()
     : m_blockingMode(false)
 {
     const QString args = commandLineArguments();
-    const auto lstjsDebugArguments = args.splitRef(QLatin1Char(','), QString::SkipEmptyParts);
+    const QStringList lstjsDebugArguments = args.split(QLatin1Char(','));
     QStringList services;
-    for (const QStringRef &strArgument : lstjsDebugArguments) {
+    QStringList::const_iterator argsItEnd = lstjsDebugArguments.cend();
+    QStringList::const_iterator argsIt = lstjsDebugArguments.cbegin();
+    for (; argsIt != argsItEnd; ++argsIt) {
+        const QString strArgument = *argsIt;
         if (strArgument == QLatin1String("block")) {
             m_blockingMode = true;
         } else if (strArgument == QLatin1String("native")) {
             // Ignore. This is used to signal that this connector
             // should be loaded and that has already happened.
         } else if (strArgument.startsWith(QLatin1String("services:"))) {
-            services.append(strArgument.mid(9).toString());
+            services.append(strArgument.mid(9));
         } else if (!services.isEmpty()) {
-            services.append(strArgument.toString());
-        } else if (!strArgument.startsWith(QLatin1String("connector:"))) {
+            services.append(strArgument);
+        } else {
             qWarning("QML Debugger: Invalid argument \"%s\" detected. Ignoring the same.",
-                     strArgument.toUtf8().constData());
+                     qUtf8Printable(strArgument));
         }
     }
     setServices(services);
@@ -205,7 +228,7 @@ QQmlNativeDebugConnector::QQmlNativeDebugConnector()
 
 QQmlNativeDebugConnector::~QQmlNativeDebugConnector()
 {
-    for (QQmlDebugService *service : qAsConst(m_services)) {
+    foreach (QQmlDebugService *service, m_services) {
         service->stateAboutToBeChanged(QQmlDebugService::NotConnected);
         service->setState(QQmlDebugService::NotConnected);
         service->stateChanged(QQmlDebugService::NotConnected);
@@ -227,41 +250,28 @@ QQmlDebugService *QQmlNativeDebugConnector::service(const QString &name) const
     return 0;
 }
 
-void QQmlNativeDebugConnector::addEngine(QJSEngine *engine)
+void QQmlNativeDebugConnector::addEngine(QQmlEngine *engine)
 {
-    Q_ASSERT(!m_engines.contains(engine));
-
     TRACE_PROTOCOL("Add engine to connector:" << engine);
-    for (QQmlDebugService *service : qAsConst(m_services))
+    foreach (QQmlDebugService *service, m_services)
         service->engineAboutToBeAdded(engine);
 
     announceObjectAvailability(QLatin1String("qmlengine"), engine, true);
 
-    for (QQmlDebugService *service : qAsConst(m_services))
+    foreach (QQmlDebugService *service, m_services)
         service->engineAdded(engine);
-
-    m_engines.append(engine);
 }
 
-void QQmlNativeDebugConnector::removeEngine(QJSEngine *engine)
+void QQmlNativeDebugConnector::removeEngine(QQmlEngine *engine)
 {
-    Q_ASSERT(m_engines.contains(engine));
-
     TRACE_PROTOCOL("Remove engine from connector:" << engine);
-    for (QQmlDebugService *service : qAsConst(m_services))
+    foreach (QQmlDebugService *service, m_services)
         service->engineAboutToBeRemoved(engine);
 
     announceObjectAvailability(QLatin1String("qmlengine"), engine, false);
 
-    for (QQmlDebugService *service : qAsConst(m_services))
+    foreach (QQmlDebugService *service, m_services)
         service->engineRemoved(engine);
-
-    m_engines.removeOne(engine);
-}
-
-bool QQmlNativeDebugConnector::hasEngine(QJSEngine *engine) const
-{
-    return m_engines.contains(engine);
 }
 
 void QQmlNativeDebugConnector::announceObjectAvailability(const QString &objectType,
@@ -284,8 +294,9 @@ void QQmlNativeDebugConnector::announceObjectAvailability(const QString &objectT
 bool QQmlNativeDebugConnector::addService(const QString &name, QQmlDebugService *service)
 {
     TRACE_PROTOCOL("Add service to connector: " << qPrintable(name) << service);
-    for (auto it = m_services.cbegin(), end = m_services.cend(); it != end; ++it) {
-        if ((*it)->name() == name)
+    for (QVector<QQmlDebugService *>::ConstIterator i = m_services.begin(); i != m_services.end();
+         ++i) {
+        if ((*i)->name() == name)
             return false;
     }
 
@@ -327,12 +338,6 @@ bool QQmlNativeDebugConnector::open(const QVariantHash &configuration)
     return true;
 }
 
-void QQmlNativeDebugConnector::setDataStreamVersion(int version)
-{
-    Q_ASSERT(version <= QDataStream::Qt_DefaultCompiledVersion);
-    s_dataStreamVersion = version;
-}
-
 void QQmlNativeDebugConnector::sendMessage(const QString &name, const QByteArray &message)
 {
     (*responseBuffer) += name.toUtf8() + ' ' + QByteArray::number(message.size()) + ' ' + message;
@@ -358,11 +363,21 @@ void QQmlNativeDebugConnector::sendMessages(const QString &name, const QList<QBy
         sendMessage(name, messages.at(i));
 }
 
-QQmlDebugConnector *QQmlNativeDebugConnectorFactory::create(const QString &key)
+class QQmlNativeDebugConnectorFactory : public QQmlDebugConnectorFactory
 {
-    return key == QLatin1String("QQmlNativeDebugConnector") ? new QQmlNativeDebugConnector : 0;
-}
+    Q_OBJECT
+
+    Q_PLUGIN_METADATA(IID QQmlDebugConnectorFactory_iid FILE "qqmlnativedebugconnector.json")
+
+public:
+    QQmlNativeDebugConnectorFactory() {}
+
+    QQmlDebugConnector *create(const QString &key)
+    {
+        return key == QLatin1String("QQmlNativeDebugConnector") ? new QQmlNativeDebugConnector : 0;
+    }
+};
 
 QT_END_NAMESPACE
 
-#include "moc_qqmlnativedebugconnector.cpp"
+#include "qqmlnativedebugconnector.moc"

@@ -2,6 +2,7 @@ CONFIG += testcase
 
 QT = core-private testlib
 
+mac:CONFIG -= app_bundle
 linux:LIBS += -lrt
 
 SOURCES += tst_qsharedmemory.cpp

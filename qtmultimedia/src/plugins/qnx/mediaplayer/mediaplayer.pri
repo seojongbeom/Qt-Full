@@ -7,9 +7,8 @@ HEADERS += \
     $$PWD/mmrenderermetadatareadercontrol.h \
     $$PWD/mmrendererplayervideorenderercontrol.h \
     $$PWD/mmrendererutil.h \
-    $$PWD/mmrenderervideowindowcontrol.h \
-    $$PWD/mmreventmediaplayercontrol.h \
-    $$PWD/mmreventthread.h
+    $$PWD/mmrenderervideowindowcontrol.h
+
 SOURCES += \
     $$PWD/mmrenderermediaplayercontrol.cpp \
     $$PWD/mmrenderermediaplayerservice.cpp \
@@ -17,8 +16,16 @@ SOURCES += \
     $$PWD/mmrenderermetadatareadercontrol.cpp \
     $$PWD/mmrendererplayervideorenderercontrol.cpp \
     $$PWD/mmrendererutil.cpp \
-    $$PWD/mmrenderervideowindowcontrol.cpp \
-    $$PWD/mmreventmediaplayercontrol.cpp \
-    $$PWD/mmreventthread.cpp
+    $$PWD/mmrenderervideowindowcontrol.cpp
 
-QMAKE_USE += mmrenderer
+LIBS += -lmmrndclient -lstrm
+
+blackberry {
+    HEADERS += $$PWD/bpsmediaplayercontrol.h
+    SOURCES += $$PWD/bpsmediaplayercontrol.cpp
+} else {
+    HEADERS += $$PWD/ppsmediaplayercontrol.h
+    SOURCES += $$PWD/ppsmediaplayercontrol.cpp
+    QT += core-private
+    LIBS += -lpps
+}

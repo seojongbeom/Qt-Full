@@ -16,7 +16,7 @@ load(qt_build_paths)
     minimal_syncqt {
         QMAKE_SYNCQT += -minimal $$QMAKE_SYNCQT_OPTIONS
     } else {
-        qtConfig(private_tests): \   # -developer-build
+        contains(QT_CONFIG, private_tests): \   # -developer-build
             QMAKE_SYNCQT += -check-includes
     }
     for(mod, MODULE_INCNAME): \
@@ -59,9 +59,7 @@ load(qt_build_paths)
 # even beyond the module's own build. The implication of this is that
 # qmake might never use a framework's headers in a non-prefix build,
 # as there is no separate set of .pri files for users outside Qt.
-# Borrowing is assumed to happen from modules which, in a framework build,
-# actually are frameworks.
-prefix_build:module_frameworks: \
+prefix_build:lib_bundle: \
     fwd = _FWD
 # When using a split include path during the build, the installed module's
 # include path is also structurally different from that in the build dir.
@@ -84,7 +82,7 @@ for(mod, MODULE_INCNAME) {
         generated_privates: \
             MODULE$${sfwd}$${prv}_INCLUDES += $$mbibase/$$VERSION $$mbibase/$$VERSION/$$mod
     }
-    prefix_build:module_frameworks {
+    prefix_build:lib_bundle {
         mfbase = \$\$QT_MODULE_LIB_BASE/$${mod}.framework/Headers
         MODULE_INCLUDES += $$mfbase
         MODULE$${prv}_INCLUDES += $$mfbase/$$VERSION $$mfbase/$$VERSION/$$mod
@@ -106,33 +104,18 @@ include($$INC_PATH/include/$$MODULE_INCNAME/headers.pri, "", true)
 
 alien_syncqt: return()
 
-MODULE_INC_OUTDIR = $$MODULE_BASE_OUTDIR/include/$$MODULE_INCNAME
-
-exists($$OUT_PWD/qt$${MODULE}-config.h) {
-    fwd_rel = $$relative_path($$OUT_PWD, $$MODULE_INC_OUTDIR)
-    SYNCQT.INJECTIONS += \
-        $$fwd_rel/qt$${MODULE}-config.h:qt$${MODULE}-config.h \
-        $$fwd_rel/qt$${MODULE}-config_p.h:$$MODULE_VERSION/$$MODULE_INCNAME/private/qt$${MODULE}-config_p.h
-    inst_rel = $$relative_path($$OUT_PWD, $$_PRO_FILE_PWD_)
-    SYNCQT.HEADER_FILES += $$inst_rel/qt$${MODULE}-config.h
-    SYNCQT.INJECTED_PRIVATE_HEADER_FILES += $$inst_rel/qt$${MODULE}-config_p.h
-}
-
 for (injection, SYNCQT.INJECTIONS) {
     injects = $$split(injection, :)
-    dst_hdr = $$absolute_path($$member(injects, 0), $$MODULE_INC_OUTDIR)
     fwd_hdr = $$member(injects, 1)
-    MAIN_FWD = $$MODULE_INC_OUTDIR/$$fwd_hdr
-    MAIN_FWD_CONT = '$${LITERAL_HASH}include "$$relative_path($$dst_hdr, $$dirname(MAIN_FWD))"'
-    write_file($$MAIN_FWD, MAIN_FWD_CONT)|error()
-    touch($$MAIN_FWD, $$dst_hdr)
+    MAIN_FWD = $$INC_PATH/include/$$MODULE_INCNAME/$$fwd_hdr
+    MAIN_FWD_CONT = '$${LITERAL_HASH}include "$$member(injects, 0)"'
+    write_file($$MAIN_FWD, MAIN_FWD_CONT)|error("Aborting.")
     !git_build: QMAKE_DISTCLEAN += $$MAIN_FWD
     injects = $$member(injects, 2, -1)
     for (inject, injects) {
-        CLASS_FWD = $$MODULE_INC_OUTDIR/$$inject
+        CLASS_FWD = $$INC_PATH/include/$$MODULE_INCNAME/$$inject
         CLASS_FWD_CONT = '$${LITERAL_HASH}include "$$fwd_hdr"'
-        write_file($$CLASS_FWD, CLASS_FWD_CONT)|error()
-        touch($$CLASS_FWD, $$dst_hdr)
+        write_file($$CLASS_FWD, CLASS_FWD_CONT)|error("Aborting.")
         !git_build: QMAKE_DISTCLEAN += $$CLASS_FWD
     }
 }
@@ -152,34 +135,27 @@ MODULE_MASTER_DEPS_HEADER = $$MODULE_BASE_OUTDIR/include/$$MODULE_INCNAME/$${MOD
         MODULE_MASTER_DEPS_HEADER_CONT += "$${LITERAL_HASH}include <$$depname/$$depname>"
     }
     MODULE_MASTER_DEPS_HEADER_CONT += "$${LITERAL_HASH}endif"
-    write_file($$MODULE_MASTER_DEPS_HEADER, MODULE_MASTER_DEPS_HEADER_CONT)|error()
+    write_file($$MODULE_MASTER_DEPS_HEADER, MODULE_MASTER_DEPS_HEADER_CONT)|error("Aborting.")
     !git_build: QMAKE_DISTCLEAN += $$MODULE_MASTER_DEPS_HEADER
 }
 SYNCQT.HEADER_FILES += $$MODULE_MASTER_DEPS_HEADER
 
-# Automatically enable precompiled headers for Qt modules with more than 2 sources
-combined_SOURCES = $$SOURCES $$OBJECTIVE_SOURCES
-count(combined_SOURCES, 2, >) {
-    # except for Gcc/Windows: Larger precompiled headers crash cc1plus.exe
-    # (e.g. with i686-4.8.2-release-posix-dwarf-rt_v3-rev3)
-    !if(gcc:equals(QMAKE_HOST.os, Windows)):!equals(TEMPLATE, aux) {
-        !defined(PRECOMPILED_HEADER, "var"): PRECOMPILED_HEADER = $$MODULE_MASTER_DEPS_HEADER
-    }
-} else {
-    CONFIG -= precompile_header
+# Automatically enable precompiled headers for Qt modules,
+# except for Gcc/Windows: Larger precompiled headers crash cc1plus.exe
+# (e.g. with i686-4.8.2-release-posix-dwarf-rt_v3-rev3)
+!if(gcc:equals(QMAKE_HOST.os, Windows)):!equals(TEMPLATE, aux) {
+    isEmpty(PRECOMPILED_HEADER): PRECOMPILED_HEADER = $$MODULE_MASTER_DEPS_HEADER
 }
-unset(combined_SOURCES)
 
 headersclean:!internal_module {
     # Make sure that the header compiles with our strict options
     hcleanDEFS = -DQT_NO_CAST_TO_ASCII=1 \
                  -DQT_NO_CAST_FROM_ASCII=1 \
-                 -UQT_RESTRICTED_CAST_FROM_ASCII \
                  -DQT_STRICT_ITERATORS \
                  -DQT_NO_URL_CAST_FROM_STRING=1 \
                  -DQT_NO_CAST_FROM_BYTEARRAY=1 \
                  -DQT_NO_KEYWORDS=1 \
-                 -DQT_USE_QSTRINGBUILDER \
+                 -DQT_USE_FAST_CONCATENATION \
                  -DQT_USE_FAST_OPERATOR_PLUS \
                  -Dsignals=int \
                  -Dslots=int \
@@ -187,11 +163,11 @@ headersclean:!internal_module {
                  -Dforeach=public: \
                  -Dforever=public:
 
-    gcc:!rim_qcc {
+    gcc {
         # Turn on some extra warnings not found in -Wall -Wextra.
         # Common to GCC, Clang and ICC (and other compilers that masquerade as GCC):
         hcleanFLAGS = -Wall -Wextra -Werror \
-                      -Woverloaded-virtual -Wshadow -Wundef -Wfloat-equal \
+                      -Woverloaded-virtual -Wshadow -Wundef \
                       -Wnon-virtual-dtor -Wpointer-arith -Wformat-security \
                       -Wno-long-long -Wno-variadic-macros -pedantic-errors
 
@@ -207,20 +183,13 @@ headersclean:!internal_module {
                 hcleanFLAGS -= -Wshadow
             }
         } else {
-            # options accepted by GCC and Clang
-            hcleanFLAGS += -Wchar-subscripts -Wold-style-cast
+            hcleanFLAGS += -Wchar-subscripts
 
             !contains(QT_ARCH, arm):!contains(QT_ARCH, mips): \
                 hcleanFLAGS += -Wcast-align
 
-            clang_ver = $${QT_CLANG_MAJOR_VERSION}.$${QT_CLANG_MINOR_VERSION}
-            versionAtLeast(clang_ver, 3.8): hcleanFLAGS += -Wdouble-promotion
-
             !clang {
                 # options accepted only by GCC
-
-                gcc_ver = $${QT_GCC_MAJOR_VERSION}.$${QT_GCC_MINOR_VERSION}
-                versionAtLeast(gcc_ver, 4.5): hcleanFLAGS += -Wdouble-promotion
 
                 c++11 {
                     # only enabled for actual c++11 builds due to
@@ -257,24 +226,17 @@ headersclean:!internal_module {
                         $$[QT_INSTALL_DATA/src]/mkspecs/features/data/dummy.cpp
     }
 
-    !isEmpty(hcleanCOMMAND):if(!qtConfig(debug_and_release)|CONFIG(release, debug|release)) {
-        CLEAN_HEADERS =
-        for (h, SYNCQT.CLEAN_HEADER_FILES) {
-            hh = $$split(h, :)
-            hr = $$member(hh, 1)
-            isEmpty(hr)|qtConfig($$hr): \
-                CLEAN_HEADERS += $$member(hh, 0)
-        }
-        CLEAN_HEADERS -= $$HEADERSCLEAN_EXCLUDE
+    !isEmpty(hcleanCOMMAND):if(!contains(QT_CONFIG, debug_and_release)|CONFIG(release, debug|release)) {
         header_check.dependency_type = TYPE_C
         header_check.CONFIG += no_link
         header_check.output = ${QMAKE_VAR_OBJECTS_DIR}header_${QMAKE_FILE_BASE}$${first(QMAKE_EXT_OBJ)}
-        header_check.input = CLEAN_HEADERS
+        header_check.input = SYNCQT.CLEAN_HEADER_FILES
         header_check.variable_out = PRE_TARGETDEPS
         header_check.name = headercheck ${QMAKE_FILE_IN}
         header_check.commands = $$hcleanCOMMAND
         silent:header_check.commands = @echo compiling[header] ${QMAKE_FILE_IN} && $$hcleanCOMMAND
         QMAKE_EXTRA_COMPILERS += header_check
+        SYNCQT.CLEAN_HEADER_FILES -= $$HEADERSCLEAN_EXCLUDE
     }
     unset(hcleanCOMMAND)
     unset(hcleanFLAGS)

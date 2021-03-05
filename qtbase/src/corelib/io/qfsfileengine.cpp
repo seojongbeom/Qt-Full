@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -48,7 +41,9 @@
 
 #ifndef QT_NO_FSFILEENGINE
 
+#if !defined(Q_OS_WINCE)
 #include <errno.h>
+#endif
 #if defined(Q_OS_UNIX)
 #include "private/qcore_unix_p.h"
 #endif
@@ -123,8 +118,10 @@ void QFSFileEnginePrivate::init()
 {
     is_sequential = 0;
     tried_stat = 0;
+#if !defined(Q_OS_WINCE)
     need_lstat = 1;
     is_link = 0;
+#endif
     openMode = QIODevice::NotOpen;
     fd = -1;
     fh = 0;
@@ -135,7 +132,9 @@ void QFSFileEnginePrivate::init()
     fileAttrib = INVALID_FILE_ATTRIBUTES;
     fileHandle = INVALID_HANDLE_VALUE;
     mapHandle = NULL;
+#ifndef Q_OS_WINCE
     cachedFd = -1;
+#endif
 #endif
 }
 
@@ -268,7 +267,7 @@ bool QFSFileEnginePrivate::openFh(QIODevice::OpenMode openMode, FILE *fh)
 
         if (ret != 0) {
             q->setError(errno == EMFILE ? QFile::ResourceError : QFile::OpenError,
-                        QSystemError::stdString());
+                        qt_error_string(int(errno)));
 
             this->openMode = QIODevice::NotOpen;
             this->fh = 0;
@@ -332,7 +331,7 @@ bool QFSFileEnginePrivate::openFd(QIODevice::OpenMode openMode, int fd)
 
         if (ret == -1) {
             q->setError(errno == EMFILE ? QFile::ResourceError : QFile::OpenError,
-                        QSystemError::stdString());
+                        qt_error_string(int(errno)));
 
             this->openMode = QIODevice::NotOpen;
             this->fd = -1;
@@ -391,7 +390,7 @@ bool QFSFileEnginePrivate::closeFdFh()
     if (!flushed || !closed) {
         if (flushed) {
             // If not flushed, we want the flush error to fall through.
-            q->setError(QFile::UnspecifiedError, QSystemError::stdString());
+            q->setError(QFile::UnspecifiedError, qt_error_string(errno));
         }
         return false;
     }
@@ -443,7 +442,7 @@ bool QFSFileEnginePrivate::flushFh()
 
     if (ret != 0) {
         q->setError(errno == ENOSPC ? QFile::ResourceError : QFile::WriteError,
-                    QSystemError::stdString());
+                    qt_error_string(errno));
         return false;
     }
     return true;
@@ -539,14 +538,14 @@ bool QFSFileEnginePrivate::seekFdFh(qint64 pos)
         } while (ret != 0 && errno == EINTR);
 
         if (ret != 0) {
-            q->setError(QFile::ReadError, QSystemError::stdString());
+            q->setError(QFile::ReadError, qt_error_string(int(errno)));
             return false;
         }
     } else {
         // Unbuffered stdio mode.
         if (QT_LSEEK(fd, QT_OFF_T(pos), SEEK_SET) == -1) {
-            qWarning("QFile::at: Cannot set file position %lld", pos);
-            q->setError(QFile::PositionError, QSystemError::stdString());
+            qWarning() << "QFile::at: Cannot set file position" << pos;
+            q->setError(QFile::PositionError, qt_error_string(errno));
             return false;
         }
     }
@@ -588,7 +587,7 @@ qint64 QFSFileEnginePrivate::readFdFh(char *data, qint64 len)
     Q_Q(QFSFileEngine);
 
     if (len < 0 || len != qint64(size_t(len))) {
-        q->setError(QFile::ReadError, QSystemError::stdString(EINVAL));
+        q->setError(QFile::ReadError, qt_error_string(EINVAL));
         return -1;
     }
 
@@ -634,7 +633,7 @@ qint64 QFSFileEnginePrivate::readFdFh(char *data, qint64 len)
 
     if (!eof && readBytes == 0) {
         readBytes = -1;
-        q->setError(QFile::ReadError, QSystemError::stdString());
+        q->setError(QFile::ReadError, qt_error_string(errno));
     }
 
     return readBytes;
@@ -680,7 +679,7 @@ qint64 QFSFileEnginePrivate::readLineFdFh(char *data, qint64 maxlen)
     // solves this.
     if (!fgets(data, int(maxlen + 1), fh)) {
         if (!feof(fh))
-            q->setError(QFile::ReadError, QSystemError::stdString());
+            q->setError(QFile::ReadError, qt_error_string(int(errno)));
         return -1;              // error
     }
 
@@ -719,7 +718,7 @@ qint64 QFSFileEnginePrivate::writeFdFh(const char *data, qint64 len)
     Q_Q(QFSFileEngine);
 
     if (len < 0 || len != qint64(size_t(len))) {
-        q->setError(QFile::WriteError, QSystemError::stdString(EINVAL));
+        q->setError(QFile::WriteError, qt_error_string(EINVAL));
         return -1;
     }
 
@@ -756,7 +755,7 @@ qint64 QFSFileEnginePrivate::writeFdFh(const char *data, qint64 len)
 
     if (len &&  writtenBytes == 0) {
         writtenBytes = -1;
-        q->setError(errno == ENOSPC ? QFile::ResourceError : QFile::WriteError, QSystemError::stdString());
+        q->setError(errno == ENOSPC ? QFile::ResourceError : QFile::WriteError, qt_error_string(errno));
     } else {
         // reset the cached size, if any
         metaData.clearFlags(QFileSystemMetaData::SizeAttribute);
@@ -880,8 +879,9 @@ bool QFSFileEngine::supportsExtension(Extension extension) const
 
 /*! \fn QFileInfoList QFSFileEngine::drives()
   For Windows, returns the list of drives in the file system as a list
-  of QFileInfo objects. On Unix, only the root path is returned.
-  On Windows, this function returns all drives (A:\, C:\, D:\, and so on).
+  of QFileInfo objects. On Unix and Windows CE, only the
+  root path is returned.  On Windows, this function returns all drives
+  (A:\, C:\, D:\, etc.).
 
   For Unix, the list contains just the root path "/".
 */

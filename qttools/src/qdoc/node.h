@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -92,7 +97,6 @@ public:
 
     enum DocSubtype {
         NoSubtype,
-        Attribution,
         Example,
         HeaderFile,
         File,
@@ -134,7 +138,6 @@ public:
 
     enum PageType {
         NoPageType,
-        AttributionPage,
         ApiPage,
         ArticlePage,
         ExamplePage,
@@ -642,7 +645,7 @@ public:
     virtual bool isInternal() const Q_DECL_OVERRIDE { return (status() == Internal); }
     virtual QString qmlFullBaseName() const Q_DECL_OVERRIDE;
     virtual QString obsoleteLink() const Q_DECL_OVERRIDE { return obsoleteLink_; }
-    virtual void setObsoleteLink(const QString& t) Q_DECL_OVERRIDE { obsoleteLink_ = t; }
+    virtual void setObsoleteLink(const QString& t) Q_DECL_OVERRIDE { obsoleteLink_ = t; };
     virtual QString logicalModuleName() const Q_DECL_OVERRIDE;
     virtual QString logicalModuleVersion() const Q_DECL_OVERRIDE;
     virtual QString logicalModuleIdentifier() const Q_DECL_OVERRIDE;
@@ -654,17 +657,17 @@ public:
     const QString& qmlBaseName() const { return qmlBaseName_; }
     void setQmlBaseName(const QString& name) { qmlBaseName_ = name; }
     bool qmlBaseNodeNotSet() const { return (qmlBaseNode_ == 0); }
-    virtual QmlTypeNode* qmlBaseNode() Q_DECL_OVERRIDE { return qmlBaseNode_; }
+    virtual QmlTypeNode* qmlBaseNode() Q_DECL_OVERRIDE;
     void setQmlBaseNode(QmlTypeNode* b) { qmlBaseNode_ = b; }
     void requireCppClass() { cnodeRequired_ = true; }
     bool cppClassRequired() const { return cnodeRequired_; }
-    static void addInheritedBy(const Node *base, Node* sub);
-    static void subclasses(const Node *base, NodeList& subs);
+    static void addInheritedBy(const QString& base, Node* sub);
+    static void subclasses(const QString& base, NodeList& subs);
     static void terminate();
 
 public:
     static bool qmlOnly;
-    static QMultiMap<const Node*, Node*> inheritedBy;
+    static QMultiMap<QString,Node*> inheritedBy;
 
 private:
     bool abstract_;
@@ -985,9 +988,6 @@ public:
     void setFinal(bool b) { isFinal_ = b; }
     bool isFinal() const { return isFinal_; }
 
-    void setOverride(bool b) { isOverride_ = b; }
-    bool isOverride() const { return isOverride_; }
-
 private:
     void addAssociatedProperty(PropertyNode* property);
 
@@ -1007,7 +1007,6 @@ private:
     bool isDeleted_ : 1;
     bool isDefaulted_ : 1;
     bool isFinal_ : 1;
-    bool isOverride_ : 1;
     unsigned char overloadNumber_;
     QVector<Parameter> parameters_;
     const FunctionNode* reimplementedFrom_;

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtAddOn.ImageFormats module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -78,12 +83,6 @@ private slots:
     void resolution_data();
     void resolution();
 
-    void multipage_data();
-    void multipage();
-
-    void tiled_data();
-    void tiled();
-
 private:
     QString prefix;
 };
@@ -139,7 +138,6 @@ void tst_qtiff::readImage_data()
     QTest::newRow("mono_orientation_7") << QString("mono_orientation_7.tiff") << QSize(64, 64);
     QTest::newRow("mono_orientation_8") << QString("mono_orientation_8.tiff") << QSize(64, 64);
     QTest::newRow("original_indexed") << QString("original_indexed.tiff") << QSize(64, 64);
-    QTest::newRow("original_grayscale") << QString("original_grayscale.tiff") << QSize(64, 64);
     QTest::newRow("original_mono") << QString("original_mono.tiff") << QSize(64, 64);
     QTest::newRow("original_rgb") << QString("original_rgb.tiff") << QSize(64, 64);
     QTest::newRow("rgba_adobedeflate_littleendian") << QString("rgba_adobedeflate_littleendian.tif") << QSize(200, 200);
@@ -157,14 +155,6 @@ void tst_qtiff::readImage_data()
     QTest::newRow("rgb_orientation_7") << QString("rgb_orientation_7.tiff") << QSize(64, 64);
     QTest::newRow("rgb_orientation_8") << QString("rgb_orientation_8.tiff") << QSize(64, 64);
     QTest::newRow("teapot") << QString("teapot.tiff") << QSize(256, 256);
-    QTest::newRow("oddsize_grayscale") << QString("oddsize_grayscale.tiff") << QSize(59, 71);
-    QTest::newRow("oddsize_mono") << QString("oddsize_mono.tiff") << QSize(59, 71);
-    QTest::newRow("tiled_rgb") << QString("tiled_rgb.tiff") << QSize(64, 64);
-    QTest::newRow("tiled_indexed") << QString("tiled_indexed.tiff") << QSize(64, 64);
-    QTest::newRow("tiled_grayscale") << QString("tiled_grayscale.tiff") << QSize(64, 64);
-    QTest::newRow("tiled_mono") << QString("tiled_mono.tiff") << QSize(64, 64);
-    QTest::newRow("tiled_oddsize_grayscale") << QString("tiled_oddsize_grayscale.tiff") << QSize(59, 71);
-    QTest::newRow("tiled_oddsize_mono") << QString("tiled_oddsize_mono.tiff") << QSize(59, 71);
 }
 
 void tst_qtiff::readImage()
@@ -419,6 +409,10 @@ void tst_qtiff::readWriteNonDestructive()
 
 void tst_qtiff::largeTiff()
 {
+#if defined(Q_OS_WINCE)
+    QSKIP("not tested on WinCE");
+#endif
+
     QImage img(4096, 2048, QImage::Format_ARGB32_Premultiplied);
 
     QPainter p(&img);
@@ -526,70 +520,6 @@ void tst_qtiff::resolution()
 
     QCOMPARE(expectedDotsPerMeterX, generatedImage.dotsPerMeterX());
     QCOMPARE(expectedDotsPerMeterY, generatedImage.dotsPerMeterY());
-}
-
-void tst_qtiff::multipage_data()
-{
-    QTest::addColumn<QString>("filename");
-    QTest::addColumn<int>("expectedNumPages");
-    QTest::addColumn<QVector<QSize>>("expectedSizes");
-
-    QVector<QSize> sizes = QVector<QSize>() << QSize(640, 480) << QSize(800, 600) << QSize(320, 240);
-    QTest::newRow("3 page TIFF") << ("multipage.tiff") << 3 << sizes;
-}
-
-void tst_qtiff::multipage()
-{
-    QFETCH(QString, filename);
-    QFETCH(int, expectedNumPages);
-    QFETCH(QVector<QSize>, expectedSizes);
-
-    QImageReader reader(prefix + filename);
-    QCOMPARE(reader.imageCount(), expectedNumPages);
-
-    // Test jumpToImage, currentImageNumber and whether the actual image is correct
-    QCOMPARE(reader.jumpToImage(-1), false);
-    for (int i = 0; i < expectedNumPages; ++i) {
-        reader.jumpToImage(i);
-        QCOMPARE(reader.currentImageNumber(), i);
-        QSize size = reader.size();
-        QCOMPARE(size.width(), expectedSizes[i].width());
-        QCOMPARE(size.height(), expectedSizes[i].height());
-        QImage image = reader.read();
-        QVERIFY2(!image.isNull(), qPrintable(reader.errorString()));
-    }
-    QCOMPARE(reader.jumpToImage(expectedNumPages), false);
-
-    // Test jumpToNextImage
-    reader.jumpToImage(0);
-    QCOMPARE(reader.currentImageNumber(), 0);
-    for (int i = 0; i < expectedNumPages - 1; ++i) {
-        QCOMPARE(reader.jumpToNextImage(), true);
-    }
-    QCOMPARE(reader.jumpToNextImage(), false);
-}
-
-void tst_qtiff::tiled_data()
-{
-    QTest::addColumn<QString>("expectedFile");
-    QTest::addColumn<QString>("tiledFile");
-    QTest::newRow("RGB") << "original_rgb.tiff" << "tiled_rgb.tiff";
-    QTest::newRow("Indexed") << "original_indexed.tiff" << "tiled_indexed.tiff";
-    QTest::newRow("Grayscale") << "original_grayscale.tiff" << "tiled_grayscale.tiff";
-    QTest::newRow("Mono") << "original_mono.tiff" << "tiled_mono.tiff";
-    QTest::newRow("Oddsize (Grayscale)") << "oddsize_grayscale.tiff" << "tiled_oddsize_grayscale.tiff";
-    QTest::newRow("Oddsize (Mono)") << "oddsize_mono.tiff" << "tiled_oddsize_mono.tiff";
-}
-
-void tst_qtiff::tiled()
-{
-    QFETCH(QString, expectedFile);
-    QFETCH(QString, tiledFile);
-
-    QImage expectedImage(prefix + expectedFile);
-    QImage tiledImage(prefix + tiledFile);
-    QVERIFY(!tiledImage.isNull());
-    QCOMPARE(expectedImage, tiledImage);
 }
 
 QTEST_MAIN(tst_qtiff)

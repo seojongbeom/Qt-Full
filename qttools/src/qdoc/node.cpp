@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -75,39 +80,6 @@ void Node::initialize()
 
 bool Node::nodeNameLessThan(const Node *n1, const Node *n2)
 {
-    if (n1->isDocumentNode() && n2->isDocumentNode()) {
-        const DocumentNode* f1 = static_cast<const DocumentNode*>(n1);
-        const DocumentNode* f2 = static_cast<const DocumentNode*>(n2);
-        if (f1->fullTitle() < f2->fullTitle())
-            return true;
-        else if (f1->fullTitle() > f2->fullTitle())
-            return false;
-    }
-
-    if (n1->isCollectionNode() && n2->isCollectionNode()) {
-        const CollectionNode* f1 = static_cast<const CollectionNode*>(n1);
-        const CollectionNode* f2 = static_cast<const CollectionNode*>(n2);
-        if (f1->fullTitle() < f2->fullTitle())
-            return true;
-        else if (f1->fullTitle() > f2->fullTitle())
-            return false;
-    }
-
-    if (n1->type() == Node::Function && n2->type() == Node::Function) {
-        const FunctionNode* f1 = static_cast<const FunctionNode*>(n1);
-        const FunctionNode* f2 = static_cast<const FunctionNode*>(n2);
-
-        if (f1->isConst() < f2->isConst())
-            return true;
-        else if (f1->isConst() > f2->isConst())
-            return false;
-
-        if (f1->signature(false) < f2->signature(false))
-            return true;
-        else if (f1->signature(false) > f2->signature(false))
-            return false;
-    }
-
     if (n1->location().filePath() < n2->location().filePath())
         return true;
     else if (n1->location().filePath() > n2->location().filePath())
@@ -127,6 +99,38 @@ bool Node::nodeNameLessThan(const Node *n1, const Node *n2)
         return true;
     else if (n1->access() > n2->access())
         return false;
+
+    if (n1->type() == Node::Function && n2->type() == Node::Function) {
+        const FunctionNode* f1 = static_cast<const FunctionNode*>(n1);
+        const FunctionNode* f2 = static_cast<const FunctionNode*>(n2);
+
+        if (f1->isConst() < f2->isConst())
+            return true;
+        else if (f1->isConst() > f2->isConst())
+            return false;
+
+        if (f1->signature(false) < f2->signature(false))
+            return true;
+        else if (f1->signature(false) > f2->signature(false))
+            return false;
+    }
+
+    if (n1->isDocumentNode() && n2->isDocumentNode()) {
+        const DocumentNode* f1 = static_cast<const DocumentNode*>(n1);
+        const DocumentNode* f2 = static_cast<const DocumentNode*>(n2);
+        if (f1->fullTitle() < f2->fullTitle())
+            return true;
+        else if (f1->fullTitle() > f2->fullTitle())
+            return false;
+    }
+    else if (n1->isCollectionNode() && n2->isCollectionNode()) {
+        const CollectionNode* f1 = static_cast<const CollectionNode*>(n1);
+        const CollectionNode* f2 = static_cast<const CollectionNode*>(n2);
+        if (f1->fullTitle() < f2->fullTitle())
+            return true;
+        else if (f1->fullTitle() > f2->fullTitle())
+            return false;
+    }
 
     return false;
 }
@@ -380,8 +384,6 @@ QString Node::pageTypeString() const
 QString Node::pageTypeString(unsigned char t)
 {
     switch ((PageType)t) {
-    case Node::AttributionPage:
-        return "attribution";
     case Node::ApiPage:
         return "api";
     case Node::ArticlePage:
@@ -1269,17 +1271,8 @@ bool Aggregate::isSameSignature(const FunctionNode *f1, const FunctionNode *f2)
               ### hack for C++ to handle superfluous
               "Foo::" prefixes gracefully
             */
-            if (t1 != t2 && t1 != (f2->parent()->name() + "::" + t2)) {
-                // Accept a difference in the template parametters of the type if one
-                // is omited (eg. "QAtomicInteger" == "QAtomicInteger<T>")
-                auto ltLoc = t1.indexOf('<');
-                auto gtLoc = t1.indexOf('>', ltLoc);
-                if (ltLoc < 0 || gtLoc < ltLoc)
-                    return false;
-                t1.remove(ltLoc, gtLoc - ltLoc + 1);
-                if (t1 != t2)
-                    return false;
-            }
+            if (t1 != t2 && t1 != (f2->parent()->name() + "::" + t2))
+                return false;
         }
         ++p1;
         ++p2;
@@ -2042,7 +2035,6 @@ FunctionNode::FunctionNode(Aggregate *parent, const QString& name)
       isDeleted_(false),
       isDefaulted_(false),
       isFinal_(false),
-      isOverride_(false),
       reimplementedFrom_(0)
 {
     setGenus(Node::CPP);
@@ -2069,7 +2061,6 @@ FunctionNode::FunctionNode(NodeType type, Aggregate *parent, const QString& name
       isDeleted_(false),
       isDefaulted_(false),
       isFinal_(false),
-      isOverride_(false),
       reimplementedFrom_(0)
 {
     setGenus(Node::QML);
@@ -2447,7 +2438,7 @@ QString PropertyNode::qualifiedDataType() const
 }
 
 bool QmlTypeNode::qmlOnly = false;
-QMultiMap<const Node*, Node*> QmlTypeNode::inheritedBy;
+QMultiMap<QString,Node*> QmlTypeNode::inheritedBy;
 
 /*!
   Constructs a Qml class node. The new node has the given
@@ -2493,18 +2484,18 @@ void QmlTypeNode::terminate()
   Record the fact that QML class \a base is inherited by
   QML class \a sub.
  */
-void QmlTypeNode::addInheritedBy(const Node *base, Node* sub)
+void QmlTypeNode::addInheritedBy(const QString& base, Node* sub)
 {
     if (sub->isInternal())
         return;
-    if (!inheritedBy.contains(base, sub))
-        inheritedBy.insert(base, sub);
+    if (inheritedBy.constFind(base,sub) == inheritedBy.constEnd())
+        inheritedBy.insert(base,sub);
 }
 
 /*!
   Loads the list \a subs with the nodes of all the subclasses of \a base.
  */
-void QmlTypeNode::subclasses(const Node *base, NodeList &subs)
+void QmlTypeNode::subclasses(const QString& base, NodeList& subs)
 {
     subs.clear();
     if (inheritedBy.count(base) > 0) {
@@ -2512,6 +2503,13 @@ void QmlTypeNode::subclasses(const Node *base, NodeList &subs)
     }
 }
 
+QmlTypeNode* QmlTypeNode::qmlBaseNode()
+{
+    if (!qmlBaseNode_ && !qmlBaseName_.isEmpty()) {
+        qmlBaseNode_ = QDocDatabase::qdocDB()->findQmlType(qmlBaseName_);
+    }
+    return qmlBaseNode_;
+}
 
 /*!
   If this QML type node has a base type node,

@@ -20,10 +20,10 @@ OBJECTIVE_SOURCES += \
     coreaudioplugin.mm \
     coreaudioutils.mm
 
-ios|tvos {
+ios {
     HEADERS += coreaudiosessionmanager.h
     OBJECTIVE_SOURCES += coreaudiosessionmanager.mm
-    LIBS += -framework Foundation -framework AVFoundation
+    LIBS += -framework AVFoundation
 } else {
     LIBS += \
         -framework ApplicationServices \

@@ -1,9 +1,9 @@
-TARGET = qtquicktemplates2plugin
-TARGETPATH = QtQuick/Templates.2
-IMPORT_VERSION = 2.2
+TARGET = qtlabstemplatesplugin
+TARGETPATH = Qt/labs/templates
+IMPORT_VERSION = 1.0
 
 QT += qml quick
-QT_PRIVATE += core-private gui-private qml-private quick-private quicktemplates2-private
+QT_PRIVATE += core-private gui-private qml-private quick-private labstemplates-private
 
 DEFINES += QT_NO_CAST_TO_ASCII QT_NO_CAST_FROM_ASCII
 
@@ -11,7 +11,7 @@ OTHER_FILES += \
     qmldir
 
 SOURCES += \
-    $$PWD/qtquicktemplates2plugin.cpp
+    $$PWD/qtlabstemplatesplugin.cpp
 
 CONFIG += no_cxx_module
 load(qml_plugin)

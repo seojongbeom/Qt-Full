@@ -1,44 +1,38 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include "qprogressbar.h"
-
+#ifndef QT_NO_PROGRESSBAR
 #include <qlocale.h>
 #include <qevent.h>
 #include <qpainter.h>
@@ -144,12 +138,12 @@ bool QProgressBarPrivate::repaintRequired() const
     if (value == lastPaintedValue)
         return false;
 
-    const auto valueDifference = qAbs(qint64(value) - lastPaintedValue);
+    const qint64 valueDifference = qAbs(qint64(value) - lastPaintedValue);
     // Check if the text needs to be repainted
     if (value == minimum || value == maximum)
         return true;
 
-    const auto totalSteps = qint64(maximum) - minimum;
+    const qint64 totalSteps = qint64(maximum) - minimum;
     if (textVisible) {
         if ((format.contains(QLatin1String("%v"))))
             return true;
@@ -177,8 +171,6 @@ bool QProgressBarPrivate::repaintRequired() const
     \ingroup basicwidgets
     \inmodule QtWidgets
 
-    \image windows-progressbar.png
-
     A progress bar is used to give the user an indication of the
     progress of an operation and to reassure them that the application
     is still running.
@@ -199,6 +191,15 @@ bool QProgressBarPrivate::repaintRequired() const
     indicator instead of a percentage of steps. This is useful, for
     example, when using QNetworkAccessManager to download items when
     they are unable to determine the size of the item being downloaded.
+
+    \table
+    \row \li \inlineimage macintosh-progressbar.png Screenshot of a Macintosh style progress bar
+         \li A progress bar shown in the Macintosh widget style.
+    \row \li \inlineimage windowsvista-progressbar.png Screenshot of a Windows Vista style progress bar
+         \li A progress bar shown in the Windows Vista widget style.
+    \row \li \inlineimage fusion-progressbar.png Screenshot of a Fusion style progress bar
+         \li A progress bar shown in the Fusion widget style.
+    \endtable
 
     \sa QProgressDialog, {fowler}{GUI Design Handbook: Progress Indicator}
 */
@@ -474,11 +475,11 @@ QString QProgressBar::text() const
     // progress bar has one step and that we are on that step. Return
     // 100% here in order to avoid division by zero further down.
     if (totalSteps == 0) {
-        result.replace(QLatin1String("%p"), locale.toString(100));
+        result.replace(QLatin1String("%p"), locale.toString(int(100)));
         return result;
     }
 
-    const auto progress = static_cast<int>((qint64(d->value) - d->minimum) * 100.0 / totalSteps);
+    int progress = (qreal(d->value) - d->minimum) * 100.0 / totalSteps;
     result.replace(QLatin1String("%p"), locale.toString(progress));
     return result;
 }
@@ -501,7 +502,9 @@ void QProgressBar::setOrientation(Qt::Orientation orientation)
         return;
     d->orientation = orientation;
     if (!testAttribute(Qt::WA_WState_OwnSizePolicy)) {
-        setSizePolicy(sizePolicy().transposed());
+        QSizePolicy sp = sizePolicy();
+        sp.transpose();
+        setSizePolicy(sp);
         setAttribute(Qt::WA_WState_OwnSizePolicy, false);
     }
     d->resetLayoutItemMargins();
@@ -623,3 +626,5 @@ QString QProgressBar::format() const
 QT_END_NAMESPACE
 
 #include "moc_qprogressbar.cpp"
+
+#endif // QT_NO_PROGRESSBAR

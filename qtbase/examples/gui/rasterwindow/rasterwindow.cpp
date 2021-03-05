@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -53,9 +43,13 @@
 //! [1]
 RasterWindow::RasterWindow(QWindow *parent)
     : QWindow(parent)
-    , m_backingStore(new QBackingStore(this))
+    , m_update_pending(false)
 {
+    create();
+    m_backingStore = new QBackingStore(this);
+
     setGeometry(100, 100, 300, 200);
+
 }
 //! [1]
 
@@ -64,6 +58,7 @@ RasterWindow::RasterWindow(QWindow *parent)
 bool RasterWindow::event(QEvent *event)
 {
     if (event->type() == QEvent::UpdateRequest) {
+        m_update_pending = false;
         renderNow();
         return true;
     }
@@ -74,7 +69,10 @@ bool RasterWindow::event(QEvent *event)
 //! [6]
 void RasterWindow::renderLater()
 {
-    requestUpdate();
+    if (!m_update_pending) {
+        m_update_pending = true;
+        QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest));
+    }
 }
 //! [6]
 
@@ -91,8 +89,9 @@ void RasterWindow::resizeEvent(QResizeEvent *resizeEvent)
 //! [2]
 void RasterWindow::exposeEvent(QExposeEvent *)
 {
-    if (isExposed())
+    if (isExposed()) {
         renderNow();
+    }
 }
 //! [2]
 

@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Dialogs module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,7 +44,7 @@ QT_BEGIN_NAMESPACE
 
 /*!
     \qmltype Dialog
-    \instantiates QQuickDialog1
+    \instantiates QQuickDialog
     \inqmlmodule QtQuick.Dialogs
     \ingroup qtquickdialogs
     \brief A generic QtQuick dialog wrapper with standard buttons.
@@ -203,11 +200,11 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \class QQuickDialog1
+    \class QQuickDialog
     \inmodule QtQuick.Dialogs
     \internal
 
-    The QQuickDialog1 class represents a container for arbitrary
+    The QQuickDialog class represents a container for arbitrary
     dialog contents.
 
     \since 5.3
@@ -216,7 +213,7 @@ QT_BEGIN_NAMESPACE
 /*!
     Constructs a dialog wrapper with parent window \a parent.
 */
-QQuickDialog1::QQuickDialog1(QObject *parent)
+QQuickDialog::QQuickDialog(QObject *parent)
     : QQuickAbstractDialog(parent)
     , m_enabledButtons(Ok)
     , m_clickedButton(NoButton)
@@ -227,30 +224,30 @@ QQuickDialog1::QQuickDialog1(QObject *parent)
 /*!
     Destroys the dialog wrapper.
 */
-QQuickDialog1::~QQuickDialog1()
+QQuickDialog::~QQuickDialog()
 {
 }
 
-QJSValue QQuickDialog1::__standardButtonsLeftModel()
+QJSValue QQuickDialog::__standardButtonsLeftModel()
 {
     updateStandardButtons();
     return m_standardButtonsLeftModel;
 }
 
-QJSValue QQuickDialog1::__standardButtonsRightModel()
+QJSValue QQuickDialog::__standardButtonsRightModel()
 {
     updateStandardButtons();
     return m_standardButtonsRightModel;
 }
 
-void QQuickDialog1::setVisible(bool v)
+void QQuickDialog::setVisible(bool v)
 {
     if (v)
         m_clickedButton = NoButton;
     QQuickAbstractDialog::setVisible(v);
 }
 
-void QQuickDialog1::updateStandardButtons()
+void QQuickDialog::updateStandardButtons()
 {
     if (m_standardButtonsRightModel.isUndefined()) {
         QJSEngine *engine = qmlEngine(this);
@@ -293,7 +290,7 @@ void QQuickDialog1::updateStandardButtons()
     }
 }
 
-void QQuickDialog1::setTitle(const QString &arg)
+void QQuickDialog::setTitle(const QString &arg)
 {
     if (m_title != arg) {
         m_title = arg;
@@ -301,7 +298,7 @@ void QQuickDialog1::setTitle(const QString &arg)
     }
 }
 
-void QQuickDialog1::setStandardButtons(StandardButtons buttons)
+void QQuickDialog::setStandardButtons(StandardButtons buttons)
 {
     m_enabledButtons = buttons;
     m_standardButtonsLeftModel = QJSValue();
@@ -339,7 +336,7 @@ void QQuickDialog1::setStandardButtons(StandardButtons buttons)
     \endqml
 */
 
-void QQuickDialog1::click(QPlatformDialogHelper::StandardButton button, QPlatformDialogHelper::ButtonRole role)
+void QQuickDialog::click(QPlatformDialogHelper::StandardButton button, QPlatformDialogHelper::ButtonRole role)
 {
     m_clickedButton = static_cast<StandardButton>(button);
     emit buttonClicked();
@@ -378,21 +375,21 @@ void QQuickDialog1::click(QPlatformDialogHelper::StandardButton button, QPlatfor
     }
 }
 
-void QQuickDialog1::click(QQuickAbstractDialog::StandardButton button)
+void QQuickDialog::click(QQuickAbstractDialog::StandardButton button)
 {
     click(static_cast<QPlatformDialogHelper::StandardButton>(button),
         static_cast<QPlatformDialogHelper::ButtonRole>(
             QPlatformDialogHelper::buttonRole(static_cast<QPlatformDialogHelper::StandardButton>(button))));
 }
 
-void QQuickDialog1::accept() {
+void QQuickDialog::accept() {
     // enter key is treated like OK
     if (m_clickedButton == NoButton)
         m_clickedButton = Ok;
     QQuickAbstractDialog::accept();
 }
 
-void QQuickDialog1::reject() {
+void QQuickDialog::reject() {
     // escape key is treated like cancel
     if (m_clickedButton == NoButton)
         m_clickedButton = Cancel;

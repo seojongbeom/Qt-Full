@@ -2,21 +2,10 @@ TEMPLATE = subdirs
 
 PUBLICTESTS += \
     geometry \
+    rendernode \
     qquickpixmapcache
 
-qtConfig(opengl(es1|es2)?) {
-    PUBLICTESTS += \
-        drawingmodes \
-        rendernode
-    qtHaveModule(widgets): PUBLICTESTS += nodes
-
-    QUICKTESTS += \
-        qquickanimatedsprite \
-        qquickframebufferobject \
-        qquickopenglinfo \
-        qquickspritesequence \
-        qquickshadereffect
-}
+qtHaveModule(widgets): PUBLICTESTS += nodes
 
 !cross_compile: PRIVATETESTS += examples
 
@@ -32,7 +21,6 @@ PRIVATETESTS += \
     qquickfontloader_static \
     qquickfontmetrics \
     qquickimageprovider \
-    qquicklayouts \
     qquickpath \
     qquicksmoothedanimation \
     qquickspringanimation \
@@ -46,10 +34,11 @@ PRIVATETESTS += \
 # This test requires the xmlpatterns module
 !qtHaveModule(xmlpatterns): PRIVATETESTS -= qquickxmllistmodel
 
-QUICKTESTS += \
+QUICKTESTS =  \
     qquickaccessible \
     qquickanchors \
     qquickanimatedimage \
+    qquickanimatedsprite \
     qquickdynamicpropertyanimation \
     qquickborderimage \
     qquickwindow \
@@ -58,7 +47,7 @@ QUICKTESTS += \
     qquickflickable \
     qquickflipable \
     qquickfocusscope \
-    qquickgraphicsinfo \
+    qquickframebufferobject \
     qquickgridview \
     qquickimage \
     qquickitem \
@@ -68,13 +57,16 @@ QUICKTESTS += \
     qquickloader \
     qquickmousearea \
     qquickmultipointtoucharea \
+    qquickopenglinfo \
     qquickpainteditem \
     qquickpathview \
     qquickpincharea \
     qquickpositioners \
     qquickrectangle \
     qquickrepeater \
+    qquickshadereffect \
     qquickshortcut \
+    qquickspritesequence \
     qquicktext \
     qquicktextdocument \
     qquicktextedit \
@@ -85,14 +77,13 @@ QUICKTESTS += \
     qquickdesignersupport \
     qquickscreen \
     touchmouse \
-    scenegraph \
-    sharedimage
+    scenegraph
 
 SUBDIRS += $$PUBLICTESTS
 
-!qtConfig(accessibility):QUICKTESTS -= qquickaccessible
+!contains(QT_CONFIG, accessibility):QUICKTESTS -= qquickaccessible
 
-qtConfig(private_tests) {
+contains(QT_CONFIG, private_tests) {
     SUBDIRS += $$PRIVATETESTS
     SUBDIRS += $$QUICKTESTS
 }

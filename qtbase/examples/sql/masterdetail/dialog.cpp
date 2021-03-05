@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -155,12 +145,12 @@ int Dialog::addNewAlbum(const QString &title, int artistId)
     return id;
 }
 
-void Dialog::addTracks(int albumId, const QStringList &tracks)
+void Dialog::addTracks(int albumId, QStringList tracks)
 {
     QDomElement albumNode = albumDetails.createElement("album");
     albumNode.setAttribute("id", albumId);
 
-    for (int i = 0; i < tracks.count(); ++i) {
+    for (int i = 0; i < tracks.count(); i++) {
         QString trackNumber = QString::number(i);
         if (i < 10)
             trackNumber.prepend('0');
@@ -254,9 +244,9 @@ QDialogButtonBox *Dialog::createButtons()
 
     closeButton->setDefault(true);
 
-    connect(closeButton, &QPushButton::clicked, this, &Dialog::close);
-    connect(revertButton, &QPushButton::clicked,  this, &Dialog::revert);
-    connect(submitButton, &QPushButton::clicked, this, &Dialog::submit);
+    connect(closeButton, SIGNAL(clicked()), this, SLOT(close()));
+    connect(revertButton, SIGNAL(clicked()), this, SLOT(revert()));
+    connect(submitButton, SIGNAL(clicked()), this, SLOT(submit()));
 
     QDialogButtonBox *buttonBox = new QDialogButtonBox;
     buttonBox->addButton(submitButton, QDialogButtonBox::ResetRole);
@@ -270,7 +260,7 @@ QModelIndex Dialog::indexOfArtist(const QString &artist)
 {
     QSqlTableModel *artistModel = model->relationModel(2);
 
-    for (int i = 0; i < artistModel->rowCount(); ++i) {
+    for (int i = 0; i < artistModel->rowCount(); i++) {
         QSqlRecord record =  artistModel->record(i);
         if (record.value("artist") == artist)
             return artistModel->index(i, 1);

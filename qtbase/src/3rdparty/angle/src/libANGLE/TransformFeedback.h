@@ -10,7 +10,6 @@
 #include "libANGLE/RefCountObject.h"
 
 #include "common/angleutils.h"
-#include "libANGLE/Debug.h"
 
 #include "angle_gl.h"
 
@@ -21,50 +20,29 @@ class TransformFeedbackImpl;
 
 namespace gl
 {
-class Buffer;
-struct Caps;
 
-class TransformFeedback final : public RefCountObject, public LabeledObject
+class TransformFeedback : public RefCountObject
 {
   public:
-    TransformFeedback(rx::TransformFeedbackImpl* impl, GLuint id, const Caps &caps);
+    TransformFeedback(rx::TransformFeedbackImpl* impl, GLuint id);
     virtual ~TransformFeedback();
 
-    void setLabel(const std::string &label) override;
-    const std::string &getLabel() const override;
+    void start(GLenum primitiveMode);
+    void stop();
+    GLboolean isStarted() const;
 
-    void begin(GLenum primitiveMode);
-    void end();
+    GLenum getDrawMode() const;
+
     void pause();
     void resume();
-
-    bool isActive() const;
-    bool isPaused() const;
-    GLenum getPrimitiveMode() const;
-
-    void bindGenericBuffer(Buffer *buffer);
-    const BindingPointer<Buffer> &getGenericBuffer() const;
-
-    void bindIndexedBuffer(size_t index, Buffer *buffer, size_t offset, size_t size);
-    const OffsetBindingPointer<Buffer> &getIndexedBuffer(size_t index) const;
-    size_t getIndexedBufferCount() const;
-
-    void detachBuffer(GLuint bufferName);
-
-    rx::TransformFeedbackImpl *getImplementation();
-    const rx::TransformFeedbackImpl *getImplementation() const;
+    GLboolean isPaused() const;
 
   private:
-    rx::TransformFeedbackImpl* mImplementation;
+    rx::TransformFeedbackImpl* mTransformFeedback;
 
-    std::string mLabel;
-
-    bool mActive;
+    GLboolean mStarted;
     GLenum mPrimitiveMode;
-    bool mPaused;
-
-    BindingPointer<Buffer> mGenericBuffer;
-    std::vector<OffsetBindingPointer<Buffer>> mIndexedBuffers;
+    GLboolean mPaused;
 };
 
 }

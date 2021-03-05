@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -48,19 +42,27 @@
 QT_BEGIN_NAMESPACE
 
 QHelpDBReader::QHelpDBReader(const QString &dbName)
-    : QObject(0),
-      m_dbName(dbName),
-      m_uniqueId(QHelpGlobal::uniquifyConnectionName(QLatin1String("QHelpDBReader"),
-                                                     this))
+    : QObject(0)
 {
+    initObject(dbName,
+        QHelpGlobal::uniquifyConnectionName(QLatin1String("QHelpDBReader"),
+        this));
 }
 
 QHelpDBReader::QHelpDBReader(const QString &dbName, const QString &uniqueId,
                            QObject *parent)
-    : QObject(parent),
-      m_dbName(dbName),
-      m_uniqueId(uniqueId)
+    : QObject(parent)
 {
+    initObject(dbName, uniqueId);
+}
+
+void QHelpDBReader::initObject(const QString &dbName, const QString &uniqueId)
+{
+    m_dbName = dbName;
+    m_uniqueId = uniqueId;
+    m_initDone = false;
+    m_query = 0;
+    m_useAttributesCache = false;
 }
 
 QHelpDBReader::~QHelpDBReader()
@@ -79,19 +81,6 @@ bool QHelpDBReader::init()
     if (!QFile::exists(m_dbName))
         return false;
 
-    if (!initDB()) {
-        QSqlDatabase::removeDatabase(m_uniqueId);
-        return false;
-    }
-
-    m_initDone = true;
-    m_query = new QSqlQuery(QSqlDatabase::database(m_uniqueId));
-
-    return true;
-}
-
-bool QHelpDBReader::initDB()
-{
     QSqlDatabase db = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"), m_uniqueId);
     db.setConnectOptions(QLatin1String("QSQLITE_OPEN_READONLY"));
     db.setDatabaseName(m_dbName);
@@ -100,8 +89,13 @@ bool QHelpDBReader::initDB()
                                   %2 - The unique id for the connection
                                   %3 - The actual error string */
         m_error = tr("Cannot open database '%1' '%2': %3").arg(m_dbName, m_uniqueId, db.lastError().text());
+        QSqlDatabase::removeDatabase(m_uniqueId);
         return false;
     }
+
+    m_initDone = true;
+    m_query = new QSqlQuery(db);
+
     return true;
 }
 
@@ -145,7 +139,7 @@ QList<QStringList> QHelpDBReader::filterAttributeSets() const
             "FilterAttributeTable b WHERE a.FilterAttributeId=b.Id ORDER BY a.Id"));
         int oldId = -1;
         while (m_query->next()) {
-            const int id = m_query->value(0).toInt();
+            int id = m_query->value(0).toInt();
             if (id != oldId) {
                 result.append(QStringList());
                 oldId = id;
@@ -177,7 +171,7 @@ bool QHelpDBReader::fileExists(const QString &virtualFolder,
             "c.FilterAttributeId=d.Id AND d.Name=\'%3\'"))
             .arg(quote(virtualFolder)).arg(quote(filePath))
             .arg(quote(filterAttributes.first()));
-        for (int i = 1; i < filterAttributes.count(); ++i) {
+        for (int i=1; i<filterAttributes.count(); ++i) {
             query.append(QString(QLatin1String(" INTERSECT SELECT COUNT(a.Name) FROM FileNameTable a, "
                 "FolderTable b, FileFilterTable c, FilterAttributeTable d WHERE a.FolderId=b.Id "
                 "AND b.Name=\'%1\' AND a.Name=\'%2\' AND a.FileId=c.FileId AND "
@@ -258,7 +252,7 @@ QStringList QHelpDBReader::indicesForFilter(const QStringList &filterAttributes)
         query = QString(QLatin1String("SELECT DISTINCT a.Name FROM IndexTable a, "
         "IndexFilterTable b, FilterAttributeTable c WHERE a.Id=b.IndexId "
         "AND b.FilterAttributeId=c.Id AND c.Name='%1'")).arg(quote(filterAttributes.first()));
-        for (int i = 1; i < filterAttributes.count(); ++i) {
+        for (int i=1; i<filterAttributes.count(); ++i) {
             query.append(QString(QLatin1String(" INTERSECT SELECT DISTINCT a.Name FROM IndexTable a, "
                 "IndexFilterTable b, FilterAttributeTable c WHERE a.Id=b.IndexId "
                 "AND b.FilterAttributeId=c.Id AND c.Name='%1'"))
@@ -274,9 +268,8 @@ QStringList QHelpDBReader::indicesForFilter(const QStringList &filterAttributes)
     return indices;
 }
 
-void QHelpDBReader::linksForKeyword(const QString &keyword,
-                                    const QStringList &filterAttributes,
-                                    QMap<QString, QUrl> *linkMap) const
+void QHelpDBReader::linksForKeyword(const QString &keyword, const QStringList &filterAttributes,
+                                    QMap<QString, QUrl> &linkMap) const
 {
     if (!m_query)
         return;
@@ -298,7 +291,7 @@ void QHelpDBReader::linksForKeyword(const QString &keyword,
         m_query->exec(query);
         while (m_query->next()) {
             if (m_indicesCache.contains(m_query->value(5).toInt())) {
-                linkMap->insertMulti(m_query->value(0).toString(), buildQUrl(m_query->value(1).toString(),
+                linkMap.insertMulti(m_query->value(0).toString(), buildQUrl(m_query->value(1).toString(),
                     m_query->value(2).toString(), m_query->value(3).toString(),
                     m_query->value(4).toString()));
             }
@@ -312,7 +305,7 @@ void QHelpDBReader::linksForKeyword(const QString &keyword,
             "AND a.NamespaceId=f.Id AND b.IndexId=a.Id AND b.FilterAttributeId=c.Id "
             "AND a.Name='%1' AND c.Name='%2'")).arg(quote(keyword))
             .arg(quote(filterAttributes.first()));
-        for (int i = 1; i < filterAttributes.count(); ++i) {
+        for (int i=1; i<filterAttributes.count(); ++i) {
             query.append(QString(QLatin1String(" INTERSECT SELECT d.Title, f.Name, e.Name, d.Name, a.Anchor "
                 "FROM IndexTable a, IndexFilterTable b, FilterAttributeTable c, "
                 "FileNameTable d, FolderTable e, NamespaceTable f "
@@ -329,7 +322,7 @@ void QHelpDBReader::linksForKeyword(const QString &keyword,
         title = m_query->value(0).toString();
         if (title.isEmpty()) // generate a title + corresponding path
             title = keyword + QLatin1String(" : ") + m_query->value(3).toString();
-        linkMap->insertMulti(title, buildQUrl(m_query->value(1).toString(),
+        linkMap.insertMulti(title, buildQUrl(m_query->value(1).toString(),
             m_query->value(2).toString(), m_query->value(3).toString(),
             m_query->value(4).toString()));
     }
@@ -337,7 +330,7 @@ void QHelpDBReader::linksForKeyword(const QString &keyword,
 
 void QHelpDBReader::linksForIdentifier(const QString &id,
                                        const QStringList &filterAttributes,
-                                       QMap<QString, QUrl> *linkMap) const
+                                       QMap<QString, QUrl> &linkMap) const
 {
     if (!m_query)
         return;
@@ -359,7 +352,7 @@ void QHelpDBReader::linksForIdentifier(const QString &id,
         m_query->exec(query);
         while (m_query->next()) {
             if (m_indicesCache.contains(m_query->value(5).toInt())) {
-                linkMap->insertMulti(m_query->value(0).toString(), buildQUrl(m_query->value(1).toString(),
+                linkMap.insertMulti(m_query->value(0).toString(), buildQUrl(m_query->value(1).toString(),
                     m_query->value(2).toString(), m_query->value(3).toString(),
                     m_query->value(4).toString()));
             }
@@ -373,7 +366,7 @@ void QHelpDBReader::linksForIdentifier(const QString &id,
             "AND a.NamespaceId=f.Id AND b.IndexId=a.Id AND b.FilterAttributeId=c.Id "
             "AND a.Identifier='%1' AND c.Name='%2'")).arg(quote(id))
             .arg(quote(filterAttributes.first()));
-        for (int i = 0; i < filterAttributes.count(); ++i) {
+        for (int i=0; i<filterAttributes.count(); ++i) {
             query.append(QString(QLatin1String(" INTERSECT SELECT d.Title, f.Name, e.Name, "
                 "d.Name, a.Anchor FROM IndexTable a, IndexFilterTable b, "
                 "FilterAttributeTable c, FileNameTable d, "
@@ -387,7 +380,7 @@ void QHelpDBReader::linksForIdentifier(const QString &id,
 
     m_query->exec(query);
     while (m_query->next()) {
-        linkMap->insertMulti(m_query->value(0).toString(), buildQUrl(m_query->value(1).toString(),
+        linkMap.insertMulti(m_query->value(0).toString(), buildQUrl(m_query->value(1).toString(),
             m_query->value(2).toString(), m_query->value(3).toString(),
             m_query->value(4).toString()));
     }
@@ -420,7 +413,7 @@ QList<QByteArray> QHelpDBReader::contentsForFilter(const QStringList &filterAttr
             "ContentsFilterTable b, FilterAttributeTable c "
             "WHERE a.Id=b.ContentsId AND b.FilterAttributeId=c.Id "
             "AND c.Name='%1'")).arg(quote(filterAttributes.first()));
-        for (int i = 1; i < filterAttributes.count(); ++i) {
+        for (int i=1; i<filterAttributes.count(); ++i) {
             query.append(QString(QLatin1String(" INTERSECT SELECT a.Data FROM ContentsTable a, "
             "ContentsFilterTable b, FilterAttributeTable c "
             "WHERE a.Id=b.ContentsId AND b.FilterAttributeId=c.Id "
@@ -429,26 +422,32 @@ QList<QByteArray> QHelpDBReader::contentsForFilter(const QStringList &filterAttr
     }
 
     m_query->exec(query);
-    while (m_query->next())
+    while (m_query->next()) {
         contents.append(m_query->value(0).toByteArray());
+    }
     return contents;
 }
 
 QUrl QHelpDBReader::urlOfPath(const QString &relativePath) const
 {
+    QUrl url;
     if (!m_query)
-        return QUrl();
+        return url;
 
     m_query->exec(QLatin1String("SELECT a.Name, b.Name FROM NamespaceTable a, "
         "FolderTable b WHERE a.id=b.NamespaceId and a.Id=1"));
-    if (!m_query->next())
-        return QUrl();
-
-    const int idx = relativePath.indexOf(QLatin1Char('#'));
-    const QString &rp = idx < 0 ? relativePath : relativePath.left(idx);
-    const QString anchor = idx < 0 ? QString() : relativePath.mid(idx + 1);
-    return buildQUrl(m_query->value(0).toString(),
-                     m_query->value(1).toString(), rp, anchor);
+    if (m_query->next()) {
+        QString rp = relativePath;
+        QString anchor;
+        int i = rp.indexOf(QLatin1Char('#'));
+        if (i > -1) {
+            rp = relativePath.left(i);
+            anchor = relativePath.mid(i+1);
+        }
+        url = buildQUrl(m_query->value(0).toString(),
+            m_query->value(1).toString(), rp, anchor);
+    }
+    return url;
 }
 
 QStringList QHelpDBReader::files(const QStringList &filterAttributes,
@@ -473,7 +472,7 @@ QStringList QHelpDBReader::files(const QStringList &filterAttributes,
             "WHERE b.FolderId=a.Id AND b.FileId=c.FileId "
             "AND c.FilterAttributeId=d.Id AND d.Name=\'%1\' %2"))
             .arg(quote(filterAttributes.first())).arg(extension);
-        for (int i = 1; i < filterAttributes.count(); ++i) {
+        for (int i=1; i<filterAttributes.count(); ++i) {
             query.append(QString(QLatin1String(" INTERSECT SELECT a.Name, b.Name FROM "
                 "FolderTable a, FileNameTable b, FileFilterTable c, "
                 "FilterAttributeTable d WHERE b.FolderId=a.Id AND "
@@ -509,10 +508,10 @@ QVariant QHelpDBReader::metaData(const QString &name) const
 QString QHelpDBReader::mergeList(const QStringList &list) const
 {
     QString str;
-    for (const QString &s : list)
+    foreach (const QString &s, list)
         str.append(QLatin1Char('\'') + quote(s) + QLatin1String("\', "));
     if (str.endsWith(QLatin1String(", ")))
-        str.chop(2);
+        str = str.left(str.length()-2);
     return str;
 }
 
@@ -533,11 +532,11 @@ QSet<int> QHelpDBReader::indexIds(const QStringList &attributes) const
     QString query = QString(QLatin1String("SELECT a.IndexId FROM IndexFilterTable a, "
         "FilterAttributeTable b WHERE a.FilterAttributeId=b.Id "
         "AND b.Name='%1'")).arg(attributes.first());
-    for (const QString &attribute : attributes) {
+    for (int i=0; i<attributes.count(); ++i) {
         query.append(QString(QLatin1String(" INTERSECT SELECT a.IndexId FROM "
             "IndexFilterTable a, FilterAttributeTable b WHERE "
             "a.FilterAttributeId=b.Id AND b.Name='%1'"))
-            .arg(attribute));
+            .arg(attributes.at(i)));
     }
 
     if (!m_query->exec(query))
@@ -559,16 +558,16 @@ bool QHelpDBReader::createAttributesCache(const QStringList &attributes,
         return true;
     }
 
-    const bool needUpdate = !m_viewAttributes.count();
+    bool needUpdate = !m_viewAttributes.count();
 
-    for (const QString &s : attributes)
+    foreach (const QString &s, attributes)
         m_viewAttributes.remove(s);
 
     if (m_viewAttributes.count() || needUpdate) {
         m_viewAttributes.clear();
         m_indicesCache = indexIds;
     }
-    for (const QString &s : attributes)
+    foreach (const QString &s, attributes)
         m_viewAttributes.insert(s);
     m_useAttributesCache = true;
     return true;

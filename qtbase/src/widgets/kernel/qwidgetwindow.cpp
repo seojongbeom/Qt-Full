@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -87,13 +81,6 @@ public:
     }
 
     QRectF closestAcceptableGeometry(const QRectF &rect) const Q_DECL_OVERRIDE;
-
-    void processSafeAreaMarginsChanged() override
-    {
-        Q_Q(QWidgetWindow);
-        if (QWidget *widget = q->widget())
-            QWidgetPrivate::get(widget)->updateContentsRect();
-    }
 };
 
 QRectF QWidgetWindowPrivate::closestAcceptableGeometry(const QRectF &rect) const
@@ -158,10 +145,6 @@ QObject *QWidgetWindow::focusObject() const
     QWidget *windowWidget = m_widget;
     if (!windowWidget)
         return Q_NULLPTR;
-
-    // A window can't have a focus object if it's being destroyed.
-    if (QWidgetPrivate::get(windowWidget)->data.in_destructor)
-        return nullptr;
 
     QWidget *widget = windowWidget->focusWidget();
 
@@ -272,7 +255,7 @@ bool QWidgetWindow::event(QEvent *event)
         handleResizeEvent(static_cast<QResizeEvent *>(event));
         return true;
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
     case QEvent::Wheel:
         handleWheelEvent(static_cast<QWheelEvent *>(event));
         return true;
@@ -296,7 +279,6 @@ bool QWidgetWindow::event(QEvent *event)
         return true;
 
     case QEvent::WindowStateChange:
-        QWindow::event(event); // Update QWindow::Visibility and emit signals.
         handleWindowStateChangedEvent(static_cast<QWindowStateChangeEvent *>(event));
         return true;
 
@@ -306,7 +288,7 @@ bool QWidgetWindow::event(QEvent *event)
     }
         return true;
 
-#if QT_CONFIG(tabletevent)
+#ifndef QT_NO_TABLETEVENT
     case QEvent::TabletPress:
     case QEvent::TabletMove:
     case QEvent::TabletRelease:
@@ -324,7 +306,7 @@ bool QWidgetWindow::event(QEvent *event)
     case QEvent::ContextMenu:
         handleContextMenuEvent(static_cast<QContextMenuEvent *>(event));
         return true;
-#endif // QT_NO_CONTEXTMENU
+#endif
 
     case QEvent::WindowBlocked:
         qt_button_down = 0;
@@ -581,12 +563,8 @@ void QWidgetWindow::handleMouseEvent(QMouseEvent *event)
                 popupEvent = popupChild;
             QContextMenuEvent e(QContextMenuEvent::Mouse, mapped, event->globalPos(), event->modifiers());
             QApplication::sendSpontaneousEvent(popupEvent, &e);
-        }
-#else
-            Q_UNUSED(contextMenuTrigger)
-            Q_UNUSED(oldOpenPopupCount)
-        }
 #endif
+        }
 
         if (releaseAfter) {
             qt_button_down = 0;
@@ -785,7 +763,7 @@ void QWidgetWindow::handleCloseEvent(QCloseEvent *event)
     event->setAccepted(is_closing);
 }
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
 
 void QWidgetWindow::handleWheelEvent(QWheelEvent *event)
 {
@@ -811,11 +789,11 @@ void QWidgetWindow::handleWheelEvent(QWheelEvent *event)
 
     QPoint mapped = widget->mapFrom(rootWidget, pos);
 
-    QWheelEvent translated(mapped, event->globalPos(), event->pixelDelta(), event->angleDelta(), event->delta(), event->orientation(), event->buttons(), event->modifiers(), event->phase(), event->source(), event->inverted());
+    QWheelEvent translated(mapped, event->globalPos(), event->pixelDelta(), event->angleDelta(), event->delta(), event->orientation(), event->buttons(), event->modifiers(), event->phase(), event->source());
     QGuiApplication::sendSpontaneousEvent(widget, &translated);
 }
 
-#endif // QT_CONFIG(wheelevent)
+#endif // QT_NO_WHEELEVENT
 
 #ifndef QT_NO_DRAGANDDROP
 
@@ -879,7 +857,7 @@ void QWidgetWindow::handleDragLeaveEvent(QDragLeaveEvent *event)
 
 void QWidgetWindow::handleDropEvent(QDropEvent *event)
 {
-    if (Q_UNLIKELY(m_dragTarget.isNull())) {
+    if (m_dragTarget.isNull()) {
         qWarning() << m_widget << ": No drag target set.";
         event->ignore();
         return;
@@ -969,8 +947,8 @@ void QWidgetWindow::handleWindowStateChangedEvent(QWindowStateChangeEvent *event
 
     // Sent event if the state changed (that is, it is not triggered by
     // QWidget::setWindowState(), which also sends an event to the widget).
-    if (widgetState != Qt::WindowStates::Int(m_widget->data->window_state)) {
-        m_widget->data->window_state = uint(widgetState);
+    if (widgetState != int(m_widget->data->window_state)) {
+        m_widget->data->window_state = widgetState;
         QWindowStateChangeEvent widgetEvent(eventState);
         QGuiApplication::sendSpontaneousEvent(m_widget, &widgetEvent);
     }
@@ -981,37 +959,32 @@ bool QWidgetWindow::nativeEvent(const QByteArray &eventType, void *message, long
     return m_widget->nativeEvent(eventType, message, result);
 }
 
-#if QT_CONFIG(tabletevent)
+#ifndef QT_NO_TABLETEVENT
 void QWidgetWindow::handleTabletEvent(QTabletEvent *event)
 {
     static QPointer<QWidget> qt_tablet_target = 0;
+    if (event->type() == QEvent::TabletPress) {
+        QWidget *widget = m_widget->childAt(event->pos());
+        if (!widget)
+            widget = m_widget;
 
-    QWidget *widget = qt_tablet_target;
-
-    if (!widget) {
-        widget = m_widget->childAt(event->pos());
-        if (event->type() == QEvent::TabletPress) {
-            if (!widget)
-                widget = m_widget;
-            qt_tablet_target = widget;
-        }
+        qt_tablet_target = widget;
     }
 
-    if (widget) {
+    if (qt_tablet_target) {
         QPointF delta = event->globalPosF() - event->globalPos();
-        QPointF mapped = widget->mapFromGlobal(event->globalPos()) + delta;
+        QPointF mapped = qt_tablet_target->mapFromGlobal(event->globalPos()) + delta;
         QTabletEvent ev(event->type(), mapped, event->globalPosF(), event->device(), event->pointerType(),
                         event->pressure(), event->xTilt(), event->yTilt(), event->tangentialPressure(),
                         event->rotation(), event->z(), event->modifiers(), event->uniqueId(), event->button(), event->buttons());
         ev.setTimestamp(event->timestamp());
-        QGuiApplication::sendSpontaneousEvent(widget, &ev);
-        event->setAccepted(ev.isAccepted());
+        QGuiApplication::sendSpontaneousEvent(qt_tablet_target, &ev);
     }
 
     if (event->type() == QEvent::TabletRelease && event->buttons() == Qt::NoButton)
         qt_tablet_target = 0;
 }
-#endif // QT_CONFIG(tabletevent)
+#endif // QT_NO_TABLETEVENT
 
 #ifndef QT_NO_GESTURES
 void QWidgetWindow::handleGestureEvent(QNativeGestureEvent *e)
@@ -1065,8 +1038,8 @@ void QWidgetWindow::updateObjectName()
 {
     QString name = m_widget->objectName();
     if (name.isEmpty())
-        name = QString::fromUtf8(m_widget->metaObject()->className()) + QLatin1String("Class");
-    name += QLatin1String("Window");
+        name = QString::fromUtf8(m_widget->metaObject()->className()) + QStringLiteral("Class");
+    name += QStringLiteral("Window");
     setObjectName(name);
 }
 

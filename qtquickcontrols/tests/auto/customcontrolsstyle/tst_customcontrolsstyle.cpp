@@ -1,26 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
+**
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 3 as published by the Free Software
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** packaging of this file. Please review the following information to
+** ensure the GNU Lesser General Public License version 3 requirements
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,7 +55,6 @@ private slots:
 
     void style_data();
     void style();
-    void changeStyle();
 };
 
 void tst_customcontrolsstyle::initTestCase()
@@ -62,7 +69,6 @@ void tst_customcontrolsstyle::style_data()
 
     QTest::newRow("NonExistentStyle") << QString::fromLatin1("NonExistentStyle") << QString::fromLatin1("Base");
     QTest::newRow("CustomFileSystemStyle") << directory() + QString::fromLatin1("/Style") << QString::fromLatin1("Style");
-    QTest::newRow("BuiltinQrcStyle") << QString::fromLatin1("ResourceStyle") << QString::fromLatin1("ResourceStyle"); // from :/qt-project.org/imports/QtQuick/Controls/Styles
     QTest::newRow("CustomQrcStyle") << QString::fromLatin1(":/Style") << QString::fromLatin1("Style");
 }
 
@@ -71,7 +77,7 @@ void tst_customcontrolsstyle::style()
     QFETCH(QString, specifiedStyle);
     QFETCH(QString, expectedStyleName);
 
-    qputenv("QT_QUICK_CONTROLS_1_STYLE", specifiedStyle.toLocal8Bit());
+    qputenv("QT_QUICK_CONTROLS_STYLE", specifiedStyle.toLocal8Bit());
 
     const bool expectBase = expectedStyleName == QLatin1String("Base");
 
@@ -104,48 +110,6 @@ void tst_customcontrolsstyle::style()
         QImage windowImage = window->grabWindow();
         QCOMPARE(windowImage.pixel(0, 0), QColor(Qt::red).rgb());
     }
-}
-
-// start with Base, switch to custom style later on (for a specific QML engine)
-void tst_customcontrolsstyle::changeStyle()
-{
-    qputenv("QT_QUICK_CONTROLS_1_STYLE", "Base");
-    QByteArray importPath = qgetenv("QML2_IMPORT_PATH");
-    if (importPath.isEmpty())
-        importPath = QFile::encodeName(directory());
-    else
-        importPath.prepend(QFile::encodeName(directory()) + QDir::listSeparator().toLatin1());
-    qputenv("QML2_IMPORT_PATH", importPath);
-
-    QQmlEngine engine;
-
-    QQmlComponent component(&engine, testFileUrl("TestComponent.qml"));
-    QTRY_COMPARE(component.status(), QQmlComponent::Ready);
-
-    QScopedPointer<QObject> object(component.create());
-    QVERIFY(object);
-
-    QCOMPARE(object->property("styleName").toString(), QString("Base"));
-
-    // Switch to "Style" custom style
-    QQmlComponent c(&engine);
-    c.setData("import QtQuick 2.1\n"
-        "import QtQuick.Controls 1.0\n"
-        "import QtQuick.Controls.Private 1.0\n"
-        "Item {"
-          "Component.onCompleted: {"
-            "Settings.styleName = \"Style\";"
-          "}"
-        "}", QUrl());
-    QObject *o = c.create();
-    o->deleteLater();
-
-    QCOMPARE(object->property("styleName").toString(), QString("Style"));
-    QMetaObject::invokeMethod(object.data(), "buttonStyleComponent");
-    QQuickWindow *window = qobject_cast<QQuickWindow*>(object.data());
-    QVERIFY(QTest::qWaitForWindowExposed(window));
-    QImage windowImage = window->grabWindow();
-    QCOMPARE(windowImage.pixel(0, 0), QColor(Qt::blue).rgb());
 }
 
 QTEST_MAIN(tst_customcontrolsstyle)

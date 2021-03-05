@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -62,7 +52,7 @@ class QDESIGNER_WIDGET_EXPORT WorldTimeClock : public QWidget
 //! [0]
 
 public:
-    explicit WorldTimeClock(QWidget *parent = nullptr);
+    explicit WorldTimeClock(QWidget *parent = 0);
 
 public slots:
     void setTimeZone(int hourOffset);
@@ -71,10 +61,10 @@ signals:
     void updated(QTime currentTime);
 
 protected:
-    void paintEvent(QPaintEvent *event) override;
+    void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
 
 private:
-    int timeZoneOffset = 0;
+    int timeZoneOffset;
 //! [2]
 };
 //! [1] //! [2]

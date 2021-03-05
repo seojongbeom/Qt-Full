@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,6 @@
 
 import QtQuick 2.0
 import QtQml.Models 2.1
-import QtQuick.Layouts 1.1
 import "./content"
 
 Rectangle {
@@ -60,50 +49,90 @@ Rectangle {
 
     property alias currentIndex: root.currentIndex
 
-    ColumnLayout {
-        anchors.fill: parent
+    Rectangle {
+        id: banner
+        height: 80
+        anchors.top: parent.top
+        width: parent.width
+        color: "#000000"
 
-        Banner {
-            id: banner
-            Layout.fillWidth: true
+        Image {
+            id: arrow
+            source: "./content/images/icon-left-arrow.png"
+            anchors.left: banner.left
+            anchors.leftMargin: 20
+            anchors.verticalCenter: banner.verticalCenter
+            visible: root.currentIndex == 1 ? true : false
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: root.currentIndex = 0;
+            }
         }
 
-        ListView {
-            id: root
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            snapMode: ListView.SnapOneItem
-            highlightRangeMode: ListView.StrictlyEnforceRange
-            highlightMoveDuration: 250
-            focus: false
-            orientation: ListView.Horizontal
-            boundsBehavior: Flickable.StopAtBounds
+        Item {
+            id: textItem
+            width: stocText.width + qtText.width
+            height: stocText.height + qtText.height
+            anchors.horizontalCenter: banner.horizontalCenter
+            anchors.verticalCenter: banner.verticalCenter
 
-            StockModel {
-                id: stock
-                stockId: listView.currentStockId
-                stockName: listView.currentStockName
-                onStockIdChanged: stock.updateStock();
-                onDataReady: {
-                    root.currentIndex = 1
-                    stockView.update()
-                }
+            Text {
+                id: stocText
+                anchors.verticalCenter: textItem.verticalCenter
+                color: "#ffffff"
+                font.family: "Abel"
+                font.pointSize: 40
+                text: "Stoc"
+            }
+            Text {
+                id: qtText
+                anchors.verticalCenter: textItem.verticalCenter
+                anchors.left: stocText.right
+                color: "#5caa15"
+                font.family: "Abel"
+                font.pointSize: 40
+                text: "Qt"
+            }
+        }
+    }
+
+    ListView {
+        id: root
+        width: parent.width
+        anchors.top: banner.bottom
+        anchors.bottom: parent.bottom
+        snapMode: ListView.SnapOneItem
+        highlightRangeMode: ListView.StrictlyEnforceRange
+        highlightMoveDuration: 250
+        focus: false
+        orientation: ListView.Horizontal
+        boundsBehavior: Flickable.StopAtBounds
+
+        StockModel {
+            id: stock
+            stockId: listView.currentStockId
+            stockName: listView.currentStockName
+            onStockIdChanged: stock.updateStock();
+            onDataReady: {
+                root.currentIndex = 1
+                stockView.update()
+            }
+        }
+
+        model: ObjectModel {
+            StockListView {
+                id: listView
+                width: root.width
+                height: root.height
             }
 
-            model: ObjectModel {
-                StockListView {
-                    id: listView
-                    width: root.width
-                    height: root.height
-                }
-
-                StockView {
-                    id: stockView
-                    width: root.width
-                    height: root.height
-                    stocklist: listView
-                    stock: stock
-                }
+            StockView {
+                id: stockView
+                width: root.width
+                height: root.height
+                stocklist: listView
+                stock: stock
             }
         }
     }

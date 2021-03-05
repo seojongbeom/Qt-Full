@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtXmlPatterns module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -167,7 +161,9 @@ bool XsdValidatingInstanceReader::read()
 
     // check IDREF occurrences
     const QStringList ids = m_model->idIdRefBindingIds();
-    for (const QString &id : qAsConst(m_idRefs)) {
+    QSetIterator<QString> it(m_idRefs);
+    while (it.hasNext()) {
+        const QString id = it.next();
         if (!ids.contains(id)) {
             error(QtXmlPatterns::tr("There is one IDREF value with no corresponding ID: %1.").arg(formatKeyword(id)));
             return false;
@@ -732,11 +728,14 @@ bool XsdValidatingInstanceReader::validateElementComplexType(const XsdElement::P
         const QSet<QXmlName> attributes(attributeNames());
 
         // 3
-        for (auto it = attributeUseHash.cbegin(), end = attributeUseHash.cend(); it != end; ++it) {
-            if (it.value()->isRequired()) {
-                if (!attributes.contains(it.key())) {
+        QHashIterator<QXmlName, XsdAttributeUse::Ptr> usesIt(attributeUseHash);
+        while (usesIt.hasNext()) {
+            usesIt.next();
+
+            if (usesIt.value()->isRequired()) {
+                if (!attributes.contains(usesIt.key())) {
                     error(QtXmlPatterns::tr("Element %1 is missing required attribute %2.").arg(formatKeyword(declaration->displayName(m_namePool)))
-                                                                                          .arg(formatKeyword(m_namePool->displayName(it.key()))));
+                                                                                          .arg(formatKeyword(m_namePool->displayName(usesIt.key()))));
                     return false;
                 }
             }
@@ -745,7 +744,9 @@ bool XsdValidatingInstanceReader::validateElementComplexType(const XsdElement::P
         bool hasIDAttribute = hasIDAttributeUse(complexType->attributeUses());
 
         // 2
-        for (const QXmlName &attributeName : attributes) {
+        QSetIterator<QXmlName> it(attributes);
+        while (it.hasNext()) {
+            const QXmlName attributeName = it.next();
 
             // skip builtin attributes
             if (attributeName == m_xsiNilName ||
@@ -966,9 +967,17 @@ bool XsdValidatingInstanceReader::validateUniqueIdentityConstraint(const XsdElem
     // 4.1
     const XsdSchemaSourceLocationReflection reflection(sourceLocation());
 
-    for (auto it = qualifiedNodeSet.cbegin(), end = qualifiedNodeSet.cend(); it != end; ++it) {
-        for (auto jt = qualifiedNodeSet.cbegin(); jt != it; ++jt) {
-            if (it->fieldsAreEqual(*jt, m_namePool, m_context, &reflection)) {
+    QSetIterator<TargetNode> it(qualifiedNodeSet);
+    while (it.hasNext()) {
+        const TargetNode node = it.next();
+        QSetIterator<TargetNode> innerIt(qualifiedNodeSet);
+        while (innerIt.hasNext()) {
+            const TargetNode innerNode = innerIt.next();
+
+            if (node == innerNode) // do not compare with ourself
+                continue;
+
+            if (node.fieldsAreEqual(innerNode, m_namePool, m_context, &reflection)) {
                 error(QtXmlPatterns::tr("Non-unique value found for constraint %1.").arg(formatKeyword(constraint->displayName(m_namePool))));
                 return false;
             }
@@ -998,7 +1007,9 @@ bool XsdValidatingInstanceReader::validateKeyIdentityConstraint(const XsdElement
         return false;
 
     // 4.2.3
-    for (const TargetNode node : qualifiedNodeSet) {
+    QSetIterator<TargetNode> it(qualifiedNodeSet);
+    while (it.hasNext()) {
+        const TargetNode node = it.next();
         const QVector<QXmlItem> fieldItems = node.fieldItems();
         for (int i = 0; i < fieldItems.count(); ++i) {
             const QXmlNodeModelIndex index = fieldItems.at(i).toNodeModelIndex();
@@ -1028,11 +1039,16 @@ bool XsdValidatingInstanceReader::validateKeyRefIdentityConstraint(const XsdElem
 
     const TargetNode::Set keySet = m_idcKeys.value(constraint->referencedKey()->name(m_namePool));
 
-    for (const TargetNode &node : qualifiedNodeSet) {
+    QSetIterator<TargetNode> it(qualifiedNodeSet);
+    while (it.hasNext()) {
+        const TargetNode node = it.next();
 
         bool foundMatching = false;
 
-        for (const TargetNode &keyNode : keySet) {
+        QSetIterator<TargetNode> keyIt(keySet);
+        while (keyIt.hasNext()) {
+            const TargetNode keyNode = keyIt.next();
+
             if (node.fieldsAreEqual(keyNode, m_namePool, m_context, &reflection)) {
                 foundMatching = true;
                 break;
@@ -1165,7 +1181,9 @@ bool XsdValidatingInstanceReader::selectNodeSets(const XsdElement::Ptr&, const Q
     }
 
     // copy all items from target node set to qualified node set, that have no empty fields
-    for (const TargetNode &node : qAsConst(targetNodeSet)) {
+    QSetIterator<TargetNode> it(targetNodeSet);
+    while (it.hasNext()) {
+        const TargetNode node = it.next();
         if (node.emptyFieldsCount() == 0)
             qualifiedNodeSet.insert(node);
     }

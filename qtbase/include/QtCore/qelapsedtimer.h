@@ -1,1 +1,1 @@
-#include "../../src/corelib/kernel/qelapsedtimer.h"
+#include "../../src/corelib/tools/qelapsedtimer.h"

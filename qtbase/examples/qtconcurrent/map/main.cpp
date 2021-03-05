@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -55,7 +45,11 @@
 #include <QGuiApplication>
 #include <qtconcurrentmap.h>
 
-#include <functional>
+QImage scale(const QImage &image)
+{
+    qDebug() << "Scaling image in thread" << QThread::currentThread();
+    return image.scaled(QSize(100, 100), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
 
 int main(int argc, char *argv[])
 {
@@ -67,12 +61,6 @@ int main(int argc, char *argv[])
     QList<QImage> images;
     for (int i = 0; i < imageCount; ++i)
         images.append(QImage(1600, 1200, QImage::Format_ARGB32_Premultiplied));
-
-    std::function<QImage(const QImage&)> scale = [](const QImage &image) -> QImage
-    {
-        qDebug() << "Scaling image in thread" << QThread::currentThread();
-        return image.scaled(QSize(100, 100), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    };
 
     // Use QtConcurrentBlocking::mapped to apply the scale function to all the
     // images in the list.

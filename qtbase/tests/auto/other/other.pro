@@ -1,7 +1,6 @@
 TEMPLATE=subdirs
-QT_FOR_CONFIG += gui-private
-
 SUBDIRS=\
+   # atwrapper \ # QTBUG-19452
    compiler \
    gestures \
    lancelot \
@@ -22,6 +21,7 @@ SUBDIRS=\
    qsharedpointer_and_qwidget \
    qprocess_and_guieventloop \
    qtokenautomaton \
+   windowsmobile \
    toolsupport \
 
 !qtHaveModule(gui): SUBDIRS -= \
@@ -52,11 +52,9 @@ cross_compile: SUBDIRS -= \
    atwrapper \
    compiler
 
-!qtConfig(accessibility): SUBDIRS -= qaccessibility
+wince*|!contains(QT_CONFIG, accessibility): SUBDIRS -= qaccessibility
 
-!qtConfig(accessibility-atspi-bridge): SUBDIRS -= qaccessibilitylinux
-
-!qtConfig(process): SUBDIRS -= qprocess_and_guieventloop
+!contains(QT_CONFIG, accessibility-atspi-bridge): SUBDIRS -= qaccessibilitylinux
 
 !mac: SUBDIRS -= \
            macgui \
@@ -64,8 +62,11 @@ cross_compile: SUBDIRS -= \
            macplist \
            qaccessibilitymac
 
-!embedded: SUBDIRS -= \
+!embedded|wince: SUBDIRS -= \
            qdirectpainter
+
+winrt: SUBDIRS -= \
+   qprocess_and_guieventloop
 
 android: SUBDIRS += \
     android

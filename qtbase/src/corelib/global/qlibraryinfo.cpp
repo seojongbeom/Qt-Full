@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Copyright (C) 2014 Intel Corporation
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -57,10 +51,7 @@ QT_END_NAMESPACE
 #  include "private/qcore_mac_p.h"
 #endif
 
-#ifndef QT_BUILD_QMAKE_BOOTSTRAP
-# include "qconfig.cpp"
-#endif
-
+#include "qconfig.cpp"
 #include "archdetect.cpp"
 
 QT_BEGIN_NAMESPACE
@@ -91,11 +82,6 @@ class QLibraryInfoPrivate
 public:
     static QSettings *findConfiguration();
 #ifdef QT_BUILD_QMAKE
-    static void reload()
-    {
-        if (qt_library_settings.exists())
-            qt_library_settings->load();
-    }
     static bool haveGroup(QLibraryInfo::PathGroup group)
     {
         QLibrarySettings *ls = qt_library_settings();
@@ -171,14 +157,14 @@ void QLibrarySettings::load()
 
 QSettings *QLibraryInfoPrivate::findConfiguration()
 {
-#ifdef QT_BUILD_QMAKE
-    QString qtconfig = qmake_libraryInfoFile();
-    if (QFile::exists(qtconfig))
-        return new QSettings(qtconfig, QSettings::IniFormat);
-#else
     QString qtconfig = QStringLiteral(":/qt/etc/qt.conf");
     if (QFile::exists(qtconfig))
         return new QSettings(qtconfig, QSettings::IniFormat);
+#ifdef QT_BUILD_QMAKE
+    qtconfig = qmake_libraryInfoFile();
+    if (QFile::exists(qtconfig))
+        return new QSettings(qtconfig, QSettings::IniFormat);
+#else
 #ifdef Q_OS_DARWIN
     CFBundleRef bundleRef = CFBundleGetMainBundle();
     if (bundleRef) {
@@ -237,30 +223,30 @@ QLibraryInfo::QLibraryInfo()
 { }
 
 /*!
-  \deprecated
-  This function used to return the person to whom this build of Qt is licensed, now returns an empty string.
+  Returns the person to whom this build of Qt is licensed.
+
+  \sa licensedProducts()
 */
 
-#if QT_DEPRECATED_SINCE(5, 8)
 QString
 QLibraryInfo::licensee()
 {
-    return QString();
+    const char * volatile str = QT_CONFIGURE_LICENSEE;
+    return QString::fromLocal8Bit(str);
 }
-#endif
 
 /*!
-  \deprecated
-  This function used to return the products that the license for this build of Qt has access to, now returns an empty string.
+  Returns the products that the license for this build of Qt has access to.
+
+  \sa licensee()
 */
 
-#if QT_DEPRECATED_SINCE(5, 8)
 QString
 QLibraryInfo::licensedProducts()
 {
-    return QString();
+    const char * volatile str = QT_CONFIGURE_LICENSED_PRODUCTS;
+    return QString::fromLatin1(str);
 }
-#endif
 
 /*!
     \since 4.6
@@ -313,8 +299,6 @@ QLibraryInfo::buildDate()
 #  else
 #    define COMPILER_STRING "Clang " __clang_version__
 #  endif
-#elif defined(Q_CC_GHS)
-#  define COMPILER_STRING "GHS " QT_STRINGIFY(__GHS_VERSION_NUMBER)
 #elif defined(Q_CC_GNU)
 #  define COMPILER_STRING "GCC " __VERSION__
 #elif defined(Q_CC_MSVC)
@@ -376,19 +360,6 @@ QLibraryInfo::isDebugBuild()
 #endif
 }
 
-#ifndef QT_BOOTSTRAPPED
-/*!
-    \since 5.8
-    Returns the version of the Qt library.
-
-    \sa qVersion()
-*/
-QVersionNumber QLibraryInfo::version() Q_DECL_NOTHROW
-{
-    return QVersionNumber(QT_VERSION_MAJOR, QT_VERSION_MINOR, QT_VERSION_PATCH);
-}
-#endif // QT_BOOTSTRAPPED
-
 #endif // QT_BUILD_QMAKE
 
 /*
@@ -423,7 +394,6 @@ static const struct {
     { "Tests", "tests" },
 #ifdef QT_BUILD_QMAKE
     { "Sysroot", "" },
-    { "SysrootifyPrefix", "" },
     { "HostBinaries", "bin" },
     { "HostLibraries", "lib" },
     { "HostData", "." },
@@ -432,13 +402,6 @@ static const struct {
     { "HostPrefix", "" },
 #endif
 };
-
-#ifdef QT_BUILD_QMAKE
-void QLibraryInfo::reload()
-{
-    QLibraryInfoPrivate::reload();
-}
-#endif
 
 /*!
   Returns the location specified by \a loc.
@@ -450,17 +413,13 @@ QLibraryInfo::location(LibraryLocation loc)
     QString ret = rawLocation(loc, FinalPaths);
 
     // Automatically prepend the sysroot to target paths
-    if (loc < SysrootPath || loc > LastHostPath) {
+    if ((loc < SysrootPath || loc > LastHostPath) && QT_CONFIGURE_SYSROOTIFY_PREFIX) {
         QString sysroot = rawLocation(SysrootPath, FinalPaths);
-        if (!sysroot.isEmpty()
-                && QVariant::fromValue(rawLocation(SysrootifyPrefixPath, FinalPaths)).toBool()) {
-            if (ret.length() > 2 && ret.at(1) == QLatin1Char(':')
-                   && (ret.at(2) == QLatin1Char('/') || ret.at(2) == QLatin1Char('\\'))) {
-                ret.replace(0, 2, sysroot); // Strip out the drive on Windows targets
-            } else {
-                ret.prepend(sysroot);
-            }
-        }
+        if (!sysroot.isEmpty() && ret.length() > 2 && ret.at(1) == QLatin1Char(':')
+            && (ret.at(2) == QLatin1Char('/') || ret.at(2) == QLatin1Char('\\')))
+            ret.replace(0, 2, sysroot); // Strip out the drive on Windows targets
+        else
+            ret.prepend(sysroot);
     }
 
     return ret;
@@ -471,8 +430,6 @@ QLibraryInfo::rawLocation(LibraryLocation loc, PathGroup group)
 {
 #endif // QT_BUILD_QMAKE, started inside location !
     QString ret;
-    bool fromConf = false;
-#ifndef QT_NO_SETTINGS
 #ifdef QT_BUILD_QMAKE
     // Logic for choosing the right data source: if EffectivePaths are requested
     // and qt.conf with that section is present, use it, otherwise fall back to
@@ -481,18 +438,40 @@ QLibraryInfo::rawLocation(LibraryLocation loc, PathGroup group)
     // EffectiveSourcePaths falls back to EffectivePaths.
     // DevicePaths falls back to FinalPaths.
     PathGroup orig_group = group;
-    if (QLibraryInfoPrivate::haveGroup(group)
-        || (group == EffectiveSourcePaths
-            && (group = EffectivePaths, QLibraryInfoPrivate::haveGroup(group)))
-        || ((group == EffectivePaths || group == DevicePaths)
-            && (group = FinalPaths, QLibraryInfoPrivate::haveGroup(group)))
-        || (group = orig_group, false))
-#else
-    if (QLibraryInfoPrivate::configuration())
+    if (!QLibraryInfoPrivate::haveGroup(group)
+        && !(group == EffectiveSourcePaths
+             && (group = EffectivePaths, QLibraryInfoPrivate::haveGroup(group)))
+        && !((group == EffectivePaths || group == DevicePaths)
+             && (group = FinalPaths, QLibraryInfoPrivate::haveGroup(group)))
+        && (group = orig_group, true))
+#elif !defined(QT_NO_SETTINGS)
+    if (!QLibraryInfoPrivate::configuration())
 #endif
     {
-        fromConf = true;
+        const char * volatile path = 0;
+        if (loc == PrefixPath) {
+            path =
+#ifdef QT_BUILD_QMAKE
+                (group != DevicePaths) ?
+                    QT_CONFIGURE_EXT_PREFIX_PATH :
+#endif
+                    QT_CONFIGURE_PREFIX_PATH;
+        } else if (unsigned(loc) <= sizeof(qt_configure_str_offsets)/sizeof(qt_configure_str_offsets[0])) {
+            path = qt_configure_strs + qt_configure_str_offsets[loc - 1];
+#ifndef Q_OS_WIN // On Windows we use the registry
+        } else if (loc == SettingsPath) {
+            path = QT_CONFIGURE_SETTINGS_PATH;
+#endif
+#ifdef QT_BUILD_QMAKE
+        } else if (loc == HostPrefixPath) {
+            path = QT_CONFIGURE_HOST_PREFIX_PATH;
+#endif
+        }
 
+        if (path)
+            ret = QString::fromLocal8Bit(path);
+#ifndef QT_NO_SETTINGS
+    } else {
         QString key;
         QString defaultValue;
         if (unsigned(loc) < sizeof(qtConfEntries)/sizeof(qtConfEntries[0])) {
@@ -523,70 +502,31 @@ QLibraryInfo::rawLocation(LibraryLocation loc, PathGroup group)
                 if (loc == HostPrefixPath)
                     ret = config->value(QLatin1String(qtConfEntries[PrefixPath].key),
                                         QLatin1String(qtConfEntries[PrefixPath].value)).toString();
-                else if (loc == TargetSpecPath || loc == HostSpecPath || loc == SysrootifyPrefixPath)
-                    fromConf = false;
-                // The last case here is SysrootPath, which can be legitimately empty.
-                // All other keys have non-empty fallbacks to start with.
+                else if (loc == TargetSpecPath || loc == HostSpecPath)
+                    ret = QString::fromLocal8Bit(qt_configure_strs + qt_configure_str_offsets[loc - 1]);
             }
 #endif
 
-            int startIndex = 0;
-            forever {
-                startIndex = ret.indexOf(QLatin1Char('$'), startIndex);
-                if (startIndex < 0)
-                    break;
-                if (ret.length() < startIndex + 3)
-                    break;
-                if (ret.at(startIndex + 1) != QLatin1Char('(')) {
-                    startIndex++;
-                    continue;
-                }
-                int endIndex = ret.indexOf(QLatin1Char(')'), startIndex + 2);
-                if (endIndex < 0)
-                    break;
-                QStringRef envVarName = ret.midRef(startIndex + 2, endIndex - startIndex - 2);
-                QString value = QString::fromLocal8Bit(qgetenv(envVarName.toLocal8Bit().constData()));
-                ret.replace(startIndex, endIndex - startIndex + 1, value);
-                startIndex += value.length();
+            // expand environment variables in the form $(ENVVAR)
+            int rep;
+            QRegExp reg_var(QLatin1String("\\$\\(.*\\)"));
+            reg_var.setMinimal(true);
+            while((rep = reg_var.indexIn(ret)) != -1) {
+                ret.replace(rep, reg_var.matchedLength(),
+                            QString::fromLocal8Bit(qgetenv(ret.mid(rep + 2,
+                                reg_var.matchedLength() - 3).toLatin1().constData()).constData()));
             }
 
             config->endGroup();
 
             ret = QDir::fromNativeSeparators(ret);
         }
-    }
 #endif // QT_NO_SETTINGS
-
-#ifndef QT_BUILD_QMAKE_BOOTSTRAP
-    if (!fromConf) {
-        const char * volatile path = 0;
-        if (loc == PrefixPath) {
-            path =
-# ifdef QT_BUILD_QMAKE
-                (group != DevicePaths) ?
-                    QT_CONFIGURE_EXT_PREFIX_PATH :
-# endif
-                    QT_CONFIGURE_PREFIX_PATH;
-        } else if (unsigned(loc) <= sizeof(qt_configure_str_offsets)/sizeof(qt_configure_str_offsets[0])) {
-            path = qt_configure_strs + qt_configure_str_offsets[loc - 1];
-#ifndef Q_OS_WIN // On Windows we use the registry
-        } else if (loc == SettingsPath) {
-            path = QT_CONFIGURE_SETTINGS_PATH;
-#endif
-# ifdef QT_BUILD_QMAKE
-        } else if (loc == HostPrefixPath) {
-            path = QT_CONFIGURE_HOST_PREFIX_PATH;
-# endif
-        }
-
-        if (path)
-            ret = QString::fromLocal8Bit(path);
     }
-#endif
 
 #ifdef QT_BUILD_QMAKE
-    // These values aren't actually paths and thus need to be returned verbatim.
-    if (loc == TargetSpecPath || loc == HostSpecPath || loc == SysrootifyPrefixPath)
+    // The specs need to be returned verbatim.
+    if (loc == TargetSpecPath || loc == HostSpecPath)
         return ret;
 #endif
 
@@ -657,14 +597,12 @@ QStringList QLibraryInfo::platformPluginArguments(const QString &platformName)
 #if !defined(QT_BUILD_QMAKE) && !defined(QT_NO_SETTINGS)
     QScopedPointer<const QSettings> settings(QLibraryInfoPrivate::findConfiguration());
     if (!settings.isNull()) {
-        const QString key = QLatin1String(platformsSection)
-                + QLatin1Char('/')
-                + platformName
-                + QLatin1String("Arguments");
+        QString key = QLatin1String(platformsSection);
+        key += QLatin1Char('/');
+        key += platformName;
+        key += QLatin1String("Arguments");
         return settings->value(key).toStringList();
     }
-#else
-    Q_UNUSED(platformName);
 #endif // !QT_BUILD_QMAKE && !QT_NO_SETTINGS
     return QStringList();
 }

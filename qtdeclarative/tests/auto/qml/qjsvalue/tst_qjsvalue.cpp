@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -431,12 +436,6 @@ void tst_QJSValue::toString()
         QVERIFY(!o.engine());
         QCOMPARE(o.toString(), QStringLiteral("1,2,3"));
     }
-
-    {
-        QByteArray hello = QByteArrayLiteral("Hello World");
-        QJSValue jsValue = eng.toScriptValue(hello);
-        QCOMPARE(jsValue.toString(), QString::fromUtf8(hello));
-    }
 }
 
 void tst_QJSValue::toNumber()
@@ -541,7 +540,7 @@ void tst_QJSValue::toBoolean() // deprecated
         QCOMPARE(number.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number), false);
 
-        QJSValue number2 = eng.toScriptValue(qQNaN());
+        QJSValue number2 = eng.toScriptValue(qSNaN());
         QCOMPARE(number2.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number2), false);
 
@@ -584,7 +583,7 @@ void tst_QJSValue::toBoolean() // deprecated
         QCOMPARE(number.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number), false);
 
-        QJSValue number2 = QJSValue(qQNaN());
+        QJSValue number2 = QJSValue(qSNaN());
         QCOMPARE(number2.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number2), false);
 
@@ -634,7 +633,7 @@ void tst_QJSValue::toBool()
         QCOMPARE(number.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number), false);
 
-        QJSValue number2 = eng.toScriptValue(qQNaN());
+        QJSValue number2 = eng.toScriptValue(qSNaN());
         QCOMPARE(number2.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number2), false);
 
@@ -677,7 +676,7 @@ void tst_QJSValue::toBool()
         QCOMPARE(number.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number), false);
 
-        QJSValue number2 = QJSValue(qQNaN());
+        QJSValue number2 = QJSValue(qSNaN());
         QCOMPARE(number2.toBool(), false);
         QCOMPARE(qjsvalue_cast<bool>(number2), false);
 
@@ -715,7 +714,7 @@ void tst_QJSValue::toInt()
         QCOMPARE(number.toInt(), 123);
         QCOMPARE(qjsvalue_cast<qint32>(number), 123);
 
-        QJSValue number2 = eng.toScriptValue(qQNaN());
+        QJSValue number2 = eng.toScriptValue(qSNaN());
         QCOMPARE(number2.toInt(), 0);
         QCOMPARE(qjsvalue_cast<qint32>(number2), 0);
 
@@ -777,7 +776,7 @@ void tst_QJSValue::toInt()
         QCOMPARE(number.toInt(), 123);
         QCOMPARE(qjsvalue_cast<qint32>(number), 123);
 
-        QJSValue number2 = QJSValue(qQNaN());
+        QJSValue number2 = QJSValue(qSNaN());
         QCOMPARE(number2.toInt(), 0);
         QCOMPARE(qjsvalue_cast<qint32>(number2), 0);
 
@@ -851,7 +850,7 @@ void tst_QJSValue::toUInt()
         QCOMPARE(number.toUInt(), quint32(123));
         QCOMPARE(qjsvalue_cast<quint32>(number), quint32(123));
 
-        QJSValue number2 = eng.toScriptValue(qQNaN());
+        QJSValue number2 = eng.toScriptValue(qSNaN());
         QCOMPARE(number2.toUInt(), quint32(0));
         QCOMPARE(qjsvalue_cast<quint32>(number2), quint32(0));
 
@@ -911,7 +910,7 @@ void tst_QJSValue::toUInt()
         QCOMPARE(number.toUInt(), quint32(123));
         QCOMPARE(qjsvalue_cast<quint32>(number), quint32(123));
 
-        QJSValue number2 = QJSValue(qQNaN());
+        QJSValue number2 = QJSValue(qSNaN());
         QCOMPARE(number2.toUInt(), quint32(0));
         QCOMPARE(qjsvalue_cast<quint32>(number2), quint32(0));
 
@@ -984,8 +983,8 @@ void tst_QJSValue::toVariant()
     QCOMPARE(qjsvalue_cast<QVariant>(undefined), QVariant());
 
     QJSValue null = eng.evaluate("null");
-    QCOMPARE(null.toVariant(), QVariant::fromValue(nullptr));
-    QCOMPARE(qjsvalue_cast<QVariant>(null), QVariant::fromValue(nullptr));
+    QCOMPARE(null.toVariant(), QVariant(QMetaType::VoidStar, 0));
+    QCOMPARE(qjsvalue_cast<QVariant>(null), QVariant(QMetaType::VoidStar, 0));
 
     {
         QJSValue number = eng.toScriptValue(123.0);
@@ -1016,7 +1015,7 @@ void tst_QJSValue::toVariant()
     {
         QVariant var = qobject.toVariant();
         QCOMPARE(var.userType(), int(QMetaType::QObjectStar));
-        QCOMPARE(qvariant_cast<QObject*>(var), (QObject *)&temp);
+        QCOMPARE(qVariantValue<QObject*>(var), (QObject *)&temp);
     }
 
     {
@@ -1061,8 +1060,8 @@ void tst_QJSValue::toVariant()
         QCOMPARE(qjsvalue_cast<QVariant>(undef), QVariant());
 
         QJSValue nil = QJSValue(QJSValue::NullValue);
-        QCOMPARE(nil.toVariant(), QVariant::fromValue(nullptr));
-        QCOMPARE(qjsvalue_cast<QVariant>(nil), QVariant::fromValue(nullptr));
+        QCOMPARE(nil.toVariant(), QVariant(QMetaType::VoidStar, 0));
+        QCOMPARE(qjsvalue_cast<QVariant>(nil), QVariant(QMetaType::VoidStar, 0));
     }
 
     // array

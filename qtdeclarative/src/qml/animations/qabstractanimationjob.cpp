@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -91,8 +85,9 @@ QQmlAnimationTimer *QQmlAnimationTimer::instance()
 
 void QQmlAnimationTimer::ensureTimerUpdate()
 {
+    QQmlAnimationTimer *inst = QQmlAnimationTimer::instance(false);
     QUnifiedTimer *instU = QUnifiedTimer::instance(false);
-    if (instU && isPaused)
+    if (instU && inst && inst->isPaused)
         instU->updateAnimationTimers(-1);
 }
 
@@ -127,7 +122,9 @@ void QQmlAnimationTimer::updateAnimationsTime(qint64 delta)
 
 void QQmlAnimationTimer::updateAnimationTimer()
 {
-    restartAnimationTimer();
+    QQmlAnimationTimer *inst = QQmlAnimationTimer::instance(false);
+    if (inst)
+        inst->restartAnimationTimer();
 }
 
 void QQmlAnimationTimer::restartAnimationTimer()
@@ -172,38 +169,45 @@ void QQmlAnimationTimer::registerAnimation(QAbstractAnimationJob *animation, boo
     if (animation->userControlDisabled())
         return;
 
-    registerRunningAnimation(animation);
+    QQmlAnimationTimer *inst = instance(true); //we create the instance if needed
+    inst->registerRunningAnimation(animation);
     if (isTopLevel) {
         Q_ASSERT(!animation->m_hasRegisteredTimer);
         animation->m_hasRegisteredTimer = true;
-        animationsToStart << animation;
-        if (!startAnimationPending) {
-            startAnimationPending = true;
-            QMetaObject::invokeMethod(this, "startAnimations", Qt::QueuedConnection);
+        inst->animationsToStart << animation;
+        if (!inst->startAnimationPending) {
+            inst->startAnimationPending = true;
+            QMetaObject::invokeMethod(inst, "startAnimations", Qt::QueuedConnection);
         }
     }
 }
 
 void QQmlAnimationTimer::unregisterAnimation(QAbstractAnimationJob *animation)
 {
-    unregisterRunningAnimation(animation);
+    QQmlAnimationTimer *inst = QQmlAnimationTimer::instance(false);
+    if (inst) {
+        //at this point the unified timer should have been created
+        //but it might also have been already destroyed in case the application is shutting down
 
-    if (!animation->m_hasRegisteredTimer)
-        return;
+        inst->unregisterRunningAnimation(animation);
 
-    int idx = animations.indexOf(animation);
-    if (idx != -1) {
-        animations.removeAt(idx);
-        // this is needed if we unregister an animation while its running
-        if (idx <= currentAnimationIdx)
-            --currentAnimationIdx;
+        if (!animation->m_hasRegisteredTimer)
+            return;
 
-        if (animations.isEmpty() && !stopTimerPending) {
-            stopTimerPending = true;
-            QMetaObject::invokeMethod(this, "stopTimer", Qt::QueuedConnection);
+        int idx = inst->animations.indexOf(animation);
+        if (idx != -1) {
+            inst->animations.removeAt(idx);
+            // this is needed if we unregister an animation while its running
+            if (idx <= inst->currentAnimationIdx)
+                --inst->currentAnimationIdx;
+
+            if (inst->animations.isEmpty() && !inst->stopTimerPending) {
+                inst->stopTimerPending = true;
+                QMetaObject::invokeMethod(inst, "stopTimer", Qt::QueuedConnection);
+            }
+        } else {
+            inst->animationsToStart.removeOne(animation);
         }
-    } else {
-        animationsToStart.removeOne(animation);
     }
     animation->m_hasRegisteredTimer = false;
 }
@@ -292,10 +296,8 @@ QAbstractAnimationJob::~QAbstractAnimationJob()
         stateChanged(oldState, m_state);
 
         Q_ASSERT(m_state == Stopped);
-        if (oldState == Running) {
-            Q_ASSERT(QQmlAnimationTimer::instance() == m_timer);
-            m_timer->unregisterAnimation(this);
-        }
+        if (oldState == Running)
+            QQmlAnimationTimer::unregisterAnimation(this);
         Q_ASSERT(!m_hasRegisteredTimer);
     }
 
@@ -318,9 +320,6 @@ void QAbstractAnimationJob::setState(QAbstractAnimationJob::State newState)
 
     if (m_loopCount == 0)
         return;
-
-    if (!m_timer)
-        m_timer = QQmlAnimationTimer::instance();
 
     State oldState = m_state;
     int oldCurrentTime = m_currentTime;
@@ -347,11 +346,11 @@ void QAbstractAnimationJob::setState(QAbstractAnimationJob::State newState)
     bool isTopLevel = !m_group || m_group->isStopped();
     if (oldState == Running) {
         if (newState == Paused && m_hasRegisteredTimer)
-            m_timer->ensureTimerUpdate();
+            QQmlAnimationTimer::ensureTimerUpdate();
         //the animation, is not running any more
-        m_timer->unregisterAnimation(this);
+        QQmlAnimationTimer::unregisterAnimation(this);
     } else if (newState == Running) {
-        m_timer->registerAnimation(this, isTopLevel);
+        QQmlAnimationTimer::registerAnimation(this, isTopLevel);
     }
 
     //starting an animation qualifies as a top level loop change
@@ -378,7 +377,7 @@ void QAbstractAnimationJob::setState(QAbstractAnimationJob::State newState)
                 m_currentLoop = 0;
                 if (isTopLevel) {
                     // currentTime needs to be updated if pauseTimer is active
-                    RETURN_IF_DELETED(m_timer->ensureTimerUpdate());
+                    RETURN_IF_DELETED(QQmlAnimationTimer::ensureTimerUpdate());
                     RETURN_IF_DELETED(setCurrentTime(m_totalCurrentTime));
                 }
             }
@@ -415,14 +414,14 @@ void QAbstractAnimationJob::setDirection(Direction direction)
     // the commands order below is important: first we need to setCurrentTime with the old direction,
     // then update the direction on this and all children and finally restart the pauseTimer if needed
     if (m_hasRegisteredTimer)
-        m_timer->ensureTimerUpdate();
+        QQmlAnimationTimer::ensureTimerUpdate();
 
     m_direction = direction;
     updateDirection(direction);
 
     if (m_hasRegisteredTimer)
         // needed to update the timer interval in case of a pause animation
-        m_timer->updateAnimationTimer();
+        QQmlAnimationTimer::updateAnimationTimer();
 }
 
 void QAbstractAnimationJob::setLoopCount(int loopCount)
@@ -583,7 +582,8 @@ void QAbstractAnimationJob::updateDirection(QAbstractAnimationJob::Direction dir
 void QAbstractAnimationJob::finished()
 {
     //TODO: update this code so it is valid to delete the animation in animationFinished
-    for (const auto &change : changeListeners) {
+    for (int i = 0; i < changeListeners.count(); ++i) {
+        const QAbstractAnimationJob::ChangeListener &change = changeListeners.at(i);
         if (change.types & QAbstractAnimationJob::Completion) {
             RETURN_IF_DELETED(change.listener->animationFinished(this));
         }
@@ -597,7 +597,8 @@ void QAbstractAnimationJob::finished()
 
 void QAbstractAnimationJob::stateChanged(QAbstractAnimationJob::State newState, QAbstractAnimationJob::State oldState)
 {
-    for (const auto &change : changeListeners) {
+    for (int i = 0; i < changeListeners.count(); ++i) {
+        const QAbstractAnimationJob::ChangeListener &change = changeListeners.at(i);
         if (change.types & QAbstractAnimationJob::StateChange) {
             RETURN_IF_DELETED(change.listener->animationStateChanged(this, newState, oldState));
         }
@@ -606,7 +607,8 @@ void QAbstractAnimationJob::stateChanged(QAbstractAnimationJob::State newState, 
 
 void QAbstractAnimationJob::currentLoopChanged()
 {
-    for (const auto &change : changeListeners) {
+    for (int i = 0; i < changeListeners.count(); ++i) {
+        const QAbstractAnimationJob::ChangeListener &change = changeListeners.at(i);
         if (change.types & QAbstractAnimationJob::CurrentLoop) {
            RETURN_IF_DELETED(change.listener->animationCurrentLoopChanged(this));
         }
@@ -617,7 +619,8 @@ void QAbstractAnimationJob::currentTimeChanged(int currentTime)
 {
     Q_ASSERT(m_hasCurrentTimeChangeListeners);
 
-    for (const auto &change : changeListeners) {
+    for (int i = 0; i < changeListeners.count(); ++i) {
+        const QAbstractAnimationJob::ChangeListener &change = changeListeners.at(i);
         if (change.types & QAbstractAnimationJob::CurrentTime) {
            RETURN_IF_DELETED(change.listener->animationCurrentTimeChanged(this, currentTime));
         }
@@ -629,18 +632,17 @@ void QAbstractAnimationJob::addAnimationChangeListener(QAnimationJobChangeListen
     if (changes & QAbstractAnimationJob::CurrentTime)
         m_hasCurrentTimeChangeListeners = true;
 
-    changeListeners.push_back(ChangeListener(listener, changes));
+    changeListeners.append(ChangeListener(listener, changes));
 }
 
 void QAbstractAnimationJob::removeAnimationChangeListener(QAnimationJobChangeListener *listener, QAbstractAnimationJob::ChangeTypes changes)
 {
     m_hasCurrentTimeChangeListeners = false;
 
-    const auto it = std::find(changeListeners.begin(), changeListeners.end(), ChangeListener(listener, changes));
-    if (it != changeListeners.end())
-        changeListeners.erase(it);
+    changeListeners.removeOne(ChangeListener(listener, changes));
 
-    for (const auto &change: changeListeners) {
+    for (int i = 0; i < changeListeners.count(); ++i) {
+        const QAbstractAnimationJob::ChangeListener &change = changeListeners.at(i);
         if (change.types & QAbstractAnimationJob::CurrentTime) {
             m_hasCurrentTimeChangeListeners = true;
             break;
@@ -667,4 +669,3 @@ QDebug operator<<(QDebug d, const QAbstractAnimationJob *job)
 QT_END_NAMESPACE
 
 //#include "moc_qabstractanimation2_p.cpp"
-#include "moc_qabstractanimationjob_p.cpp"

@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,7 +42,6 @@
 #include <qdebug.h>
 #include <qabstractitemmodel.h>
 #include <qcursor.h>
-#include <private/qhighdpiscaling_p.h>
 #include <private/qguiapplication_p.h>
 #include <QtGui/qpa/qplatformtheme.h>
 #include <QtGui/qpa/qplatformmenu.h>
@@ -134,7 +130,7 @@ QT_BEGIN_NAMESPACE
     For instance, \c "\&File" will bind the \c Alt-F shortcut to the
     \c "File" menu. Note that not all platforms support mnemonics.
 
-    Its value defaults to an empty string.
+    Its value defaults to the empty string.
 */
 
 /*!
@@ -148,7 +144,7 @@ QT_BEGIN_NAMESPACE
     \qmlproperty url Menu::iconSource
 
     Sets the icon file or resource url for the menu icon as a submenu.
-    Defaults to an empty URL.
+    Defaults to the empty URL.
 
     \sa iconName
 */
@@ -159,7 +155,7 @@ QT_BEGIN_NAMESPACE
     Sets the icon name for the menu icon. This will pick the icon
     with the given name from the current theme. Only works as a submenu.
 
-    Its value defaults to an empty string.
+    Its value defaults to the empty string.
 
     \sa iconSource
 */
@@ -260,8 +256,7 @@ QT_BEGIN_NAMESPACE
 */
 
 QQuickMenu1::QQuickMenu1(QObject *parent)
-    : QQuickMenuText1(parent, QQuickMenuItemType1::Menu),
-      m_platformMenu(0),
+    : QQuickMenuText(parent, QQuickMenuItemType::Menu),
       m_itemsCount(0),
       m_selectedIndex(-1),
       m_parentWindow(0),
@@ -277,14 +272,12 @@ QQuickMenu1::QQuickMenu1(QObject *parent)
 {
     connect(this, SIGNAL(__textChanged()), this, SIGNAL(titleChanged()));
 
-    if (QGuiApplication::platformName() != QStringLiteral("xcb")) { // QTBUG-51372
-        m_platformMenu = QGuiApplicationPrivate::platformTheme()->createPlatformMenu();
-        if (m_platformMenu) {
-            connect(m_platformMenu, SIGNAL(aboutToShow()), this, SIGNAL(aboutToShow()));
-            connect(m_platformMenu, SIGNAL(aboutToHide()), this, SLOT(hideMenu()));
-            if (platformItem())
-                platformItem()->setMenu(m_platformMenu);
-        }
+    m_platformMenu = QGuiApplicationPrivate::platformTheme()->createPlatformMenu();
+    if (m_platformMenu) {
+        connect(m_platformMenu, SIGNAL(aboutToShow()), this, SIGNAL(aboutToShow()));
+        connect(m_platformMenu, SIGNAL(aboutToHide()), this, SLOT(hideMenu()));
+        if (platformItem())
+            platformItem()->setMenu(m_platformMenu);
     }
     if (const QFont *font = QGuiApplicationPrivate::platformTheme()->font(QPlatformTheme::MenuItemFont))
         m_font = *const_cast<QFont*>(font);
@@ -293,7 +286,7 @@ QQuickMenu1::QQuickMenu1(QObject *parent)
 QQuickMenu1::~QQuickMenu1()
 {
     while (!m_menuItems.empty()) {
-        QQuickMenuBase1 *item = m_menuItems.takeFirst();
+        QQuickMenuBase *item = m_menuItems.takeFirst();
         if (item)
             item->setParentMenu(0);
     }
@@ -314,7 +307,7 @@ void QQuickMenu1::syncParentMenuBar()
 
 void QQuickMenu1::setVisible(bool v)
 {
-    QQuickMenuBase1::setVisible(v);
+    QQuickMenuBase::setVisible(v);
     if (m_platformMenu) {
         m_platformMenu->setVisible(v);
         syncParentMenuBar();
@@ -323,7 +316,7 @@ void QQuickMenu1::setVisible(bool v)
 
 void QQuickMenu1::setEnabled(bool e)
 {
-    QQuickMenuText1::setEnabled(e);
+    QQuickMenuText::setEnabled(e);
     if (m_platformMenu) {
         m_platformMenu->setEnabled(e);
         syncParentMenuBar();
@@ -334,7 +327,7 @@ void QQuickMenu1::updateText()
 {
     if (m_platformMenu)
         m_platformMenu->setText(this->text());
-    QQuickMenuText1::updateText();
+    QQuickMenuText::updateText();
 }
 
 void QQuickMenu1::setMinimumWidth(int w)
@@ -434,7 +427,7 @@ void QQuickMenu1::__popup(const QRectF &targetRect, int atItemIndex, MenuType me
 
     setPopupVisible(true);
 
-    QQuickMenuBase1 *atItem = menuItemAtIndex(atItemIndex);
+    QQuickMenuBase *atItem = menuItemAtIndex(atItemIndex);
 
     QQuickWindow *quickWindow = findParentWindow();
     QPoint renderOffset;
@@ -457,11 +450,9 @@ void QQuickMenu1::__popup(const QRectF &targetRect, int atItemIndex, MenuType me
         }
         globalTargetRect.translate(renderOffset);
         m_platformMenu->setMenuType(QPlatformMenu::MenuType(menuType));
-        m_platformMenu->showPopup(parentWindow,
-                                  QHighDpi::toNativePixels(globalTargetRect.toRect(), parentWindow),
-                                  atItem ? atItem->platformItem() : 0);
+        m_platformMenu->showPopup(parentWindow, globalTargetRect.toRect(), atItem ? atItem->platformItem() : 0);
     } else {
-        m_popupWindow = new QQuickMenuPopupWindow1(this);
+        m_popupWindow = new QQuickMenuPopupWindow(this);
         if (visualItem())
             m_popupWindow->setParentItem(visualItem());
         else
@@ -531,11 +522,11 @@ void QQuickMenu1::hideMenu()
     m_parentWindow = 0;
 }
 
-QQuickMenuPopupWindow1 *QQuickMenu1::topMenuPopup() const
+QQuickMenuPopupWindow *QQuickMenu1::topMenuPopup() const
 {
-    QQuickMenuPopupWindow1 *topMenuWindow = m_popupWindow;
+    QQuickMenuPopupWindow *topMenuWindow = m_popupWindow;
     while (topMenuWindow) {
-        QQuickMenuPopupWindow1 *pw = qobject_cast<QQuickMenuPopupWindow1 *>(topMenuWindow->transientParent());
+        QQuickMenuPopupWindow *pw = qobject_cast<QQuickMenuPopupWindow *>(topMenuWindow->transientParent());
         if (!pw)
             return topMenuWindow;
         topMenuWindow = pw;
@@ -554,7 +545,7 @@ void QQuickMenu1::__dismissMenu()
 {
     if (m_platformMenu) {
         m_platformMenu->dismiss();
-    } else if (QQuickMenuPopupWindow1 *topPopup = topMenuPopup()) {
+    } else if (QQuickMenuPopupWindow *topPopup = topMenuPopup()) {
         topPopup->dismissPopup();
     }
 }
@@ -567,7 +558,7 @@ void QQuickMenu1::windowVisibleChanged(bool v)
 {
     if (!v) {
         if (m_popupWindow) {
-            QQuickMenuPopupWindow1 *parentMenuPopup = qobject_cast<QQuickMenuPopupWindow1 *>(m_popupWindow->transientParent());
+            QQuickMenuPopupWindow *parentMenuPopup = qobject_cast<QQuickMenuPopupWindow *>(m_popupWindow->transientParent());
             if (parentMenuPopup) {
                 parentMenuPopup->setMouseGrabEnabled(true);
                 parentMenuPopup->setKeyboardGrabEnabled(true);
@@ -608,7 +599,7 @@ void QQuickMenu1::destroyMenuPopup()
 void QQuickMenu1::destroyAllMenuPopups() {
     if (m_triggerCount > 0)
         return;
-    QQuickMenuPopupWindow1 *popup = topMenuPopup();
+    QQuickMenuPopupWindow *popup = topMenuPopup();
     if (popup)
         popup->setToBeDeletedLater();
 }
@@ -645,9 +636,9 @@ void QQuickMenu1::__dismissAndDestroy()
 void QQuickMenu1::itemIndexToListIndex(int itemIndex, int *listIndex, int *containerIndex) const
 {
     *listIndex = -1;
-    QQuickMenuItemContainer1 *container = 0;
+    QQuickMenuItemContainer *container = 0;
     while (itemIndex >= 0 && ++*listIndex < m_menuItems.count())
-        if ((container = qobject_cast<QQuickMenuItemContainer1 *>(m_menuItems[*listIndex])))
+        if ((container = qobject_cast<QQuickMenuItemContainer *>(m_menuItems[*listIndex])))
             itemIndex -= container->items().count();
         else
             --itemIndex;
@@ -663,7 +654,7 @@ int QQuickMenu1::itemIndexForListIndex(int listIndex) const
     int index = 0;
     int i = 0;
     while (i < listIndex && i < m_menuItems.count())
-        if (QQuickMenuItemContainer1 *container = qobject_cast<QQuickMenuItemContainer1 *>(m_menuItems[i++]))
+        if (QQuickMenuItemContainer *container = qobject_cast<QQuickMenuItemContainer *>(m_menuItems[i++]))
             index += container->items().count();
         else
             ++index;
@@ -671,16 +662,16 @@ int QQuickMenu1::itemIndexForListIndex(int listIndex) const
     return index;
 }
 
-QQuickMenuBase1 *QQuickMenu1::nextMenuItem(QQuickMenu1::MenuItemIterator *it) const
+QQuickMenuBase *QQuickMenu1::nextMenuItem(QQuickMenu1::MenuItemIterator *it) const
 {
     if (it->containerIndex != -1) {
-        QQuickMenuItemContainer1 *container = qobject_cast<QQuickMenuItemContainer1 *>(m_menuItems[it->index]);
+        QQuickMenuItemContainer *container = qobject_cast<QQuickMenuItemContainer *>(m_menuItems[it->index]);
         if (++it->containerIndex < container->items().count())
             return container->items()[it->containerIndex];
     }
 
     if (++it->index < m_menuItems.count()) {
-        if (QQuickMenuItemContainer1 *container = qobject_cast<QQuickMenuItemContainer1 *>(m_menuItems[it->index])) {
+        if (QQuickMenuItemContainer *container = qobject_cast<QQuickMenuItemContainer *>(m_menuItems[it->index])) {
             it->containerIndex = 0;
             return container->items()[0];
         } else {
@@ -692,20 +683,20 @@ QQuickMenuBase1 *QQuickMenu1::nextMenuItem(QQuickMenu1::MenuItemIterator *it) co
     return 0;
 }
 
-QQuickMenuBase1 *QQuickMenu1::menuItemAtIndex(int index) const
+QQuickMenuBase *QQuickMenu1::menuItemAtIndex(int index) const
 {
     if (0 <= index && index < m_itemsCount) {
         if (!m_containersCount) {
             return m_menuItems[index];
         } else if (m_containersCount == 1 && m_menuItems.count() == 1) {
-            QQuickMenuItemContainer1 *container = qobject_cast<QQuickMenuItemContainer1 *>(m_menuItems[0]);
+            QQuickMenuItemContainer *container = qobject_cast<QQuickMenuItemContainer *>(m_menuItems[0]);
             return container->items()[index];
         } else {
             int containerIndex;
             int i;
             itemIndexToListIndex(index, &i, &containerIndex);
             if (containerIndex != -1) {
-                QQuickMenuItemContainer1 *container = qobject_cast<QQuickMenuItemContainer1 *>(m_menuItems[i]);
+                QQuickMenuItemContainer *container = qobject_cast<QQuickMenuItemContainer *>(m_menuItems[i]);
                 return container->items()[containerIndex];
             } else {
                 return m_menuItems[i];
@@ -716,7 +707,7 @@ QQuickMenuBase1 *QQuickMenu1::menuItemAtIndex(int index) const
     return 0;
 }
 
-bool QQuickMenu1::contains(QQuickMenuBase1 *item)
+bool QQuickMenu1::contains(QQuickMenuBase *item)
 {
     if (item->container())
         return item->container()->items().contains(item);
@@ -724,7 +715,7 @@ bool QQuickMenu1::contains(QQuickMenuBase1 *item)
     return m_menuItems.contains(item);
 }
 
-int QQuickMenu1::indexOfMenuItem(QQuickMenuBase1 *item) const
+int QQuickMenu1::indexOfMenuItem(QQuickMenuBase *item) const
 {
     if (!item)
         return -1;
@@ -760,17 +751,17 @@ void QQuickMenu1::addSeparator()
 
 void QQuickMenu1::insertSeparator(int index)
 {
-    QQuickMenuSeparator1 *item = new QQuickMenuSeparator1(this);
+    QQuickMenuSeparator *item = new QQuickMenuSeparator(this);
     insertItem(index, item);
 }
 
-void QQuickMenu1::insertItem(int index, QQuickMenuBase1 *menuItem)
+void QQuickMenu1::insertItem(int index, QQuickMenuBase *menuItem)
 {
     if (!menuItem)
         return;
     int itemIndex;
     if (m_containersCount) {
-        QQuickMenuItemContainer1 *container = menuItem->parent() != this ? m_containers[menuItem->parent()] : 0;
+        QQuickMenuItemContainer *container = menuItem->parent() != this ? m_containers[menuItem->parent()] : 0;
         if (container) {
             container->insertItem(index, menuItem);
             itemIndex = itemIndexForListIndex(m_menuItems.indexOf(container)) + index;
@@ -787,13 +778,13 @@ void QQuickMenu1::insertItem(int index, QQuickMenuBase1 *menuItem)
     emit itemsChanged();
 }
 
-void QQuickMenu1::removeItem(QQuickMenuBase1 *menuItem)
+void QQuickMenu1::removeItem(QQuickMenuBase *menuItem)
 {
     if (!menuItem)
         return;
     menuItem->setParentMenu(0);
 
-    QQuickMenuItemContainer1 *container = menuItem->parent() != this ? m_containers[menuItem->parent()] : 0;
+    QQuickMenuItemContainer *container = menuItem->parent() != this ? m_containers[menuItem->parent()] : 0;
     if (container)
         container->removeItem(menuItem);
     else
@@ -818,7 +809,7 @@ void QQuickMenu1::clear()
     m_itemsCount = 0;
 }
 
-void QQuickMenu1::setupMenuItem(QQuickMenuBase1 *item, int platformIndex)
+void QQuickMenu1::setupMenuItem(QQuickMenuBase *item, int platformIndex)
 {
     item->setParentMenu(this);
     if (m_platformMenu) {
@@ -833,18 +824,17 @@ void QQuickMenu1::setupMenuItem(QQuickMenuBase1 *item, int platformIndex)
 void QQuickMenu1::append_menuItems(QQuickMenuItems *list, QObject *o)
 {
     if (QQuickMenu1 *menu = qobject_cast<QQuickMenu1 *>(list->object)) {
-        if (QQuickMenuBase1 *menuItem = qobject_cast<QQuickMenuBase1 *>(o)) {
+        if (QQuickMenuBase *menuItem = qobject_cast<QQuickMenuBase *>(o)) {
             menu->m_menuItems.append(menuItem);
             menu->setupMenuItem(menuItem);
         } else {
-            QQuickMenuItemContainer1 *menuItemContainer = new QQuickMenuItemContainer1(menu);
+            QQuickMenuItemContainer *menuItemContainer = new QQuickMenuItemContainer(menu);
             menu->m_menuItems.append(menuItemContainer);
             menu->m_containers.insert(o, menuItemContainer);
             menuItemContainer->setParentMenu(menu);
             ++menu->m_containersCount;
-            const auto children = o->children();
-            for (QObject *child : children) {
-                if (QQuickMenuBase1 *item = qobject_cast<QQuickMenuBase1 *>(child)) {
+            foreach (QObject *child, o->children()) {
+                if (QQuickMenuBase *item = qobject_cast<QQuickMenuBase *>(child)) {
                     menuItemContainer->insertItem(-1, item);
                     menu->setupMenuItem(item);
                 }

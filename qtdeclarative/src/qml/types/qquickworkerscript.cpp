@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,6 +36,7 @@
 #include "qqmllistmodelworkeragent_p.h"
 #include <private/qqmlengine_p.h>
 #include <private/qqmlexpression_p.h>
+#include <private/qqmlcontextwrapper_p.h>
 
 #include <QtCore/qcoreevent.h>
 #include <QtCore/qcoreapplication.h>
@@ -51,12 +46,10 @@
 #include <QtCore/qwaitcondition.h>
 #include <QtCore/qfile.h>
 #include <QtCore/qdatetime.h>
+#include <QtNetwork/qnetworkaccessmanager.h>
 #include <QtQml/qqmlinfo.h>
 #include <QtQml/qqmlfile.h>
-#if QT_CONFIG(qml_network)
-#include <QtNetwork/qnetworkaccessmanager.h>
 #include "qqmlnetworkaccessmanagerfactory.h"
-#endif
 
 #include <private/qv8engine_p.h>
 #include <private/qv4serialize_p.h>
@@ -142,10 +135,7 @@ public:
         ~WorkerEngine();
 
         void init();
-
-#if QT_CONFIG(qml_network)
-        QNetworkAccessManager *networkAccessManager() override;
-#endif
+        virtual QNetworkAccessManager *networkAccessManager();
 
         QQuickWorkerScriptEnginePrivate *p;
 
@@ -154,9 +144,7 @@ public:
         QV4::PersistentValue onmessage;
     private:
         QV4::PersistentValue createsend;
-#if QT_CONFIG(qml_network)
         QNetworkAccessManager *accessManager;
-#endif
     };
 
     WorkerEngine *workerEngine;
@@ -185,13 +173,13 @@ public:
 
     int m_nextId;
 
-    static void method_sendMessage(const QV4::BuiltinFunction *, QV4::Scope &scope, QV4::CallData *callData);
+    static QV4::ReturnedValue method_sendMessage(QV4::CallContext *ctx);
 
 signals:
     void stopThread();
 
 protected:
-    bool event(QEvent *) override;
+    virtual bool event(QEvent *);
 
 private:
     void processMessage(int, const QByteArray &);
@@ -200,19 +188,14 @@ private:
 };
 
 QQuickWorkerScriptEnginePrivate::WorkerEngine::WorkerEngine(QQuickWorkerScriptEnginePrivate *parent)
-: QV8Engine(0), p(parent)
-#if QT_CONFIG(qml_network)
-, accessManager(0)
-#endif
+: QV8Engine(0), p(parent), accessManager(0)
 {
     m_v4Engine->v8Engine = this;
 }
 
 QQuickWorkerScriptEnginePrivate::WorkerEngine::~WorkerEngine()
 {
-#if QT_CONFIG(qml_network)
     delete accessManager;
-#endif
 }
 
 void QQuickWorkerScriptEnginePrivate::WorkerEngine::init()
@@ -250,8 +233,7 @@ void QQuickWorkerScriptEnginePrivate::WorkerEngine::init()
     QV4::ScopedCallData callData(scope, 1);
     callData->args[0] = function;
     callData->thisObject = global();
-    createsendconstructor->call(scope, callData);
-    createsend.set(scope.engine, scope.result.asReturnedValue());
+    createsend.set(scope.engine, createsendconstructor->call(callData));
 }
 
 // Requires handle and context scope
@@ -264,16 +246,16 @@ QV4::ReturnedValue QQuickWorkerScriptEnginePrivate::WorkerEngine::sendFunction(i
     QV4::Scope scope(v4);
     QV4::ScopedFunctionObject f(scope, createsend.value());
 
+    QV4::ScopedValue v(scope);
     QV4::ScopedCallData callData(scope, 1);
     callData->args[0] = QV4::Primitive::fromInt32(id);
     callData->thisObject = global();
-    f->call(scope, callData);
+    v = f->call(callData);
     if (scope.hasException())
-        scope.result = scope.engine->catchException();
-    return scope.result.asReturnedValue();
+        v = scope.engine->catchException();
+    return v->asReturnedValue();
 }
 
-#if QT_CONFIG(qml_network)
 QNetworkAccessManager *QQuickWorkerScriptEnginePrivate::WorkerEngine::networkAccessManager()
 {
     if (!accessManager) {
@@ -285,20 +267,20 @@ QNetworkAccessManager *QQuickWorkerScriptEnginePrivate::WorkerEngine::networkAcc
     }
     return accessManager;
 }
-#endif
 
 QQuickWorkerScriptEnginePrivate::QQuickWorkerScriptEnginePrivate(QQmlEngine *engine)
 : workerEngine(0), qmlengine(engine), m_nextId(0)
 {
 }
 
-void QQuickWorkerScriptEnginePrivate::method_sendMessage(const QV4::BuiltinFunction *, QV4::Scope &scope, QV4::CallData *callData)
+QV4::ReturnedValue QQuickWorkerScriptEnginePrivate::method_sendMessage(QV4::CallContext *ctx)
 {
-    WorkerEngine *engine = (WorkerEngine*)scope.engine->v8Engine;
+    WorkerEngine *engine = (WorkerEngine*)ctx->engine()->v8Engine;
 
-    int id = callData->argc > 1 ? callData->args[1].toInt32() : 0;
+    int id = ctx->argc() > 1 ? ctx->args()[1].toInt32() : 0;
 
-    QV4::ScopedValue v(scope, callData->argument(2));
+    QV4::Scope scope(ctx);
+    QV4::ScopedValue v(scope, ctx->argument(2));
     QByteArray data = QV4::Serialize::serialize(v, scope.engine);
 
     QMutexLocker locker(&engine->p->m_lock);
@@ -306,7 +288,7 @@ void QQuickWorkerScriptEnginePrivate::method_sendMessage(const QV4::BuiltinFunct
     if (script && script->owner)
         QCoreApplication::postEvent(script->owner, new WorkerDataEvent(0, data));
 
-    scope.result = QV4::Encode::undefined();
+    return QV4::Encode::undefined();
 }
 
 QV4::ReturnedValue QQuickWorkerScriptEnginePrivate::getWorker(WorkerScript *script)
@@ -316,8 +298,19 @@ QV4::ReturnedValue QQuickWorkerScriptEnginePrivate::getWorker(WorkerScript *scri
 
         QV4::ExecutionEngine *v4 = QV8Engine::getV4(workerEngine);
         QV4::Scope scope(v4);
-        QV4::ScopedValue v(scope, workerEngine->sendFunction(script->id));
-        script->qmlContext.set(v4, QV4::QmlContext::createWorkerContext(v4->rootContext(), script->source, v));
+
+        QV4::Scoped<QV4::QmlContextWrapper> w(scope, QV4::QmlContextWrapper::urlScope(v4, script->source));
+        Q_ASSERT(!!w);
+        w->setReadOnly(false);
+
+        QV4::ScopedObject api(scope, v4->newObject());
+        api->put(QV4::ScopedString(scope, v4->newString(QStringLiteral("sendMessage"))), QV4::ScopedValue(scope, workerEngine->sendFunction(script->id)));
+
+        w->QV4::Object::put(QV4::ScopedString(scope, v4->newString(QStringLiteral("WorkerScript"))), api);
+
+        w->setReadOnly(true);
+
+        script->qmlContext.set(v4, v4->rootContext()->newQmlContext(w));
     }
 
     return script->qmlContext.value();
@@ -367,7 +360,7 @@ void QQuickWorkerScriptEnginePrivate::processMessage(int id, const QByteArray &d
     callData->thisObject = workerEngine->global();
     callData->args[0] = qmlContext->d()->qml; // ###
     callData->args[1] = value;
-    f->call(scope, callData);
+    f->call(callData);
     if (scope.hasException()) {
         QQmlError error = scope.engine->catchExceptionAsQmlError();
         reportScriptException(script, error);
@@ -758,4 +751,3 @@ QT_END_NAMESPACE
 
 #include <qquickworkerscript.moc>
 
-#include "moc_qquickworkerscript_p.cpp"

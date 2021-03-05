@@ -1,3 +1,4 @@
+
 QT += core-private multimedia-private network
 
 qtHaveModule(widgets) {
@@ -7,11 +8,30 @@ qtHaveModule(widgets) {
 
 LIBS += -lqgsttools_p
 
-QMAKE_USE += gstreamer
+CONFIG += link_pkgconfig
 
-qtConfig(resourcepolicy): \
-    QMAKE_USE += libresourceqt5
+PKGCONFIG += \
+    gstreamer-$$GST_VERSION \
+    gstreamer-base-$$GST_VERSION \
+    gstreamer-audio-$$GST_VERSION \
+    gstreamer-video-$$GST_VERSION \
+    gstreamer-pbutils-$$GST_VERSION
 
-qtConfig(gstreamer_app): \
-    QMAKE_USE += gstreamer_app
+maemo*:PKGCONFIG +=gstreamer-plugins-bad-$$GST_VERSION
+
+mir: {
+    DEFINES += HAVE_MIR
+}
+
+
+config_resourcepolicy {
+    DEFINES += HAVE_RESOURCE_POLICY
+    PKGCONFIG += libresourceqt5
+}
+
+config_gstreamer_appsrc {
+    PKGCONFIG += gstreamer-app-$$GST_VERSION
+    DEFINES += HAVE_GST_APPSRC
+    LIBS += -lgstapp-$$GST_VERSION
+}
 

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -116,8 +110,6 @@ public:
     uint16 photometric;
     bool grayscale;
     bool headersRead;
-    int currentDirectory;
-    int directoryCount;
 };
 
 static QImageIOHandler::Transformations exif2Qt(int exifOrientation)
@@ -176,8 +168,6 @@ QTiffHandlerPrivate::QTiffHandlerPrivate()
     , photometric(false)
     , grayscale(false)
     , headersRead(false)
-    , currentDirectory(0)
-    , directoryCount(0)
 {
 }
 
@@ -229,19 +219,6 @@ bool QTiffHandlerPrivate::openForRead(QIODevice *device)
     if (!tiff) {
         return false;
     }
-    return true;
-}
-
-bool QTiffHandlerPrivate::readHeaders(QIODevice *device)
-{
-    if (headersRead)
-        return true;
-
-    if (!openForRead(device))
-        return false;
-
-    TIFFSetDirectory(tiff, currentDirectory);
-
     uint32 width;
     uint32 height;
     if (!TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width)
@@ -292,6 +269,14 @@ bool QTiffHandlerPrivate::readHeaders(QIODevice *device)
     return true;
 }
 
+bool QTiffHandlerPrivate::readHeaders(QIODevice *device)
+{
+    if (headersRead)
+        return true;
+
+    return openForRead(device);
+}
+
 QTiffHandler::QTiffHandler()
     : QImageIOHandler()
     , d(new QTiffHandlerPrivate)
@@ -317,7 +302,7 @@ bool QTiffHandler::canRead(QIODevice *device)
 bool QTiffHandler::read(QImage *image)
 {
     // Open file and read headers if it hasn't already been done.
-    if (!d->readHeaders(device()))
+    if (!d->openForRead(device()))
         return false;
 
     QImage::Format format = d->format;
@@ -329,88 +314,22 @@ bool QTiffHandler::read(QImage *image)
     if (image->size() != d->size || image->format() != format)
         *image = QImage(d->size, format);
 
-    if (image->isNull()) {
-        d->close();
-        return false;
-    }
-
     TIFF *const tiff = d->tiff;
     const uint32 width = d->size.width();
     const uint32 height = d->size.height();
 
-    if (format == QImage::Format_Mono || format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale8) {
-        if (format == QImage::Format_Mono) {
-            QVector<QRgb> colortable(2);
-            if (d->photometric == PHOTOMETRIC_MINISBLACK) {
-                colortable[0] = 0xff000000;
-                colortable[1] = 0xffffffff;
-            } else {
-                colortable[0] = 0xffffffff;
-                colortable[1] = 0xff000000;
-            }
-            image->setColorTable(colortable);
-        } else if (format == QImage::Format_Indexed8) {
-            const uint16 tableSize = 256;
-            QVector<QRgb> qtColorTable(tableSize);
-            if (d->grayscale) {
-                for (int i = 0; i<tableSize; ++i) {
-                    const int c = (d->photometric == PHOTOMETRIC_MINISBLACK) ? i : (255 - i);
-                    qtColorTable[i] = qRgb(c, c, c);
-                }
-            } else {
-                // create the color table
-                uint16 *redTable = 0;
-                uint16 *greenTable = 0;
-                uint16 *blueTable = 0;
-                if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
-                    d->close();
-                    return false;
-                }
-                if (!redTable || !greenTable || !blueTable) {
-                    d->close();
-                    return false;
-                }
-
-                for (int i = 0; i<tableSize ;++i) {
-                    const int red = redTable[i] / 257;
-                    const int green = greenTable[i] / 257;
-                    const int blue = blueTable[i] / 257;
-                    qtColorTable[i] = qRgb(red, green, blue);
-                }
-            }
-            image->setColorTable(qtColorTable);
-            // free redTable, greenTable and greenTable done by libtiff
-        }
-
-        if (TIFFIsTiled(tiff)) {
-            quint32 tileWidth, tileLength;
-            TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tileWidth);
-            TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tileLength);
-            uchar *buf = (uchar *)_TIFFmalloc(TIFFTileSize(tiff));
-            if (!tileWidth || !tileLength || !buf) {
-                _TIFFfree(buf);
-                d->close();
-                return false;
-            }
-            quint32 byteWidth = (format == QImage::Format_Mono) ? (width + 7)/8 : width;
-            quint32 byteTileWidth = (format == QImage::Format_Mono) ? tileWidth/8 : tileWidth;
-            for (quint32 y = 0; y < height; y += tileLength) {
-                for (quint32 x = 0; x < width; x += tileWidth) {
-                    if (TIFFReadTile(tiff, buf, x, y, 0, 0) < 0) {
-                        _TIFFfree(buf);
-                        d->close();
-                        return false;
-                    }
-                    quint32 linesToCopy = qMin(tileLength, height - y);
-                    quint32 byteOffset = (format == QImage::Format_Mono) ? x/8 : x;
-                    quint32 widthToCopy = qMin(byteTileWidth, byteWidth - byteOffset);
-                    for (quint32 i = 0; i < linesToCopy; i++) {
-                        ::memcpy(image->scanLine(y + i) + byteOffset, buf + (i * byteTileWidth), widthToCopy);
-                    }
-                }
-            }
-            _TIFFfree(buf);
+    if (format == QImage::Format_Mono) {
+        QVector<QRgb> colortable(2);
+        if (d->photometric == PHOTOMETRIC_MINISBLACK) {
+            colortable[0] = 0xff000000;
+            colortable[1] = 0xffffffff;
         } else {
+            colortable[0] = 0xffffffff;
+            colortable[1] = 0xff000000;
+        }
+        image->setColorTable(colortable);
+
+        if (!image->isNull()) {
             for (uint32 y=0; y<height; ++y) {
                 if (TIFFReadScanline(tiff, image->scanLine(y), y, 0) < 0) {
                     d->close();
@@ -419,16 +338,74 @@ bool QTiffHandler::read(QImage *image)
             }
         }
     } else {
-        const int stopOnError = 1;
-        if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32 *>(image->bits()), qt2Exif(d->transformation), stopOnError)) {
-            for (uint32 y=0; y<height; ++y)
-                convert32BitOrder(image->scanLine(y), width);
+        if (format == QImage::Format_Indexed8) {
+            if (!image->isNull()) {
+                const uint16 tableSize = 256;
+                QVector<QRgb> qtColorTable(tableSize);
+                if (d->grayscale) {
+                    for (int i = 0; i<tableSize; ++i) {
+                        const int c = (d->photometric == PHOTOMETRIC_MINISBLACK) ? i : (255 - i);
+                        qtColorTable[i] = qRgb(c, c, c);
+                    }
+                } else {
+                    // create the color table
+                    uint16 *redTable = 0;
+                    uint16 *greenTable = 0;
+                    uint16 *blueTable = 0;
+                    if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
+                        d->close();
+                        return false;
+                    }
+                    if (!redTable || !greenTable || !blueTable) {
+                        d->close();
+                        return false;
+                    }
+
+                    for (int i = 0; i<tableSize ;++i) {
+                        const int red = redTable[i] / 257;
+                        const int green = greenTable[i] / 257;
+                        const int blue = blueTable[i] / 257;
+                        qtColorTable[i] = qRgb(red, green, blue);
+                    }
+                }
+
+                image->setColorTable(qtColorTable);
+                for (uint32 y=0; y<height; ++y) {
+                    if (TIFFReadScanline(tiff, image->scanLine(y), y, 0) < 0) {
+                        d->close();
+                        return false;
+                    }
+                }
+
+                // free redTable, greenTable and greenTable done by libtiff
+            }
+        } else if (format == QImage::Format_Grayscale8) {
+            if (!image->isNull()) {
+                for (uint32 y = 0; y < height; ++y) {
+                    if (TIFFReadScanline(tiff, image->scanLine(y), y, 0) < 0) {
+                        d->close();
+                        return false;
+                    }
+                }
+            }
         } else {
-            d->close();
-            return false;
+            if (!image->isNull()) {
+                const int stopOnError = 1;
+                if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32 *>(image->bits()), qt2Exif(d->transformation), stopOnError)) {
+                    for (uint32 y=0; y<height; ++y)
+                        convert32BitOrder(image->scanLine(y), width);
+                } else {
+                    d->close();
+                    return false;
+                }
+            }
         }
     }
 
+    if (image->isNull()) {
+        d->close();
+        return false;
+    }
 
     float resX = 0;
     float resY = 0;
@@ -455,6 +432,7 @@ bool QTiffHandler::read(QImage *image)
         }
     }
 
+    d->close();
     return true;
 }
 
@@ -557,7 +535,7 @@ bool QTiffHandler::write(const QImage &image)
         if (image.colorTable().at(0) == 0xffffffff)
             photometric = PHOTOMETRIC_MINISWHITE;
         if (!TIFFSetField(tiff, TIFFTAG_PHOTOMETRIC, photometric)
-            || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_LZW)
+            || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_CCITTRLE)
             || !TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 1)) {
             TIFFClose(tiff);
             return false;
@@ -592,14 +570,14 @@ bool QTiffHandler::write(const QImage &image)
             if (colorTable.at(0) == 0xffffffff)
                 photometric = PHOTOMETRIC_MINISWHITE;
             if (!TIFFSetField(tiff, TIFFTAG_PHOTOMETRIC, photometric)
-                    || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_LZW)
+                    || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_PACKBITS)
                     || !TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 8)) {
                 TIFFClose(tiff);
                 return false;
             }
         } else {
             if (!TIFFSetField(tiff, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_PALETTE)
-                    || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_LZW)
+                    || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_PACKBITS)
                     || !TIFFSetField(tiff, TIFFTAG_BITSPERSAMPLE, 8)) {
                 TIFFClose(tiff);
                 return false;
@@ -755,45 +733,6 @@ bool QTiffHandler::supportsOption(ImageOption option) const
             || option == TransformedByDefault;
 }
 
-bool QTiffHandler::jumpToNextImage()
-{
-    if (!ensureHaveDirectoryCount())
-        return false;
-    if (d->currentDirectory >= d->directoryCount - 1)
-        return false;
-
-    d->headersRead = false;
-    ++d->currentDirectory;
-    return true;
-}
-
-bool QTiffHandler::jumpToImage(int imageNumber)
-{
-    if (!ensureHaveDirectoryCount())
-        return false;
-    if (imageNumber < 0 || imageNumber >= d->directoryCount)
-        return false;
-
-    if (d->currentDirectory != imageNumber) {
-        d->headersRead = false;
-        d->currentDirectory = imageNumber;
-    }
-    return true;
-}
-
-int QTiffHandler::imageCount() const
-{
-    if (!ensureHaveDirectoryCount())
-        return 1;
-
-    return d->directoryCount;
-}
-
-int QTiffHandler::currentImageNumber() const
-{
-    return d->currentDirectory;
-}
-
 void QTiffHandler::convert32BitOrder(void *buffer, int width)
 {
     uint32 *target = reinterpret_cast<uint32 *>(buffer);
@@ -806,33 +745,4 @@ void QTiffHandler::convert32BitOrder(void *buffer, int width)
                     | ((p & 0x000000ff) << 16);
     }
 }
-
-bool QTiffHandler::ensureHaveDirectoryCount() const
-{
-    if (d->directoryCount > 0)
-        return true;
-
-    TIFF *tiff = TIFFClientOpen("foo",
-                                "r",
-                                device(),
-                                qtiffReadProc,
-                                qtiffWriteProc,
-                                qtiffSeekProc,
-                                qtiffCloseProc,
-                                qtiffSizeProc,
-                                qtiffMapProc,
-                                qtiffUnmapProc);
-    if (!tiff) {
-        device()->reset();
-        return false;
-    }
-
-    do {
-        ++d->directoryCount;
-    } while (TIFFReadDirectory(tiff));
-    TIFFClose(tiff);
-    device()->reset();
-    return true;
-}
-
 QT_END_NAMESPACE

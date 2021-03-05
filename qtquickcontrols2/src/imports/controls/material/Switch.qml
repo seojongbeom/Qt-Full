@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,47 +34,93 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.controls.material 1.0
+import Qt.labs.templates 1.0 as T
+import QtGraphicalEffects 1.0
 
 T.Switch {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            (label ? label.implicitWidth : 0) +
+                            (indicator ? indicator.implicitWidth : 0) +
+                            (label && indicator ? spacing : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
+                             Math.max(label ? label.implicitHeight : 0,
                                       indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 8
     spacing: 8
 
-    indicator: SwitchIndicator {
+    //! [indicator]
+    indicator: Item {
         x: text ? (control.mirrored ? control.width - width - control.rightPadding : control.leftPadding) : control.leftPadding + (control.availableWidth - width) / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        control: control
+        implicitWidth: 38
+        implicitHeight: 32
 
         Ripple {
-            x: parent.handle.x + parent.handle.width / 2 - width / 2
-            y: parent.handle.y + parent.handle.height / 2 - height / 2
-            width: 28; height: 28
-            pressed: control.pressed
-            active: control.down || control.visualFocus || control.hovered
-            color: control.checked ? control.Material.highlightedRippleColor : control.Material.rippleColor
+            x: handle.x + handle.width / 2 - width / 2
+            y: handle.y + handle.height / 2 - height / 2
+            width: handle.width
+            height: width
+            control: control
+            colored: control.checked
+            opacity: control.pressed || control.activeFocus ? 1 : 0
+        }
+
+        Rectangle {
+            width: parent.width
+            height: 14
+            radius: height / 2
+            y: parent.height / 2 - height / 2
+            color: control.enabled ? (control.checked ? control.Material.switchCheckedTrackColor : control.Material.switchUncheckedTrackColor)
+                                   : control.Material.switchDisabledTrackColor
+        }
+
+        Rectangle {
+            id: handle
+            x: Math.max(0, Math.min(parent.width - width, control.visualPosition * parent.width - (width / 2)))
+            y: (parent.height - height) / 2
+            width: 20
+            height: 20
+            radius: width / 2
+            color: control.enabled ? (control.checked ? control.Material.switchCheckedHandleColor : control.Material.switchUncheckedHandleColor)
+                                   : control.Material.switchDisabledHandleColor
+
+            Behavior on x {
+                enabled: !control.pressed
+                SmoothedAnimation {
+                    duration: 300
+                }
+            }
+
+            layer.enabled: true
+            layer.effect: DropShadow {
+                verticalOffset: 1
+                color: control.Material.dropShadowColor
+                spread: 0.3
+            }
         }
     }
+    //! [indicator]
 
-    contentItem: Text {
-        leftPadding: control.indicator && !control.mirrored ? control.indicator.width + control.spacing : 0
-        rightPadding: control.indicator && control.mirrored ? control.indicator.width + control.spacing : 0
+    //! [label]
+    label: Text {
+        x: control.mirrored ? control.leftPadding : (indicator.x + indicator.width + control.spacing)
+        y: control.topPadding
+        width: control.availableWidth - indicator.width - control.spacing
+        height: control.availableHeight
 
         text: control.text
         font: control.font
-        color: control.enabled ? control.Material.foreground : control.Material.hintTextColor
+        color: control.enabled ? control.Material.primaryTextColor : control.Material.hintTextColor
         elide: Text.ElideRight
+        visible: control.text
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 }

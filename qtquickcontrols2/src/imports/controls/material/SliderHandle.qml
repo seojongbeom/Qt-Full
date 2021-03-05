@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,9 +34,8 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.controls.material 1.0
 
 Item {
     id: root
@@ -46,7 +45,6 @@ Item {
     property real value: 0
     property bool handleHasFocus: false
     property bool handlePressed: false
-    property bool handleHovered: false
     readonly property int initialSize: 13
     readonly property bool horizontal: control.orientation === Qt.Horizontal
     readonly property var control: parent
@@ -67,11 +65,10 @@ Item {
     }
 
     Ripple {
-        x: (parent.width - width) / 2
-        y: (parent.height - height) / 2
-        width: 22; height: 22
-        pressed: root.handlePressed
-        active: root.handlePressed || root.handleHasFocus || root.handleHovered
-        color: control.Material.rippleColor
+        width: parent.width
+        height: width
+        control: root.control
+        colored: true
+        opacity: root.handleHasFocus && !root.handlePressed ? 1 : 0
     }
 }

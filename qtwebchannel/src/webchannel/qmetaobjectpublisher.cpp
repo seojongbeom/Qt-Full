@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Milian Wolff <milian.wolff@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Milian Wolff <milian.wolff@kdab.com>
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWebChannel module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -383,12 +377,12 @@ QVariant QMetaObjectPublisher::invokeMethod(QObject *const object, const int met
                   arguments[0], arguments[1], arguments[2], arguments[3], arguments[4],
                   arguments[5], arguments[6], arguments[7], arguments[8], arguments[9]);
     } else {
+        QGenericReturnArgument returnArgument(method.typeName(), returnValue.data());
+
         // Only init variant with return type if its not a variant itself, which would
         // lead to nested variants which is not what we want.
         if (method.returnType() != QMetaType::QVariant)
             returnValue = QVariant(method.returnType(), 0);
-
-        QGenericReturnArgument returnArgument(method.typeName(), returnValue.data());
         method.invoke(object, returnArgument,
                   arguments[0], arguments[1], arguments[2], arguments[3], arguments[4],
                   arguments[5], arguments[6], arguments[7], arguments[8], arguments[9]);
@@ -463,6 +457,29 @@ void QMetaObjectPublisher::objectDestroyed(const QObject *object)
     pendingPropertyUpdates.remove(object);
 }
 
+void QMetaObjectPublisher::transportRemoved(QWebChannelAbstractTransport *transport)
+{
+    QHash<QWebChannelAbstractTransport*, QString>::iterator it = transportedWrappedObjects.find(transport);
+    // It is not allowed to modify a container while iterating over it. So save
+    // objects which should be removed and call objectDestroyed() on them later.
+    QVector<QObject*> objectsForDeletion;
+    while (it != transportedWrappedObjects.end() && it.key() == transport) {
+        if (wrappedObjects.contains(it.value())) {
+            QVector<QWebChannelAbstractTransport*> &transports = wrappedObjects[it.value()].transports;
+            transports.removeOne(transport);
+            if (transports.isEmpty())
+                objectsForDeletion.append(wrappedObjects[it.value()].object);
+        }
+
+        it++;
+    }
+
+    transportedWrappedObjects.remove(transport);
+
+    foreach (QObject *obj, objectsForDeletion)
+        objectDestroyed(obj);
+}
+
 QObject *QMetaObjectPublisher::unwrapObject(const QString &objectId) const
 {
     if (!objectId.isEmpty()) {
@@ -501,29 +518,6 @@ QVariant QMetaObjectPublisher::toVariant(const QJsonValue &value, int targetType
         qWarning() << "Could not convert argument" << value << "to target type" << QVariant::typeToName(targetType) << '.';
     }
     return variant;
-}
-
-void QMetaObjectPublisher::transportRemoved(QWebChannelAbstractTransport *transport)
-{
-    auto it = transportedWrappedObjects.find(transport);
-    // It is not allowed to modify a container while iterating over it. So save
-    // objects which should be removed and call objectDestroyed() on them later.
-    QVector<QObject*> objectsForDeletion;
-    while (it != transportedWrappedObjects.end() && it.key() == transport) {
-        if (wrappedObjects.contains(it.value())) {
-            QVector<QWebChannelAbstractTransport*> &transports = wrappedObjects[it.value()].transports;
-            transports.removeOne(transport);
-            if (transports.isEmpty())
-                objectsForDeletion.append(wrappedObjects[it.value()].object);
-        }
-
-        it++;
-    }
-
-    transportedWrappedObjects.remove(transport);
-
-    foreach (QObject *obj, objectsForDeletion)
-        objectDestroyed(obj);
 }
 
 // NOTE: transport can be a nullptr
@@ -664,15 +658,9 @@ void QMetaObjectPublisher::handleMessage(const QJsonObject &message, QWebChannel
                 return;
             }
 
-            QPointer<QMetaObjectPublisher> publisherExists(this);
-            QPointer<QWebChannelAbstractTransport> transportExists(transport);
-            QVariant result =
-                invokeMethod(object,
-                             message.value(KEY_METHOD).toInt(-1),
-                             message.value(KEY_ARGS).toArray());
-            if (!publisherExists || !transportExists)
-                return;
-            transport->sendMessage(createResponse(message.value(KEY_ID), wrapResult(result, transport)));
+            transport->sendMessage(createResponse(message.value(KEY_ID),
+                wrapResult(invokeMethod(object, message.value(KEY_METHOD).toInt(-1),
+                             message.value(KEY_ARGS).toArray()), transport)));
         } else if (type == TypeConnectToSignal) {
             signalHandler.connectTo(object, message.value(KEY_SIGNAL).toInt(-1));
         } else if (type == TypeDisconnectFromSignal) {

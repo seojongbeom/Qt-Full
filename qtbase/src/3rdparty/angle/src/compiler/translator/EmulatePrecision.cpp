@@ -179,50 +179,11 @@ const char *getFloatTypeStr(const TType& type)
       case 1:
         return "float";
       case 2:
-        switch(type.getSecondarySize())
-        {
-          case 1:
-            return "vec2";
-          case 2:
-            return "mat2";
-          case 3:
-            return "mat2x3";
-          case 4:
-            return "mat2x4";
-          default:
-            UNREACHABLE();
-            return NULL;
-        }
+        return type.getSecondarySize() > 1 ? "mat2" : "vec2";
       case 3:
-        switch(type.getSecondarySize())
-        {
-          case 1:
-            return "vec3";
-          case 2:
-            return "mat3x2";
-          case 3:
-            return "mat3";
-          case 4:
-            return "mat3x4";
-          default:
-            UNREACHABLE();
-            return NULL;
-        }
+        return type.getSecondarySize() > 1 ? "mat3" : "vec3";
       case 4:
-        switch(type.getSecondarySize())
-        {
-          case 1:
-            return "vec4";
-          case 2:
-            return "mat4x2";
-          case 3:
-            return "mat4x3";
-          case 4:
-            return "mat4";
-          default:
-            UNREACHABLE();
-            return NULL;
-        }
+        return type.getSecondarySize() > 1 ? "mat4" : "vec4";
       default:
         UNREACHABLE();
         return NULL;
@@ -238,10 +199,8 @@ bool canRoundFloat(const TType &type)
 TIntermAggregate *createInternalFunctionCallNode(TString name, TIntermNode *child)
 {
     TIntermAggregate *callNode = new TIntermAggregate();
-    callNode->setOp(EOpFunctionCall);
-    TName nameObj(TFunction::mangleName(name));
-    nameObj.setInternal(true);
-    callNode->setNameObj(nameObj);
+    callNode->setOp(EOpInternalFunctionCall);
+    callNode->setName(name);
     callNode->getSequence()->push_back(child);
     return callNode;
 }
@@ -293,14 +252,17 @@ bool parentUsesResult(TIntermNode* parent, TIntermNode* node)
 
 }  // namespace anonymous
 
-EmulatePrecision::EmulatePrecision(const TSymbolTable &symbolTable, int shaderVersion)
-    : TLValueTrackingTraverser(true, true, true, symbolTable, shaderVersion),
-      mDeclaringVariables(false)
+EmulatePrecision::EmulatePrecision()
+    : TIntermTraverser(true, true, true),
+      mDeclaringVariables(false),
+      mInLValue(false),
+      mInFunctionCallOutParameter(false)
 {}
 
 void EmulatePrecision::visitSymbol(TIntermSymbol *node)
 {
-    if (canRoundFloat(node->getType()) && !mDeclaringVariables && !isLValueRequiredHere())
+    if (canRoundFloat(node->getType()) &&
+        !mDeclaringVariables && !mInLValue && !mInFunctionCallOutParameter)
     {
         TIntermNode *parent = getParentNode();
         TIntermNode *replacement = createRoundingFunctionCallNode(node);
@@ -312,6 +274,14 @@ void EmulatePrecision::visitSymbol(TIntermSymbol *node)
 bool EmulatePrecision::visitBinary(Visit visit, TIntermBinary *node)
 {
     bool visitChildren = true;
+
+    if (node->isAssignment())
+    {
+        if (visit == PreVisit)
+            mInLValue = true;
+        else if (visit == InVisit)
+            mInLValue = false;
+    }
 
     TOperator op = node->getOp();
 
@@ -406,9 +376,22 @@ bool EmulatePrecision::visitAggregate(Visit visit, TIntermAggregate *node)
     {
       case EOpSequence:
       case EOpConstructStruct:
+        // No special handling
+        break;
       case EOpFunction:
+        if (visit == PreVisit)
+        {
+            const TIntermSequence &sequence = *(node->getSequence());
+            TIntermSequence::const_iterator seqIter = sequence.begin();
+            TIntermAggregate *params = (*seqIter)->getAsAggregate();
+            ASSERT(params != NULL);
+            ASSERT(params->getOp() == EOpParameters);
+            mFunctionMap[node->getName()] = params->getSequence();
+        }
         break;
       case EOpPrototype:
+        if (visit == PreVisit)
+            mFunctionMap[node->getName()] = node->getSequence();
         visitChildren = false;
         break;
       case EOpParameters:
@@ -435,16 +418,49 @@ bool EmulatePrecision::visitAggregate(Visit visit, TIntermAggregate *node)
       case EOpFunctionCall:
       {
         // Function call.
+        bool inFunctionMap = (mFunctionMap.find(node->getName()) != mFunctionMap.end());
         if (visit == PreVisit)
         {
             // User-defined function return values are not rounded, this relies on that
             // calculations producing the value were rounded.
             TIntermNode *parent = getParentNode();
-            if (canRoundFloat(node->getType()) && !isInFunctionMap(node) &&
-                parentUsesResult(parent, node))
+            if (canRoundFloat(node->getType()) && !inFunctionMap && parentUsesResult(parent, node))
             {
                 TIntermNode *replacement = createRoundingFunctionCallNode(node);
                 mReplacements.push_back(NodeUpdateEntry(parent, node, replacement, true));
+            }
+
+            if (inFunctionMap)
+            {
+                mSeqIterStack.push_back(mFunctionMap[node->getName()]->begin());
+                if (mSeqIterStack.back() != mFunctionMap[node->getName()]->end())
+                {
+                    TQualifier qualifier = (*mSeqIterStack.back())->getAsTyped()->getQualifier();
+                    mInFunctionCallOutParameter = (qualifier == EvqOut || qualifier == EvqInOut);
+                }
+            }
+            else
+            {
+                // The function is not user-defined - it is likely built-in texture function.
+                // Assume that those do not have out parameters.
+                mInFunctionCallOutParameter = false;
+            }
+        }
+        else if (visit == InVisit)
+        {
+            if (inFunctionMap)
+            {
+                ++mSeqIterStack.back();
+                TQualifier qualifier = (*mSeqIterStack.back())->getAsTyped()->getQualifier();
+                mInFunctionCallOutParameter = (qualifier == EvqOut || qualifier == EvqInOut);
+            }
+        }
+        else
+        {
+            if (inFunctionMap)
+            {
+                mSeqIterStack.pop_back();
+                mInFunctionCallOutParameter = false;
             }
         }
         break;
@@ -468,10 +484,15 @@ bool EmulatePrecision::visitUnary(Visit visit, TIntermUnary *node)
       case EOpNegative:
       case EOpVectorLogicalNot:
       case EOpLogicalNot:
+        break;
       case EOpPostIncrement:
       case EOpPostDecrement:
       case EOpPreIncrement:
       case EOpPreDecrement:
+        if (visit == PreVisit)
+            mInLValue = true;
+        else if (visit == PostVisit)
+            mInLValue = false;
         break;
       default:
         if (canRoundFloat(node->getType()) && visit == PreVisit)
@@ -490,7 +511,7 @@ void EmulatePrecision::writeEmulationHelpers(TInfoSinkBase& sink, ShShaderOutput
 {
     // Other languages not yet supported
     ASSERT(outputLanguage == SH_GLSL_COMPATIBILITY_OUTPUT ||
-           IsGLSL130OrNewer(outputLanguage) ||
+           outputLanguage == SH_GLSL_CORE_OUTPUT ||
            outputLanguage == SH_ESSL_OUTPUT);
     writeCommonPrecisionEmulationHelpers(sink, outputLanguage);
 

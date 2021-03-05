@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -43,16 +37,11 @@
 #include "simplewidgets_p.h"
 #include "rangecontrols_p.h"
 #include "complexwidgets_p.h"
-#if QT_CONFIG(itemviews)
 #include "itemviews_p.h"
-#endif
 
-#if QT_CONFIG(toolbutton)
+#include <qpushbutton.h>
 #include <qtoolbutton.h>
-#endif
-#if QT_CONFIG(treeview)
 #include <qtreeview.h>
-#endif
 #include <qvariant.h>
 #include <qaccessible.h>
 
@@ -76,18 +65,18 @@ QAccessibleInterface *qAccessibleFactory(const QString &classname, QObject *obje
         return iface;
 
     if (false) {
-#if QT_CONFIG(lineedit)
+#ifndef QT_NO_LINEEDIT
     } else if (classname == QLatin1String("QLineEdit")) {
         if (widget->objectName() == QLatin1String("qt_spinbox_lineedit"))
             iface = 0;
         else
             iface = new QAccessibleLineEdit(widget);
 #endif
-#if QT_CONFIG(combobox)
+#ifndef QT_NO_COMBOBOX
     } else if (classname == QLatin1String("QComboBox")) {
         iface = new QAccessibleComboBox(widget);
 #endif
-#if QT_CONFIG(spinbox)
+#ifndef QT_NO_SPINBOX
     } else if (classname == QLatin1String("QAbstractSpinBox")) {
         iface = new QAccessibleAbstractSpinBox(widget);
     } else if (classname == QLatin1String("QSpinBox")) {
@@ -95,79 +84,75 @@ QAccessibleInterface *qAccessibleFactory(const QString &classname, QObject *obje
     } else if (classname == QLatin1String("QDoubleSpinBox")) {
         iface = new QAccessibleDoubleSpinBox(widget);
 #endif
-#if QT_CONFIG(scrollbar)
+#ifndef QT_NO_SCROLLBAR
     } else if (classname == QLatin1String("QScrollBar")) {
         iface = new QAccessibleScrollBar(widget);
 #endif
-#if QT_CONFIG(slider)
     } else if (classname == QLatin1String("QAbstractSlider")) {
         iface = new QAccessibleAbstractSlider(widget);
+#ifndef QT_NO_SLIDER
     } else if (classname == QLatin1String("QSlider")) {
         iface = new QAccessibleSlider(widget);
 #endif
-#if QT_CONFIG(toolbutton)
+#ifndef QT_NO_TOOLBUTTON
     } else if (classname == QLatin1String("QToolButton")) {
         iface = new QAccessibleToolButton(widget);
-#endif // QT_CONFIG(toolbutton)
-#if QT_CONFIG(abstractbutton)
+#endif // QT_NO_TOOLBUTTON
     } else if (classname == QLatin1String("QCheckBox")
             || classname == QLatin1String("QRadioButton")
             || classname == QLatin1String("QPushButton")
             || classname == QLatin1String("QAbstractButton")) {
         iface = new QAccessibleButton(widget);
-#endif
     } else if (classname == QLatin1String("QDialog")) {
         iface = new QAccessibleWidget(widget, QAccessible::Dialog);
     } else if (classname == QLatin1String("QMessageBox")) {
         iface = new QAccessibleWidget(widget, QAccessible::AlertMessage);
-#if QT_CONFIG(mainwindow)
+#ifndef QT_NO_MAINWINDOW
     } else if (classname == QLatin1String("QMainWindow")) {
         iface = new QAccessibleMainWindow(widget);
 #endif
     } else if (classname == QLatin1String("QLabel") || classname == QLatin1String("QLCDNumber")) {
         iface = new QAccessibleDisplay(widget);
-#if QT_CONFIG(groupbox)
+#ifndef QT_NO_GROUPBOX
     } else if (classname == QLatin1String("QGroupBox")) {
         iface = new QAccessibleGroupBox(widget);
 #endif
     } else if (classname == QLatin1String("QStatusBar")) {
         iface = new QAccessibleDisplay(widget);
-#if QT_CONFIG(progressbar)
+#ifndef QT_NO_PROGRESSBAR
     } else if (classname == QLatin1String("QProgressBar")) {
         iface = new QAccessibleProgressBar(widget);
 #endif
     } else if (classname == QLatin1String("QToolBar")) {
         iface = new QAccessibleWidget(widget, QAccessible::ToolBar, widget->windowTitle());
-#if QT_CONFIG(menubar)
+#ifndef QT_NO_MENUBAR
     } else if (classname == QLatin1String("QMenuBar")) {
         iface = new QAccessibleMenuBar(widget);
 #endif
-#if QT_CONFIG(menu)
+#ifndef QT_NO_MENU
     } else if (classname == QLatin1String("QMenu")) {
         iface = new QAccessibleMenu(widget);
 #endif
-#if QT_CONFIG(treeview)
+#ifndef QT_NO_ITEMVIEWS
     } else if (classname == QLatin1String("QTreeView")) {
         iface = new QAccessibleTree(widget);
-#endif // QT_CONFIG(treeview)
-#if QT_CONFIG(itemviews)
     } else if (classname == QLatin1String("QTableView") || classname == QLatin1String("QListView")) {
         iface = new QAccessibleTable(widget);
     // ### This should be cleaned up. We return the parent for the scrollarea to hide it.
-#endif // QT_CONFIG(itemviews)
-#if QT_CONFIG(tabbar)
+#endif // QT_NO_ITEMVIEWS
+#ifndef QT_NO_TABBAR
     } else if (classname == QLatin1String("QTabBar")) {
         iface = new QAccessibleTabBar(widget);
 #endif
     } else if (classname == QLatin1String("QSizeGrip")) {
         iface = new QAccessibleWidget(widget, QAccessible::Grip);
-#if QT_CONFIG(splitter)
+#ifndef QT_NO_SPLITTER
     } else if (classname == QLatin1String("QSplitter")) {
         iface = new QAccessibleWidget(widget, QAccessible::Splitter);
     } else if (classname == QLatin1String("QSplitterHandle")) {
         iface = new QAccessibleWidget(widget, QAccessible::Grip);
 #endif
-#if QT_CONFIG(textedit) && !defined(QT_NO_CURSOR)
+#if !defined(QT_NO_TEXTEDIT) && !defined(QT_NO_CURSOR)
     } else if (classname == QLatin1String("QTextEdit")) {
         iface = new QAccessibleTextEdit(widget);
     } else if (classname == QLatin1String("QPlainTextEdit")) {
@@ -177,47 +162,45 @@ QAccessibleInterface *qAccessibleFactory(const QString &classname, QObject *obje
         iface = new QAccessibleDisplay(widget, QAccessible::ToolTip);
     } else if (classname == QLatin1String("QFrame")) {
         iface = new QAccessibleWidget(widget, QAccessible::Border);
-#if QT_CONFIG(stackedwidget)
+#ifndef QT_NO_STACKEDWIDGET
     } else if (classname == QLatin1String("QStackedWidget")) {
         iface = new QAccessibleStackedWidget(widget);
 #endif
-#if QT_CONFIG(toolbox)
+#ifndef QT_NO_TOOLBOX
     } else if (classname == QLatin1String("QToolBox")) {
         iface = new QAccessibleToolBox(widget);
 #endif
-#if QT_CONFIG(mdiarea)
+#ifndef QT_NO_MDIAREA
     } else if (classname == QLatin1String("QMdiArea")) {
         iface = new QAccessibleMdiArea(widget);
     } else if (classname == QLatin1String("QMdiSubWindow")) {
         iface = new QAccessibleMdiSubWindow(widget);
 #endif
-#if QT_CONFIG(dialogbuttonbox)
     } else if (classname == QLatin1String("QDialogButtonBox")) {
         iface = new QAccessibleDialogButtonBox(widget);
-#endif
-#if QT_CONFIG(dial)
+#ifndef QT_NO_DIAL
     } else if (classname == QLatin1String("QDial")) {
         iface = new QAccessibleDial(widget);
 #endif
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     } else if (classname == QLatin1String("QRubberBand")) {
         iface = new QAccessibleWidget(widget, QAccessible::Border);
 #endif
-#if QT_CONFIG(textbrowser) && !defined(QT_NO_CURSOR)
+#if !defined(QT_NO_TEXTBROWSER) && !defined(QT_NO_CURSOR)
     } else if (classname == QLatin1String("QTextBrowser")) {
         iface = new QAccessibleTextBrowser(widget);
 #endif
-#if QT_CONFIG(scrollarea)
+#ifndef QT_NO_SCROLLAREA
     } else if (classname == QLatin1String("QAbstractScrollArea")) {
         iface = new QAccessibleAbstractScrollArea(widget);
     } else if (classname == QLatin1String("QScrollArea")) {
         iface = new QAccessibleScrollArea(widget);
 #endif
-#if QT_CONFIG(calendarwidget)
+#ifndef QT_NO_CALENDARWIDGET
     } else if (classname == QLatin1String("QCalendarWidget")) {
         iface = new QAccessibleCalendarWidget(widget);
 #endif
-#if QT_CONFIG(dockwidget)
+#ifndef QT_NO_DOCKWIDGET
     } else if (classname == QLatin1String("QDockWidget")) {
         iface = new QAccessibleDockWidget(widget);
 #endif

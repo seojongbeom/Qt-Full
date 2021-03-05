@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the demonstration applications of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -66,10 +56,10 @@
      networkaccessmanagerfactory [-host <proxy> -port <port>] [file]
 */
 
-#if QT_CONFIG(networkproxy)
+#ifndef QT_NO_NETWORKPROXY
 static QString proxyHost;
 static int proxyPort = 0;
-#endif // networkproxy
+#endif // !QT_NO_NETWORKPROXY
 
 class MyNetworkAccessManagerFactory : public QQmlNetworkAccessManagerFactory
 {
@@ -80,13 +70,13 @@ public:
 QNetworkAccessManager *MyNetworkAccessManagerFactory::create(QObject *parent)
 {
     QNetworkAccessManager *nam = new QNetworkAccessManager(parent);
-#if QT_CONFIG(networkproxy)
+#ifndef QT_NO_NETWORKPROXY
     if (!proxyHost.isEmpty()) {
         qDebug() << "Created QNetworkAccessManager using proxy" << (proxyHost + ":" + QString::number(proxyPort));
         QNetworkProxy proxy(QNetworkProxy::HttpCachingProxy, proxyHost, proxyPort);
         nam->setProxy(proxy);
     }
-#endif // networkproxy
+#endif // !QT_NO_NETWORKPROXY
 
     return nam;
 }
@@ -98,12 +88,12 @@ int main(int argc, char ** argv)
     QGuiApplication app(argc, argv);
 
     QCommandLineParser parser;
-#if QT_CONFIG(networkproxy)
+#ifndef QT_NO_NETWORKPROXY
     QCommandLineOption proxyHostOption("host", "The proxy host to use.", "host");
     parser.addOption(proxyHostOption);
     QCommandLineOption proxyPortOption("port", "The proxy port to use.", "port", "0");
     parser.addOption(proxyPortOption);
-#endif // networkproxy
+#endif // !QT_NO_NETWORKPROXY
     parser.addPositionalArgument("file", "The file to use.");
     QCommandLineOption helpOption = parser.addHelpOption();
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
@@ -116,7 +106,7 @@ int main(int argc, char ** argv)
         qWarning() << parser.helpText();
         exit(0);
     }
-#if QT_CONFIG(networkproxy)
+#ifndef QT_NO_NETWORKPROXY
     if (parser.isSet(proxyHostOption))
         proxyHost = parser.value(proxyHostOption);
     if (parser.isSet(proxyPortOption)) {
@@ -128,7 +118,7 @@ int main(int argc, char ** argv)
             exit(1);
         }
     }
-#endif // networkproxy
+#endif // !QT_NO_NETWORKPROXY
     if (parser.positionalArguments().count() == 1)
         source = QUrl::fromLocalFile(parser.positionalArguments().first());
 

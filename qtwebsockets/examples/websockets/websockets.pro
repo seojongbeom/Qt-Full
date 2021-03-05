@@ -1,5 +1,4 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += network
 
 SUBDIRS = echoclient \
           echoserver \
@@ -10,7 +9,7 @@ SUBDIRS += qmlwebsocketclient \
            qmlwebsocketserver
 }
 
-qtConfig(ssl) {
+contains(QT_CONFIG, openssl) | contains(QT_CONFIG, openssl-linked) {
 SUBDIRS +=  \
             sslechoserver \
             sslechoclient

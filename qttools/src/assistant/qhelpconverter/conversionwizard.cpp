@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -86,16 +91,15 @@ ConversionWizard::ConversionWizard()
     setPage(Finish_Page, m_finishPage);
     m_finishPage->setMaximumHeight(240);
 
-    connect(this, &QWizard::currentIdChanged,
-            this, &ConversionWizard::pageChanged);
+    connect(this, SIGNAL(currentIdChanged(int)),
+        this, SLOT(pageChanged(int)));
 
     m_helpWindow = 0;
     qApp->installEventFilter(this);
 
     QAbstractButton *btn = button(QWizard::HelpButton);
     btn->setCheckable(true);
-    connect(btn, &QAbstractButton::toggled,
-            this, &ConversionWizard::showHelp);
+    connect(btn, SIGNAL(toggled(bool)), this, SLOT(showHelp(bool)));
 }
 
 void ConversionWizard::setAdpFileName(const QString &fileName)
@@ -130,12 +134,12 @@ void ConversionWizard::pageChanged(int id)
         m_files.clear();
         QFileInfo fi(field(QLatin1String("adpFileName")).toString());
         QDir rootDir = fi.absolutePath();
-        for (const QString &p : m_pathPage->paths()) {
+        foreach (const QString &p, m_pathPage->paths()) {
             QDir dir(p);
             QString rel = rootDir.relativeFilePath(dir.absolutePath());
             if (!rel.isEmpty())
                 rel.append(QLatin1Char('/'));
-            for (const QString &f : dir.entryList(m_pathPage->filters()))
+            foreach (const QString &f, dir.entryList(m_pathPage->filters()))
                 m_files.append(rel + f);
         }
         m_filesPage->setFilesToRemove(getUnreferencedFiles(m_files));
@@ -144,7 +148,7 @@ void ConversionWizard::pageChanged(int id)
         m_outputPage->setCollectionComponentEnabled(
             !m_adpReader.properties().isEmpty());
     } else if (id == Finish_Page) {
-        QTimer::singleShot(300, this, &ConversionWizard::convert);
+        QTimer::singleShot(300, this, SLOT(convert()));
     }
 }
 
@@ -194,8 +198,8 @@ bool ConversionWizard::eventFilter(QObject *obj, QEvent *e)
 QStringList ConversionWizard::getUnreferencedFiles(const QStringList &files)
 {
     QStringList lst;
-    const QSet<QString> &adpFiles = m_adpReader.files();
-    for (const QString &s : files) {
+    QSet<QString> adpFiles = m_adpReader.files();
+    foreach (const QString &s, files) {
         if (!adpFiles.contains(s))
             lst.append(s);
     }
@@ -215,7 +219,7 @@ void ConversionWizard::convert()
     qhpWriter.setFilterAttributes(m_filterPage->filterAttributes());
     qhpWriter.setCustomFilters(m_filterPage->customFilters());
 
-    for (const QString &f : m_filesPage->filesToRemove())
+    foreach (const QString &f, m_filesPage->filesToRemove())
         m_files.removeAll(f);
     qhpWriter.setFiles(m_files);
 
@@ -240,8 +244,8 @@ void ConversionWizard::convert()
         qhcpWriter.setProperties(m_adpReader.properties());
         qhcpWriter.setTitlePath(QLatin1String("qthelp://")
             + field(QLatin1String("namespaceName")).toString()
-            + QLatin1Char('/')
-            + field(QLatin1String("virtualFolder")).toString());
+            + QLatin1String("/")
+            +field(QLatin1String("virtualFolder")).toString());
         qhcpWriter.writeFile(fi.absolutePath() + QDir::separator()
             + field(QLatin1String("CollectionFileName")).toString());
     }

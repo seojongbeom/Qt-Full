@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,23 +34,24 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.RangeSlider {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-        Math.max(first.handle ? first.handle.implicitWidth : 0,
-                 second.handle ? second.handle.implicitWidth : 0) + leftPadding + rightPadding)
+        Math.max(track ? track.implicitWidth : 0,
+            first.handle ? first.handle.implicitWidth : 0,
+                second.handle ? second.handle.implicitWidth : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-        Math.max(first.handle ? first.handle.implicitHeight : 0,
-                 second.handle ? second.handle.implicitHeight : 0) + topPadding + bottomPadding)
+        Math.max(track ? track.implicitHeight : 0,
+            first.handle ? first.handle.implicitHeight : 0,
+                second.handle ? second.handle.implicitHeight : 0) + topPadding + bottomPadding)
 
     padding: 6
 
+    //! [firstHandle]
     first.handle: Rectangle {
         x: control.leftPadding + (horizontal ? control.first.visualPosition * (control.availableWidth - width) : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : control.first.visualPosition * (control.availableHeight - height))
@@ -58,16 +59,14 @@ T.RangeSlider {
         implicitHeight: 28
         radius: width / 2
         border.width: activeFocus ? 2 : 1
-        border.color: control.enabled ? (activeFocus
-            ? Default.focusColor
-            : (control.first.pressed ? Default.indicatorFramePressedColor : Default.indicatorFrameColor)) : Default.indicatorFrameDisabledColor
-        color: control.enabled ? (first.pressed
-            ? (activeFocus ? Default.focusPressedColor : Default.indicatorPressedColor)
-            : (activeFocus ? Default.focusLightColor : Default.backgroundColor)) : Default.indicatorDisabledColor
+        border.color: "#353637"
+        color: first.pressed ? "#bdbebf" : "#ffffff"
 
         readonly property bool horizontal: control.orientation === Qt.Horizontal
     }
+    //! [firstHandle]
 
+    //! [secondHandle]
     second.handle: Rectangle {
         x: control.leftPadding + (horizontal ? control.second.visualPosition * (control.availableWidth - width) : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : control.second.visualPosition * (control.availableHeight - height))
@@ -75,17 +74,15 @@ T.RangeSlider {
         implicitHeight: 28
         radius: width / 2
         border.width: activeFocus ? 2 : 1
-        border.color: control.enabled ? (activeFocus
-            ? Default.focusColor
-            : (control.second.pressed ? Default.indicatorFramePressedColor : Default.indicatorFrameColor)) : Default.indicatorFrameDisabledColor
-        color: control.enabled ? (second.pressed
-            ? (activeFocus ? Default.focusPressedColor : Default.indicatorPressedColor)
-            : (activeFocus ? Default.focusLightColor : Default.backgroundColor)) : Default.indicatorDisabledColor
+        border.color: "#353637"
+        color: second.pressed ? "#bdbebf" : "#ffffff"
 
         readonly property bool horizontal: control.orientation === Qt.Horizontal
     }
+    //! [secondHandle]
 
-    background: Rectangle {
+    //! [track]
+    track: Rectangle {
         x: control.leftPadding + (horizontal ? 0 : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : 0)
         implicitWidth: horizontal ? 200 : 6
@@ -93,18 +90,11 @@ T.RangeSlider {
         width: horizontal ? control.availableWidth : implicitWidth
         height: horizontal ? implicitHeight : control.availableHeight
         radius: 3
-        color: Default.buttonColor
+        border.color: "#353637"
+        color: "#ffffff"
         scale: horizontal && control.mirrored ? -1 : 1
 
         readonly property bool horizontal: control.orientation === Qt.Horizontal
-
-        Rectangle {
-            x: parent.horizontal ? control.first.position * parent.width + 3 : 0
-            y: parent.horizontal ? 0 : control.second.visualPosition * parent.height + 3
-            width: parent.horizontal ? control.second.position * parent.width - control.first.position * parent.width - 6 : 6
-            height: parent.horizontal ? 6 : control.second.position * parent.height - control.first.position * parent.height - 6
-
-            color: Default.textColor
-        }
     }
+    //! [track]
 }

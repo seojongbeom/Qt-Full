@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,34 +35,22 @@
 #include "qitemeditorfactory.h"
 #include "qitemeditorfactory_p.h"
 
-#if QT_CONFIG(combobox)
+#ifndef QT_NO_ITEMVIEWS
+
 #include <qcombobox.h>
-#endif
-#if QT_CONFIG(datetimeedit)
 #include <qdatetimeedit.h>
-#endif
-#if QT_CONFIG(label)
 #include <qlabel.h>
-#endif
-#if QT_CONFIG(lineedit)
 #include <qlineedit.h>
-#endif
-#if QT_CONFIG(spinbox)
 #include <qspinbox.h>
-#endif
-#include <qstyle.h>
-#include <qstyleoption.h>
 #include <limits.h>
 #include <float.h>
 #include <qapplication.h>
 #include <qdebug.h>
 
-#include <vector>
-#include <algorithm>
 QT_BEGIN_NAMESPACE
 
 
-#if QT_CONFIG(combobox)
+#ifndef QT_NO_COMBOBOX
 
 class QBooleanComboBox : public QComboBox
 {
@@ -81,10 +63,10 @@ public:
     bool value() const;
 };
 
-#endif // QT_CONFIG(combobox)
+#endif // QT_NO_COMBOBOX
 
 
-#if QT_CONFIG(spinbox)
+#ifndef QT_NO_SPINBOX
 
 class QUIntSpinBox : public QSpinBox
 {
@@ -111,7 +93,7 @@ Q_SIGNALS:
     void uintValueChanged();
 };
 
-#endif // QT_CONFIG(spinbox)
+#endif // QT_NO_SPINBOX
 
 /*!
     \class QItemEditorFactory
@@ -200,11 +182,9 @@ QByteArray QItemEditorFactory::valuePropertyName(int userType) const
 QItemEditorFactory::~QItemEditorFactory()
 {
     //we make sure we delete all the QItemEditorCreatorBase
-    //this has to be done only once, hence the sort-unique idiom
-    std::vector<QItemEditorCreatorBase*> creators(creatorMap.cbegin(), creatorMap.cend());
-    std::sort(creators.begin(), creators.end());
-    const auto it = std::unique(creators.begin(), creators.end());
-    qDeleteAll(creators.begin(), it);
+    //this has to be done only once, hence the QSet
+    QSet<QItemEditorCreatorBase*> set = creatorMap.values().toSet();
+    qDeleteAll(set);
 }
 
 /*!
@@ -217,12 +197,12 @@ QItemEditorFactory::~QItemEditorFactory()
 */
 void QItemEditorFactory::registerEditor(int userType, QItemEditorCreatorBase *creator)
 {
-    const auto it = creatorMap.constFind(userType);
-    if (it != creatorMap.cend()) {
+    QHash<int, QItemEditorCreatorBase *>::iterator it = creatorMap.find(userType);
+    if (it != creatorMap.end()) {
         QItemEditorCreatorBase *oldCreator = it.value();
         Q_ASSERT(oldCreator);
         creatorMap.erase(it);
-        if (std::find(creatorMap.cbegin(), creatorMap.cend(), oldCreator) == creatorMap.cend())
+        if (!creatorMap.values().contains(oldCreator))
             delete oldCreator; // if it is no more in use we can delete it
     }
 
@@ -240,13 +220,13 @@ public:
 QWidget *QDefaultItemEditorFactory::createEditor(int userType, QWidget *parent) const
 {
     switch (userType) {
-#if QT_CONFIG(combobox)
+#ifndef QT_NO_COMBOBOX
     case QVariant::Bool: {
         QBooleanComboBox *cb = new QBooleanComboBox(parent);
         cb->setFrame(false);
         return cb; }
 #endif
-#if QT_CONFIG(spinbox)
+#ifndef QT_NO_SPINBOX
     case QVariant::UInt: {
         QSpinBox *sb = new QUIntSpinBox(parent);
         sb->setFrame(false);
@@ -260,7 +240,7 @@ QWidget *QDefaultItemEditorFactory::createEditor(int userType, QWidget *parent) 
         sb->setMaximum(INT_MAX);
         return sb; }
 #endif
-#if QT_CONFIG(datetimeedit)
+#ifndef QT_NO_DATETIMEEDIT
     case QVariant::Date: {
         QDateTimeEdit *ed = new QDateEdit(parent);
         ed->setFrame(false);
@@ -274,11 +254,9 @@ QWidget *QDefaultItemEditorFactory::createEditor(int userType, QWidget *parent) 
         ed->setFrame(false);
         return ed; }
 #endif
-#if QT_CONFIG(label)
     case QVariant::Pixmap:
         return new QLabel(parent);
-#endif
-#if QT_CONFIG(spinbox)
+#ifndef QT_NO_SPINBOX
     case QVariant::Double: {
         QDoubleSpinBox *sb = new QDoubleSpinBox(parent);
         sb->setFrame(false);
@@ -286,7 +264,7 @@ QWidget *QDefaultItemEditorFactory::createEditor(int userType, QWidget *parent) 
         sb->setMaximum(DBL_MAX);
         return sb; }
 #endif
-#if QT_CONFIG(lineedit)
+#ifndef QT_NO_LINEEDIT
     case QVariant::String:
     default: {
         // the default editor is a lineedit
@@ -306,17 +284,17 @@ QWidget *QDefaultItemEditorFactory::createEditor(int userType, QWidget *parent) 
 QByteArray QDefaultItemEditorFactory::valuePropertyName(int userType) const
 {
     switch (userType) {
-#if QT_CONFIG(combobox)
+#ifndef QT_NO_COMBOBOX
     case QVariant::Bool:
         return "currentIndex";
 #endif
-#if QT_CONFIG(spinbox)
+#ifndef QT_NO_SPINBOX
     case QVariant::UInt:
     case QVariant::Int:
     case QVariant::Double:
         return "value";
 #endif
-#if QT_CONFIG(datetimeedit)
+#ifndef QT_NO_DATETIMEEDIT
     case QVariant::Date:
         return "date";
     case QVariant::Time:
@@ -539,7 +517,7 @@ QItemEditorCreatorBase::~QItemEditorCreatorBase()
     \reimp
 */
 
-#if QT_CONFIG(lineedit)
+#ifndef QT_NO_LINEEDIT
 
 QExpandingLineEdit::QExpandingLineEdit(QWidget *parent)
     : QLineEdit(parent), originalWidth(-1), widgetOwnsGeometry(false)
@@ -599,9 +577,9 @@ void QExpandingLineEdit::resizeToContents()
     }
 }
 
-#endif // QT_CONFIG(lineedit)
+#endif // QT_NO_LINEEDIT
 
-#if QT_CONFIG(combobox)
+#ifndef QT_NO_COMBOBOX
 
 QBooleanComboBox::QBooleanComboBox(QWidget *parent)
     : QComboBox(parent)
@@ -620,12 +598,14 @@ bool QBooleanComboBox::value() const
     return (currentIndex() == 1);
 }
 
-#endif // QT_CONFIG(combobox)
+#endif // QT_NO_COMBOBOX
 
 QT_END_NAMESPACE
 
-#if QT_CONFIG(lineedit) || QT_CONFIG(combobox)
+#if !defined(QT_NO_LINEEDIT) || !defined(QT_NO_COMBOBOX)
 #include "qitemeditorfactory.moc"
 #endif
 
 #include "moc_qitemeditorfactory_p.cpp"
+
+#endif // QT_NO_ITEMVIEWS

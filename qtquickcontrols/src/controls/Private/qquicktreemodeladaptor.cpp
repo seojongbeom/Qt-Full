@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,17 +48,17 @@ QT_BEGIN_NAMESPACE
 #   define ASSERT_CONSISTENCY qt_noop
 #endif
 
-QQuickTreeModelAdaptor1::QQuickTreeModelAdaptor1(QObject *parent) :
+QQuickTreeModelAdaptor::QQuickTreeModelAdaptor(QObject *parent) :
     QAbstractListModel(parent), m_model(0), m_lastItemIndex(0)
 {
 }
 
-QAbstractItemModel *QQuickTreeModelAdaptor1::model() const
+QAbstractItemModel *QQuickTreeModelAdaptor::model() const
 {
     return m_model;
 }
 
-void QQuickTreeModelAdaptor1::setModel(QAbstractItemModel *arg)
+void QQuickTreeModelAdaptor::setModel(QAbstractItemModel *arg)
 {
     struct Cx {
         const char *signal;
@@ -115,7 +112,7 @@ void QQuickTreeModelAdaptor1::setModel(QAbstractItemModel *arg)
     }
 }
 
-void QQuickTreeModelAdaptor1::clearModelData()
+void QQuickTreeModelAdaptor::clearModelData()
 {
     beginResetModel();
     m_items.clear();
@@ -123,12 +120,12 @@ void QQuickTreeModelAdaptor1::clearModelData()
     endResetModel();
 }
 
-const QModelIndex &QQuickTreeModelAdaptor1::rootIndex() const
+const QModelIndex &QQuickTreeModelAdaptor::rootIndex() const
 {
     return m_rootIndex;
 }
 
-void QQuickTreeModelAdaptor1::setRootIndex(const QModelIndex &idx)
+void QQuickTreeModelAdaptor::setRootIndex(const QModelIndex &idx)
 {
     if (m_rootIndex == idx)
         return;
@@ -141,12 +138,12 @@ void QQuickTreeModelAdaptor1::setRootIndex(const QModelIndex &idx)
     emit rootIndexChanged();
 }
 
-void QQuickTreeModelAdaptor1::resetRootIndex()
+void QQuickTreeModelAdaptor::resetRootIndex()
 {
     setRootIndex(QModelIndex());
 }
 
-QHash<int, QByteArray> QQuickTreeModelAdaptor1::roleNames() const
+QHash<int, QByteArray> QQuickTreeModelAdaptor::roleNames() const
 {
     if (!m_model)
         return QHash<int, QByteArray>();
@@ -160,12 +157,12 @@ QHash<int, QByteArray> QQuickTreeModelAdaptor1::roleNames() const
     return modelRoleNames;
 }
 
-int QQuickTreeModelAdaptor1::rowCount(const QModelIndex &) const
+int QQuickTreeModelAdaptor::rowCount(const QModelIndex &) const
 {
     return m_items.count();
 }
 
-QVariant QQuickTreeModelAdaptor1::data(const QModelIndex &index, int role) const
+QVariant QQuickTreeModelAdaptor::data(const QModelIndex &index, int role) const
 {
     if (!m_model)
         return QVariant();
@@ -188,7 +185,7 @@ QVariant QQuickTreeModelAdaptor1::data(const QModelIndex &index, int role) const
     }
 }
 
-bool QQuickTreeModelAdaptor1::setData(const QModelIndex &index, const QVariant &value, int role)
+bool QQuickTreeModelAdaptor::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     if (!m_model)
         return false;
@@ -207,7 +204,7 @@ bool QQuickTreeModelAdaptor1::setData(const QModelIndex &index, const QVariant &
     }
 }
 
-int QQuickTreeModelAdaptor1::itemIndex(const QModelIndex &index) const
+int QQuickTreeModelAdaptor::itemIndex(const QModelIndex &index) const
 {
     // This is basically a plagiarism of QTreeViewPrivate::viewIndex()
     if (!index.isValid() || index == m_rootIndex || m_items.isEmpty())
@@ -249,23 +246,23 @@ int QQuickTreeModelAdaptor1::itemIndex(const QModelIndex &index) const
     return -1;
 }
 
-bool QQuickTreeModelAdaptor1::isVisible(const QModelIndex &index)
+bool QQuickTreeModelAdaptor::isVisible(const QModelIndex &index)
 {
     return itemIndex(index) != -1;
 }
 
-bool QQuickTreeModelAdaptor1::childrenVisible(const QModelIndex &index)
+bool QQuickTreeModelAdaptor::childrenVisible(const QModelIndex &index)
 {
     return (index == m_rootIndex && !m_items.isEmpty())
            || (m_expandedItems.contains(index) && isVisible(index));
 }
 
-const QModelIndex &QQuickTreeModelAdaptor1::mapToModel(const QModelIndex &index) const
+const QModelIndex &QQuickTreeModelAdaptor::mapToModel(const QModelIndex &index) const
 {
     return m_items.at(index.row()).index;
 }
 
-QModelIndex QQuickTreeModelAdaptor1::mapRowToModelIndex(int row) const
+QModelIndex QQuickTreeModelAdaptor::mapRowToModelIndex(int row) const
 {
     if (!m_model)
         return QModelIndex();
@@ -274,7 +271,7 @@ QModelIndex QQuickTreeModelAdaptor1::mapRowToModelIndex(int row) const
     return m_items.at(row).index;
 }
 
-QItemSelection  QQuickTreeModelAdaptor1::selectionForRowRange(const QModelIndex &fromIndex, const QModelIndex &toIndex) const
+QItemSelection  QQuickTreeModelAdaptor::selectionForRowRange(const QModelIndex &fromIndex, const QModelIndex &toIndex) const
 {
     int from = itemIndex(fromIndex);
     int to = itemIndex(toIndex);
@@ -321,13 +318,13 @@ QItemSelection  QQuickTreeModelAdaptor1::selectionForRowRange(const QModelIndex 
 
     QItemSelection sel;
     sel.reserve(ranges.count());
-    for (const MIPair &pair : qAsConst(ranges))
+    foreach (const MIPair &pair, ranges)
        sel.append(QItemSelectionRange(pair.first, pair.second));
 
     return sel;
 }
 
-void QQuickTreeModelAdaptor1::showModelTopLevelItems(bool doInsertRows)
+void QQuickTreeModelAdaptor::showModelTopLevelItems(bool doInsertRows)
 {
     if (!m_model)
         return;
@@ -341,7 +338,7 @@ void QQuickTreeModelAdaptor1::showModelTopLevelItems(bool doInsertRows)
     showModelChildItems(TreeItem(m_rootIndex), 0, topLevelRowCount - 1, doInsertRows);
 }
 
-void QQuickTreeModelAdaptor1::showModelChildItems(const TreeItem &parentItem, int start, int end, bool doInsertRows, bool doExpandPendingRows)
+void QQuickTreeModelAdaptor::showModelChildItems(const TreeItem &parentItem, int start, int end, bool doInsertRows, bool doExpandPendingRows)
 {
     const QModelIndex &parentIndex = parentItem.index;
     int rowIdx = parentIndex.isValid() && parentIndex != m_rootIndex ? itemIndex(parentIndex) + 1 : 0;
@@ -383,7 +380,7 @@ void QQuickTreeModelAdaptor1::showModelChildItems(const TreeItem &parentItem, in
 }
 
 
-void QQuickTreeModelAdaptor1::expand(const QModelIndex &idx)
+void QQuickTreeModelAdaptor::expand(const QModelIndex &idx)
 {
     ASSERT_CONSISTENCY();
     if (!m_model)
@@ -404,7 +401,7 @@ void QQuickTreeModelAdaptor1::expand(const QModelIndex &idx)
     emit expanded(idx);
 }
 
-void QQuickTreeModelAdaptor1::collapse(const QModelIndex &idx)
+void QQuickTreeModelAdaptor::collapse(const QModelIndex &idx)
 {
     ASSERT_CONSISTENCY();
     if (!m_model)
@@ -425,7 +422,7 @@ void QQuickTreeModelAdaptor1::collapse(const QModelIndex &idx)
     emit collapsed(idx);
 }
 
-bool QQuickTreeModelAdaptor1::isExpanded(const QModelIndex &index) const
+bool QQuickTreeModelAdaptor::isExpanded(const QModelIndex &index) const
 {
     ASSERT_CONSISTENCY();
     if (!m_model)
@@ -434,12 +431,12 @@ bool QQuickTreeModelAdaptor1::isExpanded(const QModelIndex &index) const
     return !index.isValid() || m_expandedItems.contains(index);
 }
 
-bool QQuickTreeModelAdaptor1::isExpanded(int row) const
+bool QQuickTreeModelAdaptor::isExpanded(int row) const
 {
     return m_items.at(row).expanded;
 }
 
-void QQuickTreeModelAdaptor1::expandRow(int n)
+void QQuickTreeModelAdaptor::expandRow(int n)
 {
     if (!m_model || isExpanded(n))
         return;
@@ -456,7 +453,7 @@ void QQuickTreeModelAdaptor1::expandRow(int n)
     expandPendingRows();
 }
 
-void QQuickTreeModelAdaptor1::expandPendingRows(bool doInsertRows)
+void QQuickTreeModelAdaptor::expandPendingRows(bool doInsertRows)
 {
     while (!m_itemsToExpand.isEmpty()) {
         TreeItem *item = m_itemsToExpand.takeFirst();
@@ -476,7 +473,7 @@ void QQuickTreeModelAdaptor1::expandPendingRows(bool doInsertRows)
     }
 }
 
-void QQuickTreeModelAdaptor1::collapseRow(int n)
+void QQuickTreeModelAdaptor::collapseRow(int n)
 {
     if (!m_model || !isExpanded(n))
         return;
@@ -495,7 +492,7 @@ void QQuickTreeModelAdaptor1::collapseRow(int n)
     removeVisibleRows(n + 1, lastIndex);
 }
 
-int QQuickTreeModelAdaptor1::lastChildIndex(const QModelIndex &index)
+int QQuickTreeModelAdaptor::lastChildIndex(const QModelIndex &index)
 {
     if (!m_expandedItems.contains(index))
         return itemIndex(index);
@@ -513,7 +510,7 @@ int QQuickTreeModelAdaptor1::lastChildIndex(const QModelIndex &index)
     return firstIndex - 1;
 }
 
-void QQuickTreeModelAdaptor1::removeVisibleRows(int startIndex, int endIndex, bool doRemoveRows)
+void QQuickTreeModelAdaptor::removeVisibleRows(int startIndex, int endIndex, bool doRemoveRows)
 {
     if (startIndex < 0 || endIndex < 0 || startIndex > endIndex)
         return;
@@ -525,14 +522,14 @@ void QQuickTreeModelAdaptor1::removeVisibleRows(int startIndex, int endIndex, bo
         endRemoveRows();
 }
 
-void QQuickTreeModelAdaptor1::modelHasBeenDestroyed()
+void QQuickTreeModelAdaptor::modelHasBeenDestroyed()
 {
     // The model has been deleted. This should behave as if no model was set
     clearModelData();
     emit modelChanged(Q_NULLPTR);
 }
 
-void QQuickTreeModelAdaptor1::modelHasBeenReset()
+void QQuickTreeModelAdaptor::modelHasBeenReset()
 {
     clearModelData();
 
@@ -540,7 +537,7 @@ void QQuickTreeModelAdaptor1::modelHasBeenReset()
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::modelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRigth, const QVector<int> &roles)
+void QQuickTreeModelAdaptor::modelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRigth, const QVector<int> &roles)
 {
     Q_ASSERT(topLeft.parent() == bottomRigth.parent());
     const QModelIndex &parent = topLeft.parent();
@@ -578,14 +575,14 @@ void QQuickTreeModelAdaptor1::modelDataChanged(const QModelIndex &topLeft, const
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::modelLayoutAboutToBeChanged(const QList<QPersistentModelIndex> &parents, QAbstractItemModel::LayoutChangeHint hint)
+void QQuickTreeModelAdaptor::modelLayoutAboutToBeChanged(const QList<QPersistentModelIndex> &parents, QAbstractItemModel::LayoutChangeHint hint)
 {
     ASSERT_CONSISTENCY();
     Q_UNUSED(parents);
     Q_UNUSED(hint);
 }
 
-void QQuickTreeModelAdaptor1::modelLayoutChanged(const QList<QPersistentModelIndex> &parents, QAbstractItemModel::LayoutChangeHint hint)
+void QQuickTreeModelAdaptor::modelLayoutChanged(const QList<QPersistentModelIndex> &parents, QAbstractItemModel::LayoutChangeHint hint)
 {
     Q_UNUSED(hint);
     if (parents.isEmpty()) {
@@ -594,7 +591,7 @@ void QQuickTreeModelAdaptor1::modelLayoutChanged(const QList<QPersistentModelInd
         emit dataChanged(index(0), index(m_items.count() - 1));
     }
 
-    for (const QPersistentModelIndex &pmi : parents) {
+    Q_FOREACH (const QPersistentModelIndex &pmi, parents) {
         if (m_expandedItems.contains(pmi)) {
             int row = itemIndex(pmi);
             if (row != -1) {
@@ -612,7 +609,7 @@ void QQuickTreeModelAdaptor1::modelLayoutChanged(const QList<QPersistentModelInd
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::modelRowsAboutToBeInserted(const QModelIndex & parent, int start, int end)
+void QQuickTreeModelAdaptor::modelRowsAboutToBeInserted(const QModelIndex & parent, int start, int end)
 {
     Q_UNUSED(parent);
     Q_UNUSED(start);
@@ -620,7 +617,7 @@ void QQuickTreeModelAdaptor1::modelRowsAboutToBeInserted(const QModelIndex & par
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::modelRowsInserted(const QModelIndex & parent, int start, int end)
+void QQuickTreeModelAdaptor::modelRowsInserted(const QModelIndex & parent, int start, int end)
 {
     TreeItem item;
     int parentRow = itemIndex(parent);
@@ -643,7 +640,7 @@ void QQuickTreeModelAdaptor1::modelRowsInserted(const QModelIndex & parent, int 
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::modelRowsAboutToBeRemoved(const QModelIndex & parent, int start, int end)
+void QQuickTreeModelAdaptor::modelRowsAboutToBeRemoved(const QModelIndex & parent, int start, int end)
 {
     ASSERT_CONSISTENCY();
     if (parent == m_rootIndex || childrenVisible(parent)) {
@@ -670,7 +667,7 @@ void QQuickTreeModelAdaptor1::modelRowsAboutToBeRemoved(const QModelIndex & pare
     }
 }
 
-void QQuickTreeModelAdaptor1::modelRowsRemoved(const QModelIndex & parent, int start, int end)
+void QQuickTreeModelAdaptor::modelRowsRemoved(const QModelIndex & parent, int start, int end)
 {
     Q_UNUSED(start);
     Q_UNUSED(end);
@@ -683,7 +680,7 @@ void QQuickTreeModelAdaptor1::modelRowsRemoved(const QModelIndex & parent, int s
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::modelRowsAboutToBeMoved(const QModelIndex & sourceParent, int sourceStart, int sourceEnd, const QModelIndex & destinationParent, int destinationRow)
+void QQuickTreeModelAdaptor::modelRowsAboutToBeMoved(const QModelIndex & sourceParent, int sourceStart, int sourceEnd, const QModelIndex & destinationParent, int destinationRow)
 {
     ASSERT_CONSISTENCY();
     if (!childrenVisible(sourceParent))
@@ -760,7 +757,7 @@ void QQuickTreeModelAdaptor1::modelRowsAboutToBeMoved(const QModelIndex & source
     }
 }
 
-void QQuickTreeModelAdaptor1::modelRowsMoved(const QModelIndex & sourceParent, int sourceStart, int sourceEnd, const QModelIndex & destinationParent, int destinationRow)
+void QQuickTreeModelAdaptor::modelRowsMoved(const QModelIndex & sourceParent, int sourceStart, int sourceEnd, const QModelIndex & destinationParent, int destinationRow)
 {
     if (childrenVisible(destinationParent)) {
         if (!childrenVisible(sourceParent))
@@ -793,7 +790,7 @@ void QQuickTreeModelAdaptor1::modelRowsMoved(const QModelIndex & sourceParent, i
     ASSERT_CONSISTENCY();
 }
 
-void QQuickTreeModelAdaptor1::dump() const
+void QQuickTreeModelAdaptor::dump() const
 {
     if (!m_model)
         return;
@@ -813,7 +810,7 @@ void QQuickTreeModelAdaptor1::dump() const
     }
 }
 
-bool QQuickTreeModelAdaptor1::testConsistency(bool dumpOnFail) const
+bool QQuickTreeModelAdaptor::testConsistency(bool dumpOnFail) const
 {
     if (!m_model) {
         if (!m_items.isEmpty()) {

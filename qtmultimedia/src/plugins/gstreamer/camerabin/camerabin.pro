@@ -52,7 +52,19 @@ SOURCES += \
     $$PWD/camerabincapturebufferformat.cpp \
     $$PWD/camerabininfocontrol.cpp
 
-qtConfig(gstreamer_photography) {
+maemo6 {
+    HEADERS += \
+        $$PWD/camerabuttonlistener_meego.h
+
+    SOURCES += \
+        $$PWD/camerabuttonlistener_meego.cpp
+
+    CONFIG += have_gst_photography
+}
+
+config_gstreamer_photography {
+    DEFINES += HAVE_GST_PHOTOGRAPHY
+
     HEADERS += \
         $$PWD/camerabinfocus.h \
         $$PWD/camerabinexposure.h \
@@ -65,11 +77,17 @@ qtConfig(gstreamer_photography) {
         $$PWD/camerabinfocus.cpp \
         $$PWD/camerabinlocks.cpp
 
-    QMAKE_USE += gstreamer_photography
+    LIBS += -lgstphotography-$$GST_VERSION
     DEFINES += GST_USE_UNSTABLE_API #prevents warnings because of unstable photography API
 }
 
-qtConfig(linux_v4l) {
+config_gstreamer_encodingprofiles {
+    DEFINES += HAVE_GST_ENCODING_PROFILES
+}
+
+config_linux_v4l: {
+    DEFINES += USE_V4L
+
     HEADERS += \
         $$PWD/camerabinv4limageprocessing.h
 

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,8 +50,6 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
-
-#include <algorithm>
 
 QT_BEGIN_NAMESPACE
 
@@ -145,23 +148,32 @@ void BuddyEditor::updateBackground()
     m_updating = true;
     QList<Connection *> newList;
     const LabelList label_list = background()->findChildren<QLabel*>();
-    for (QLabel *label : label_list) {
+    foreach (QLabel *label, label_list) {
         const QString buddy_name = buddy(label, m_formWindow->core());
         if (buddy_name.isEmpty())
             continue;
 
-        const QWidgetList targets = background()->findChildren<QWidget*>(buddy_name);
+        const QList<QWidget *> targets = background()->findChildren<QWidget*>(buddy_name);
         if (targets.isEmpty())
             continue;
 
-        const auto wit = std::find_if(targets.cbegin(), targets.cend(),
-                                      [] (const QWidget *w) { return !w->isHidden(); });
-        if (wit == targets.cend())
+        QWidget *target = 0;
+
+        QListIterator<QWidget *> it(targets);
+        while (it.hasNext()) {
+            QWidget *widget = it.next();
+            if (widget && !widget->isHidden()) {
+                target = widget;
+                break;
+            }
+        }
+
+        if (target == 0)
             continue;
 
         Connection *con = new Connection(this);
         con->setEndPoint(EndPoint::Source, label, widgetRect(label).center());
-        con->setEndPoint(EndPoint::Target, *wit, widgetRect(*wit).center());
+        con->setEndPoint(EndPoint::Target, target, widgetRect(target).center());
         newList.append(con);
     }
 
@@ -172,21 +184,29 @@ void BuddyEditor::updateBackground()
         Connection *con = connection(i);
         QObject *source = con->object(EndPoint::Source);
         QObject *target = con->object(EndPoint::Target);
-        const bool found =
-            std::any_of(newList.cbegin(), newList.cend(),
-                        [source, target] (const Connection *nc)
-                        { return nc->object(EndPoint::Source) == source && nc->object(EndPoint::Target) == target; });
+        bool found = false;
+        QListIterator<Connection *> it(newList);
+        while (it.hasNext()) {
+            Connection *newConn = it.next();
+            if (newConn->object(EndPoint::Source) == source && newConn->object(EndPoint::Target) == target) {
+                found = true;
+                break;
+            }
+        }
         if (found == false)
             toRemove.append(con);
     }
     if (!toRemove.isEmpty()) {
         DeleteConnectionsCommand command(this, toRemove);
         command.redo();
-        for (Connection *con : qAsConst(toRemove))
+        foreach (Connection *con, toRemove)
             delete takeConnection(con);
     }
 
-    for (Connection *newConn : qAsConst(newList)) {
+    QListIterator<Connection *> it(newList);
+    while (it.hasNext()) {
+        Connection *newConn = it.next();
+
         bool found = false;
         const int c = connectionCount();
         for (int i = 0; i < c; i++) {
@@ -213,7 +233,7 @@ void BuddyEditor::setBackground(QWidget *background)
     ConnectionEdit::setBackground(background);
 
     const LabelList label_list = background->findChildren<QLabel*>();
-    for (QLabel *label : label_list) {
+    foreach (QLabel *label, label_list) {
         const QString buddy_name = buddy(label, m_formWindow->core());
         if (buddy_name.isEmpty())
             continue;
@@ -275,9 +295,9 @@ void BuddyEditor::widgetRemoved(QWidget *widget)
     child_list.prepend(widget);
 
     ConnectionSet remove_set;
-    for (QWidget *w : qAsConst(child_list)) {
+    foreach (QWidget *w, child_list) {
         const ConnectionList &cl = connectionList();
-        for (Connection *con : cl) {
+        foreach (Connection *con, cl) {
             if (con->widget(EndPoint::Source) == w || con->widget(EndPoint::Target) == w)
                 remove_set.insert(con, con);
         }
@@ -285,7 +305,7 @@ void BuddyEditor::widgetRemoved(QWidget *widget)
 
     if (!remove_set.isEmpty()) {
         undoStack()->beginMacro(tr("Remove buddies"));
-        for (Connection *con : qAsConst(remove_set)) {
+        foreach (Connection *con, remove_set) {
             setSelected(con, false);
             con->update();
             QWidget *source = con->widget(EndPoint::Source);
@@ -309,7 +329,7 @@ void BuddyEditor::deleteSelected()
         return;
 
     undoStack()->beginMacro(tr("Remove %n buddies", 0, selectedConnections.size()));
-    for (Connection *con : selectedConnections) {
+    foreach (Connection *con, selectedConnections) {
         setSelected(con, false);
         con->update();
         QWidget *source = con->widget(EndPoint::Source);
@@ -334,7 +354,7 @@ void BuddyEditor::autoBuddy()
     // Find already used buddies
     QWidgetList usedBuddies;
     const ConnectionList &beforeConnections = connectionList();
-    for (const Connection *c : beforeConnections)
+    foreach (const Connection *c, beforeConnections)
         usedBuddies.push_back(c->widget(EndPoint::Target));
     // Find potential new buddies, keep lists in sync
     QWidgetList buddies;
@@ -365,7 +385,7 @@ void BuddyEditor::autoBuddy()
     undoStack()->endMacro();
     // Now select all new ones
     const ConnectionList &connections = connectionList();
-    for (Connection *con : connections)
+    foreach (Connection *con, connections)
         setSelected(con, buddies.contains(con->widget(EndPoint::Target)));
 }
 

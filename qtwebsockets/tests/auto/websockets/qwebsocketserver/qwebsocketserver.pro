@@ -10,5 +10,4 @@ TEMPLATE = app
 
 SOURCES += tst_qwebsocketserver.cpp
 
-RESOURCES += $$PWD/../shared/qwebsocketshared.qrc
-
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

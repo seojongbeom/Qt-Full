@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-QT += qml quick xmlpatterns
+QT += qml quick widgets xmlpatterns
 
 SOURCES += main.cpp
 

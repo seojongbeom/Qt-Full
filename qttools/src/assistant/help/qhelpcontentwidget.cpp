@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -55,14 +49,12 @@ class QHelpContentItemPrivate
 public:
     QHelpContentItemPrivate(const QString &t, const QString &l,
                             QHelpDBReader *r, QHelpContentItem *p)
-        : parent(p),
-          title(t),
-          link(l),
-          helpDBReader(r)
     {
+        parent = p;
+        title = t;
+        link = l;
+        helpDBReader = r;
     }
-
-    void appendChild(QHelpContentItem *item) { childItems.append(item); }
 
     QList<QHelpContentItem*> childItems;
     QHelpContentItem *parent;
@@ -85,7 +77,7 @@ signals:
     void finishedSuccessFully();
 
 private:
-    void run() override;
+    void run();
 
     QHelpEnginePrivate *m_helpEngine;
     QStringList m_filterAttributes;
@@ -97,7 +89,7 @@ private:
 class QHelpContentModelPrivate
 {
 public:
-    QHelpContentItem *rootItem = nullptr;
+    QHelpContentItem *rootItem;
     QHelpContentProvider *qhelpContentProvider;
 };
 
@@ -125,6 +117,11 @@ QHelpContentItem::~QHelpContentItem()
     delete d;
 }
 
+void QHelpContentItem::appendChild(QHelpContentItem *item)
+{
+    d->childItems.append(item);
+}
+
 /*!
     Returns the child of the content item in the give \a row.
 
@@ -132,6 +129,8 @@ QHelpContentItem::~QHelpContentItem()
 */
 QHelpContentItem *QHelpContentItem::child(int row) const
 {
+    if (row >= childCount())
+        return 0;
     return d->childItems.value(row);
 }
 
@@ -250,7 +249,7 @@ void QHelpContentProvider::run()
     const QStringList fileNames = m_helpEngine->orderedFileNameList;
     m_mutex.unlock();
 
-    for (const QString &dbFileName : fileNames) {
+    foreach (const QString &dbFileName, fileNames) {
         m_mutex.lock();
         if (m_abort) {
             delete rootItem;
@@ -265,7 +264,7 @@ void QHelpContentProvider::run()
             QThread::currentThread()), 0);
         if (!reader.init())
             continue;
-        for (const QByteArray &ba : reader.contentsForFilter(atts)) {
+        foreach (const QByteArray& ba, reader.contentsForFilter(atts)) {
             if (ba.size() < 1)
                 continue;
 
@@ -285,7 +284,7 @@ CHECK_DEPTH:
                     m_mutex.lock();
                     item = new QHelpContentItem(title, link,
                         m_helpEngine->fileNameReaderMap.value(dbFileName), rootItem);
-                    rootItem->d->appendChild(item);
+                    rootItem->appendChild(item);
                     m_mutex.unlock();
                     stack.push(item);
                     _depth = 1;
@@ -298,7 +297,7 @@ CHECK_DEPTH:
                     if (depth == _depth) {
                         item = new QHelpContentItem(title, link,
                             m_helpEngine->fileNameReaderMap.value(dbFileName), stack.top());
-                        stack.top()->d->appendChild(item);
+                        stack.top()->appendChild(item);
                     } else if (depth < _depth) {
                         stack.pop();
                         --_depth;
@@ -344,12 +343,12 @@ QHelpContentModel::QHelpContentModel(QHelpEnginePrivate *helpEngine)
     : QAbstractItemModel(helpEngine)
 {
     d = new QHelpContentModelPrivate();
+    d->rootItem = 0;
     d->qhelpContentProvider = new QHelpContentProvider(helpEngine);
 
-    connect(d->qhelpContentProvider, &QHelpContentProvider::finishedSuccessFully,
-            this, &QHelpContentModel::insertContents, Qt::QueuedConnection);
-    connect(helpEngine->q, &QHelpEngineCore::readersAboutToBeInvalidated,
-            [this]() { invalidateContents(); });
+    connect(d->qhelpContentProvider, SIGNAL(finishedSuccessFully()),
+        this, SLOT(insertContents()), Qt::QueuedConnection);
+    connect(helpEngine->q, SIGNAL(readersAboutToBeInvalidated()), this, SLOT(invalidateContents()));
 }
 
 /*!
@@ -364,8 +363,7 @@ QHelpContentModel::~QHelpContentModel()
 void QHelpContentModel::invalidateContents(bool onShutDown)
 {
     if (onShutDown) {
-        disconnect(d->qhelpContentProvider, &QHelpContentProvider::finishedSuccessFully,
-                   this, &QHelpContentModel::insertContents);
+        disconnect(this, SLOT(insertContents()));
     } else {
         beginResetModel();
     }
@@ -394,7 +392,8 @@ void QHelpContentModel::insertContents()
     if (!newRootItem)
         return;
     beginResetModel();
-    delete d->rootItem;
+    if (d->rootItem)
+        delete d->rootItem;
     d->rootItem = newRootItem;
     endResetModel();
     emit contentsCreated();
@@ -516,8 +515,8 @@ QHelpContentWidget::QHelpContentWidget()
 {
     header()->hide();
     setUniformRowHeights(true);
-    connect(this, &QAbstractItemView::activated,
-            this, &QHelpContentWidget::showLink);
+    connect(this, SIGNAL(activated(QModelIndex)),
+        this, SLOT(showLink(QModelIndex)));
 }
 
 /*!
@@ -553,7 +552,7 @@ bool QHelpContentWidget::searchContentItem(QHelpContentModel *model, const QMode
         return true;
     }
 
-    for (int i = 0; i < parentItem->childCount(); ++i) {
+    for (int i=0; i<parentItem->childCount(); ++i) {
         if (searchContentItem(model, model->index(i, 0, parent), cleanPath))
             return true;
     }

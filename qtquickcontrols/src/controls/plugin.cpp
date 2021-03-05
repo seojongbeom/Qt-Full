@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -73,10 +70,7 @@
 
 static void initResources()
 {
-#ifdef QT_STATIC
-    Q_INIT_RESOURCE(qmake_QtQuick_Controls);
-    Q_INIT_RESOURCE(qmake_controls);
-#endif
+    Q_INIT_RESOURCE(controls);
 }
 
 QT_BEGIN_NAMESPACE
@@ -124,67 +118,61 @@ static const struct {
     { "TreeView", 1, 5 }
 };
 
-QtQuickControls1Plugin::QtQuickControls1Plugin(QObject *parent) : QQmlExtensionPlugin(parent)
+void QtQuickControlsPlugin::registerTypes(const char *uri)
 {
     initResources();
-}
-
-void QtQuickControls1Plugin::registerTypes(const char *uri)
-{
-    qmlRegisterType<QQuickAction1>(uri, 1, 0, "Action");
+    qmlRegisterType<QQuickAction>(uri, 1, 0, "Action");
     qmlRegisterType<QQuickExclusiveGroup1>(uri, 1, 0, "ExclusiveGroup");
     qmlRegisterType<QQuickMenuItem1>(uri, 1, 0, "MenuItem");
-    qmlRegisterUncreatableType<QQuickMenuItemType1>(uri, 1, 0, "MenuItemType",
+    qmlRegisterUncreatableType<QQuickMenuItemType>(uri, 1, 0, "MenuItemType",
                                                    QLatin1String("Do not create objects of type MenuItemType"));
-    qmlRegisterType<QQuickMenuSeparator1>(uri, 1, 0, "MenuSeparator");
-    qmlRegisterUncreatableType<QQuickMenuBase1>(uri, 1, 0, "MenuBase",
+    qmlRegisterType<QQuickMenuSeparator>(uri, 1, 0, "MenuSeparator");
+    qmlRegisterUncreatableType<QQuickMenuBase>(uri, 1, 0, "MenuBase",
                                                QLatin1String("Do not create objects of type MenuBase"));
 
-    qmlRegisterUncreatableType<QQuickStack1>(uri, 1, 0, "Stack", QLatin1String("Do not create objects of type Stack"));
-    qmlRegisterUncreatableType<QQuickSelectionMode1>(uri, 1, 1, "SelectionMode", QLatin1String("Do not create objects of type SelectionMode"));
+    qmlRegisterUncreatableType<QQuickStack>(uri, 1, 0, "Stack", QLatin1String("Do not create objects of type Stack"));
+    qmlRegisterUncreatableType<QQuickSelectionMode>(uri, 1, 1, "SelectionMode", QLatin1String("Do not create objects of type SelectionMode"));
 
     const QString filesLocation = fileLocation();
     for (int i = 0; i < int(sizeof(qmldir)/sizeof(qmldir[0])); i++)
         qmlRegisterType(QUrl(filesLocation + "/" + qmldir[i].type + ".qml"), uri, qmldir[i].major, qmldir[i].minor, qmldir[i].type);
 }
 
-void QtQuickControls1Plugin::initializeEngine(QQmlEngine *engine, const char *uri)
+void QtQuickControlsPlugin::initializeEngine(QQmlEngine *engine, const char *uri)
 {
     Q_UNUSED(uri);
 
     // Register private API. Note that to use these types outside of the
     // Qt Quick Controls module, both the public and private imports must be used.
     const char *private_uri = "QtQuick.Controls.Private";
-    qmlRegisterType<QQuickAbstractStyle1>(private_uri, 1, 0, "AbstractStyle");
-    qmlRegisterType<QQuickCalendarModel1>(private_uri, 1, 0, "CalendarModel");
-    qmlRegisterType<QQuickPadding1>(private_uri, 1, 0, "Padding");
-    qmlRegisterType<QQuickRangedDate1>(private_uri, 1, 0, "RangedDate");
-    qmlRegisterType<QQuickRangeModel1>(private_uri, 1, 0, "RangeModel");
-    qmlRegisterType<QQuickWheelArea1>(private_uri, 1, 0, "WheelArea");
-#if QT_CONFIG(validator)
-    qmlRegisterType<QQuickSpinBoxValidator1>(private_uri, 1, 0, "SpinBoxValidator");
-#endif
-    qmlRegisterSingletonType<QQuickTooltip1>(private_uri, 1, 0, "Tooltip", QQuickControlsPrivate1::registerTooltipModule);
-    qmlRegisterSingletonType<QQuickControlSettings1>(private_uri, 1, 0, "Settings", QQuickControlsPrivate1::registerSettingsModule);
+    qmlRegisterType<QQuickAbstractStyle>(private_uri, 1, 0, "AbstractStyle");
+    qmlRegisterType<QQuickCalendarModel>(private_uri, 1, 0, "CalendarModel");
+    qmlRegisterType<QQuickPadding>(private_uri, 1, 0, "Padding");
+    qmlRegisterType<QQuickRangedDate>(private_uri, 1, 0, "RangedDate");
+    qmlRegisterType<QQuickRangeModel>(private_uri, 1, 0, "RangeModel");
+    qmlRegisterType<QQuickWheelArea>(private_uri, 1, 0, "WheelArea");
+    qmlRegisterType<QQuickSpinBoxValidator>(private_uri, 1, 0, "SpinBoxValidator");
+    qmlRegisterSingletonType<QQuickTooltip>(private_uri, 1, 0, "Tooltip", QQuickControlsPrivate::registerTooltipModule);
+    qmlRegisterSingletonType<QQuickControlSettings>(private_uri, 1, 0, "Settings", QQuickControlsPrivate::registerSettingsModule);
 
-    qmlRegisterUncreatableType<QQuickControlsPrivate1>(private_uri, 1, 0, "Controls", QLatin1String("Controls is an abstract type."));
-    qmlRegisterType<QQuickControlsPrivate1Attached>();
+    qmlRegisterUncreatableType<QQuickControlsPrivate>(private_uri, 1, 0, "Controls", QLatin1String("Controls is an abstract type."));
+    qmlRegisterType<QQuickControlsPrivateAttached>();
 
-    qmlRegisterType<QQuickTreeModelAdaptor1>(private_uri, 1, 0, "TreeModelAdaptor");
-    qmlRegisterType<QQuickScenePosListener1>(private_uri, 1, 0, "ScenePosListener");
+    qmlRegisterType<QQuickTreeModelAdaptor>(private_uri, 1, 0, "TreeModelAdaptor");
+    qmlRegisterType<QQuickScenePosListener>(private_uri, 1, 0, "ScenePosListener");
 
     qmlRegisterType<QQuickMenu1>(private_uri, 1, 0, "MenuPrivate");
     qmlRegisterType<QQuickMenuBar1>(private_uri, 1, 0, "MenuBarPrivate");
-    qmlRegisterType<QQuickPopupWindow1>(private_uri, 1, 0, "PopupWindow");
+    qmlRegisterType<QQuickPopupWindow>(private_uri, 1, 0, "PopupWindow");
 
     qmlRegisterUncreatableType<QAbstractItemModel>(private_uri, 1, 0, "AbstractItemModel",
                                                    QLatin1String("AbstractItemModel is an abstract type."));
 
 #ifdef QT_WIDGETS_LIB
-    qmlRegisterType<QQuickStyleItem1>(private_uri, 1, 0, "StyleItem");
-    engine->addImageProvider("__tablerow", new QQuickTableRowImageProvider1);
+    qmlRegisterType<QQuickStyleItem>(private_uri, 1, 0, "StyleItem");
+    engine->addImageProvider("__tablerow", new QQuickTableRowImageProvider);
 #endif
-    engine->addImageProvider("desktoptheme", new QQuickDesktopIconProvider1);
+    engine->addImageProvider("desktoptheme", new QQuickDesktopIconProvider);
     if (isLoadedFromResource())
         engine->addImportPath(QStringLiteral("qrc:/"));
 
@@ -195,24 +183,15 @@ void QtQuickControls1Plugin::initializeEngine(QQmlEngine *engine, const char *ur
 #endif
 }
 
-QString QtQuickControls1Plugin::fileLocation() const
+QString QtQuickControlsPlugin::fileLocation() const
 {
-#ifndef QT_STATIC
     if (isLoadedFromResource())
         return "qrc:/QtQuick/Controls";
     return baseUrl().toString();
-#else
-    return "qrc:/qt-project.org/imports/QtQuick/Controls";
-#endif
 }
 
-bool QtQuickControls1Plugin::isLoadedFromResource() const
+bool QtQuickControlsPlugin::isLoadedFromResource() const
 {
-#ifdef QT_STATIC
-    // When static it is included automatically
-    // for us.
-    return false;
-#endif
 #if defined(ALWAYS_LOAD_FROM_RESOURCES)
     return true;
 #else

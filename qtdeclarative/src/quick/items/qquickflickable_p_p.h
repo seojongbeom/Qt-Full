@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -62,7 +56,6 @@
 #include <private/qquicktimeline_p_p.h>
 #include <private/qquickanimation_p_p.h>
 #include <private/qquicktransitionmanager_p_p.h>
-#include <private/qpodvector_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -101,15 +94,14 @@ public:
             : move(fp, func)
             , transitionToBounds(0)
             , viewSize(-1), lastPos(0), previousDragDelta(0), velocity(0), startMargin(0), endMargin(0)
-            , origin(0), overshoot(0)
+            , origin(0)
             , transitionTo(0)
             , continuousFlickVelocity(0), velocityTime(), vTime(0)
             , smoothVelocity(fp), atEnd(false), atBeginning(true)
             , transitionToSet(false)
-            , fixingUp(false), inOvershoot(false), inRebound(false), moving(false), flicking(false)
+            , fixingUp(false), inOvershoot(false), moving(false), flicking(false)
             , dragging(false), extentsChanged(false)
             , explicitValue(false), minExtentDirty(true), maxExtentDirty(true)
-            , unused(0)
         {}
 
         ~AxisData();
@@ -149,7 +141,6 @@ public:
         qreal startMargin;
         qreal endMargin;
         qreal origin;
-        qreal overshoot;
         qreal transitionTo;
         qreal continuousFlickVelocity;
         QElapsedTimer velocityTime;
@@ -169,7 +160,6 @@ public:
         bool explicitValue : 1;
         mutable bool minExtentDirty : 1;
         mutable bool maxExtentDirty : 1;
-        uint unused : 19;
     };
 
     bool flickX(qreal velocity);
@@ -195,9 +185,9 @@ public:
     void setViewportX(qreal x);
     void setViewportY(qreal y);
 
-    qreal overShootDistance(qreal size) const;
+    qreal overShootDistance(qreal size);
 
-    void itemGeometryChanged(QQuickItem *, QQuickGeometryChange, const QRectF &) Q_DECL_OVERRIDE;
+    void itemGeometryChanged(QQuickItem *, const QRectF &, const QRectF &) Q_DECL_OVERRIDE;
 
     void draggingStarting();
     void draggingEnding();
@@ -263,8 +253,8 @@ public:
               const QVector2D &deltas, bool overThreshold, bool momentum,
               bool velocitySensitiveOverBounds, const QVector2D &velocity);
 
-    qint64 computeCurrentTime(QInputEvent *event) const;
-    qreal devicePixelRatio() const;
+    qint64 computeCurrentTime(QInputEvent *event);
+    qreal devicePixelRatio();
 
     // flickableData property
     static void data_append(QQmlListProperty<QObject> *, QObject *);

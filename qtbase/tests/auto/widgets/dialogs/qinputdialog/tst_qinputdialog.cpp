@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -165,10 +170,10 @@ void testGetNumeric(QInputDialog *dialog, SpinBoxType * = 0, ValueType * = 0)
     const ValueType origValue = sbox->value();
 
     testInvalidateAndRestore<SpinBoxType, ValueType>(sbox, okButton, ledit);
-    testTypingValue<SpinBoxType>(sbox, okButton, QString::number(sbox->minimum()));
-    testTypingValue<SpinBoxType>(sbox, okButton, QString::number(sbox->maximum()));
-    testTypingValue<SpinBoxType>(sbox, okButton, QString::number(sbox->minimum() - 1));
-    testTypingValue<SpinBoxType>(sbox, okButton, QString::number(sbox->maximum() + 1));
+    testTypingValue<SpinBoxType>(sbox, okButton, QString("%1").arg(sbox->minimum()));
+    testTypingValue<SpinBoxType>(sbox, okButton, QString("%1").arg(sbox->maximum()));
+    testTypingValue<SpinBoxType>(sbox, okButton, QString("%1").arg(sbox->minimum() - 1));
+    testTypingValue<SpinBoxType>(sbox, okButton, QString("%1").arg(sbox->maximum() + 1));
     testTypingValue<SpinBoxType>(sbox, okButton, "0");
     testTypingValue<SpinBoxType>(sbox, okButton, "0.0");
     testTypingValue<SpinBoxType>(sbox, okButton, "foobar");
@@ -257,14 +262,6 @@ void tst_QInputDialog::getInt()
     QFETCH(int, min);
     QFETCH(int, max);
     QVERIFY(min < max);
-
-#if defined(Q_OS_MACOS)
-    if (QSysInfo::productVersion() == QLatin1String("10.12")) {
-        QSKIP("Test hangs  on macOS 10.12 -- QTQAINFRA-1356");
-        return;
-    }
-#endif
-
     parent = new QWidget;
     doneCode = QDialog::Accepted;
     testFunc = &tst_QInputDialog::testFuncGetInt;
@@ -305,14 +302,6 @@ void tst_QInputDialog::getDouble()
     QFETCH(double, max);
     QFETCH(int, decimals);
     QVERIFY(min < max && decimals >= 0 && decimals <= 13);
-
-#if defined(Q_OS_MACOS)
-    if (QSysInfo::productVersion() == QLatin1String("10.12")) {
-        QSKIP("Test hangs  on macOS 10.12 -- QTQAINFRA-1356");
-        return;
-    }
-#endif
-
     parent = new QWidget;
     doneCode = QDialog::Accepted;
     testFunc = &tst_QInputDialog::testFuncGetDouble;
@@ -365,12 +354,11 @@ void tst_QInputDialog::taskQTBUG_54693_crashWhenParentIsDeletedWhileDialogIsOpen
     }
 
     // getItem
-    for (int editable = 0; editable < 2; ++editable) {
+    for (int editable = false; editable <= true; ++editable) {
         QAutoPointer<SelfDestructParent> dialog(new SelfDestructParent);
         bool ok = true;
         const QString result = QInputDialog::getItem(dialog.get(), "Title", "Label",
-                                                     QStringList() << "1" << "2", 1,
-                                                     editable != 0, &ok);
+                                                     QStringList() << "1" << "2", 1, editable, &ok);
         QVERIFY(!dialog);
         QVERIFY(!ok);
         QCOMPARE(result, QLatin1String("2"));

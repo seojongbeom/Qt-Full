@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -70,16 +60,20 @@ TestCase {
         Text { }
     }
 
-    Component {
-        id: signalSpy
-        SignalSpy { }
+    SignalSpy {
+        id: currentItemChangedSpy
+        signalName: "currentItemChanged"
+    }
+
+    function cleanup() {
+        currentItemChangedSpy.clear()
+        currentItemChangedSpy.target = null
     }
 
     function test_current() {
-        var control = createTemporaryObject(swipeView, testCase)
+        var control = swipeView.createObject(testCase)
 
-        var currentItemChangedSpy = createTemporaryObject(signalSpy, testCase, {target: control, signalName: "currentItemChanged"})
-        verify(currentItemChangedSpy.valid)
+        currentItemChangedSpy.target = control
 
         compare(control.count, 0)
         compare(control.currentIndex, -1)
@@ -113,15 +107,7 @@ TestCase {
         compare(control.currentItem.text, "2")
         compare(currentItemChangedSpy.count, 3);
 
-        control.decrementCurrentIndex()
-        compare(control.currentIndex, 1)
-        compare(control.currentItem.text, "1")
-        compare(currentItemChangedSpy.count, 4);
-
-        control.incrementCurrentIndex()
-        compare(control.currentIndex, 2)
-        compare(control.currentItem.text, "2")
-        compare(currentItemChangedSpy.count, 5);
+        control.destroy()
     }
 
     Component {
@@ -142,15 +128,17 @@ TestCase {
     }
 
     function test_initialCurrent() {
-        var control = createTemporaryObject(initialCurrentSwipeView, testCase)
+        var control = initialCurrentSwipeView.createObject(testCase)
 
         compare(control.count, 2)
         compare(control.currentIndex, 1)
         compare(control.currentItem, control.item1)
+
+        control.destroy()
     }
 
     function test_addRemove() {
-        var control = createTemporaryObject(swipeView, testCase)
+        var control = swipeView.createObject(testCase)
 
         function verifyCurrentIndexCountDiff() {
             verify(control.currentIndex < control.count)
@@ -158,8 +146,7 @@ TestCase {
         control.currentIndexChanged.connect(verifyCurrentIndexCountDiff)
         control.countChanged.connect(verifyCurrentIndexCountDiff)
 
-        var currentItemChangedSpy = createTemporaryObject(signalSpy, testCase, {target: control, signalName: "currentItemChanged"})
-        verify(currentItemChangedSpy.valid)
+        currentItemChangedSpy.target = control;
 
         compare(control.count, 0)
         compare(control.currentIndex, -1)
@@ -244,6 +231,8 @@ TestCase {
         compare(control.count, 0)
         compare(control.currentIndex, -1)
         compare(currentItemChangedSpy.count, 2)
+
+        control.destroy()
     }
 
     Component {
@@ -258,7 +247,7 @@ TestCase {
     }
 
     function test_content() {
-        var control = createTemporaryObject(contentView, testCase)
+        var control = contentView.createObject(testCase)
 
         function compareObjectNames(content, names) {
             if (content.length !== names.length)
@@ -288,6 +277,8 @@ TestCase {
         control.removeItem(0)
         verify(compareObjectNames(control.contentData, ["object", "page1", "timer", "page2", "", "page3"]))
         verify(compareObjectNames(control.contentChildren, ["page2", "page1", "page3"]))
+
+        control.destroy()
     }
 
     Component {
@@ -303,7 +294,7 @@ TestCase {
     }
 
     function test_repeater() {
-        var control = createTemporaryObject(repeated, testCase)
+        var control = repeated.createObject(testCase)
         verify(control)
 
         var model = control.contentModel
@@ -334,6 +325,8 @@ TestCase {
             compare(model.get(j), item2)
             compare(repeater.itemAt(j), item2)
         }
+
+        control.destroy()
     }
 
     Component {
@@ -357,7 +350,7 @@ TestCase {
     }
 
     function test_order() {
-        var control = createTemporaryObject(ordered, testCase)
+        var control = ordered.createObject(testCase)
         verify(control)
 
         compare(control.count, 7)
@@ -368,6 +361,8 @@ TestCase {
         compare(control.itemAt(4).text, "static_4")
         compare(control.itemAt(5).text, "dynamic_5")
         compare(control.itemAt(6).text, "dynamic_6")
+
+        control.destroy()
     }
 
     function test_move_data() {
@@ -412,13 +407,11 @@ TestCase {
             property int index: SwipeView.index
             property SwipeView view: SwipeView.view
             property bool isCurrentItem: SwipeView.isCurrentItem
-            property bool isNextItem: SwipeView.isNextItem
-            property bool isPreviousItem: SwipeView.isPreviousItem
         }
     }
 
     function test_move(data) {
-        var control = createTemporaryObject(swipeView, testCase)
+        var control = swipeView.createObject(testCase)
 
         compare(control.count, 0)
         var titles = ["1", "2", "3"]
@@ -434,15 +427,11 @@ TestCase {
             compare(control.itemAt(i).text, titles[i])
             compare(control.itemAt(i).SwipeView.index, i)
             compare(control.itemAt(i).SwipeView.isCurrentItem, i === 0)
-            compare(control.itemAt(i).SwipeView.isNextItem, i === 1)
-            compare(control.itemAt(i).SwipeView.isPreviousItem, false)
         }
 
         control.currentIndex = data.currentBefore
         for (i = 0; i < control.count; ++i) {
             compare(control.itemAt(i).SwipeView.isCurrentItem, i === data.currentBefore)
-            compare(control.itemAt(i).SwipeView.isNextItem, i === data.currentBefore + 1)
-            compare(control.itemAt(i).SwipeView.isPreviousItem, i === data.currentBefore - 1)
         }
 
         control.moveItem(data.from, data.to)
@@ -459,9 +448,9 @@ TestCase {
             compare(control.itemAt(i).text, titles[i])
             compare(control.itemAt(i).SwipeView.index, i);
             compare(control.itemAt(i).SwipeView.isCurrentItem, i === data.currentAfter)
-            compare(control.itemAt(i).SwipeView.isNextItem, i === data.currentAfter + 1)
-            compare(control.itemAt(i).SwipeView.isPreviousItem, i === data.currentAfter - 1)
         }
+
+        control.destroy()
     }
 
     Component {
@@ -478,7 +467,7 @@ TestCase {
     }
 
     function test_dynamic() {
-        var control = createTemporaryObject(dynamicView, testCase)
+        var control = dynamicView.createObject(testCase)
 
         // insertItem(), addItem(), createObject() and static page {}
         compare(control.count, 4)
@@ -492,25 +481,23 @@ TestCase {
 //        tab.destroy()
 //        wait(0)
 //        compare(control.count, 4)
+
+        control.destroy()
     }
 
     function test_attachedParent() {
-        var control = createTemporaryObject(swipeView, testCase);
+        var control = swipeView.createObject(testCase);
 
-        var page = createTemporaryObject(pageAttached, testCase);
+        var page = pageAttached.createObject(testCase);
         compare(page.view, null);
         compare(page.index, -1);
         compare(page.isCurrentItem, false);
-        compare(page.isNextItem, false);
-        compare(page.isPreviousItem, false);
         page.destroy();
 
-        page = createTemporaryObject(pageAttached, null);
+        page = pageAttached.createObject(null);
         compare(page.view, null);
         compare(page.index, -1);
         compare(page.isCurrentItem, false);
-        compare(page.isNextItem, false);
-        compare(page.isPreviousItem, false);
 
         control.insertItem(0, page);
         compare(control.count, 1);
@@ -518,8 +505,6 @@ TestCase {
         compare(page.view, control);
         compare(page.index, 0);
         compare(page.isCurrentItem, true);
-        compare(page.isNextItem, false);
-        compare(page.isPreviousItem, false);
 
         control.removeItem(0);
         compare(control.count, 0);
@@ -527,30 +512,7 @@ TestCase {
         compare(page.view, null);
         compare(page.index, -1);
         compare(page.isCurrentItem, false);
-        compare(page.isNextItem, false);
-        compare(page.isPreviousItem, false);
-    }
 
-    function test_orientation() {
-        var control = createTemporaryObject(swipeView, testCase, {width: 200, height: 200})
-        verify(control)
-
-        for (var i = 0; i < 3; ++i)
-            control.addItem(page.createObject(control, {text: i}))
-
-        compare(control.orientation, Qt.Horizontal)
-
-        for (i = 0; i < control.count; ++i) {
-            control.currentIndex = i
-            compare(control.itemAt(i).y, 0)
-        }
-
-        control.orientation = Qt.Vertical
-        compare(control.orientation, Qt.Vertical)
-
-        for (i = 0; i < control.count; ++i) {
-            control.currentIndex = i
-            compare(control.itemAt(i).x, 0)
-        }
+        control.destroy();
     }
 }

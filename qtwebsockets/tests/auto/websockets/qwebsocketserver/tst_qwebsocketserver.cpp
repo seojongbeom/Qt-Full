@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Kurt Pattyn <pattyn.kurt@gmail.com>.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Kurt Pattyn <pattyn.kurt@gmail.com>.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -28,14 +33,6 @@
 #include <QString>
 #include <QtTest>
 #include <QNetworkProxy>
-#include <QTcpServer>
-#ifndef QT_NO_OPENSSL
-#include <QtNetwork/qsslpresharedkeyauthenticator.h>
-#endif
-#ifndef QT_NO_SSL
-#include <QtNetwork/qsslcipher.h>
-#include <QtNetwork/qsslkey.h>
-#endif
 #include <QtWebSockets/QWebSocketServer>
 #include <QtWebSockets/QWebSocket>
 #include <QtWebSockets/QWebSocketCorsAuthenticator>
@@ -49,47 +46,6 @@ Q_DECLARE_METATYPE(QWebSocketServer::SslMode)
 Q_DECLARE_METATYPE(QWebSocketCorsAuthenticator *)
 #ifndef QT_NO_SSL
 Q_DECLARE_METATYPE(QSslError)
-#endif
-
-#ifndef QT_NO_OPENSSL
-// Use this cipher to force PSK key sharing.
-static const QString PSK_CIPHER_WITHOUT_AUTH = QStringLiteral("PSK-AES256-CBC-SHA");
-static const QByteArray PSK_CLIENT_PRESHAREDKEY = QByteArrayLiteral("\x1a\x2b\x3c\x4d\x5e\x6f");
-static const QByteArray PSK_SERVER_IDENTITY_HINT = QByteArrayLiteral("QtTestServerHint");
-static const QByteArray PSK_CLIENT_IDENTITY = QByteArrayLiteral("Client_identity");
-
-class PskProvider : public QObject
-{
-    Q_OBJECT
-
-public:
-    bool m_server = false;
-    QByteArray m_identity;
-    QByteArray m_psk;
-
-public slots:
-    void providePsk(QSslPreSharedKeyAuthenticator *authenticator)
-    {
-        QVERIFY(authenticator);
-        QCOMPARE(authenticator->identityHint(), PSK_SERVER_IDENTITY_HINT);
-        if (m_server)
-            QCOMPARE(authenticator->maximumIdentityLength(), 0);
-        else
-            QVERIFY(authenticator->maximumIdentityLength() > 0);
-
-        QVERIFY(authenticator->maximumPreSharedKeyLength() > 0);
-
-        if (!m_identity.isEmpty()) {
-            authenticator->setIdentity(m_identity);
-            QCOMPARE(authenticator->identity(), m_identity);
-        }
-
-        if (!m_psk.isEmpty()) {
-            authenticator->setPreSharedKey(m_psk);
-            QCOMPARE(authenticator->preSharedKey(), m_psk);
-        }
-    }
-};
 #endif
 
 class tst_QWebSocketServer : public QObject
@@ -107,11 +63,8 @@ private Q_SLOTS:
     void tst_settersAndGetters();
     void tst_listening();
     void tst_connectivity();
-    void tst_preSharedKey();
     void tst_maxPendingConnections();
     void tst_serverDestroyedWhileSocketConnected();
-    void tst_scheme(); // qtbug-55927
-    void tst_handleConnection();
 };
 
 tst_QWebSocketServer::tst_QWebSocketServer()
@@ -126,9 +79,6 @@ void tst_QWebSocketServer::init()
     qRegisterMetaType<QWebSocketCorsAuthenticator *>("QWebSocketCorsAuthenticator *");
 #ifndef QT_NO_SSL
     qRegisterMetaType<QSslError>("QSslError");
-#ifndef QT_NO_OPENSSL
-    qRegisterMetaType<QSslPreSharedKeyAuthenticator *>();
-#endif
 #endif
 }
 
@@ -261,7 +211,7 @@ void tst_QWebSocketServer::tst_listening()
     QVERIFY(server.isListening());
     QCOMPARE(serverClosedSpy.count(), 0);
     server.close();
-    QTRY_COMPARE(serverClosedSpy.count(), 1);
+    QVERIFY(serverClosedSpy.wait(1000));
     QVERIFY(!server.isListening());
     QCOMPARE(serverErrorSpy.count(), 0);
 
@@ -304,7 +254,8 @@ void tst_QWebSocketServer::tst_connectivity()
 
     socket.open(server.serverUrl().toString());
 
-    QTRY_COMPARE(socketConnectedSpy.count(), 1);
+    if (socketConnectedSpy.count() == 0)
+        QVERIFY(socketConnectedSpy.wait());
     QCOMPARE(socket.state(), QAbstractSocket::ConnectedState);
     QCOMPARE(serverConnectionSpy.count(), 1);
     QCOMPARE(corsAuthenticationSpy.count(), 1);
@@ -313,88 +264,13 @@ void tst_QWebSocketServer::tst_connectivity()
 
     server.close();
 
-    QTRY_COMPARE(serverClosedSpy.count(), 1);
+    QVERIFY(serverClosedSpy.wait());
+    QCOMPARE(serverClosedSpy.count(), 1);
 #ifndef QT_NO_SSL
     QCOMPARE(peerVerifyErrorSpy.count(), 0);
     QCOMPARE(sslErrorsSpy.count(), 0);
 #endif
     QCOMPARE(serverErrorSpy.count(), 0);
-}
-
-void tst_QWebSocketServer::tst_preSharedKey()
-{
-#ifndef QT_NO_OPENSSL
-    QWebSocketServer server(QString(), QWebSocketServer::SecureMode);
-
-    bool cipherFound = false;
-    const QList<QSslCipher> supportedCiphers = QSslSocket::supportedCiphers();
-    for (const QSslCipher &cipher : supportedCiphers) {
-        if (cipher.name() == PSK_CIPHER_WITHOUT_AUTH) {
-            cipherFound = true;
-            break;
-        }
-    }
-
-    if (!cipherFound)
-        QSKIP("SSL implementation does not support the necessary cipher");
-
-    QSslCipher cipher(PSK_CIPHER_WITHOUT_AUTH);
-    QList<QSslCipher> list;
-    list << cipher;
-
-    QSslConfiguration config = QSslConfiguration::defaultConfiguration();
-    config.setCiphers(list);
-    config.setPeerVerifyMode(QSslSocket::VerifyNone);
-    config.setPreSharedKeyIdentityHint(PSK_SERVER_IDENTITY_HINT);
-    server.setSslConfiguration(config);
-
-    PskProvider providerServer;
-    providerServer.m_server = true;
-    providerServer.m_identity = PSK_CLIENT_IDENTITY;
-    providerServer.m_psk = PSK_CLIENT_PRESHAREDKEY;
-    connect(&server, &QWebSocketServer::preSharedKeyAuthenticationRequired, &providerServer, &PskProvider::providePsk);
-
-    QSignalSpy serverPskRequiredSpy(&server, &QWebSocketServer::preSharedKeyAuthenticationRequired);
-    QSignalSpy serverConnectionSpy(&server, &QWebSocketServer::newConnection);
-    QSignalSpy serverErrorSpy(&server,
-                              SIGNAL(serverError(QWebSocketProtocol::CloseCode)));
-    QSignalSpy serverClosedSpy(&server, &QWebSocketServer::closed);
-    QSignalSpy sslErrorsSpy(&server, SIGNAL(sslErrors(QList<QSslError>)));
-
-    QWebSocket socket;
-    QSslConfiguration socketConfig = QSslConfiguration::defaultConfiguration();
-    socketConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
-    socketConfig.setCiphers(list);
-    socket.setSslConfiguration(socketConfig);
-
-    PskProvider providerClient;
-    providerClient.m_identity = PSK_CLIENT_IDENTITY;
-    providerClient.m_psk = PSK_CLIENT_PRESHAREDKEY;
-    connect(&socket, &QWebSocket::preSharedKeyAuthenticationRequired, &providerClient, &PskProvider::providePsk);
-    QSignalSpy socketPskRequiredSpy(&socket, &QWebSocket::preSharedKeyAuthenticationRequired);
-    QSignalSpy socketConnectedSpy(&socket, &QWebSocket::connected);
-
-    QVERIFY(server.listen());
-    QCOMPARE(server.serverAddress(), QHostAddress(QHostAddress::Any));
-    QCOMPARE(server.serverUrl(), QUrl(QString::asprintf("wss://%ls:%d",
-                                 qUtf16Printable(QHostAddress(QHostAddress::LocalHost).toString()), server.serverPort())));
-
-    socket.open(server.serverUrl().toString());
-
-    QTRY_COMPARE(socketConnectedSpy.count(), 1);
-    QCOMPARE(socket.state(), QAbstractSocket::ConnectedState);
-    QCOMPARE(serverConnectionSpy.count(), 1);
-    QCOMPARE(serverPskRequiredSpy.count(), 1);
-    QCOMPARE(socketPskRequiredSpy.count(), 1);
-
-    QCOMPARE(serverClosedSpy.count(), 0);
-
-    server.close();
-
-    QTRY_COMPARE(serverClosedSpy.count(), 1);
-    QCOMPARE(sslErrorsSpy.count(), 0);
-    QCOMPARE(serverErrorSpy.count(), 0);
-#endif
 }
 
 void tst_QWebSocketServer::tst_maxPendingConnections()
@@ -427,18 +303,20 @@ void tst_QWebSocketServer::tst_maxPendingConnections()
 
     socket1.open(server.serverUrl().toString());
 
-    QTRY_COMPARE(socket1ConnectedSpy.count(), 1);
+    if (socket1ConnectedSpy.count() == 0)
+        QVERIFY(socket1ConnectedSpy.wait());
     QCOMPARE(socket1.state(), QAbstractSocket::ConnectedState);
     QCOMPARE(serverConnectionSpy.count(), 1);
     QCOMPARE(corsAuthenticationSpy.count(), 1);
     socket2.open(server.serverUrl().toString());
-    QTRY_COMPARE(socket2ConnectedSpy.count(), 1);
+    if (socket2ConnectedSpy.count() == 0)
+        QVERIFY(socket2ConnectedSpy.wait());
     QCOMPARE(socket2.state(), QAbstractSocket::ConnectedState);
     QCOMPARE(serverConnectionSpy.count(), 2);
     QCOMPARE(corsAuthenticationSpy.count(), 2);
     socket3.open(server.serverUrl().toString());
-    QVERIFY(!socket3ConnectedSpy.wait(250));
-    QCOMPARE(socket3ConnectedSpy.count(), 0);
+    if (socket3ConnectedSpy.count() == 0)
+        QVERIFY(!socket3ConnectedSpy.wait(250));
     QCOMPARE(socket3.state(), QAbstractSocket::UnconnectedState);
     QCOMPARE(serverConnectionSpy.count(), 2);
     QCOMPARE(corsAuthenticationSpy.count(), 2);
@@ -464,7 +342,8 @@ void tst_QWebSocketServer::tst_maxPendingConnections()
 
     server.close();
 
-    QTRY_COMPARE(serverClosedSpy.count(), 1);
+    QVERIFY(serverClosedSpy.wait());
+    QCOMPARE(serverClosedSpy.count(), 1);
 #ifndef QT_NO_SSL
     QCOMPARE(peerVerifyErrorSpy.count(), 0);
     QCOMPARE(sslErrorsSpy.count(), 0);
@@ -491,7 +370,8 @@ void tst_QWebSocketServer::tst_serverDestroyedWhileSocketConnected()
 
     socket.open(server->serverUrl().toString());
 
-    QTRY_COMPARE(socketConnectedSpy.count(), 1);
+    if (socketConnectedSpy.count() == 0)
+        QVERIFY(socketConnectedSpy.wait());
     QCOMPARE(socket.state(), QAbstractSocket::ConnectedState);
     QCOMPARE(serverConnectionSpy.count(), 1);
     QCOMPARE(corsAuthenticationSpy.count(), 1);
@@ -500,91 +380,9 @@ void tst_QWebSocketServer::tst_serverDestroyedWhileSocketConnected()
 
     delete server;
 
-    QTRY_COMPARE(socketDisconnectedSpy.count(), 1);
-}
-
-void tst_QWebSocketServer::tst_scheme()
-{
-    QWebSocketServer plainServer(QString(), QWebSocketServer::NonSecureMode);
-    QSignalSpy plainServerConnectionSpy(&plainServer, SIGNAL(newConnection()));
-
-    QVERIFY(plainServer.listen());
-
-    QWebSocket plainSocket;
-    plainSocket.open(plainServer.serverUrl().toString());
-
-    QTRY_COMPARE(plainServerConnectionSpy.count(), 1);
-    QScopedPointer<QWebSocket> plainServerSocket(plainServer.nextPendingConnection());
-    QVERIFY(!plainServerSocket.isNull());
-    QCOMPARE(plainServerSocket->requestUrl().scheme(), QStringLiteral("ws"));
-    plainServer.close();
-
-#ifndef QT_NO_SSL
-    QWebSocketServer secureServer(QString(), QWebSocketServer::SecureMode);
-    QSslConfiguration sslConfiguration;
-    QFile certFile(QStringLiteral(":/localhost.cert"));
-    QFile keyFile(QStringLiteral(":/localhost.key"));
-    QVERIFY(certFile.open(QIODevice::ReadOnly));
-    QVERIFY(keyFile.open(QIODevice::ReadOnly));
-    QSslCertificate certificate(&certFile, QSsl::Pem);
-    QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
-    certFile.close();
-    keyFile.close();
-    sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
-    sslConfiguration.setLocalCertificate(certificate);
-    sslConfiguration.setPrivateKey(sslKey);
-    sslConfiguration.setProtocol(QSsl::TlsV1SslV3);
-    secureServer.setSslConfiguration(sslConfiguration);
-    QSignalSpy secureServerConnectionSpy(&secureServer, SIGNAL(newConnection()));
-
-    QVERIFY(secureServer.listen());
-
-    QSslCipher sessionCipher;
-    QWebSocket secureSocket;
-    connect(&secureSocket, &QWebSocket::sslErrors,
-            &secureSocket, [&] {
-                secureSocket.ignoreSslErrors();
-                sessionCipher = secureSocket.sslConfiguration().sessionCipher();
-            });
-    secureSocket.open(secureServer.serverUrl().toString());
-
-    QTRY_COMPARE(secureServerConnectionSpy.count(), 1);
-    QScopedPointer<QWebSocket> secureServerSocket(secureServer.nextPendingConnection());
-    QVERIFY(!secureServerSocket.isNull());
-    QCOMPARE(secureServerSocket->requestUrl().scheme(), QStringLiteral("wss"));
-    secureServer.close();
-    QVERIFY(!sessionCipher.isNull());
-#endif
-}
-
-void tst_QWebSocketServer::tst_handleConnection()
-{
-    QWebSocketServer wsServer(QString(), QWebSocketServer::NonSecureMode);
-    QSignalSpy wsServerConnectionSpy(&wsServer, &QWebSocketServer::newConnection);
-
-    QTcpServer tcpServer;
-    connect(&tcpServer, &QTcpServer::newConnection,
-            [&tcpServer, &wsServer]() {
-        wsServer.handleConnection(tcpServer.nextPendingConnection());
-    });
-    QVERIFY(tcpServer.listen());
-
-    QWebSocket webSocket;
-    QSignalSpy wsConnectedSpy(&webSocket, &QWebSocket::connected);
-    webSocket.open(QStringLiteral("ws://localhost:%1").arg(tcpServer.serverPort()));
-    QTRY_COMPARE(wsConnectedSpy.count(), 1);
-
-    QTRY_COMPARE(wsServerConnectionSpy.count(), 1);
-
-    QScopedPointer<QWebSocket> webServerSocket(wsServer.nextPendingConnection());
-    QVERIFY(!webServerSocket.isNull());
-
-    QSignalSpy wsMessageReceivedSpy(webServerSocket.data(), &QWebSocket::textMessageReceived);
-    webSocket.sendTextMessage("dummy");
-
-    QTRY_COMPARE(wsMessageReceivedSpy.count(), 1);
-    QList<QVariant> arguments = wsMessageReceivedSpy.takeFirst();
-    QCOMPARE(arguments.first().toString(), QString("dummy"));
+    if (socketDisconnectedSpy.count() == 0)
+        QVERIFY(socketDisconnectedSpy.wait());
+    QCOMPARE(socketDisconnectedSpy.count(), 1);
 }
 
 QTEST_MAIN(tst_QWebSocketServer)

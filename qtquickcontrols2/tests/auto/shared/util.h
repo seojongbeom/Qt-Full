@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -65,7 +65,7 @@ public:
 
     inline QString dataDirectory() const { return m_dataDirectory; }
     inline QUrl dataDirectoryUrl() const { return m_dataDirectoryUrl; }
-    inline QString directory() const { return m_directory; }
+    inline QString directory() const  { return m_directory; }
 
     static inline QQmlDataTest *instance() { return m_instance; }
 

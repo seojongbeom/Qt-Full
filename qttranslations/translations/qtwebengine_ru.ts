@@ -47,10 +47,6 @@
         <translation>Скопировать</translation>
     </message>
     <message>
-        <source>Unselect</source>
-        <translation>Снять выделение</translation>
-    </message>
-    <message>
         <source>Copy Link URL</source>
         <translation>Скопировать адрес ссылки</translation>
     </message>
@@ -122,10 +118,6 @@
         <translation>Перезагрузить</translation>
     </message>
     <message>
-        <source>Reload and Bypass Cache</source>
-        <translation>Перезагрузить без кэша</translation>
-    </message>
-    <message>
         <source>Cut</source>
         <translation>Вырезать</translation>
     </message>
@@ -164,10 +156,6 @@
     <message>
         <source>Open Link in New Tab</source>
         <translation>Открыть ссылку в новой вкладке</translation>
-    </message>
-    <message>
-        <source>Open Link in New Background Tab</source>
-        <translation>Открыть ссылку в новой фоновой вкладке</translation>
     </message>
     <message>
         <source>Copy Link URL</source>
@@ -226,14 +214,6 @@
         <translation>Закрыть страницу</translation>
     </message>
     <message>
-        <source>Unselect</source>
-        <translation>Снять выделение</translation>
-    </message>
-    <message>
-        <source>Save &amp;Page</source>
-        <translation>Сохранить страни&amp;цу</translation>
-    </message>
-    <message>
         <source>Are you sure you want to leave this page?</source>
         <translation>Закрыть страницу?</translation>
     </message>
@@ -286,10 +266,6 @@
     <message>
         <source>Cannot create a separate instance of WebEngineViewport</source>
         <translation>Невозможно создать отдельный экземпляр WebEngineViewport</translation>
-    </message>
-    <message>
-        <source>Cannot create a separate instance of WebEngineContextMenuData</source>
-        <translation>Невозможно создать отдельный экземпляр WebEngineContextMenuData</translation>
     </message>
 </context>
 <context>

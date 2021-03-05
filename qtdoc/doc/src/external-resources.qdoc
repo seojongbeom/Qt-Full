@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -46,18 +46,8 @@
 */
 
 /*!
-    \externalpage https://developer.apple.com/programs/
-    \title Apple Developer Program
-*/
-
-/*!
-    \externalpage http://help.apple.com/xcode/mac/8.0/#/dev10510b1f7
-    \title Create asset catalogs and sets
-*/
-
-/*!
-    \externalpage https://developer.apple.com/library/content/qa/qa1686/_index.html
-    \title App Icons on iPhone, iPad and Apple Watch
+    \externalpage https://developer.apple.com/news/?id=12172013a
+    \title Xcode5Req
 */
 
 /*!
@@ -71,17 +61,12 @@
 */
 
 /*!
-    \externalpage http://www.gnu.org/licenses/gpl-2.0.html
-    \title GNU General Public License, version 2
+    \externalpage http://www.gnu.org/licenses/gpl.html
+    \title GNU General Public License (GPL)
 */
 
 /*!
-    \externalpage http://www.gnu.org/licenses/gpl-3.0.html
-    \title GNU General Public License, version 3
-*/
-
-/*!
-    \externalpage http://www.gnu.org/licenses/lgpl-2.1.html
+    \externalpage http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
     \title GNU Lesser General Public License, version 2.1
 */
 
@@ -234,6 +219,21 @@
 */
 
 /*!
+    \externalpage http://doc.qt.io/QtDataVisualization
+    \title Qt Data Visualization
+*/
+
+/*!
+    \externalpage http://doc.qt.io/QtVirtualKeyboard
+    \title Qt Virtual Keyboard
+*/
+
+/*!
+    \externalpage http://doc.qt.io/QtCharts
+    \title Qt Charts
+*/
+
+/*!
     \externalpage http://doc.qt.io/QtQuickCompiler
     \title Qt Quick Compiler
 */
@@ -249,6 +249,16 @@
 */
 
 /*!
+    \externalpage http://doc.qt.io/QtPurchasing
+    \title Qt Purchasing
+*/
+
+/*!
+    \externalpage http://doc.qt.io/qt-5/qtwaylandcompositor-index.html
+    \title Qt Wayland Compositor
+*/
+
+/*!
     \externalpage http://doc.qt.io/QtSupportedPlatforms/index.html
     \title Officially Supported Platforms
 */
@@ -259,7 +269,7 @@
 */
 
 /*!
-    \externalpage https://account.qt.io/
+    \externalpage http://www.qt.io/qt-account/
     \title Qt Account
 */
 
@@ -295,24 +305,6 @@
     \externalpage http://doc.qt.io/archives/qt-5.3/enginio-index.html
     \title Enginio Manual
 */
-/*!
-    \externalpage http://doc.qt.io/QtForDeviceCreation/qtee-about-b2qt.html
-    \title Boot2Qt
-*/
-/*!
-    \externalpage https://doc.qt.io/QtForDeviceCreation/qt-configuration-tool.html
-    \title Qt Configuration Tool
-*/
-
-/*!
-    \externalpage https://qmlbook.github.io/
-    \title QML Book
-*/
-
-/*!
-    \externalpage https://doc.qt.io/qt-5/vxworks.html
-    \title ext: Qt for VxWorks
-*/
 
 /*
     This prevents autolinking of each occurrence of 'macOS'
@@ -321,8 +313,4 @@
     \externalpage nolink
     \title macOS
     \internal
-*/
-/*!
-    \externalpage https://wiki.openssl.org/images/7/70/Setenv-android.sh
-    \title OpenSSL: Build Setup Script
 */

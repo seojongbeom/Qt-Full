@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,41 +50,71 @@
 
 QT_BEGIN_NAMESPACE
 
-class QResultWidget : public QTextBrowser
+class QDefaultResultWidget : public QTreeWidget
 {
     Q_OBJECT
 
 public:
-    QResultWidget(QWidget *parent = 0)
+    QDefaultResultWidget(QWidget *parent = 0)
+        : QTreeWidget(parent)
+    {
+        header()->hide();
+        connect(this, SIGNAL(itemActivated(QTreeWidgetItem*,int)),
+            this, SLOT(itemActivated(QTreeWidgetItem*,int)));
+    }
+
+    void showResultPage(const QList<QHelpSearchEngine::SearchHit> hits)
+    {
+        foreach (const QHelpSearchEngine::SearchHit &hit, hits)
+            new QTreeWidgetItem(this, QStringList(hit.first) << hit.second);
+    }
+
+signals:
+    void requestShowLink(const QUrl &url);
+
+private slots:
+    void itemActivated(QTreeWidgetItem *item, int /* column */)
+    {
+        if (item) {
+            QString data = item->data(1, Qt::DisplayRole).toString();
+            emit requestShowLink(data);
+        }
+    }
+};
+
+
+class QCLuceneResultWidget : public QTextBrowser
+{
+    Q_OBJECT
+
+public:
+    QCLuceneResultWidget(QWidget *parent = 0)
         : QTextBrowser(parent)
     {
-        connect(this, &QTextBrowser::anchorClicked,
-                this, &QResultWidget::requestShowLink);
+        connect(this, SIGNAL(anchorClicked(QUrl)),
+            this, SIGNAL(requestShowLink(QUrl)));
         setContextMenuPolicy(Qt::NoContextMenu);
     }
 
-    void showResultPage(const QVector<QHelpSearchResult> results, bool isIndexing)
+    void showResultPage(const QList<QHelpSearchEngine::SearchHit> hits, bool isIndexing)
     {
-        QString htmlFile = QString(QLatin1String("<html><head><title>%1"
-            "</title></head><body>")).arg(tr("Search Results"));
+        QString htmlFile = QString(QLatin1String("<html><head><title>%1</title></head><body>"))
+            .arg(tr("Search Results"));
 
-        const int count = results.count();
+        int count = hits.count();
         if (count != 0) {
             if (isIndexing)
-                htmlFile += QString(QLatin1String("<div style=\"text-align:left;"
-                    " font-weight:bold; color:red\">"
+                htmlFile += QString(QLatin1String("<div style=\"text-align:left; font-weight:bold; color:red\">"
                     "%1&nbsp;<span style=\"font-weight:normal; color:black\">"
                     "%2</span></div></div><br>")).arg(tr("Note:"))
                     .arg(tr("The search results may not be complete since the "
                             "documentation is still being indexed."));
 
-            for (const QHelpSearchResult &result : results) {
-                htmlFile += QString(QLatin1String("<div style=\"text-align:left;"
-                    " font-weight:bold\"><a href=\"%1\">%2</a>"
-                    "<div style=\"color:green; font-weight:normal;"
-                    " margin:5px\">%3</div></div><p></p>"))
-                        .arg(result.url().toString(), result.title(),
-                             result.snippet());
+            foreach (const QHelpSearchEngine::SearchHit &hit, hits) {
+                htmlFile += QString(QLatin1String("<div style=\"text-align:left; font-weight:bold\""
+                "><a href=\"%1\">%2</a><div style=\"color:green; font-weight:normal;"
+                " margin:5px\">%1</div></div><p></p>"))
+                .arg(hit.first).arg(hit.second);
             }
         } else {
             htmlFile += QLatin1String("<div align=\"center\"><br><br><h2>")
@@ -112,7 +136,7 @@ signals:
     void requestShowLink(const QUrl &url);
 
 private slots:
-    void setSource(const QUrl & /* name */) override {}
+    void setSource(const QUrl & /* name */) {}
 };
 
 
@@ -121,37 +145,91 @@ class QHelpSearchResultWidgetPrivate : public QObject
     Q_OBJECT
 
 private slots:
-    void showFirstResultPage()
+    void setResults(int hitsCount)
     {
-        if (!searchEngine.isNull())
-            resultFirstToShow = 0;
+        if (!searchEngine.isNull()) {
+#if defined(QT_CLUCENE_SUPPORT)
+            showFirstResultPage();
+            updateNextButtonState(((hitsCount > 20) ? true : false));
+#else
+            resultTreeWidget->clear();
+            resultTreeWidget->showResultPage(searchEngine->hits(0, hitsCount));
+#endif
+        }
+    }
+
+    void showNextResultPage()
+    {
+        if (!searchEngine.isNull()
+            && resultLastToShow < searchEngine->hitCount()) {
+            resultLastToShow += 20;
+            resultFirstToShow += 20;
+
+            resultTextBrowser->showResultPage(searchEngine->hits(resultFirstToShow,
+                resultLastToShow), isIndexing);
+            if (resultLastToShow >= searchEngine->hitCount())
+                updateNextButtonState(false);
+        }
         updateHitRange();
     }
 
     void showLastResultPage()
     {
-        if (!searchEngine.isNull())
-            resultFirstToShow = (searchEngine->searchResultCount() - 1) / ResultsRange * ResultsRange;
+        if (!searchEngine.isNull()) {
+            resultLastToShow = searchEngine->hitCount();
+            resultFirstToShow = resultLastToShow - (resultLastToShow % 20);
+
+            if (resultFirstToShow == resultLastToShow)
+                resultFirstToShow -= 20;
+
+            resultTextBrowser->showResultPage(searchEngine->hits(resultFirstToShow,
+                resultLastToShow), isIndexing);
+            updateNextButtonState(false);
+        }
+        updateHitRange();
+    }
+
+    void showFirstResultPage()
+    {
+        if (!searchEngine.isNull()) {
+            resultLastToShow = 20;
+            resultFirstToShow = 0;
+
+            resultTextBrowser->showResultPage(searchEngine->hits(resultFirstToShow,
+                resultLastToShow), isIndexing);
+            updatePrevButtonState(false);
+        }
         updateHitRange();
     }
 
     void showPreviousResultPage()
     {
         if (!searchEngine.isNull()) {
-            resultFirstToShow -= ResultsRange;
-            if (resultFirstToShow < 0)
-                resultFirstToShow = 0;
+            int count = resultLastToShow % 20;
+            if (count == 0 || resultLastToShow != searchEngine->hitCount())
+                count = 20;
+
+            resultLastToShow -= count;
+            resultFirstToShow = resultLastToShow -20;
+
+            resultTextBrowser->showResultPage(searchEngine->hits(resultFirstToShow,
+                resultLastToShow), isIndexing);
+            if (resultFirstToShow == 0)
+                updatePrevButtonState(false);
         }
         updateHitRange();
     }
 
-    void showNextResultPage()
+    void updatePrevButtonState(bool state = true)
     {
-        if (!searchEngine.isNull()
-            && resultFirstToShow + ResultsRange < searchEngine->searchResultCount()) {
-            resultFirstToShow += ResultsRange;
-        }
-        updateHitRange();
+        firstResultPage->setEnabled(state);
+        previousResultPage->setEnabled(state);
+    }
+
+    void updateNextButtonState(bool state = true)
+    {
+        nextResultPage->setEnabled(state);
+        lastResultPage->setEnabled(state);
     }
 
     void indexingStarted()
@@ -168,11 +246,24 @@ private:
     QHelpSearchResultWidgetPrivate(QHelpSearchEngine *engine)
         : QObject()
         , searchEngine(engine)
+        , isIndexing(false)
     {
-        connect(searchEngine.data(), &QHelpSearchEngine::indexingStarted,
-                this, &QHelpSearchResultWidgetPrivate::indexingStarted);
-        connect(searchEngine.data(), &QHelpSearchEngine::indexingFinished,
-                this, &QHelpSearchResultWidgetPrivate::indexingFinished);
+        resultTreeWidget = 0;
+        resultTextBrowser = 0;
+
+        resultLastToShow = 20;
+        resultFirstToShow = 0;
+
+        firstResultPage = 0;
+        previousResultPage = 0;
+        hitsLabel = 0;
+        nextResultPage = 0;
+        lastResultPage = 0;
+
+        connect(searchEngine, SIGNAL(indexingStarted()),
+            this, SLOT(indexingStarted()));
+        connect(searchEngine, SIGNAL(indexingFinished()),
+            this, SLOT(indexingFinished()));
     }
 
     ~QHelpSearchResultWidgetPrivate()
@@ -199,20 +290,13 @@ private:
         int count = 0;
 
         if (!searchEngine.isNull()) {
-            count = searchEngine->searchResultCount();
+            count = searchEngine->hitCount();
             if (count > 0) {
-                last = qMin(resultFirstToShow + ResultsRange, count);
-                first = resultFirstToShow + 1;
+                first = resultFirstToShow +1;
+                last = resultLastToShow > count ? count : resultLastToShow;
             }
-            resultTextBrowser->showResultPage(searchEngine->searchResults(resultFirstToShow,
-                               last), isIndexing);
         }
-
         hitsLabel->setText(QHelpSearchResultWidget::tr("%1 - %2 of %n Hits", 0, count).arg(first).arg(last));
-        firstResultPage->setEnabled(resultFirstToShow);
-        previousResultPage->setEnabled(resultFirstToShow);
-        lastResultPage->setEnabled(count - last);
-        nextResultPage->setEnabled(count - last);
     }
 
 private:
@@ -220,18 +304,18 @@ private:
 
     QPointer<QHelpSearchEngine> searchEngine;
 
-    QResultWidget *resultTextBrowser = nullptr;
+    QDefaultResultWidget *resultTreeWidget;
+    QCLuceneResultWidget *resultTextBrowser;
 
-    static const int ResultsRange = 20;
+    int resultLastToShow;
+    int resultFirstToShow;
+    bool isIndexing;
 
-    int resultFirstToShow = 0;
-    bool isIndexing = false;
-
-    QToolButton *firstResultPage = nullptr;
-    QToolButton *previousResultPage = nullptr;
-    QLabel *hitsLabel = nullptr;
-    QToolButton *nextResultPage = nullptr;
-    QToolButton *lastResultPage = nullptr;
+    QToolButton *firstResultPage;
+    QToolButton *previousResultPage;
+    QLabel *hitsLabel;
+    QToolButton *nextResultPage;
+    QToolButton *lastResultPage;
 };
 
 #include "qhelpsearchresultwidget.moc"
@@ -241,8 +325,9 @@ private:
     \class QHelpSearchResultWidget
     \since 4.4
     \inmodule QtHelp
-    \brief The QHelpSearchResultWidget class provides a text browser to display
-    search results.
+    \brief The QHelpSearchResultWidget class provides either a tree
+    widget or a text browser depending on the used search engine to display
+    the hits found by the search.
 */
 
 /*!
@@ -260,6 +345,7 @@ QHelpSearchResultWidget::QHelpSearchResultWidget(QHelpSearchEngine *engine)
     vLayout->setMargin(0);
     vLayout->setSpacing(0);
 
+#if defined(QT_CLUCENE_SUPPORT)
     QHBoxLayout *hBoxLayout = new QHBoxLayout();
 #ifndef Q_OS_MAC
     hBoxLayout->setMargin(0);
@@ -272,6 +358,7 @@ QHelpSearchResultWidget::QHelpSearchResultWidget(QHelpSearchEngine *engine)
         QString::fromUtf8(":/qt-project.org/assistant/images/1leftarrow.png")));
 
     d->hitsLabel = new QLabel(tr("0 - 0 of 0 Hits"), this);
+    d->hitsLabel->setEnabled(false);
     hBoxLayout->addWidget(d->hitsLabel);
     d->hitsLabel->setAlignment(Qt::AlignCenter);
     d->hitsLabel->setMinimumSize(QSize(150, d->hitsLabel->height()));
@@ -287,23 +374,30 @@ QHelpSearchResultWidget::QHelpSearchResultWidget(QHelpSearchEngine *engine)
 
     vLayout->addLayout(hBoxLayout);
 
-    d->resultTextBrowser = new QResultWidget(this);
+    d->resultTextBrowser = new QCLuceneResultWidget(this);
     vLayout->addWidget(d->resultTextBrowser);
 
-    connect(d->resultTextBrowser, &QResultWidget::requestShowLink,
-            this, &QHelpSearchResultWidget::requestShowLink);
+    connect(d->resultTextBrowser, SIGNAL(requestShowLink(QUrl)), this,
+        SIGNAL(requestShowLink(QUrl)));
 
-    connect(d->nextResultPage, &QAbstractButton::clicked,
-            d, &QHelpSearchResultWidgetPrivate::showNextResultPage);
-    connect(d->lastResultPage, &QAbstractButton::clicked,
-            d, &QHelpSearchResultWidgetPrivate::showLastResultPage);
-    connect(d->firstResultPage, &QAbstractButton::clicked,
-            d, &QHelpSearchResultWidgetPrivate::showFirstResultPage);
-    connect(d->previousResultPage, &QAbstractButton::clicked,
-            d, &QHelpSearchResultWidgetPrivate::showPreviousResultPage);
+    connect(d->nextResultPage, SIGNAL(clicked()), d, SLOT(showNextResultPage()));
+    connect(d->lastResultPage, SIGNAL(clicked()), d, SLOT(showLastResultPage()));
+    connect(d->firstResultPage, SIGNAL(clicked()), d, SLOT(showFirstResultPage()));
+    connect(d->previousResultPage, SIGNAL(clicked()), d, SLOT(showPreviousResultPage()));
 
-    connect(engine, &QHelpSearchEngine::searchingFinished,
-            d, &QHelpSearchResultWidgetPrivate::showFirstResultPage);
+    connect(d->firstResultPage, SIGNAL(clicked()), d, SLOT(updateNextButtonState()));
+    connect(d->previousResultPage, SIGNAL(clicked()), d, SLOT(updateNextButtonState()));
+    connect(d->nextResultPage, SIGNAL(clicked()), d, SLOT(updatePrevButtonState()));
+    connect(d->lastResultPage, SIGNAL(clicked()), d, SLOT(updatePrevButtonState()));
+
+#else
+    d->resultTreeWidget = new QDefaultResultWidget(this);
+    vLayout->addWidget(d->resultTreeWidget);
+    connect(d->resultTreeWidget, SIGNAL(requestShowLink(QUrl)), this,
+        SIGNAL(requestShowLink(QUrl)));
+#endif
+
+    connect(engine, SIGNAL(searchingFinished(int)), d, SLOT(setResults(int)));
 }
 
 /*! \reimp
@@ -311,7 +405,7 @@ QHelpSearchResultWidget::QHelpSearchResultWidget(QHelpSearchEngine *engine)
 void QHelpSearchResultWidget::changeEvent(QEvent *event)
 {
     if (event->type() == QEvent::LanguageChange)
-        d->updateHitRange();
+        d->setResults(d->searchEngine->hitCount());
 }
 
 /*!
@@ -328,9 +422,18 @@ QHelpSearchResultWidget::~QHelpSearchResultWidget()
 */
 QUrl QHelpSearchResultWidget::linkAt(const QPoint &point)
 {
+    QUrl url;
+#if defined(QT_CLUCENE_SUPPORT)
     if (d->resultTextBrowser)
-        return d->resultTextBrowser->anchorAt(point);
-    return QUrl();
+        url = d->resultTextBrowser->anchorAt(point);
+#else
+    if (d->resultTreeWidget) {
+        QTreeWidgetItem *item = d->resultTreeWidget->itemAt(point);
+        if (item)
+            url = item->data(1, Qt::DisplayRole).toString();
+    }
+#endif
+    return url;
 }
 
 QT_END_NAMESPACE

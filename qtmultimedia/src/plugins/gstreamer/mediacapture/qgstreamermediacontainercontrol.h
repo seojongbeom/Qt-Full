@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,8 +39,6 @@
 #include <QtCore/qstringlist.h>
 #include <QtCore/qset.h>
 
-#include <private/qgstcodecsinfo_p.h>
-
 #include <gst/gst.h>
 
 QT_BEGIN_NAMESPACE
@@ -56,15 +48,15 @@ class QGstreamerMediaContainerControl : public QMediaContainerControl
 Q_OBJECT
 public:
     QGstreamerMediaContainerControl(QObject *parent);
-    ~QGstreamerMediaContainerControl() {}
+    virtual ~QGstreamerMediaContainerControl() {};
 
-    QStringList supportedContainers() const override { return m_containers.supportedCodecs(); }
-    QString containerFormat() const override { return m_format; }
-    void setContainerFormat(const QString &formatMimeType) override { m_format = formatMimeType; }
+    virtual QStringList supportedContainers() const { return m_supportedContainers; }
+    virtual QString containerFormat() const { return m_format; }
+    virtual void setContainerFormat(const QString &formatMimeType) { m_format = formatMimeType; }
 
-    QString containerDescription(const QString &formatMimeType) const override { return m_containers.codecDescription(formatMimeType); }
+    virtual QString containerDescription(const QString &formatMimeType) const { return m_containerDescriptions.value(formatMimeType); }
 
-    QByteArray formatElementName() const { return m_containers.codecElement(containerFormat()); }
+    QByteArray formatElementName() const { return m_elementNames.value(containerFormat()); }
 
     QSet<QString> supportedStreamTypes(const QString &container) const;
 
@@ -74,7 +66,10 @@ public:
 
 private:
     QString m_format;
-    QGstCodecsInfo m_containers;
+    QStringList m_supportedContainers;
+    QMap<QString,QByteArray> m_elementNames;
+    QMap<QString, QString> m_containerDescriptions;
+    QMap<QString, QString> m_containerExtensions;
     QMap<QString, QSet<QString> > m_streamTypes;
 };
 

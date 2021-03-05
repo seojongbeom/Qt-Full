@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -63,7 +57,6 @@ QT_BEGIN_NAMESPACE
 
 class QOpenGLFramebufferObject;
 class QOpenGLPaintDevice;
-class QSGDefaultRenderContext;
 
 class Q_QUICK_PRIVATE_EXPORT QSGPainterTexture : public QSGPlainTexture
 {
@@ -72,7 +65,7 @@ public:
 
     void setDirtyRect(const QRect &rect) { m_dirty_rect = rect; }
 
-    void bind() override;
+    void bind();
 
 private:
     QRect m_dirty_rect;
@@ -84,43 +77,43 @@ public:
     QSGDefaultPainterNode(QQuickPaintedItem *item);
     virtual ~QSGDefaultPainterNode();
 
-    void setPreferredRenderTarget(QQuickPaintedItem::RenderTarget target) override;
+    void setPreferredRenderTarget(QQuickPaintedItem::RenderTarget target);
 
-    void setSize(const QSize &size) override;
+    void setSize(const QSize &size);
     QSize size() const { return m_size; }
 
-    void setDirty(const QRect &dirtyRect = QRect()) override;
+    void setDirty(const QRect &dirtyRect = QRect());
 
-    void setOpaquePainting(bool opaque) override;
+    void setOpaquePainting(bool opaque);
     bool opaquePainting() const { return m_opaquePainting; }
 
-    void setLinearFiltering(bool linearFiltering) override;
+    void setLinearFiltering(bool linearFiltering);
     bool linearFiltering() const { return m_linear_filtering; }
 
-    void setMipmapping(bool mipmapping) override;
+    void setMipmapping(bool mipmapping);
     bool mipmapping() const { return m_mipmapping; }
 
-    void setSmoothPainting(bool s) override;
+    void setSmoothPainting(bool s);
     bool smoothPainting() const { return m_smoothPainting; }
 
-    void setFillColor(const QColor &c) override;
+    void setFillColor(const QColor &c);
     QColor fillColor() const { return m_fillColor; }
 
-    void setContentsScale(qreal s) override;
+    void setContentsScale(qreal s);
     qreal contentsScale() const { return m_contentsScale; }
 
-    void setFastFBOResizing(bool fastResizing) override;
+    void setFastFBOResizing(bool fastResizing);
     bool fastFBOResizing() const { return m_fastFBOResizing; }
 
-    void setTextureSize(const QSize &textureSize) override;
+    void setTextureSize(const QSize &textureSize);
     QSize textureSize() const { return m_textureSize; }
 
-    QImage toImage() const override;
-    void update() override;
+    QImage toImage() const;
+    void update();
 
     void paint();
 
-    QSGTexture *texture() const override { return m_texture; }
+    QSGTexture *texture() const { return m_texture; }
 
 private:
     void updateTexture();
@@ -128,7 +121,7 @@ private:
     void updateRenderTarget();
     void updateFBOSize();
 
-    QSGDefaultRenderContext *m_context;
+    QSGRenderContext *m_context;
 
     QQuickPaintedItem::RenderTarget m_preferredRenderTarget;
     QQuickPaintedItem::RenderTarget m_actualRenderTarget;

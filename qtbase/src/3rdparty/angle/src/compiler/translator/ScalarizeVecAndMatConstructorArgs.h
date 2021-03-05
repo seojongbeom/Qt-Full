@@ -14,13 +14,12 @@ class ScalarizeVecAndMatConstructorArgs : public TIntermTraverser
   public:
     ScalarizeVecAndMatConstructorArgs(sh::GLenum shaderType,
                                       bool fragmentPrecisionHigh)
-        : TIntermTraverser(true, false, false),
-          mTempVarCount(0),
+        : mTempVarCount(0),
           mShaderType(shaderType),
           mFragmentPrecisionHigh(fragmentPrecisionHigh) {}
 
   protected:
-    bool visitAggregate(Visit visit, TIntermAggregate *node) override;
+    virtual bool visitAggregate(Visit visit, TIntermAggregate *node);
 
   private:
     void scalarizeArgs(TIntermAggregate *aggregate,

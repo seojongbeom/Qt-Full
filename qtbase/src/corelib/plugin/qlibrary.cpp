@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Copyright (C) 2013 Intel Corporation
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,7 +34,8 @@
 #include "qplatformdefs.h"
 #include "qlibrary.h"
 
-#include "qfactoryloader_p.h"
+#ifndef QT_NO_LIBRARY
+
 #include "qlibrary_p.h"
 #include <qstringlist.h>
 #include <qfile.h>
@@ -48,7 +43,6 @@
 #include <qmutex.h>
 #include <qmap.h>
 #include <private/qcoreapplication_p.h>
-#include <private/qsystemerror_p.h>
 #ifdef Q_OS_MAC
 #  include <private/qcore_mac_p.h>
 #endif
@@ -237,34 +231,21 @@ static bool findPatternUnloaded(const QString &library, QLibraryPrivate *lib)
         if (lib)
             lib->errorString = file.errorString();
         if (qt_debug_component()) {
-            qWarning("%s: %s", QFile::encodeName(library).constData(),
-                qPrintable(QSystemError::stdString()));
+            qWarning("%s: %s", (const char*) QFile::encodeName(library),
+                qPrintable(qt_error_string(errno)));
         }
         return false;
     }
 
     QByteArray data;
+    const char *filedata = 0;
     ulong fdlen = file.size();
-    const char *filedata = reinterpret_cast<char *>(file.map(0, fdlen));
-
+    filedata = (char *) file.map(0, fdlen);
     if (filedata == 0) {
-        if (uchar *mapdata = file.map(0, 1)) {
-            file.unmap(mapdata);
-            // Mapping is supported, but failed for the entire file, likely due to OOM.
-            // Return false, as readAll() would cause a bad_alloc and terminate the process.
-            if (lib)
-                lib->errorString = QLibrary::tr("Out of memory while loading plugin '%1'.").arg(library);
-            if (qt_debug_component()) {
-                qWarning("%s: %s", QFile::encodeName(library).constData(),
-                    qPrintable(QSystemError::stdString(ENOMEM)));
-            }
-            return false;
-        } else {
-            // Try reading the data into memory instead.
-            data = file.readAll();
-            filedata = data.constData();
-            fdlen = data.size();
-        }
+        // try reading the data into memory instead
+        data = file.readAll();
+        filedata = data.constData();
+        fdlen = data.size();
     }
 
     /*
@@ -321,7 +302,7 @@ static bool findPatternUnloaded(const QString &library, QLibraryPrivate *lib)
     if (pos >= 0) {
         if (hasMetaData) {
             const char *data = filedata + pos;
-            QJsonDocument doc = qJsonFromRawLibraryMetaData(data);
+            QJsonDocument doc = QLibraryPrivate::fromRawMetaData(data);
             lib->metaData = doc.object();
             if (qt_debug_component())
                 qWarning("Found metadata in lib %s, metadata=\n%s\n",
@@ -425,7 +406,7 @@ inline void QLibraryStore::cleanup()
 
     if (qt_debug_component()) {
         // dump all objects that remain
-        for (QLibraryPrivate *lib : qAsConst(data->libraryMap)) {
+        foreach (QLibraryPrivate *lib, data->libraryMap) {
             if (lib)
                 qDebug() << "On QtCore unload," << lib->fileName << "was leaked, with"
                          << lib->libraryRefCount.load() << "users";
@@ -549,13 +530,8 @@ bool QLibraryPrivate::load()
         return false;
 
     bool ret = load_sys();
-    if (qt_debug_component()) {
-        if (ret) {
-            qDebug() << "loaded library" << fileName;
-        } else {
-            qDebug() << qUtf8Printable(errorString);
-        }
-    }
+    if (qt_debug_component())
+        qDebug() << "loaded library" << fileName;
     if (ret) {
         //when loading a library we add a reference to it so that the QLibraryPrivate won't get deleted
         //this allows to unload the library at a later time
@@ -630,34 +606,40 @@ bool QLibrary::isLibrary(const QString &fileName)
 {
 #if defined(Q_OS_WIN)
     return fileName.endsWith(QLatin1String(".dll"), Qt::CaseInsensitive);
-#else // Generic Unix
+#else
     QString completeSuffix = QFileInfo(fileName).completeSuffix();
     if (completeSuffix.isEmpty())
         return false;
-    const QVector<QStringRef> suffixes = completeSuffix.splitRef(QLatin1Char('.'));
+    QStringList suffixes = completeSuffix.split(QLatin1Char('.'));
+# if defined(Q_OS_DARWIN)
+
+    // On Mac, libs look like libmylib.1.0.0.dylib
+    const QString lastSuffix = suffixes.at(suffixes.count() - 1);
+    const QString firstSuffix = suffixes.at(0);
+
+    bool valid = (lastSuffix == QLatin1String("dylib")
+            || firstSuffix == QLatin1String("so")
+            || firstSuffix == QLatin1String("bundle"));
+
+    return valid;
+# else  // Generic Unix
     QStringList validSuffixList;
 
-# if defined(Q_OS_HPUX)
+#  if defined(Q_OS_HPUX)
 /*
     See "HP-UX Linker and Libraries User's Guide", section "Link-time Differences between PA-RISC and IPF":
     "In PA-RISC (PA-32 and PA-64) shared libraries are suffixed with .sl. In IPF (32-bit and 64-bit),
     the shared libraries are suffixed with .so. For compatibility, the IPF linker also supports the .sl suffix."
  */
     validSuffixList << QLatin1String("sl");
-#  if defined __ia64
+#   if defined __ia64
+    validSuffixList << QLatin1String("so");
+#   endif
+#  elif defined(Q_OS_AIX)
+    validSuffixList << QLatin1String("a") << QLatin1String("so");
+#  elif defined(Q_OS_UNIX)
     validSuffixList << QLatin1String("so");
 #  endif
-# elif defined(Q_OS_AIX)
-    validSuffixList << QLatin1String("a") << QLatin1String("so");
-# elif defined(Q_OS_DARWIN)
-    // On Apple platforms, dylib look like libmylib.1.0.0.dylib
-    if (suffixes.last() == QLatin1String("dylib"))
-        return true;
-
-    validSuffixList << QLatin1String("so") << QLatin1String("bundle");
-# elif defined(Q_OS_UNIX)
-    validSuffixList << QLatin1String("so");
-# endif
 
     // Examples of valid library names:
     //  libfoo.so
@@ -669,14 +651,16 @@ bool QLibrary::isLibrary(const QString &fileName)
     int suffix;
     int suffixPos = -1;
     for (suffix = 0; suffix < validSuffixList.count() && suffixPos == -1; ++suffix)
-        suffixPos = suffixes.indexOf(QStringRef(&validSuffixList.at(suffix)));
+        suffixPos = suffixes.indexOf(validSuffixList.at(suffix));
 
     bool valid = suffixPos != -1;
     for (int i = suffixPos + 1; i < suffixes.count() && valid; ++i)
         if (i != suffixPos)
             suffixes.at(i).toInt(&valid);
     return valid;
+# endif
 #endif
+
 }
 
 typedef const char * (*QtPluginQueryVerificationDataFunction)();
@@ -691,7 +675,7 @@ static bool qt_get_metadata(QtPluginQueryVerificationDataFunction pfn, QLibraryP
     if (!szData)
         return false;
 
-    QJsonDocument doc = qJsonFromRawLibraryMetaData(szData);
+    QJsonDocument doc = QLibraryPrivate::fromRawMetaData(szData);
     if (doc.isNull())
         return false;
     priv->metaData = doc.object();
@@ -758,7 +742,7 @@ void QLibraryPrivate::updatePluginState()
         if (qt_debug_component()) {
             qWarning("In %s:\n"
                  "  Plugin uses incompatible Qt library (%d.%d.%d) [%s]",
-                 QFile::encodeName(fileName).constData(),
+                 (const char*) QFile::encodeName(fileName),
                  (qt_version&0xff0000) >> 16, (qt_version&0xff00) >> 8, qt_version&0xff,
                  debug ? "debug" : "release");
         }
@@ -1106,6 +1090,8 @@ QString QLibrary::errorString() const
     to the library \c shr_64.o in the archive file named \c libGL.a. This
     is only supported on the AIX platform.
 
+    Setting PreventUnloadHint will only apply on Unix platforms.
+
     The interpretation of the load hints is platform dependent, and if
     you use it you are probably making some assumptions on which platform
     you are compiling for, so use them only if you understand the consequences
@@ -1144,4 +1130,4 @@ bool qt_debug_component()
 
 QT_END_NAMESPACE
 
-#include "moc_qlibrary.cpp"
+#endif // QT_NO_LIBRARY

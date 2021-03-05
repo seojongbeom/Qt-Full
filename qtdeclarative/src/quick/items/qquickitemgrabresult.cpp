@@ -1,58 +1,47 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Jolla Ltd, author: <gunnar.sletta@jollamobile.com>
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Jolla Ltd, author: <gunnar.sletta@jollamobile.com>
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
-#include <private/qtquickglobal_p.h>
 #include "qquickitemgrabresult.h"
 
 #include "qquickwindow.h"
 #include "qquickitem.h"
-#if QT_CONFIG(quick_shadereffect)
 #include "qquickshadereffectsource_p.h"
-#endif
 
 #include <QtQml/QQmlEngine>
-#include <QtQml/QQmlInfo>
 
 #include <private/qquickpixmapcache_p.h>
 #include <private/qquickitem_p.h>
 #include <private/qsgcontext_p.h>
-#include <private/qsgadaptationlayer_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -75,7 +64,7 @@ public:
 
     void ensureImageInCache() const {
         if (url.isEmpty() && !image.isNull()) {
-            url.setScheme(QQuickPixmap::itemGrabberScheme);
+            url.setScheme(QStringLiteral("ItemGrabber"));
             url.setPath(QVariant::fromValue(item.data()).toString());
             static uint counter = 0;
             url.setFragment(QString::number(++counter));
@@ -185,25 +174,12 @@ QQuickItemGrabResult::QQuickItemGrabResult(QObject *parent)
 /*!
  * Saves the grab result as an image to \a fileName. Returns true
  * if successful; otherwise returns false.
- *
- * \note In Qt versions prior to 5.9, this function is marked as non-\c{const}.
- */
-bool QQuickItemGrabResult::saveToFile(const QString &fileName) const
-{
-    Q_D(const QQuickItemGrabResult);
-    return d->image.save(fileName);
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-/*!
- * \overload
- * \internal
  */
 bool QQuickItemGrabResult::saveToFile(const QString &fileName)
 {
-    return qAsConst(*this).saveToFile(fileName);
+    Q_D(QQuickItemGrabResult);
+    return d->image.save(fileName);
 }
-#endif // < Qt 6
 
 QUrl QQuickItemGrabResult::url() const
 {
@@ -258,7 +234,8 @@ void QQuickItemGrabResult::render()
         return;
 
     d->texture->setRect(QRectF(0, d->itemSize.height(), d->itemSize.width(), -d->itemSize.height()));
-    const QSize minSize = QQuickWindowPrivate::get(d->window.data())->context->sceneGraphContext()->minimumFBOSize();
+    QSGContext *sg = QSGRenderContext::from(QOpenGLContext::currentContext())->sceneGraphContext();
+    const QSize minSize = sg->minimumFBOSize();
     d->texture->setSize(QSize(qMax(minSize.width(), d->textureSize.width()),
                               qMax(minSize.height(), d->textureSize.height())));
     d->texture->scheduleUpdate();
@@ -280,17 +257,17 @@ QQuickItemGrabResult *QQuickItemGrabResultPrivate::create(QQuickItem *item, cons
         size = QSize(item->width(), item->height());
 
     if (size.width() < 1 || size.height() < 1) {
-        qmlWarning(item) << "grabToImage: item has invalid dimensions";
+        qWarning("Item::grabToImage: item has invalid dimensions");
         return 0;
     }
 
     if (!item->window()) {
-        qmlWarning(item) << "grabToImage: item is not attached to a window";
+        qWarning("Item::grabToImage: item is not attached to a window");
         return 0;
     }
 
     if (!item->window()->isVisible()) {
-        qmlWarning(item) << "grabToImage: item's window is not visible";
+        qWarning("Item::grabToImage: item's window is not visible");
         return 0;
     }
 
@@ -317,7 +294,7 @@ QQuickItemGrabResult *QQuickItemGrabResultPrivate::create(QQuickItem *item, cons
  * Use \a targetSize to specify the size of the target image. By default, the
  * result will have the same size as item.
  *
- * If the grab could not be initiated, the function returns \c null.
+ * If the grab could not be initiated, the function returns a \c null.
  *
  * \note This function will render the item to an offscreen surface and
  * copy that surface from the GPU's memory into the CPU's memory, which can
@@ -378,12 +355,12 @@ bool QQuickItem::grabToImage(const QJSValue &callback, const QSize &targetSize)
 {
     QQmlEngine *engine = qmlEngine(this);
     if (!engine) {
-        qmlWarning(this) << "grabToImage: item has no QML engine";
+        qWarning("Item::grabToImage: no QML Engine");
         return false;
     }
 
     if (!callback.isCallable()) {
-        qmlWarning(this) << "grabToImage: 'callback' is not a function";
+        qWarning("Item::grabToImage: 'callback' is not a function");
         return false;
     }
 
@@ -392,12 +369,12 @@ bool QQuickItem::grabToImage(const QJSValue &callback, const QSize &targetSize)
         size = QSize(width(), height());
 
     if (size.width() < 1 || size.height() < 1) {
-        qmlWarning(this) << "grabToImage: item has invalid dimensions";
+        qWarning("Item::grabToImage: item has invalid dimensions");
         return false;
     }
 
     if (!window()) {
-        qmlWarning(this) << "grabToImage: item is not attached to a window";
+        qWarning("Item::grabToImage: item is not attached to a window");
         return false;
     }
 
@@ -415,5 +392,3 @@ bool QQuickItem::grabToImage(const QJSValue &callback, const QSize &targetSize)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qquickitemgrabresult.cpp"

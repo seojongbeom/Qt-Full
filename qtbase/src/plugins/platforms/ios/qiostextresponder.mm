@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -163,7 +157,7 @@
 
 @implementation QIOSTextInputResponder
 
-- (id)initWithInputContext:(QT_PREPEND_NAMESPACE(QIOSInputContext) *)inputContext
+- (id)initWithInputContext:(QIOSInputContext *)inputContext
 {
     if (!(self = [self init]))
         return self;
@@ -236,21 +230,17 @@
         self.inputView = [[[WrapperView alloc] initWithView:inputView] autorelease];
     if (UIView *accessoryView = static_cast<UIView *>(platformData.value(kImePlatformDataInputAccessoryView).value<void *>()))
         self.inputAccessoryView = [[[WrapperView alloc] initWithView:accessoryView] autorelease];
-
-#ifndef Q_OS_TVOS
     if (QSysInfo::MacintoshVersion >= QSysInfo::MV_IOS_9_0) {
         if (platformData.value(kImePlatformDataHideShortcutsBar).toBool()) {
             // According to the docs, leadingBarButtonGroups/trailingBarButtonGroups should be set to nil to hide the shortcuts bar.
             // However, starting with iOS 10, the API has been surrounded with NS_ASSUME_NONNULL, which contradicts this and causes
-            // compiler warnings. Still it is the way to go to really hide the space reserved for that.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnonnull"
-            self.inputAssistantItem.leadingBarButtonGroups = nil;
-            self.inputAssistantItem.trailingBarButtonGroups = nil;
-#pragma clang diagnostic pop
+            // compiler warnings. And assigning just an empty array causes layout asserts. Hence, we assign empty button groups instead.
+            UIBarButtonItemGroup *leading = [[[UIBarButtonItemGroup alloc] initWithBarButtonItems:@[] representativeItem:nil] autorelease];
+            UIBarButtonItemGroup *trailing = [[[UIBarButtonItemGroup alloc] initWithBarButtonItems:@[] representativeItem:nil] autorelease];
+            self.inputAssistantItem.leadingBarButtonGroups = @[leading];
+            self.inputAssistantItem.trailingBarButtonGroups = @[trailing];
         }
     }
-#endif
 
     self.undoManager.groupsByEvent = NO;
     [self rebuildUndoStack];
@@ -276,7 +266,7 @@
         // as well, as the IM state that we were based on may have been invalidated when
         // IM was switched off.
 
-        qImDebug("IM was turned on, we need to check hints and platform data as well");
+        qImDebug() << "IM was turned on, we need to check hints and platform data as well";
         updatedProperties |= (Qt::ImHints | Qt::ImPlatformData);
     }
 
@@ -326,7 +316,7 @@
     // Don't allow activation events of the window that we're doing text on behalf on
     // to steal responder.
     if (FirstResponderCandidate::currentCandidate() == [self nextResponder]) {
-        qImDebug("not allowing parent window to steal responder");
+        qImDebug() << "not allowing parent window to steal responder";
         return NO;
     }
 
@@ -349,7 +339,7 @@
         if ([self currentImeState:Qt::ImEnabled].toBool()) {
             // The current focus object expects text input, but there
             // is no keyboard to get input from. So we clear focus.
-            qImDebug("no keyboard available, clearing focus object");
+            qImDebug() << "no keyboard available, clearing focus object";
             m_inputContext->clearCurrentFocusObject();
         }
     } else {
@@ -357,7 +347,7 @@
         // another QIOSTextResponder was made first-responder, another UIView was
         // made first-responder, or the first-responder was cleared globally. In
         // either of these cases we don't have to do anything.
-        qImDebug("lost first responder, but not clearing focus object");
+        qImDebug() << "lost first responder, but not clearing focus object";
     }
 
     return YES;
@@ -377,6 +367,7 @@
     QScopedValueRollback<BOOL> rollback(m_inSendEventToFocusObject, true);
     QWindowSystemInterface::handleKeyEvent(qApp->focusWindow(), QEvent::KeyPress, key, modifiers);
     QWindowSystemInterface::handleKeyEvent(qApp->focusWindow(), QEvent::KeyRelease, key, modifiers);
+    QWindowSystemInterface::flushWindowSystemEvents();
 }
 
 #ifndef QT_NO_SHORTCUT
@@ -694,7 +685,11 @@
     if (markedTextFormat.isEmpty()) {
         // There seems to be no way to query how the preedit text
         // should be drawn. So we need to hard-code the color.
-        markedTextFormat.setBackground(QColor(206, 221, 238));
+        QSysInfo::MacVersion iosVersion = QSysInfo::MacintoshVersion;
+        if (iosVersion < QSysInfo::MV_IOS_7_0)
+            markedTextFormat.setBackground(QColor(235, 239, 247));
+        else
+            markedTextFormat.setBackground(QColor(206, 221, 238));
     }
 
     QList<QInputMethodEvent::Attribute> attrs;
@@ -822,7 +817,7 @@
         [self sendEventToFocusObject:e];
     }
 
-    return startRect.united(endRect).toCGRect();
+    return toCGRect(startRect.united(endRect));
 }
 
 - (NSArray *)selectionRectsForRange:(UITextRange *)range
@@ -840,7 +835,7 @@
     // Assume for now that position is always the same as
     // cursor index until a better API is in place:
     QRectF cursorRect = qApp->inputMethod()->cursorRectangle();
-    return cursorRect.toCGRect();
+    return toCGRect(cursorRect);
 }
 
 - (void)replaceRange:(UITextRange *)range withText:(NSString *)text
@@ -907,7 +902,6 @@
     // text instead of just guessing...
 }
 
-#ifndef Q_OS_TVOS
 - (NSDictionary *)textStylingAtPosition:(UITextPosition *)position inDirection:(UITextStorageDirection)direction
 {
     Q_UNUSED(position);
@@ -927,7 +921,6 @@
         return [NSDictionary dictionary];
     return [NSDictionary dictionaryWithObject:uifont forKey:NSFontAttributeName];
 }
-#endif
 
 - (NSDictionary *)markedTextStyle
 {

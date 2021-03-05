@@ -1,13 +1,14 @@
 TARGET = qqnx
 
-QT += \
-    core-private gui-private \
-    fontdatabase_support-private eventdispatcher_support-private egl_support-private
+QT += platformsupport-private core-private gui-private
 
 # Uncomment this to build with support for IMF once it becomes available in the BBNDK
 #CONFIG += qqnx_imf
 
+!blackberry:CONFIG += qqnx_screeneventthread
+
 # Uncomment these to enable debugging output for various aspects of the plugin
+#DEFINES += QQNXBPSEVENTFILTER_DEBUG
 #DEFINES += QQNXBUFFER_DEBUG
 #DEFINES += QQNXBUTTON_DEBUG
 #DEFINES += QQNXCLIPBOARD_DEBUG
@@ -45,8 +46,7 @@ SOURCES =   main.cpp \
             qqnxservices.cpp \
             qqnxcursor.cpp \
             qqnxrasterwindow.cpp \
-            qqnxglobal.cpp \
-            qqnxscreeneventthread.cpp
+            qqnxglobal.cpp
 
 HEADERS =   main.h \
             qqnxbuffer.h \
@@ -66,41 +66,78 @@ HEADERS =   main.h \
             qqnxrasterwindow.h \
             qqnxscreeneventfilter.h \
             qqnxglobal.h \
-            qqnxlgmon.h \
-            qqnxscreeneventthread.h
+            qqnxlgmon.h
+
+CONFIG(qqnx_screeneventthread) {
+    DEFINES += QQNX_SCREENEVENTTHREAD
+    SOURCES += qqnxscreeneventthread.cpp
+    HEADERS += qqnxscreeneventthread.h
+}
 
 LIBS += -lscreen
 
-qtConfig(egl) {
+contains(QT_CONFIG, opengles2) {
     SOURCES += qqnxglcontext.cpp \
                qqnxeglwindow.cpp
 
     HEADERS += qqnxglcontext.h \
                qqnxeglwindow.h
 
-    QMAKE_USE += egl
+    LIBS += -lEGL
 }
 
-qtConfig(qqnx_pps) {
-    SOURCES += qqnxbuttoneventnotifier.cpp \
-               qqnxnavigatorpps.cpp \
-               qqnxnavigatoreventnotifier.cpp \
-               qqnxvirtualkeyboardpps.cpp
+CONFIG(blackberry) {
+    SOURCES += qqnxnavigatorbps.cpp \
+               qqnxeventdispatcher_blackberry.cpp \
+               qqnxbpseventfilter.cpp \
+               qqnxvirtualkeyboardbps.cpp \
+               qblackberrytheme.cpp \
+               qqnxsystemsettings.cpp
 
-    HEADERS += qqnxbuttoneventnotifier.h \
-               qqnxnavigatorpps.h \
-               qqnxnavigatoreventnotifier.h \
-               qqnxvirtualkeyboardpps.h
+    HEADERS += qqnxnavigatorbps.h \
+               qqnxeventdispatcher_blackberry.h \
+               qqnxbpseventfilter.h \
+               qqnxvirtualkeyboardbps.h  \
+               qblackberrytheme.h \
+               qqnxsystemsettings.h \
+               qqnxfiledialoghelper.h
 
-    QMAKE_USE += pps
+    LIBS += -lbps
+}
 
-    qtConfig(clipboard) {
-        SOURCES += qqnxclipboard.cpp
-        HEADERS += qqnxclipboard.h
-        LIBS += -lclipboard
+CONFIG(blackberry) {
+    SOURCES += qqnxfiledialoghelper_bb10.cpp \
+               qqnxfilepicker.cpp \
+               qqnxnavigatorcover.cpp
+
+    HEADERS += qqnxfilepicker.h \
+               qqnxnavigatorcover.h
+}
+
+CONFIG(qqnx_pps) {
+    DEFINES += QQNX_PPS
+
+    SOURCES += qqnxclipboard.cpp \
+               qqnxbuttoneventnotifier.cpp
+
+    HEADERS += qqnxclipboard.h \
+               qqnxbuttoneventnotifier.h
+
+    !blackberry {
+        SOURCES += qqnxnavigatorpps.cpp \
+                   qqnxnavigatoreventnotifier.cpp \
+                   qqnxvirtualkeyboardpps.cpp
+
+        HEADERS += qqnxnavigatorpps.h \
+                   qqnxnavigatoreventnotifier.h \
+                   qqnxvirtualkeyboardpps.h
     }
 
-    qtConfig(qqnx_imf) {
+    LIBS += -lpps
+    !contains(DEFINES, QT_NO_CLIPBOARD): LIBS += -lclipboard
+
+    CONFIG(qqnx_imf) {
+        DEFINES += QQNX_IMF
         HEADERS += qqnxinputcontext_imf.h
         SOURCES += qqnxinputcontext_imf.cpp
     } else {
@@ -112,10 +149,15 @@ qtConfig(qqnx_pps) {
 lgmon {
     DEFINES += QQNX_LGMON
     SOURCES += qqnxlgmon.cpp
-    QMAKE_USE += lgmon
+    LIBS += -llgmon
 }
 
 OTHER_FILES += qnx.json
+
+QMAKE_CXXFLAGS += -I./private
+
+include (../../../platformsupport/eglconvenience/eglconvenience.pri)
+include (../../../platformsupport/fontdatabases/fontdatabases.pri)
 
 PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = QQnxIntegrationPlugin

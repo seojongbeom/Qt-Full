@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -32,8 +32,9 @@
     \ingroup supportedplatform
 
     Qt for WinRT allows you to run Qt applications on devices supporting the
-    Windows Store App APIs. This covers Modern UI applications on Windows 10,
-    Windows 10 Mobile and Windows 10 IoT.
+    Windows Store App APIs. This includes Modern UI applications in Windows 8.1
+    and up, as well as devices running Windows RT 8.1 and Windows Phone 8.1
+    and up.
 
     Microsoft introduced a new design paradigm with the Windows 8 Modern UI. A
     core part of this new approach is Windows Runtime (WinRT) that supports
@@ -47,7 +48,7 @@
     \section1 Requirements
 
     Development for Windows Runtime requires a Microsoft Windows development host.
-    The minimum version supported is Windows 10.
+    The minimum version supported is Windows 8.1.
 
     Depending on your device target you will need the following tools provided
     by Microsoft to be installed:
@@ -57,21 +58,24 @@
         \li Device Target
         \li Environment
     \row
-        \li Windows 10 Mobile
-        \li Visual Studio 2015
+        \li Windows 8.1 Modern UI
+        \li Visual Studio 2013 for Windows
     \row
-        \li Windows 10 Desktop
-        \li Visual Studio 2015
+        \li Windows RT
+        \li Visual Studio 2013 for Windows
     \row
-        \li Windows 10 IoT
-        \li Visual Studio 2015
+        \li Windows Phone 8.1
+        \li Visual Studio 2013 for Windows Phone
     \row
-        \li XBox One
+        \li Windows 10
         \li Visual Studio 2015
     \endtable
 
     If you are targeting a remote device, please follow all instructions by
     Visual Studio to set it up correctly.
+
+    If you are targeting an emulator for Windows Phone, Windows 8.1 Pro is
+    required by Microsoft to launch the emulator itself.
 
     \section1 Getting Started
 
@@ -160,14 +164,15 @@
 
     Please make sure to use an x86 command prompt (either use the \e {VS x86 Native
     Tools Command Prompt} or call \e vcvarsall.bat without any parameter or with \c x86)
-    for every WinRT build. While the toolchain which is used for the
+    for every WinRT/Windows Phone build. While the toolchain which is used for the
     target is set automatically, the command prompt decides what will be used for the
     host tools like \e qmake or \e moc. Building these tools might fail if another
     command prompt is used.
 
     The WinRT mkspec format is \c {<platform>-<architecture>-<toolchain>}
-    where architecture can be \c arm, \c x86, or \c x64. The following is an
-    example of building qtbase for WinRT:
+    where \e platform can be \c winrt or \c winphone and architecture can be
+    \c arm, \c x86, or \c x64. The following is an example of building qtbase
+    for WinRT:
     \code
         > ./configure -xplatform winrt-x64-msvc2013 -release
         > nmake/jom
@@ -210,7 +215,7 @@
     \endcode
     \note \l{winrtrunner}{The WinRT Runner Tool} can perform the same operation with the --install option.
 
-    If that worked, you should be able to find your application in Windows'
+    If that worked, you should be able to find your application in Windows 8.1's
     start screen. To remove your application, use Windows' built-in way to
     uninstall applications (right-click or tap and hold the application and
     choose \c{Uninstall}).

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -875,19 +880,19 @@ void tst_QRegExp::caretAnchoredOptimization()
 {
     QString s = "---babnana----";
     s.replace( QRegExp("^-*|(-*)$"), "" );
-    QCOMPARE(s, QLatin1String("babnana"));
+    QVERIFY(s == "babnana");
 
     s = "---babnana----";
     s.replace( QRegExp("^-*|(-{0,})$"), "" );
-    QCOMPARE(s, QLatin1String("babnana"));
+    QVERIFY(s == "babnana");
 
     s = "---babnana----";
     s.replace( QRegExp("^-*|(-{1,})$"), "" );
-    QCOMPARE(s, QLatin1String("babnana"));
+    QVERIFY(s == "babnana");
 
     s = "---babnana----";
     s.replace( QRegExp("^-*|(-+)$"), "" );
-    QCOMPARE(s, QLatin1String("babnana"));
+    QVERIFY(s == "babnana");
 }
 
 void tst_QRegExp::isEmpty()
@@ -927,7 +932,11 @@ void tst_QRegExp::rainersSlowRegExpCopyBug()
 {
     // this test should take an extreme amount of time if QRegExp is broken
     QRegExp original(email);
+#if defined(Q_OS_WINCE)
+    for (int i = 0; i < 100; ++i) {
+#else
     for (int i = 0; i < 100000; ++i) {
+#endif
         QRegExp copy = original;
         (void)copy.exactMatch("~");
         QRegExp copy2 = original;
@@ -976,9 +985,13 @@ void Thread::run()
     str += "abbbdekcz";
     int x;
 
-    for (int j = 0; j < 10000; ++j)
+#if defined(Q_OS_WINCE)
+    for (int j = 0; j < 100; ++j) {
+#else
+    for (int j = 0; j < 10000; ++j) {
+#endif
         x = rx.indexIn(str);
-
+    }
     QCOMPARE(x, 3072);
 }
 
@@ -1014,9 +1027,13 @@ void Thread2::run()
     str += "abbbdekcz";
     int x;
 
-    for (int j = 0; j < 10000; ++j)
+#if defined(Q_OS_WINCE)
+    for (int j = 0; j < 100; ++j) {
+#else
+    for (int j = 0; j < 10000; ++j) {
+#endif
         x = rx.indexIn(str);
-
+    }
     QCOMPARE(x, 3072);
 }
 
@@ -1353,14 +1370,12 @@ void tst_QRegExp::escapeSequences()
 {
     QString perlSyntaxSpecialChars("0123456789afnrtvbBdDwWsSx\\|[]{}()^$?+*");
     QString w3cXmlSchema11SyntaxSpecialChars("cCiIpP"); // as well as the perl ones
-    QString pattern = QLatin1String("\\?");
     for (int i = ' '; i <= 127; ++i) {
         QLatin1Char c(i);
         if (perlSyntaxSpecialChars.indexOf(c) == -1) {
-            pattern[1] = c;
-            QRegExp rx(pattern, Qt::CaseSensitive, QRegExp::RegExp);
+            QRegExp rx(QString("\\%1").arg(c), Qt::CaseSensitive, QRegExp::RegExp);
             // we'll never have c == 'a' since it's a special character
-            const QString s = QLatin1String("aaa") + c + QLatin1String("aaa");
+            QString s = QString("aaa%1aaa").arg(c);
             QCOMPARE(rx.indexIn(s), 3);
 
             rx.setPatternSyntax(QRegExp::RegExp2);

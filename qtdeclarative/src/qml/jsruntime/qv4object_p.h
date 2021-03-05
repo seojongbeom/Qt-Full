@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,46 +50,26 @@
 #include "qv4engine_p.h"
 #include "qv4scopedvalue_p.h"
 #include "qv4value_p.h"
-#include "qv4internalclass_p.h"
+
+#include <QtCore/qtypetraits.h>
 
 QT_BEGIN_NAMESPACE
 
 
 namespace QV4 {
 
-struct BuiltinFunction;
-
 namespace Heap {
 
 struct Object : Base {
-    void init() { Base::init(); }
-    void destroy() { Base::destroy(); }
+    inline Object() {}
 
-    const Value *inlinePropertyData(uint index) const {
-        Q_ASSERT(index < vtable()->nInlineProperties);
-        return reinterpret_cast<const Value *>(this) + vtable()->inlinePropertyOffset + index;
-    }
-    Value *inlinePropertyData(uint index) {
-        Q_ASSERT(index < vtable()->nInlineProperties);
-        return reinterpret_cast<Value *>(this) + vtable()->inlinePropertyOffset + index;
-    }
+    const Value *propertyData(uint index) const { if (index < inlineMemberSize) return reinterpret_cast<const Value *>(this) + inlineMemberOffset + index; return memberData->data + index - inlineMemberSize; }
+    Value *propertyData(uint index) { if (index < inlineMemberSize) return reinterpret_cast<Value *>(this) + inlineMemberOffset + index; return memberData->data + index - inlineMemberSize; }
 
-    const Value *propertyData(uint index) const {
-        uint nInline = vtable()->nInlineProperties;
-        if (index < nInline)
-            return reinterpret_cast<const Value *>(this) + vtable()->inlinePropertyOffset + index;
-        index -= nInline;
-        return memberData->data + index;
-    }
-    Value *propertyData(uint index) {
-        uint nInline = vtable()->nInlineProperties;
-        if (index < nInline)
-            return reinterpret_cast<Value *>(this) + vtable()->inlinePropertyOffset + index;
-        index -= nInline;
-        return memberData->data + index;
-    }
-
-    Heap::Object *prototype() const { return internalClass->prototype; }
+    uint inlineMemberOffset;
+    uint inlineMemberSize;
+    InternalClass *internalClass;
+    Pointer<Object> prototype;
     Pointer<MemberData> memberData;
     Pointer<ArrayData> arrayData;
 };
@@ -109,13 +83,7 @@ struct Object : Base {
         static const QV4::ObjectVTable static_vtbl; \
         static inline const QV4::VTable *staticVTable() { return &static_vtbl.vTable; } \
         V4_MANAGED_SIZE_TEST \
-        Data *d_unchecked() const { return static_cast<Data *>(m()); } \
-        Data *d() const { \
-            Data *dptr = d_unchecked(); \
-            dptr->_checkIsInitialized(); \
-            return dptr; \
-        } \
-        V4_ASSERT_IS_TRIVIAL(Data);
+        Data *d() const { return static_cast<Data *>(m()); }
 
 #define V4_OBJECT2(DataClass, superClass) \
     private: \
@@ -128,14 +96,11 @@ struct Object : Base {
         static const QV4::ObjectVTable static_vtbl; \
         static inline const QV4::VTable *staticVTable() { return &static_vtbl.vTable; } \
         V4_MANAGED_SIZE_TEST \
-        QV4::Heap::DataClass *d_unchecked() const { return static_cast<QV4::Heap::DataClass *>(m()); } \
-        QV4::Heap::DataClass *d() const { \
-            QV4::Heap::DataClass *dptr = d_unchecked(); \
-            dptr->_checkIsInitialized(); \
-            return dptr; \
-        } \
-        V4_ASSERT_IS_TRIVIAL(QV4::Heap::DataClass);
+        QV4::Heap::DataClass *d() const { return static_cast<QV4::Heap::DataClass *>(m()); }
 
+#define V4_INTERNALCLASS(c) \
+    static QV4::InternalClass *defaultInternalClass(QV4::ExecutionEngine *e) \
+    { return e->c; }
 #define V4_PROTOTYPE(p) \
     static QV4::Object *defaultPrototype(QV4::ExecutionEngine *e) \
     { return e->p(); }
@@ -143,8 +108,8 @@ struct Object : Base {
 struct ObjectVTable
 {
     VTable vTable;
-    void (*call)(const Managed *, Scope &scope, CallData *data);
-    void (*construct)(const Managed *, Scope &scope, CallData *data);
+    ReturnedValue (*call)(const Managed *, CallData *data);
+    ReturnedValue (*construct)(const Managed *, CallData *data);
     ReturnedValue (*get)(const Managed *, String *name, bool *hasProperty);
     ReturnedValue (*getIndexed)(const Managed *, uint index, bool *hasProperty);
     void (*put)(Managed *, String *name, const Value &value);
@@ -157,13 +122,12 @@ struct ObjectVTable
     void (*setLookup)(Managed *m, Lookup *l, const Value &v);
     uint (*getLength)(const Managed *m);
     void (*advanceIterator)(Managed *m, ObjectIterator *it, Value *name, uint *index, Property *p, PropertyAttributes *attributes);
-    ReturnedValue (*instanceOf)(const Object *typeObject, const Value &var);
 };
 
 #define DEFINE_OBJECT_VTABLE_BASE(classname) \
 const QV4::ObjectVTable classname::static_vtbl =    \
 {     \
-    DEFINE_MANAGED_VTABLE_INT(classname, (std::is_same<classname::SuperClass, Object>::value) ? nullptr : &classname::SuperClass::static_vtbl.vTable), \
+    DEFINE_MANAGED_VTABLE_INT(classname, (QT_PREPEND_NAMESPACE(QtPrivate)::is_same<classname::SuperClass, Object>::value) ? Q_NULLPTR : &classname::SuperClass::static_vtbl.vTable), \
     call,                                       \
     construct,                                  \
     get,                                        \
@@ -177,8 +141,7 @@ const QV4::ObjectVTable classname::static_vtbl =    \
     getLookup,                                  \
     setLookup,                                  \
     getLength,                                  \
-    advanceIterator,                            \
-    instanceOf                                  \
+    advanceIterator                            \
 }
 
 #define DEFINE_OBJECT_VTABLE(classname) \
@@ -194,7 +157,7 @@ QT_WARNING_SUPPRESS_GCC_TAUTOLOGICAL_COMPARE_OFF
 struct Q_QML_EXPORT Object: Managed {
     V4_OBJECT2(Object, Object)
     Q_MANAGED_TYPE(Object)
-    V4_INTERNALCLASS(Object)
+    V4_INTERNALCLASS(emptyClass)
     V4_PROTOTYPE(objectPrototype)
 
     enum {
@@ -203,6 +166,7 @@ struct Q_QML_EXPORT Object: Managed {
         SetterOffset = 1
     };
 
+    InternalClass *internalClass() const { return d()->internalClass; }
     void setInternalClass(InternalClass *ic);
 
     const Value *propertyData(uint index) const { return d()->propertyData(index); }
@@ -215,7 +179,7 @@ struct Q_QML_EXPORT Object: Managed {
     void setProperty(uint index, const Property *p);
 
     const ObjectVTable *vtable() const { return reinterpret_cast<const ObjectVTable *>(d()->vtable()); }
-    Heap::Object *prototype() const { return d()->prototype(); }
+    Heap::Object *prototype() const { return d()->prototype; }
     bool setPrototype(Object *proto);
 
     void getOwnProperty(String *name, PropertyAttributes *attrs, Property *p = 0);
@@ -255,12 +219,10 @@ struct Q_QML_EXPORT Object: Managed {
         insertMember(name, value, Attr_Data|Attr_NotEnumerable);
     }
     void defineDefaultProperty(const QString &name, const Value &value);
-    void defineDefaultProperty(const QString &name, void (*code)(const BuiltinFunction *, Scope &, CallData *), int argumentCount = 0);
-    void defineDefaultProperty(String *name, void (*code)(const BuiltinFunction *, Scope &, CallData *), int argumentCount = 0);
-    void defineAccessorProperty(const QString &name, void (*getter)(const BuiltinFunction *, Scope &, CallData *),
-                                void (*setter)(const BuiltinFunction *, Scope &, CallData *));
-    void defineAccessorProperty(String *name, void (*getter)(const BuiltinFunction *, Scope &, CallData *),
-                                void (*setter)(const BuiltinFunction *, Scope &, CallData *));
+    void defineDefaultProperty(const QString &name, ReturnedValue (*code)(CallContext *), int argumentCount = 0);
+    void defineDefaultProperty(String *name, ReturnedValue (*code)(CallContext *), int argumentCount = 0);
+    void defineAccessorProperty(const QString &name, ReturnedValue (*getter)(CallContext *), ReturnedValue (*setter)(CallContext *));
+    void defineAccessorProperty(String *name, ReturnedValue (*getter)(CallContext *), ReturnedValue (*setter)(CallContext *));
     /* Fixed: Writable: false, Enumerable: false, Configurable: false */
     void defineReadonlyProperty(const QString &name, const Value &value);
     void defineReadonlyProperty(String *name, const Value &value);
@@ -272,6 +234,8 @@ struct Q_QML_EXPORT Object: Managed {
         insertMember(s, p, attributes);
     }
     void insertMember(String *s, const Property *p, PropertyAttributes attributes);
+
+    inline ExecutionEngine *engine() const { return internalClass()->engine; }
 
     bool isExtensible() const { return d()->internalClass->extensible; }
 
@@ -363,17 +327,15 @@ public:
     void advanceIterator(ObjectIterator *it, Value *name, uint *index, Property *p, PropertyAttributes *attributes)
     { vtable()->advanceIterator(this, it, name, index, p, attributes); }
     uint getLength() const { return vtable()->getLength(this); }
-    ReturnedValue instanceOf(const Value &var) const
-    { return vtable()->instanceOf(this, var); }
 
-    inline void construct(Scope &scope, CallData *d) const
-    { return vtable()->construct(this, scope, d); }
-    inline void call(Scope &scope, CallData *d) const
-    { vtable()->call(this, scope, d); }
+    inline ReturnedValue construct(CallData *d) const
+    { return vtable()->construct(this, d); }
+    inline ReturnedValue call(CallData *d) const
+    { return vtable()->call(this, d); }
 protected:
     static void markObjects(Heap::Base *that, ExecutionEngine *e);
-    static void construct(const Managed *m, Scope &scope, CallData *);
-    static void call(const Managed *m, Scope &scope, CallData *);
+    static ReturnedValue construct(const Managed *m, CallData *);
+    static ReturnedValue call(const Managed *m, CallData *);
     static ReturnedValue get(const Managed *m, String *name, bool *hasProperty);
     static ReturnedValue getIndexed(const Managed *m, uint index, bool *hasProperty);
     static void put(Managed *m, String *name, const Value &value);
@@ -386,7 +348,8 @@ protected:
     static void setLookup(Managed *m, Lookup *l, const Value &v);
     static void advanceIterator(Managed *m, ObjectIterator *it, Value *name, uint *index, Property *p, PropertyAttributes *attributes);
     static uint getLength(const Managed *m);
-    static ReturnedValue instanceOf(const Object *typeObject, const Value &var);
+
+    void ensureMemberData();
 
 private:
     ReturnedValue internalGet(String *name, bool *hasProperty) const;
@@ -403,22 +366,18 @@ private:
 namespace Heap {
 
 struct BooleanObject : Object {
-    void init() { Object::init(); }
-    void init(bool b) {
-        Object::init();
-        this->b = b;
-    }
-
+    BooleanObject() {}
+    BooleanObject(bool b)
+        : b(b)
+    {}
     bool b;
 };
 
 struct NumberObject : Object {
-    void init() { Object::init(); }
-    void init(double val) {
-        Object::init();
-        value = val;
-    }
-
+    NumberObject() {}
+    NumberObject(double val)
+        : value(val)
+    {}
     double value;
 };
 
@@ -427,15 +386,10 @@ struct ArrayObject : Object {
         LengthPropertyIndex = 0
     };
 
-    void init() {
-        Object::init();
-        commonInit();
-    }
-
-    void init(const QStringList &list);
-
-private:
-    void commonInit()
+    ArrayObject()
+    { init(); }
+    ArrayObject(const QStringList &list);
+    void init()
     { *propertyData(LengthPropertyIndex) = Primitive::fromInt32(0); }
 };
 
@@ -461,7 +415,7 @@ struct NumberObject: Object {
 struct ArrayObject: Object {
     V4_OBJECT2(ArrayObject, Object)
     Q_MANAGED_TYPE(ArrayObject)
-    V4_INTERNALCLASS(ArrayObject)
+    V4_INTERNALCLASS(arrayClass)
     V4_PROTOTYPE(arrayPrototype)
 
     void init(ExecutionEngine *engine);
@@ -519,7 +473,7 @@ inline void Object::arraySet(uint index, const Value &value)
 
 template<>
 inline const ArrayObject *Value::as() const {
-    return isManaged() && m()->vtable()->type == Managed::Type_ArrayObject ? static_cast<const ArrayObject *>(this) : 0;
+    return isManaged() && m() && m()->vtable()->type == Managed::Type_ArrayObject ? static_cast<const ArrayObject *>(this) : 0;
 }
 
 #ifndef V4_BOOTSTRAP

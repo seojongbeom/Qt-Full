@@ -8,16 +8,15 @@
 // specific to the D3D9 renderer.
 
 #include "libANGLE/renderer/d3d/d3d9/renderer9_utils.h"
+#include "libANGLE/renderer/d3d/d3d9/formatutils9.h"
+#include "libANGLE/renderer/d3d/FramebufferD3D.h"
+#include "libANGLE/renderer/Workarounds.h"
+#include "libANGLE/formatutils.h"
+#include "libANGLE/Framebuffer.h"
+#include "libANGLE/renderer/d3d/d3d9/RenderTarget9.h"
 
 #include "common/mathutil.h"
 #include "common/debug.h"
-
-#include "libANGLE/formatutils.h"
-#include "libANGLE/Framebuffer.h"
-#include "libANGLE/renderer/d3d/d3d9/formatutils9.h"
-#include "libANGLE/renderer/d3d/d3d9/RenderTarget9.h"
-#include "libANGLE/renderer/d3d/FramebufferD3D.h"
-#include "libANGLE/renderer/d3d/WorkaroundsD3D.h"
 
 #include "third_party/systeminfo/SystemInfo.h"
 
@@ -209,8 +208,7 @@ D3DTEXTUREFILTERTYPE ConvertMagFilter(GLenum magFilter, float maxAnisotropy)
     return d3dMagFilter;
 }
 
-void ConvertMinFilter(GLenum minFilter, D3DTEXTUREFILTERTYPE *d3dMinFilter, D3DTEXTUREFILTERTYPE *d3dMipFilter,
-                      float *d3dLodBias, float maxAnisotropy, size_t baseLevel)
+void ConvertMinFilter(GLenum minFilter, D3DTEXTUREFILTERTYPE *d3dMinFilter, D3DTEXTUREFILTERTYPE *d3dMipFilter, float maxAnisotropy)
 {
     switch (minFilter)
     {
@@ -244,20 +242,6 @@ void ConvertMinFilter(GLenum minFilter, D3DTEXTUREFILTERTYPE *d3dMinFilter, D3DT
         UNREACHABLE();
     }
 
-    // Disabling mipmapping will always sample from level 0 of the texture. It is possible to work
-    // around this by modifying D3DSAMP_MAXMIPLEVEL to force a specific mip level to become the
-    // lowest sampled mip level and using a large negative value for D3DSAMP_MIPMAPLODBIAS to
-    // ensure that only the base mip level is sampled.
-    if (baseLevel > 0 && *d3dMipFilter == D3DTEXF_NONE)
-    {
-        *d3dMipFilter = D3DTEXF_POINT;
-        *d3dLodBias = -static_cast<float>(gl::IMPLEMENTATION_MAX_TEXTURE_LEVELS);
-    }
-    else
-    {
-        *d3dLodBias = 0.0f;
-    }
-
     if (maxAnisotropy > 1.0f)
     {
         *d3dMinFilter = D3DTEXF_ANISOTROPIC;
@@ -273,16 +257,6 @@ D3DMULTISAMPLE_TYPE GetMultisampleType(GLuint samples)
 
 namespace d3d9_gl
 {
-
-unsigned int GetReservedVertexUniformVectors()
-{
-    return 3;  // dx_ViewCoords, dx_ViewAdjust and dx_DepthRange.
-}
-
-unsigned int GetReservedFragmentUniformVectors()
-{
-    return 3;  // dx_ViewCoords, dx_DepthFront and dx_DepthRange.
-}
 
 GLsizei GetSamplesCount(D3DMULTISAMPLE_TYPE type)
 {
@@ -329,7 +303,7 @@ static gl::TextureCaps GenerateTextureFormatCaps(GLenum internalFormat, IDirect3
         }
 
         textureCaps.sampleCounts.insert(1);
-        for (unsigned int i = D3DMULTISAMPLE_2_SAMPLES; i <= D3DMULTISAMPLE_16_SAMPLES; i++)
+        for (size_t i = D3DMULTISAMPLE_2_SAMPLES; i <= D3DMULTISAMPLE_16_SAMPLES; i++)
         {
             D3DMULTISAMPLE_TYPE multisampleType = D3DMULTISAMPLE_TYPE(i);
 
@@ -344,14 +318,8 @@ static gl::TextureCaps GenerateTextureFormatCaps(GLenum internalFormat, IDirect3
     return textureCaps;
 }
 
-void GenerateCaps(IDirect3D9 *d3d9,
-                  IDirect3DDevice9 *device,
-                  D3DDEVTYPE deviceType,
-                  UINT adapter,
-                  gl::Caps *caps,
-                  gl::TextureCapsMap *textureCapsMap,
-                  gl::Extensions *extensions,
-                  gl::Limitations *limitations)
+void GenerateCaps(IDirect3D9 *d3d9, IDirect3DDevice9 *device, D3DDEVTYPE deviceType, UINT adapter, gl::Caps *caps,
+                  gl::TextureCapsMap *textureCapsMap, gl::Extensions *extensions)
 {
     D3DCAPS9 deviceCaps;
     if (FAILED(d3d9->GetDeviceCaps(adapter, deviceType, &deviceCaps)))
@@ -445,9 +413,9 @@ void GenerateCaps(IDirect3D9 *d3d9,
     // Vertex shader limits
     caps->maxVertexAttributes = 16;
 
+    const size_t reservedVertexUniformVectors = 2; // dx_ViewAdjust and dx_DepthRange.
     const size_t MAX_VERTEX_CONSTANT_VECTORS_D3D9 = 256;
-    caps->maxVertexUniformVectors =
-        MAX_VERTEX_CONSTANT_VECTORS_D3D9 - GetReservedVertexUniformVectors();
+    caps->maxVertexUniformVectors = MAX_VERTEX_CONSTANT_VECTORS_D3D9 - reservedVertexUniformVectors;
     caps->maxVertexUniformComponents = caps->maxVertexUniformVectors * 4;
 
     caps->maxVertexUniformBlocks = 0;
@@ -473,12 +441,12 @@ void GenerateCaps(IDirect3D9 *d3d9,
     }
 
     // Fragment shader limits
+    const size_t reservedPixelUniformVectors = 3; // dx_ViewCoords, dx_DepthFront and dx_DepthRange.
+
     const size_t MAX_PIXEL_CONSTANT_VECTORS_SM3 = 224;
     const size_t MAX_PIXEL_CONSTANT_VECTORS_SM2 = 32;
-    caps->maxFragmentUniformVectors =
-        ((deviceCaps.PixelShaderVersion >= D3DPS_VERSION(3, 0)) ? MAX_PIXEL_CONSTANT_VECTORS_SM3
-                                                                : MAX_PIXEL_CONSTANT_VECTORS_SM2) -
-        GetReservedFragmentUniformVectors();
+    caps->maxFragmentUniformVectors = ((deviceCaps.PixelShaderVersion >= D3DPS_VERSION(3, 0)) ? MAX_PIXEL_CONSTANT_VECTORS_SM3
+                                                                                              : MAX_PIXEL_CONSTANT_VECTORS_SM2) - reservedPixelUniformVectors;
     caps->maxFragmentUniformComponents = caps->maxFragmentUniformVectors * 4;
     caps->maxFragmentUniformBlocks = 0;
     caps->maxFragmentInputComponents = caps->maxVertexOutputComponents;
@@ -504,12 +472,10 @@ void GenerateCaps(IDirect3D9 *d3d9,
     caps->maxTransformFeedbackSeparateAttributes = 0;
     caps->maxTransformFeedbackSeparateComponents = 0;
 
-    // Multisample limits
-    caps->maxSamples = maxSamples;
-
     // GL extension support
     extensions->setTextureExtensionSupport(*textureCapsMap);
     extensions->elementIndexUint = deviceCaps.MaxVertexIndex >= (1 << 16);
+    extensions->packedDepthStencil = true;
     extensions->getProgramBinary = true;
     extensions->rgb8rgba8 = true;
     extensions->readFormatBGRA = true;
@@ -520,7 +486,7 @@ void GenerateCaps(IDirect3D9 *d3d9,
     // textureRG is emulated and not performant.
     extensions->textureRG = false;
 
-    D3DADAPTER_IDENTIFIER9 adapterId = {};
+    D3DADAPTER_IDENTIFIER9 adapterId = { 0 };
     if (SUCCEEDED(d3d9->GetAdapterIdentifier(adapter, 0, &adapterId)))
     {
         // ATI cards on XP have problems with non-power-of-two textures.
@@ -558,11 +524,11 @@ void GenerateCaps(IDirect3D9 *d3d9,
     SafeRelease(eventQuery);
 
     extensions->timerQuery = false; // Unimplemented
-    extensions->disjointTimerQuery     = false;
     extensions->robustness = true;
     extensions->blendMinMax = true;
     extensions->framebufferBlit = true;
     extensions->framebufferMultisample = true;
+    extensions->maxSamples = maxSamples;
     extensions->instancedArrays = deviceCaps.PixelShaderVersion >= D3DPS_VERSION(3, 0);
     extensions->packReverseRowOrder = true;
     extensions->standardDerivatives = (deviceCaps.PS20Caps.Caps & D3DPS20CAPS_GRADIENTINSTRUCTIONS) != 0;
@@ -570,27 +536,7 @@ void GenerateCaps(IDirect3D9 *d3d9,
     extensions->fragDepth = true;
     extensions->textureUsage = true;
     extensions->translatedShaderSource = true;
-    extensions->fboRenderMipmap = false;
-    extensions->discardFramebuffer = false; // It would be valid to set this to true, since glDiscardFramebufferEXT is just a hint
     extensions->colorBufferFloat = false;
-    extensions->debugMarker = true;
-    extensions->eglImage               = true;
-    extensions->unpackSubimage         = true;
-    extensions->packSubimage           = true;
-    extensions->vertexArrayObject      = true;
-    extensions->noError                = true;
-
-    // D3D9 has no concept of separate masks and refs for front and back faces in the depth stencil
-    // state.
-    limitations->noSeparateStencilRefsAndMasks = true;
-
-    // D3D9 shader models have limited support for looping, so the Appendix A
-    // index/loop limitations are necessary. Workarounds that are needed to
-    // support dynamic indexing of vectors on HLSL also don't work on D3D9.
-    limitations->shadersRequireIndexedLoopValidation = true;
-
-    // D3D9 cannot support constant color and alpha blend funcs together
-    limitations->noSimultaneousConstantColorAndAlphaBlendFunc = true;
 }
 
 }
@@ -625,9 +571,21 @@ void MakeValidSize(bool isImage, D3DFORMAT format, GLsizei *requestWidth, GLsize
     *levelOffset = upsampleCount;
 }
 
-WorkaroundsD3D GenerateWorkarounds()
+gl::Error GetAttachmentRenderTarget(const gl::FramebufferAttachment *attachment, RenderTarget9 **outRT)
 {
-    WorkaroundsD3D workarounds;
+    RenderTargetD3D *renderTarget = NULL;
+    gl::Error error = rx::GetAttachmentRenderTarget(attachment, &renderTarget);
+    if (error.isError())
+    {
+        return error;
+    }
+    *outRT = RenderTarget9::makeRenderTarget9(renderTarget);
+    return gl::Error(GL_NO_ERROR);
+}
+
+Workarounds GenerateWorkarounds()
+{
+    Workarounds workarounds;
     workarounds.mrtPerfWorkaround = true;
     workarounds.setDataFasterThanImageUpload = false;
     workarounds.useInstancedPointSpriteEmulation = false;

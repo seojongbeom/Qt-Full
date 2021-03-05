@@ -1,11 +1,10 @@
 TARGET     = QtOpenGLExtensions
 CONFIG += static
 
-qtConfig(opengl): CONFIG += opengl
-qtConfig(opengles2): CONFIG += opengles2
+contains(QT_CONFIG, opengl):CONFIG += opengl
+contains(QT_CONFIG, opengles2):CONFIG += opengles2
 
-DEFINES += QT_NO_CAST_FROM_ASCII QT_NO_FOREACH
-
+DEFINES += QT_NO_CAST_FROM_ASCII
 PRECOMPILED_HEADER =
 
 HEADERS = qopenglextensions.h

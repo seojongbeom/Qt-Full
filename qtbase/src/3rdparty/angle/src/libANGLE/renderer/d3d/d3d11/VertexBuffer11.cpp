@@ -7,14 +7,11 @@
 // VertexBuffer11.cpp: Defines the D3D11 VertexBuffer implementation.
 
 #include "libANGLE/renderer/d3d/d3d11/VertexBuffer11.h"
-
+#include "libANGLE/renderer/d3d/d3d11/Buffer11.h"
+#include "libANGLE/renderer/d3d/d3d11/Renderer11.h"
+#include "libANGLE/renderer/d3d/d3d11/formatutils11.h"
 #include "libANGLE/Buffer.h"
 #include "libANGLE/VertexAttribute.h"
-#include "libANGLE/formatutils.h"
-#include "libANGLE/renderer/d3d/d3d11/Buffer11.h"
-#include "libANGLE/renderer/d3d/d3d11/formatutils11.h"
-#include "libANGLE/renderer/d3d/d3d11/Renderer11.h"
-#include "libANGLE/renderer/d3d/d3d11/renderer11_utils.h"
 
 namespace rx
 {
@@ -56,21 +53,18 @@ gl::Error VertexBuffer11::initialize(unsigned int size, bool dynamicUsage)
         {
             return gl::Error(GL_OUT_OF_MEMORY, "Failed to allocate internal vertex buffer of size, %lu.", size);
         }
-
-        if (dynamicUsage)
-        {
-            d3d11::SetDebugName(mBuffer, "VertexBuffer11 (dynamic)");
-        }
-        else
-        {
-            d3d11::SetDebugName(mBuffer, "VertexBuffer11 (static)");
-        }
     }
 
     mBufferSize = size;
     mDynamicUsage = dynamicUsage;
 
     return gl::Error(GL_NO_ERROR);
+}
+
+VertexBuffer11 *VertexBuffer11::makeVertexBuffer11(VertexBuffer *vetexBuffer)
+{
+    ASSERT(HAS_DYNAMIC_TYPE(VertexBuffer11*, vetexBuffer));
+    return static_cast<VertexBuffer11*>(vetexBuffer);
 }
 
 gl::Error VertexBuffer11::mapResource()
@@ -104,20 +98,16 @@ void VertexBuffer11::hintUnmapResource()
     }
 }
 
-gl::Error VertexBuffer11::storeVertexAttributes(const gl::VertexAttribute &attrib,
-                                                GLenum currentValueType,
-                                                GLint start,
-                                                GLsizei count,
-                                                GLsizei instances,
-                                                unsigned int offset,
-                                                const uint8_t *sourceData)
+gl::Error VertexBuffer11::storeVertexAttributes(const gl::VertexAttribute &attrib, const gl::VertexAttribCurrentValueData &currentValue,
+                                                GLint start, GLsizei count, GLsizei instances, unsigned int offset)
 {
     if (!mBuffer)
     {
         return gl::Error(GL_OUT_OF_MEMORY, "Internal vertex buffer is not initialized.");
     }
 
-    int inputStride = static_cast<int>(ComputeVertexAttributeStride(attrib));
+    gl::Buffer *buffer = attrib.buffer.get();
+    int inputStride = ComputeVertexAttributeStride(attrib);
 
     // This will map the resource if it isn't already mapped.
     gl::Error error = mapResource();
@@ -128,16 +118,36 @@ gl::Error VertexBuffer11::storeVertexAttributes(const gl::VertexAttribute &attri
 
     uint8_t *output = mMappedResourceData + offset;
 
-    const uint8_t *input = sourceData;
+    const uint8_t *input = NULL;
+    if (attrib.enabled)
+    {
+        if (buffer)
+        {
+            BufferD3D *storage = GetImplAs<BufferD3D>(buffer);
+            error = storage->getData(&input);
+            if (error.isError())
+            {
+                return error;
+            }
+            input += static_cast<int>(attrib.offset);
+        }
+        else
+        {
+            input = static_cast<const uint8_t*>(attrib.pointer);
+        }
+    }
+    else
+    {
+        input = reinterpret_cast<const uint8_t*>(currentValue.FloatValues);
+    }
 
     if (instances == 0 || attrib.divisor == 0)
     {
         input += inputStride * start;
     }
 
-    gl::VertexFormatType vertexFormatType = gl::GetVertexFormatType(attrib, currentValueType);
-    const D3D_FEATURE_LEVEL featureLevel = mRenderer->getRenderer11DeviceCaps().featureLevel;
-    const d3d11::VertexFormat &vertexFormatInfo = d3d11::GetVertexFormatInfo(vertexFormatType, featureLevel);
+    gl::VertexFormat vertexFormat(attrib, currentValue.Type);
+    const d3d11::VertexFormat &vertexFormatInfo = d3d11::GetVertexFormatInfo(vertexFormat, mRenderer->getFeatureLevel());
     ASSERT(vertexFormatInfo.copyFunction != NULL);
     vertexFormatInfo.copyFunction(input, inputStride, count, output);
 
@@ -160,9 +170,8 @@ gl::Error VertexBuffer11::getSpaceRequired(const gl::VertexAttribute &attrib, GL
             elementCount = UnsignedCeilDivide(static_cast<unsigned int>(instances), attrib.divisor);
         }
 
-        gl::VertexFormatType formatType = gl::GetVertexFormatType(attrib);
-        const D3D_FEATURE_LEVEL featureLevel = mRenderer->getRenderer11DeviceCaps().featureLevel;
-        const d3d11::VertexFormat &vertexFormatInfo = d3d11::GetVertexFormatInfo(formatType, featureLevel);
+        gl::VertexFormat vertexFormat(attrib);
+        const d3d11::VertexFormat &vertexFormatInfo = d3d11::GetVertexFormatInfo(vertexFormat, mRenderer->getFeatureLevel());
         const d3d11::DXGIFormat &dxgiFormatInfo = d3d11::GetDXGIFormatInfo(vertexFormatInfo.nativeFormat);
         unsigned int elementSize = dxgiFormatInfo.pixelBytes;
         if (elementSize <= std::numeric_limits<unsigned int>::max() / elementCount)

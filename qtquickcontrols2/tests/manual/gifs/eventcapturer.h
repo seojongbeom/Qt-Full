@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -74,7 +74,7 @@ public:
 
     QVector<CapturedEvent> capturedEvents() const;
 protected:
-    bool eventFilter(QObject *object, QEvent *event) override;
+    bool eventFilter(QObject *object, QEvent *event) Q_DECL_OVERRIDE;
 
 private slots:
     void stopCapturing();

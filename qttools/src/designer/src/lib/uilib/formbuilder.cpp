@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -459,8 +453,7 @@ static void insertPlugins(QObject *o, QMap<QString, QDesignerCustomWidgetInterfa
     }
     // step 2) try with a collection of plugins
     if (QDesignerCustomWidgetCollectionInterface *c = qobject_cast<QDesignerCustomWidgetCollectionInterface *>(o)) {
-        const auto &collectionCustomWidgets = c->customWidgets();
-        for (QDesignerCustomWidgetInterface *iface : collectionCustomWidgets)
+        foreach (QDesignerCustomWidgetInterface *iface, c->customWidgets())
             customWidgets->insert(iface->name(), iface);
     }
 }
@@ -472,12 +465,11 @@ void QFormBuilder::updateCustomWidgets()
 {
     d->m_customWidgets.clear();
 
-#if QT_CONFIG(library)
-    for (const QString &path : qAsConst(d->m_pluginPaths)) {
+    foreach (const QString &path, d->m_pluginPaths) {
         const QDir dir(path);
         const QStringList candidates = dir.entryList(QDir::Files);
 
-        for (const QString &plugin : candidates) {
+        foreach (const QString &plugin, candidates) {
             if (!QLibrary::isLibrary(plugin))
                 continue;
 
@@ -490,12 +482,11 @@ void QFormBuilder::updateCustomWidgets()
                 insertPlugins(loader.instance(), &d->m_customWidgets);
         }
     }
-#endif // QT_CONFIG(library)
-
     // Check statically linked plugins
     const QObjectList staticPlugins = QPluginLoader::staticInstances();
-    for (QObject *o : staticPlugins)
-        insertPlugins(o, &d->m_customWidgets);
+    if (!staticPlugins.empty())
+        foreach (QObject *o, staticPlugins)
+            insertPlugins(o, &d->m_customWidgets);
 }
 
 /*!

@@ -27,7 +27,6 @@ qhp.QtPlatformHeaders.subprojects.classes.sortPages = true
 depends += \
     qtcore \
     qtgui \
-    qtwidgets \
     qtdoc
 
 headerdirs  += ..

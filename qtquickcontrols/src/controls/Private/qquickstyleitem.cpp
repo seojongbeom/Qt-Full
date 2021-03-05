@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,12 +42,12 @@
 #include <qstyle.h>
 #include <qstyleoption.h>
 #include <qapplication.h>
+#include <qsgsimpletexturenode.h>
 #include <qquickwindow.h>
 #include "private/qguiapplication_p.h"
 #include <QtQuick/private/qquickwindow_p.h>
 #include <QtQuick/private/qquickitem_p.h>
 #include <QtGui/qpa/qplatformtheme.h>
-#include <QtQuick/qsgninepatchnode.h>
 #include "../qquickmenuitem_p.h"
 
 QT_BEGIN_NAMESPACE
@@ -96,7 +93,123 @@ CGContextRef qt_mac_cg_context(const QPaintDevice *pdev)
 
 #endif
 
-QQuickStyleItem1::QQuickStyleItem1(QQuickItem *parent)
+class QQuickStyleNode : public QSGNinePatchNode
+{
+public:
+    QQuickStyleNode()
+        : m_geometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4)
+    {
+        m_geometry.setDrawingMode(GL_TRIANGLE_STRIP);
+        setGeometry(&m_geometry);
+        // The texture material has mipmap filtering set to Nearest by default. This is not ideal.
+        m_material.setMipmapFiltering(QSGTexture::None);
+        setMaterial(&m_material);
+    }
+
+    ~QQuickStyleNode()
+    {
+        delete m_material.texture();
+    }
+
+    virtual void setTexture(QSGTexture *texture)
+    {
+        delete m_material.texture();
+        m_material.setTexture(texture);
+    }
+
+    virtual void setBounds(const QRectF &bounds)
+    {
+        m_bounds = bounds;
+    }
+
+    virtual void setDevicePixelRatio(qreal ratio)
+    {
+        m_devicePixelRatio = ratio;
+    }
+
+    virtual void setPadding(qreal left, qreal top, qreal right, qreal bottom)
+    {
+        m_paddingLeft = left;
+        m_paddingTop = top;
+        m_paddingRight = right;
+        m_paddingBottom = bottom;
+    }
+
+    virtual void update() {
+        QSGTexture *texture = m_material.texture();
+
+        if (m_paddingLeft <= 0 && m_paddingTop <= 0 && m_paddingRight <= 0 && m_paddingBottom <= 0) {
+            m_geometry.allocate(4, 0);
+            QSGGeometry::updateTexturedRectGeometry(&m_geometry, m_bounds, texture->normalizedTextureSubRect());
+            markDirty(QSGNode::DirtyGeometry | QSGNode::DirtyMaterial);
+            return;
+        }
+
+        QRectF tc = texture->normalizedTextureSubRect();
+        QSize ts = texture->textureSize();
+        ts.setHeight(ts.height() / m_devicePixelRatio);
+        ts.setWidth(ts.width() / m_devicePixelRatio);
+
+        qreal invtw = tc.width() / ts.width();
+        qreal invth = tc.height() / ts.height();
+
+        struct Coord { qreal p; qreal t; };
+        Coord cx[4] = { { m_bounds.left(), tc.left() },
+                        { m_bounds.left() + m_paddingLeft, tc.left() + m_paddingLeft * invtw },
+                        { m_bounds.right() - m_paddingRight, tc.right() - m_paddingRight * invtw },
+                        { m_bounds.right(), tc.right() }
+                      };
+        Coord cy[4] = { { m_bounds.top(), tc.top() },
+                        { m_bounds.top() + m_paddingTop, tc.top() + m_paddingTop * invth },
+                        { m_bounds.bottom() - m_paddingBottom, tc.bottom() - m_paddingBottom * invth },
+                        { m_bounds.bottom(), tc.bottom() }
+                      };
+
+        m_geometry.allocate(16, 28);
+        QSGGeometry::TexturedPoint2D *v = m_geometry.vertexDataAsTexturedPoint2D();
+        for (int y=0; y<4; ++y) {
+            for (int x=0; x<4; ++x) {
+                v->set(cx[x].p, cy[y].p, cx[x].t, cy[y].t);
+                ++v;
+            }
+        }
+
+        quint16 *i = m_geometry.indexDataAsUShort();
+        for (int r=0; r<3; ++r) {
+            if (r > 0)
+                *i++ = 4 * r;
+            for (int c=0; c<4; ++c) {
+                i[0] = 4 * r + c;
+                i[1] = 4 * r + c + 4;
+                i+=2;
+            }
+            if (r < 2)
+                *i++ = 4 * r + 3 + 4;
+        }
+
+        markDirty(QSGNode::DirtyGeometry | QSGNode::DirtyMaterial);
+
+//        v = m_geometry.vertexDataAsTexturedPoint2D();
+//        for (int j=0; j<m_geometry.vertexCount(); ++j)
+//            qDebug() << v[j].x << v[j].y << v[j].tx << v[j].ty;
+
+//        i = m_geometry.indexDataAsUShort();
+//        for (int j=0; j<m_geometry.indexCount(); ++j)
+//            qDebug() << i[j];
+
+    }
+
+    QRectF m_bounds;
+    qreal m_devicePixelRatio;
+    qreal m_paddingLeft;
+    qreal m_paddingTop;
+    qreal m_paddingRight;
+    qreal m_paddingBottom;
+    QSGGeometry m_geometry;
+    QSGTextureMaterial m_material;
+};
+
+QQuickStyleItem::QQuickStyleItem(QQuickItem *parent)
     : QQuickItem(parent),
     m_styleoption(0),
     m_itemType(Undefined),
@@ -159,46 +272,34 @@ QQuickStyleItem1::QQuickStyleItem1(QQuickItem *parent)
     connect(this, SIGNAL(contentHeightChanged(int)), this, SLOT(updateBaselineOffset()));
 }
 
-QQuickStyleItem1::~QQuickStyleItem1()
+QQuickStyleItem::~QQuickStyleItem()
 {
     if (const QStyleOptionButton *aux = qstyleoption_cast<const QStyleOptionButton*>(m_styleoption))
         delete aux;
-#if QT_CONFIG(itemviews)
     else if (const QStyleOptionViewItem *aux = qstyleoption_cast<const QStyleOptionViewItem*>(m_styleoption))
         delete aux;
-#endif
     else if (const QStyleOptionHeader *aux = qstyleoption_cast<const QStyleOptionHeader*>(m_styleoption))
         delete aux;
     else if (const QStyleOptionToolButton *aux = qstyleoption_cast<const QStyleOptionToolButton*>(m_styleoption))
         delete aux;
-#if QT_CONFIG(toolbar)
     else if (const QStyleOptionToolBar *aux = qstyleoption_cast<const QStyleOptionToolBar*>(m_styleoption))
         delete aux;
-#endif
-#if QT_CONFIG(tabbar)
     else if (const QStyleOptionTab *aux = qstyleoption_cast<const QStyleOptionTab*>(m_styleoption))
         delete aux;
-#endif
     else if (const QStyleOptionFrame *aux = qstyleoption_cast<const QStyleOptionFrame*>(m_styleoption))
         delete aux;
     else if (const QStyleOptionFocusRect *aux = qstyleoption_cast<const QStyleOptionFocusRect*>(m_styleoption))
         delete aux;
-#if QT_CONFIG(tabwidget)
     else if (const QStyleOptionTabWidgetFrame *aux = qstyleoption_cast<const QStyleOptionTabWidgetFrame*>(m_styleoption))
         delete aux;
-#endif
     else if (const QStyleOptionMenuItem *aux = qstyleoption_cast<const QStyleOptionMenuItem*>(m_styleoption))
         delete aux;
     else if (const QStyleOptionComboBox *aux = qstyleoption_cast<const QStyleOptionComboBox*>(m_styleoption))
         delete aux;
-#if QT_CONFIG(spinbox)
     else if (const QStyleOptionSpinBox *aux = qstyleoption_cast<const QStyleOptionSpinBox*>(m_styleoption))
         delete aux;
-#endif
-#if QT_CONFIG(slider)
     else if (const QStyleOptionSlider *aux = qstyleoption_cast<const QStyleOptionSlider*>(m_styleoption))
         delete aux;
-#endif
     else if (const QStyleOptionProgressBar *aux = qstyleoption_cast<const QStyleOptionProgressBar*>(m_styleoption))
         delete aux;
     else if (const QStyleOptionGroupBox *aux = qstyleoption_cast<const QStyleOptionGroupBox*>(m_styleoption))
@@ -209,7 +310,7 @@ QQuickStyleItem1::~QQuickStyleItem1()
     m_styleoption = 0;
 }
 
-void QQuickStyleItem1::initStyleOption()
+void QQuickStyleItem::initStyleOption()
 {
     if (m_styleoption)
         m_styleoption->state = 0;
@@ -261,7 +362,6 @@ void QQuickStyleItem1::initStyleOption()
         }
     }
         break;
-#if QT_CONFIG(itemviews)
     case ItemRow: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionViewItem();
@@ -272,14 +372,14 @@ void QQuickStyleItem1::initStyleOption()
             opt->features |= QStyleOptionViewItem::Alternate;
     }
         break;
-#endif // QT_CONFIG(itemviews)
+
     case Splitter: {
         if (!m_styleoption) {
             m_styleoption = new QStyleOption;
         }
     }
         break;
-#if QT_CONFIG(itemviews)
+
     case Item: {
         if (!m_styleoption) {
             m_styleoption = new QStyleOptionViewItem();
@@ -301,7 +401,6 @@ void QQuickStyleItem1::initStyleOption()
         }
     }
         break;
-#endif // QT_CONFIG(itemviews)
     case ItemBranchIndicator: {
         if (!m_styleoption)
             m_styleoption = new QStyleOption;
@@ -371,14 +470,11 @@ void QQuickStyleItem1::initStyleOption()
 
     }
         break;
-#if QT_CONFIG(toolbar)
     case ToolBar: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionToolBar();
     }
         break;
-#endif
-#if QT_CONFIG(tabbar)
     case Tab: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionTab();
@@ -412,7 +508,7 @@ void QQuickStyleItem1::initStyleOption()
 
 
     } break;
-#endif // QT_CONFIG(tabbar)
+
     case Frame: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionFrame();
@@ -430,7 +526,6 @@ void QQuickStyleItem1::initStyleOption()
         m_styleoption->state |= QStyle::State_KeyboardFocusChange;
     }
         break;
-#if QT_CONFIG(tabwidget)
     case TabFrame: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionTabWidgetFrame();
@@ -445,7 +540,6 @@ void QQuickStyleItem1::initStyleOption()
         opt->leftCornerWidgetSize = QSize(value(), 0);
     }
         break;
-#endif // QT_CONFIG(tabwidget)
     case MenuBar:
         if (!m_styleoption) {
             QStyleOptionMenuItem *menuOpt = new QStyleOptionMenuItem();
@@ -486,19 +580,19 @@ void QQuickStyleItem1::initStyleOption()
         // For GTK style. See below, in setElementType()
         setProperty("_q_isComboBoxPopupItem", m_itemType == ComboBoxItem);
 
-        QQuickMenuItemType1::MenuItemType type =
-                static_cast<QQuickMenuItemType1::MenuItemType>(m_properties[QStringLiteral("type")].toInt());
-        if (type == QQuickMenuItemType1::ScrollIndicator) {
+        QQuickMenuItemType::MenuItemType type =
+                static_cast<QQuickMenuItemType::MenuItemType>(m_properties[QStringLiteral("type")].toInt());
+        if (type == QQuickMenuItemType::ScrollIndicator) {
             int scrollerDirection = m_properties[QStringLiteral("scrollerDirection")].toInt();
             opt->menuItemType = QStyleOptionMenuItem::Scroller;
             opt->state |= scrollerDirection == Qt::UpArrow ?
                         QStyle::State_UpArrow : QStyle::State_DownArrow;
-        } else if (type == QQuickMenuItemType1::Separator) {
+        } else if (type == QQuickMenuItemType::Separator) {
             opt->menuItemType = QStyleOptionMenuItem::Separator;
         } else {
             opt->text = text();
 
-            if (type == QQuickMenuItemType1::Menu) {
+            if (type == QQuickMenuItemType::Menu) {
                 opt->menuItemType = QStyleOptionMenuItem::SubMenu;
             } else {
                 opt->menuItemType = QStyleOptionMenuItem::Normal;
@@ -581,7 +675,6 @@ void QQuickStyleItem1::initStyleOption()
 #endif
     }
         break;
-#if QT_CONFIG(spinbox)
     case SpinBox: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionSpinBox();
@@ -601,8 +694,6 @@ void QQuickStyleItem1::initStyleOption()
             opt->stepEnabled |= QAbstractSpinBox::StepDownEnabled;
     }
         break;
-#endif // QT_CONFIG(spinbox)
-#if QT_CONFIG(slider)
     case Slider:
     case Dial:
     {
@@ -639,7 +730,6 @@ void QQuickStyleItem1::initStyleOption()
         opt->activeSubControls = QStyle::SC_SliderHandle;
     }
         break;
-#endif // QT_CONFIG(slider)
     case ProgressBar: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionProgressBar();
@@ -670,7 +760,6 @@ void QQuickStyleItem1::initStyleOption()
 
     }
         break;
-#if QT_CONFIG(slider)
     case ScrollBar: {
         if (!m_styleoption)
             m_styleoption = new QStyleOptionSlider();
@@ -696,7 +785,6 @@ void QQuickStyleItem1::initStyleOption()
         setTransient(qApp->style()->styleHint(QStyle::SH_ScrollBar_Transient, m_styleoption));
         break;
     }
-#endif // QT_CONFIG(slider)
     default:
         break;
     }
@@ -757,7 +845,7 @@ void QQuickStyleItem1::initStyleOption()
 
 }
 
-void QQuickStyleItem1::resolvePalette()
+void QQuickStyleItem::resolvePalette()
 {
     if (QCoreApplication::testAttribute(Qt::AA_SetPalette))
         return;
@@ -826,7 +914,7 @@ void QQuickStyleItem1::resolvePalette()
  *   QFusionStyle = "fusion"
  */
 
-QString QQuickStyleItem1::style() const
+QString QQuickStyleItem::style() const
 {
     QString style = qApp->style()->metaObject()->className();
     style = style.toLower();
@@ -837,7 +925,7 @@ QString QQuickStyleItem1::style() const
     return style;
 }
 
-QString QQuickStyleItem1::hitTest(int px, int py)
+QString QQuickStyleItem::hitTest(int px, int py)
 {
     QStyle::SubControl subcontrol = QStyle::SC_All;
     switch (m_itemType) {
@@ -893,7 +981,7 @@ QString QQuickStyleItem1::hitTest(int px, int py)
     return QStringLiteral("none");
 }
 
-QSize QQuickStyleItem1::sizeFromContents(int width, int height)
+QSize QQuickStyleItem::sizeFromContents(int width, int height)
 {
     initStyleOption();
 
@@ -1051,7 +1139,7 @@ QSize QQuickStyleItem1::sizeFromContents(int width, int height)
     }    return size;
 }
 
-qreal QQuickStyleItem1::baselineOffset()
+qreal QQuickStyleItem::baselineOffset()
 {
     QRect r;
     bool ceilResult = true; // By default baseline offset rounding is done upwards
@@ -1075,14 +1163,12 @@ qreal QQuickStyleItem1::baselineOffset()
                 r.adjust(0,0,0,1);
         }
         break;
-#if QT_CONFIG(spinbox)
     case SpinBox:
         if (const QStyleOptionSpinBox *spinbox = qstyleoption_cast<const QStyleOptionSpinBox *>(m_styleoption)) {
             r = qApp->style()->subControlRect(QStyle::CC_SpinBox, spinbox, QStyle::SC_SpinBoxEditField);
             ceilResult = false;
         }
         break;
-#endif
     default:
         break;
     }
@@ -1114,14 +1200,14 @@ qreal QQuickStyleItem1::baselineOffset()
     return 0.;
 }
 
-void QQuickStyleItem1::updateBaselineOffset()
+void QQuickStyleItem::updateBaselineOffset()
 {
     const qreal baseline = baselineOffset();
     if (baseline > 0)
         setBaselineOffset(baseline);
 }
 
-void QQuickStyleItem1::setContentWidth(int arg)
+void QQuickStyleItem::setContentWidth(int arg)
 {
     if (m_contentWidth != arg) {
         m_contentWidth = arg;
@@ -1129,7 +1215,7 @@ void QQuickStyleItem1::setContentWidth(int arg)
     }
 }
 
-void QQuickStyleItem1::setContentHeight(int arg)
+void QQuickStyleItem::setContentHeight(int arg)
 {
     if (m_contentHeight != arg) {
         m_contentHeight = arg;
@@ -1137,20 +1223,20 @@ void QQuickStyleItem1::setContentHeight(int arg)
     }
 }
 
-void QQuickStyleItem1::updateSizeHint()
+void QQuickStyleItem::updateSizeHint()
 {
     QSize implicitSize = sizeFromContents(m_contentWidth, m_contentHeight);
     setImplicitSize(implicitSize.width(), implicitSize.height());
 }
 
-void QQuickStyleItem1::updateRect()
+void QQuickStyleItem::updateRect()
 {
     initStyleOption();
     m_styleoption->rect.setWidth(width());
     m_styleoption->rect.setHeight(height());
 }
 
-int QQuickStyleItem1::pixelMetric(const QString &metric)
+int QQuickStyleItem::pixelMetric(const QString &metric)
 {
 
     if (metric == QLatin1String("scrollbarExtent"))
@@ -1198,7 +1284,7 @@ int QQuickStyleItem1::pixelMetric(const QString &metric)
     return 0;
 }
 
-QVariant QQuickStyleItem1::styleHint(const QString &metric)
+QVariant QQuickStyleItem::styleHint(const QString &metric)
 {
     initStyleOption();
     if (metric == QLatin1String("comboboxpopup")) {
@@ -1224,16 +1310,14 @@ QVariant QQuickStyleItem1::styleHint(const QString &metric)
         return qApp->style()->styleHint(QStyle::SH_ItemView_ActivateItemOnSingleClick);
     else if (metric == QLatin1String("submenupopupdelay"))
         return qApp->style()->styleHint(QStyle::SH_Menu_SubMenuPopupDelay, m_styleoption);
-#if QT_CONFIG(wheelevent)
     else if (metric == QLatin1String("wheelScrollLines"))
         return qApp->wheelScrollLines();
-#endif
     return 0;
 
     // Add SH_Menu_SpaceActivatesItem
 }
 
-void QQuickStyleItem1::setHints(const QVariantMap &str)
+void QQuickStyleItem::setHints(const QVariantMap &str)
 {
     if (m_hints != str) {
         m_hints = str;
@@ -1251,13 +1335,13 @@ void QQuickStyleItem1::setHints(const QVariantMap &str)
     }
 }
 
-void QQuickStyleItem1::resetHints()
+void QQuickStyleItem::resetHints()
 {
     m_hints.clear();
 }
 
 
-void QQuickStyleItem1::setElementType(const QString &str)
+void QQuickStyleItem::setElementType(const QString &str)
 {
     if (m_type == str)
         return;
@@ -1348,7 +1432,7 @@ void QQuickStyleItem1::setElementType(const QString &str)
     updateSizeHint();
 }
 
-QRectF QQuickStyleItem1::subControlRect(const QString &subcontrolString)
+QRectF QQuickStyleItem::subControlRect(const QString &subcontrolString)
 {
     QStyle::SubControl subcontrol = QStyle::SC_None;
     initStyleOption();
@@ -1412,9 +1496,9 @@ QRectF QQuickStyleItem1::subControlRect(const QString &subcontrolString)
 }
 
 namespace  {
-class QHighDpiPixmapsEnabler1 {
+class QHighDpiPixmapsEnabler {
 public:
-    QHighDpiPixmapsEnabler1()
+    QHighDpiPixmapsEnabler()
     :wasEnabled(false)
     {
         if (!qApp->testAttribute(Qt::AA_UseHighDpiPixmaps)) {
@@ -1423,7 +1507,7 @@ public:
         }
     }
 
-    ~QHighDpiPixmapsEnabler1()
+    ~QHighDpiPixmapsEnabler()
     {
         if (wasEnabled)
             qApp->setAttribute(Qt::AA_UseHighDpiPixmaps, false);
@@ -1433,7 +1517,7 @@ private:
 };
 }
 
-void QQuickStyleItem1::paint(QPainter *painter)
+void QQuickStyleItem::paint(QPainter *painter)
 {
     initStyleOption();
     if (QStyleOptionMenuItem *opt = qstyleoption_cast<QStyleOptionMenuItem*>(m_styleoption))
@@ -1450,7 +1534,7 @@ void QQuickStyleItem1::paint(QPainter *painter)
     // Set AA_UseHighDpiPixmaps when calling style code to make QIcon return
     // "retina" pixmaps. The flag is controlled by the application so we can't
     // set it unconditinally.
-    QHighDpiPixmapsEnabler1 enabler;
+    QHighDpiPixmapsEnabler enabler;
 
     switch (m_itemType) {
     case Button:
@@ -1709,30 +1793,30 @@ void QQuickStyleItem1::paint(QPainter *painter)
     }
 }
 
-qreal QQuickStyleItem1::textWidth(const QString &text)
+qreal QQuickStyleItem::textWidth(const QString &text)
 {
     QFontMetricsF fm = QFontMetricsF(m_styleoption->fontMetrics);
     return fm.boundingRect(text).width();
 }
 
-qreal QQuickStyleItem1::textHeight(const QString &text)
+qreal QQuickStyleItem::textHeight(const QString &text)
 {
     QFontMetricsF fm = QFontMetricsF(m_styleoption->fontMetrics);
     return text.isEmpty() ? fm.height() :
                             fm.boundingRect(text).height();
 }
 
-QString QQuickStyleItem1::elidedText(const QString &text, int elideMode, int width)
+QString QQuickStyleItem::elidedText(const QString &text, int elideMode, int width)
 {
     return m_styleoption->fontMetrics.elidedText(text, Qt::TextElideMode(elideMode), width);
 }
 
-bool QQuickStyleItem1::hasThemeIcon(const QString &icon) const
+bool QQuickStyleItem::hasThemeIcon(const QString &icon) const
 {
     return QIcon::hasThemeIcon(icon);
 }
 
-bool QQuickStyleItem1::event(QEvent *ev)
+bool QQuickStyleItem::event(QEvent *ev)
 {
     if (ev->type() == QEvent::StyleAnimationUpdate) {
         if (isVisible()) {
@@ -1747,7 +1831,7 @@ bool QQuickStyleItem1::event(QEvent *ev)
     return QQuickItem::event(ev);
 }
 
-void QQuickStyleItem1::setTextureWidth(int w)
+void QQuickStyleItem::setTextureWidth(int w)
 {
     if (m_textureWidth == w)
         return;
@@ -1756,7 +1840,7 @@ void QQuickStyleItem1::setTextureWidth(int w)
     update();
 }
 
-void QQuickStyleItem1::setTextureHeight(int h)
+void QQuickStyleItem::setTextureHeight(int h)
 {
     if (m_textureHeight == h)
         return;
@@ -1765,7 +1849,7 @@ void QQuickStyleItem1::setTextureHeight(int h)
     update();
 }
 
-QSGNode *QQuickStyleItem1::updatePaintNode(QSGNode *node, UpdatePaintNodeData *)
+QSGNode *QQuickStyleItem::updatePaintNode(QSGNode *node, UpdatePaintNodeData *)
 {
     if (m_image.isNull()) {
         delete node;
@@ -1773,8 +1857,11 @@ QSGNode *QQuickStyleItem1::updatePaintNode(QSGNode *node, UpdatePaintNodeData *)
     }
 
     QSGNinePatchNode *styleNode = static_cast<QSGNinePatchNode *>(node);
-    if (!styleNode)
-        styleNode = window()->createNinePatchNode();
+    if (!styleNode) {
+        styleNode = QQuickItemPrivate::get(this)->sceneGraphContext()->createNinePatchNode();
+        if (!styleNode)
+            styleNode = new QQuickStyleNode;
+    }
 
 #ifdef QSG_RUNTIME_DESCRIPTION
     qsgnode_set_description(styleNode,
@@ -1793,7 +1880,7 @@ QSGNode *QQuickStyleItem1::updatePaintNode(QSGNode *node, UpdatePaintNodeData *)
     return styleNode;
 }
 
-void QQuickStyleItem1::updatePolish()
+void QQuickStyleItem::updatePolish()
 {
     if (width() >= 1 && height() >= 1) { // Note these are reals so 1 pixel is minimum
         float devicePixelRatio = window() ? window()->devicePixelRatio() : qApp->devicePixelRatio();
@@ -1812,7 +1899,7 @@ void QQuickStyleItem1::updatePolish()
     }
 }
 
-QPixmap QQuickTableRowImageProvider1::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
+QPixmap QQuickTableRowImageProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
 {
     Q_UNUSED (requestedSize);
     int width = 16;
@@ -1821,7 +1908,7 @@ QPixmap QQuickTableRowImageProvider1::requestPixmap(const QString &id, QSize *si
         *size = QSize(width, height);
 
     QPixmap pixmap(width, height);
-#if QT_CONFIG(itemviews)
+
     QStyleOptionViewItem opt;
     opt.state |= QStyle::State_Enabled;
     opt.rect = QRect(0, 0, width, height);
@@ -1850,9 +1937,6 @@ QPixmap QQuickTableRowImageProvider1::requestPixmap(const QString &id, QSize *si
         QPainter pixpainter(&pixmap);
         qApp->style()->drawPrimitive(QStyle::PE_PanelItemViewRow, &opt, &pixpainter);
     }
-#else
-    Q_UNUSED(id);
-#endif
     return pixmap;
 }
 

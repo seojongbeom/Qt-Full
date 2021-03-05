@@ -40,7 +40,7 @@
 #include <machine/ieee.h>
 #endif
 
-#if (OS(QNX) && defined(_CPPLIB_VER)) || COMPILER(INTEL)
+#if OS(QNX) && defined(_CPPLIB_VER)
 // FIXME: Look into a way to have cmath import its functions into both the standard and global
 // namespace. For now, we include math.h since the QNX cmath header only imports its functions
 // into the standard namespace.
@@ -77,7 +77,7 @@ inline double wtf_ceil(double x) { return copysign(ceil(x), x); }
 
 #endif
 
-#if OS(SOLARIS) && __cplusplus < 201103L
+#if OS(SOLARIS)
 
 namespace std {
 

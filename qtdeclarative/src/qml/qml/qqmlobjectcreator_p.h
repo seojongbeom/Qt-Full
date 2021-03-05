@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,6 +47,7 @@
 #include <private/qqmlimport_p.h>
 #include <private/qqmltypenamecache_p.h>
 #include <private/qv4compileddata_p.h>
+#include <private/qqmlcompiler_p.h>
 #include <private/qqmltypecompiler_p.h>
 #include <private/qfinitestack_p.h>
 #include <private/qrecursionwatcher_p.h>
@@ -65,7 +60,7 @@ QT_BEGIN_NAMESPACE
 class QQmlAbstractBinding;
 struct QQmlTypeCompiler;
 class QQmlInstantiationInterrupt;
-class QQmlIncubatorPrivate;
+struct QQmlVmeProfiler;
 
 struct QQmlObjectCreatorSharedState : public QSharedData
 {
@@ -81,39 +76,39 @@ struct QQmlObjectCreatorSharedState : public QSharedData
     QRecursionNode recursionNode;
 };
 
-class Q_QML_PRIVATE_EXPORT QQmlObjectCreator
+class QQmlObjectCreator
 {
     Q_DECLARE_TR_FUNCTIONS(QQmlObjectCreator)
 public:
-    QQmlObjectCreator(QQmlContextData *parentContext, QV4::CompiledData::CompilationUnit *compilationUnit, QQmlContextData *creationContext, QQmlIncubatorPrivate  *incubator = 0);
+    QQmlObjectCreator(QQmlContextData *parentContext, QQmlCompiledData *compiledData, QQmlContextData *creationContext, void *activeVMEDataForRootContext = 0);
     ~QQmlObjectCreator();
 
     QObject *create(int subComponentIndex = -1, QObject *parent = 0, QQmlInstantiationInterrupt *interrupt = 0);
-    bool populateDeferredProperties(QObject *instance, QQmlData::DeferredData *deferredData);
-    bool populateDeferredBinding(const QQmlProperty &qmlProperty, QQmlData::DeferredData *deferredData, const QV4::CompiledData::Binding *binding);
+    bool populateDeferredProperties(QObject *instance);
     QQmlContextData *finalize(QQmlInstantiationInterrupt &interrupt);
     void clear();
 
-    QQmlComponentAttached **componentAttachment() const { return &sharedState->componentAttached; }
+    QQmlComponentAttached **componentAttachment() { return &sharedState->componentAttached; }
 
-    QList<QQmlEnginePrivate::FinalizeCallback> *finalizeCallbacks() const { return &sharedState->finalizeCallbacks; }
+    QList<QQmlEnginePrivate::FinalizeCallback> *finalizeCallbacks() { return &sharedState->finalizeCallbacks; }
 
     QList<QQmlError> errors;
 
-    QQmlContextData *parentContextData() const { return parentContext.contextData(); }
+    QQmlContextData *parentContextData() { return parentContext.contextData(); }
     QFiniteStack<QPointer<QObject> > &allCreatedObjects() const { return sharedState->allCreatedObjects; }
 
 private:
-    QQmlObjectCreator(QQmlContextData *contextData, QV4::CompiledData::CompilationUnit *compilationUnit, QQmlObjectCreatorSharedState *inheritedSharedState);
+    QQmlObjectCreator(QQmlContextData *contextData, QQmlCompiledData *compiledData, QQmlObjectCreatorSharedState *inheritedSharedState);
 
     void init(QQmlContextData *parentContext);
 
     QObject *createInstance(int index, QObject *parent = 0, bool isContextObject = false);
 
     bool populateInstance(int index, QObject *instance,
-                          QObject *bindingTarget, const QQmlPropertyData *valueTypeProperty);
+                          QObject *bindingTarget, const QQmlPropertyData *valueTypeProperty,
+                          const QBitArray &bindingsToSkip = QBitArray());
 
-    void setupBindings(bool applyDeferredBindings = false);
+    void setupBindings(const QBitArray &bindingsToSkip);
     bool setPropertyBinding(const QQmlPropertyData *property, const QV4::CompiledData::Binding *binding);
     void setPropertyValue(const QQmlPropertyData *property, const QV4::CompiledData::Binding *binding);
     void setupFunctions();
@@ -121,10 +116,9 @@ private:
     QString stringAt(int idx) const { return qmlUnit->stringAt(idx); }
     void recordError(const QV4::CompiledData::Location &location, const QString &description);
 
-    void registerObjectWithContextById(const QV4::CompiledData::Object *object, QObject *instance) const;
+    void registerObjectWithContextById(int objectIndex, QObject *instance) const;
 
-    inline QV4::Heap::QmlContext *currentQmlContext();
-    Q_NEVER_INLINE void createQmlContext();
+    QV4::Heap::QmlContext *currentQmlContext();
 
     enum Phase {
         Startup,
@@ -137,15 +131,17 @@ private:
 
     QQmlEngine *engine;
     QV4::ExecutionEngine *v4;
-    QQmlRefPointer<QV4::CompiledData::CompilationUnit> compilationUnit;
+    QQmlCompiledData *compiledData;
     const QV4::CompiledData::Unit *qmlUnit;
     QQmlGuardedContextData parentContext;
     QQmlContextData *context;
-    const QV4::CompiledData::ResolvedTypeReferenceMap &resolvedTypes;
-    const QQmlPropertyCacheVector *propertyCaches;
+    const QHash<int, QQmlCompiledData::TypeReference*> &resolvedTypes;
+    const QVector<QQmlPropertyCache *> &propertyCaches;
+    const QVector<QByteArray> &vmeMetaObjectData;
+    QHash<int, int> objectIndexToId;
     QExplicitlySharedDataPointer<QQmlObjectCreatorSharedState> sharedState;
     bool topLevelCreator;
-    QQmlIncubatorPrivate *incubator;
+    void *activeVMEDataForRootContext;
 
     QObject *_qobject;
     QObject *_scopeObject;
@@ -161,9 +157,6 @@ private:
     QV4::QmlContext *_qmlContext;
 
     friend struct QQmlObjectCreatorRecursionWatcher;
-
-    typedef std::function<bool(QQmlObjectCreatorSharedState *sharedState)> PendingAliasBinding;
-    std::vector<PendingAliasBinding> pendingAliasBindings;
 };
 
 struct QQmlObjectCreatorRecursionWatcher
@@ -176,14 +169,6 @@ private:
     QExplicitlySharedDataPointer<QQmlObjectCreatorSharedState> sharedState;
     QRecursionWatcher<QQmlObjectCreatorSharedState, &QQmlObjectCreatorSharedState::recursionNode> watcher;
 };
-
-QV4::Heap::QmlContext *QQmlObjectCreator::currentQmlContext()
-{
-    if (Q_UNLIKELY(!_qmlContext->isManaged()))
-        createQmlContext(); // less common slow path
-
-    return _qmlContext->d();
-}
 
 QT_END_NAMESPACE
 

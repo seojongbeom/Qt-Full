@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtDBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,7 +36,6 @@
 #include "qdbus_symbols_p.h"
 
 #include <QtCore/qstringlist.h>
-#include <QtCore/qvector.h>
 
 #include "qdbusargument.h"
 #include "qdbusunixfiledescriptor.h"
@@ -84,8 +77,8 @@ static bool variantToString(const QVariant &arg, QString &out)
 
     if (argType == QVariant::StringList) {
         out += QLatin1Char('{');
-        const QStringList list = arg.toStringList();
-        for (const QString &item : list)
+        QStringList list = arg.toStringList();
+        foreach (const QString &item, list)
             out += QLatin1Char('\"') + item + QLatin1String("\", ");
         if (!list.isEmpty())
             out.chop(2);
@@ -102,8 +95,8 @@ static bool variantToString(const QVariant &arg, QString &out)
         out += QLatin1Char('}');
     } else if (argType == QVariant::List) {
         out += QLatin1Char('{');
-        const QList<QVariant> list = arg.toList();
-        for (const QVariant &item : list) {
+        QList<QVariant> list = arg.toList();
+        foreach (const QVariant &item, list) {
             if (!variantToString(item, out))
                 return false;
             out += QLatin1String(", ");
@@ -331,10 +324,10 @@ namespace QDBusUtil
 
     /*!
         \internal
-        \fn bool QDBusUtil::isValidPartOfObjectPath(const QStringRef &part)
+        \fn bool QDBusUtil::isValidPartOfObjectPath(const QString &part)
         See QDBusUtil::isValidObjectPath
     */
-    bool isValidPartOfObjectPath(const QStringRef &part)
+    bool isValidPartOfObjectPath(const QString &part)
     {
         if (part.isEmpty())
             return false;       // can't be valid if it's empty
@@ -346,13 +339,6 @@ namespace QDBusUtil
 
         return true;
     }
-
-    /*!
-        \internal
-        \fn bool QDBusUtil::isValidPartOfObjectPath(const QString &part)
-
-        \overload
-    */
 
     /*!
         \fn bool QDBusUtil::isValidInterfaceName(const QString &ifaceName)
@@ -372,35 +358,36 @@ namespace QDBusUtil
         if (ifaceName.isEmpty() || ifaceName.length() > DBUS_MAXIMUM_NAME_LENGTH)
             return false;
 
-        const auto parts = ifaceName.splitRef(QLatin1Char('.'));
+        QStringList parts = ifaceName.split(QLatin1Char('.'));
         if (parts.count() < 2)
             return false;           // at least two parts
 
-        for (const QStringRef &part : parts)
-            if (!isValidMemberName(part))
+        for (int i = 0; i < parts.count(); ++i)
+            if (!isValidMemberName(parts.at(i)))
                 return false;
 
         return true;
     }
 
     /*!
-        \fn bool QDBusUtil::isValidUniqueConnectionName(const QStringRef &connName)
+        \fn bool QDBusUtil::isValidUniqueConnectionName(const QString &connName)
         Returns \c true if \a connName is a valid unique connection name.
 
         Unique connection names start with a colon (":") and are followed by a list of dot-separated
         components composed of ASCII letters, digits, the hyphen or the underscore ("_") character.
     */
-    bool isValidUniqueConnectionName(const QStringRef &connName)
+    bool isValidUniqueConnectionName(const QString &connName)
     {
         if (connName.isEmpty() || connName.length() > DBUS_MAXIMUM_NAME_LENGTH ||
             !connName.startsWith(QLatin1Char(':')))
             return false;
 
-        const auto parts = connName.mid(1).split(QLatin1Char('.'));
+        QStringList parts = connName.mid(1).split(QLatin1Char('.'));
         if (parts.count() < 1)
             return false;
 
-        for (const QStringRef &part : parts) {
+        for (int i = 0; i < parts.count(); ++i) {
+            const QString &part = parts.at(i);
             if (part.isEmpty())
                  return false;
 
@@ -412,12 +399,6 @@ namespace QDBusUtil
 
         return true;
     }
-
-    /*!
-        \fn bool QDBusUtil::isValidUniqueConnectionName(const QString &connName)
-
-        \overload
-    */
 
     /*!
         \fn bool QDBusUtil::isValidBusName(const QString &busName)
@@ -442,11 +423,12 @@ namespace QDBusUtil
         if (busName.startsWith(QLatin1Char(':')))
             return isValidUniqueConnectionName(busName);
 
-        const auto parts = busName.splitRef(QLatin1Char('.'));
+        QStringList parts = busName.split(QLatin1Char('.'));
         if (parts.count() < 1)
             return false;
 
-        for (const QStringRef &part : parts) {
+        for (int i = 0; i < parts.count(); ++i) {
+            const QString &part = parts.at(i);
             if (part.isEmpty())
                 return false;
 
@@ -462,12 +444,12 @@ namespace QDBusUtil
     }
 
     /*!
-        \fn bool QDBusUtil::isValidMemberName(const QStringRef &memberName)
+        \fn bool QDBusUtil::isValidMemberName(const QString &memberName)
         Returns \c true if \a memberName is a valid member name. A valid member name does not exceed
         255 characters in length, is not empty, is composed only of ASCII letters, digits and
         underscores, but does not start with a digit.
     */
-    bool isValidMemberName(const QStringRef &memberName)
+    bool isValidMemberName(const QString &memberName)
     {
         if (memberName.isEmpty() || memberName.length() > DBUS_MAXIMUM_NAME_LENGTH)
             return false;
@@ -480,12 +462,6 @@ namespace QDBusUtil
                 return false;
         return true;
     }
-
-    /*!
-        \fn bool QDBusUtil::isValidMemberName(const QString &memberName)
-
-        \overload
-    */
 
     /*!
         \fn bool QDBusUtil::isValidErrorName(const QString &errorName)
@@ -519,10 +495,12 @@ namespace QDBusUtil
             path.endsWith(QLatin1Char('/')))
             return false;
 
-        // it starts with /, so we skip the empty first part
-        const auto parts = path.midRef(1).split(QLatin1Char('/'));
-        for (const QStringRef &part : parts)
-            if (!isValidPartOfObjectPath(part))
+        QStringList parts = path.split(QLatin1Char('/'));
+        Q_ASSERT(parts.count() >= 1);
+        parts.removeFirst();    // it starts with /, so we get an empty first part
+
+        for (int i = 0; i < parts.count(); ++i)
+            if (!isValidPartOfObjectPath(parts.at(i)))
                 return false;
 
         return true;

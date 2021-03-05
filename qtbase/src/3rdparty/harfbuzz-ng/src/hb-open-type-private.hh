@@ -101,11 +101,13 @@ static inline Type& StructAfter(TObject &X)
 #define DEFINE_SIZE_STATIC(size) \
   DEFINE_INSTANCE_ASSERTION (sizeof (*this) == (size)); \
   static const unsigned int static_size = (size); \
-  static const unsigned int min_size = (size); \
-  inline unsigned int get_size (void) const { return (size); }
+  static const unsigned int min_size = (size)
+
+/* Size signifying variable-sized array */
+#define VAR 1
 
 #define DEFINE_SIZE_UNION(size, _member) \
-  DEFINE_INSTANCE_ASSERTION (0*sizeof(this->u._member.static_size) + sizeof(this->u._member) == (size)); \
+  DEFINE_INSTANCE_ASSERTION (this->u._member.static_size == (size)); \
   static const unsigned int min_size = (size)
 
 #define DEFINE_SIZE_MIN(size) \
@@ -183,7 +185,7 @@ struct hb_dispatch_context_t
 
 /* This limits sanitizing time on really broken fonts. */
 #ifndef HB_SANITIZE_MAX_EDITS
-#define HB_SANITIZE_MAX_EDITS 32
+#define HB_SANITIZE_MAX_EDITS 100
 #endif
 
 struct hb_sanitize_context_t :
@@ -650,9 +652,7 @@ struct IntType
   DEFINE_SIZE_STATIC (Size);
 };
 
-typedef	IntType<int8_t	, 1> CHAR;	/* 8-bit signed integer. */
 typedef	IntType<uint8_t	, 1> BYTE;	/* 8-bit unsigned integer. */
-typedef	IntType<int8_t	, 1> INT8;	/* 8-bit signed integer. */
 typedef IntType<uint16_t, 2> USHORT;	/* 16-bit unsigned integer. */
 typedef IntType<int16_t,  2> SHORT;	/* 16-bit signed integer. */
 typedef IntType<uint32_t, 4> ULONG;	/* 32-bit unsigned integer. */
@@ -664,24 +664,6 @@ typedef SHORT FWORD;
 
 /* 16-bit unsigned integer (USHORT) that describes a quantity in FUnits. */
 typedef USHORT UFWORD;
-
-/* 16-bit signed fixed number with the low 14 bits of fraction (2.14). */
-struct F2DOT14 : SHORT
-{
-  //inline float to_float (void) const { return ???; }
-  //inline void set_float (float f) { v.set (f * ???); }
-  public:
-  DEFINE_SIZE_STATIC (2);
-};
-
-/* 32-bit signed fixed-point number (16.16). */
-struct Fixed: LONG
-{
-  //inline float to_float (void) const { return ???; }
-  //inline void set_float (float f) { v.set (f * ???); }
-  public:
-  DEFINE_SIZE_STATIC (4);
-};
 
 /* Date represented in number of seconds since 12:00 midnight, January 1,
  * 1904. The value is represented as a signed 64-bit integer. */
@@ -760,10 +742,9 @@ struct CheckSum : ULONG
  * Version Numbers
  */
 
-template <typename FixedType=USHORT>
 struct FixedVersion
 {
-  inline uint32_t to_int (void) const { return (major << (sizeof(FixedType) * 8)) + minor; }
+  inline uint32_t to_int (void) const { return (major << 16) + minor; }
 
   inline bool sanitize (hb_sanitize_context_t *c) const
   {
@@ -771,10 +752,10 @@ struct FixedVersion
     return_trace (c->check_struct (this));
   }
 
-  FixedType major;
-  FixedType minor;
+  USHORT major;
+  USHORT minor;
   public:
-  DEFINE_SIZE_STATIC (2 * sizeof(FixedType));
+  DEFINE_SIZE_STATIC (4);
 };
 
 
@@ -807,7 +788,6 @@ struct OffsetTo : Offset<OffsetType>
     if (unlikely (!c->check_struct (this))) return_trace (false);
     unsigned int offset = *this;
     if (unlikely (!offset)) return_trace (true);
-    if (unlikely (!c->check_range (base, offset))) return_trace (false);
     const Type &obj = StructAtOffset<Type> (base, offset);
     return_trace (likely (obj.sanitize (c)) || neuter (c));
   }
@@ -818,7 +798,6 @@ struct OffsetTo : Offset<OffsetType>
     if (unlikely (!c->check_struct (this))) return_trace (false);
     unsigned int offset = *this;
     if (unlikely (!offset)) return_trace (true);
-    if (unlikely (!c->check_range (base, offset))) return_trace (false);
     const Type &obj = StructAtOffset<Type> (base, offset);
     return_trace (likely (obj.sanitize (c, user_data)) || neuter (c));
   }
@@ -952,8 +931,8 @@ struct ArrayOf
 };
 
 /* Array of Offset's */
-template <typename Type, typename OffsetType=USHORT>
-struct OffsetArrayOf : ArrayOf<OffsetTo<Type, OffsetType> > {};
+template <typename Type>
+struct OffsetArrayOf : ArrayOf<OffsetTo<Type> > {};
 
 /* Array of offsets relative to the beginning of the array itself. */
 template <typename Type>

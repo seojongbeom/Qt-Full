@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -29,9 +34,6 @@
 #include <qdir.h>
 #include <QtQml/qqmlengine.h>
 #include <QtQml/qqmlcomponent.h>
-#include <QtQml/qqmlextensionplugin.h>
-#include <QtCore/qjsondocument.h>
-#include <QtCore/qjsonarray.h>
 #include <QDebug>
 
 #if defined(Q_OS_MAC)
@@ -55,7 +57,8 @@ public:
 private slots:
     virtual void initTestCase();
     void importsPlugin();
-    void importsPlugin_data();
+    void importsPlugin2();
+    void importsPlugin21();
     void importsMixedQmlCppPlugin();
     void incorrectPluginCase();
     void importPluginWithQmlFile();
@@ -72,82 +75,10 @@ private slots:
     void importStrictModule();
     void importStrictModule_data();
     void importProtectedModule();
-    void importVersionedModule();
-    void importsChildPlugin();
-    void importsChildPlugin2();
-    void importsChildPlugin21();
-    void parallelPluginImport();
 
 private:
     QString m_importsDirectory;
     QString m_dataImportsDirectory;
-};
-
-class PluginThatWaits : public QQmlExtensionPlugin
-{
-public:
-    static QByteArray metaData;
-
-    static QMutex initializeEngineEntered;
-    static QWaitCondition waitingForInitializeEngineEntry;
-    static QMutex leavingInitializeEngine;
-    static QWaitCondition waitingForInitializeEngineLeave;
-
-    void registerTypes(const char *uri) override
-    {
-        qmlRegisterModule(uri, 1, 0);
-    }
-
-    void initializeEngine(QQmlEngine *engine, const char *uri) override
-    {
-        initializeEngineEntered.lock();
-        leavingInitializeEngine.lock();
-        waitingForInitializeEngineEntry.wakeOne();
-        initializeEngineEntered.unlock();
-        waitingForInitializeEngineLeave.wait(&leavingInitializeEngine);
-        leavingInitializeEngine.unlock();
-    }
-};
-QByteArray PluginThatWaits::metaData;
-QMutex PluginThatWaits::initializeEngineEntered;
-QWaitCondition PluginThatWaits::waitingForInitializeEngineEntry;
-QMutex PluginThatWaits::leavingInitializeEngine;
-QWaitCondition PluginThatWaits::waitingForInitializeEngineLeave;
-
-class SecondStaticPlugin : public QQmlExtensionPlugin
-{
-public:
-    static QByteArray metaData;
-
-    void registerTypes(const char *uri) override
-    {
-        qmlRegisterModule(uri, 1, 0);
-    }
-};
-QByteArray SecondStaticPlugin::metaData;
-
-template <typename PluginType>
-void registerStaticPlugin(const char *uri)
-{
-    QStaticPlugin plugin;
-    plugin.instance = []() {
-        static PluginType plugin;
-        return static_cast<QObject*>(&plugin);
-    };
-
-    QJsonObject md;
-    md.insert(QStringLiteral("IID"), QQmlExtensionInterface_iid);
-    QJsonArray uris;
-    uris.append(uri);
-    md.insert(QStringLiteral("uri"), uris);
-
-    PluginType::metaData.append(QLatin1String("QTMETADATA  "));
-    PluginType::metaData.append(QJsonDocument(md).toBinaryData());
-
-    plugin.rawMetaData = []() {
-        return PluginType::metaData.constData();
-    };
-    qRegisterStaticPluginFunction(plugin);
 };
 
 void tst_qqmlmoduleplugin::initTestCase()
@@ -159,9 +90,6 @@ void tst_qqmlmoduleplugin::initTestCase()
     m_dataImportsDirectory = directory() + QStringLiteral("/imports");
     QVERIFY2(QFileInfo(m_dataImportsDirectory).isDir(),
              qPrintable(QString::fromLatin1("Imports directory '%1' does not exist.").arg(m_dataImportsDirectory)));
-
-    registerStaticPlugin<PluginThatWaits>("moduleWithWaitingPlugin");
-    registerStaticPlugin<SecondStaticPlugin>("moduleWithStaticPlugin");
 }
 
 #define VERIFY_ERRORS(errorfile) \
@@ -204,15 +132,12 @@ void tst_qqmlmoduleplugin::initTestCase()
 
 void tst_qqmlmoduleplugin::importsPlugin()
 {
-    QFETCH(QString, suffix);
-    QFETCH(QString, qmlFile);
-
     QQmlEngine engine;
     engine.addImportPath(m_importsDirectory);
-    QTest::ignoreMessage(QtWarningMsg, qPrintable(QString("plugin%1 created").arg(suffix)));
-    QTest::ignoreMessage(QtWarningMsg, qPrintable(QString("import%1 worked").arg(suffix)));
+    QTest::ignoreMessage(QtWarningMsg, "plugin created");
+    QTest::ignoreMessage(QtWarningMsg, "import worked");
     QTest::ignoreMessage(QtWarningMsg, "Module 'org.qtproject.AutoTestQmlPluginType' does not contain a module identifier directive - it cannot be protected from external registrations.");
-    QQmlComponent component(&engine, testFileUrl(qmlFile));
+    QQmlComponent component(&engine, testFileUrl(QStringLiteral("works.qml")));
     foreach (QQmlError err, component.errors())
         qWarning() << err;
     VERIFY_ERRORS(0);
@@ -222,15 +147,38 @@ void tst_qqmlmoduleplugin::importsPlugin()
     delete object;
 }
 
-void tst_qqmlmoduleplugin::importsPlugin_data()
+void tst_qqmlmoduleplugin::importsPlugin2()
 {
-    QTest::addColumn<QString>("suffix");
-    QTest::addColumn<QString>("qmlFile");
+    QQmlEngine engine;
+    engine.addImportPath(m_importsDirectory);
+    QTest::ignoreMessage(QtWarningMsg, "plugin2 created");
+    QTest::ignoreMessage(QtWarningMsg, "import2 worked");
+    QTest::ignoreMessage(QtWarningMsg, "Module 'org.qtproject.AutoTestQmlPluginType' does not contain a module identifier directive - it cannot be protected from external registrations.");
+    QQmlComponent component(&engine, testFileUrl(QStringLiteral("works2.qml")));
+    foreach (QQmlError err, component.errors())
+        qWarning() << err;
+    VERIFY_ERRORS(0);
+    QObject *object = component.create();
+    QVERIFY(object != 0);
+    QCOMPARE(object->property("value").toInt(),123);
+    delete object;
+}
 
-    QTest::newRow("1.0") << "" << "works.qml";
-    QTest::newRow("2.0") << "2" << "works2.qml";
-    QTest::newRow("2.1") << "2.1" << "works21.qml";
-    QTest::newRow("2.2") << "2.2" << "works22.qml";
+void tst_qqmlmoduleplugin::importsPlugin21()
+{
+    QQmlEngine engine;
+    engine.addImportPath(m_importsDirectory);
+    QTest::ignoreMessage(QtWarningMsg, "plugin2.1 created");
+    QTest::ignoreMessage(QtWarningMsg, "import2.1 worked");
+    QTest::ignoreMessage(QtWarningMsg, "Module 'org.qtproject.AutoTestQmlPluginType' does not contain a module identifier directive - it cannot be protected from external registrations.");
+    QQmlComponent component(&engine, testFileUrl(QStringLiteral("works21.qml")));
+    foreach (QQmlError err, component.errors())
+        qWarning() << err;
+    VERIFY_ERRORS(0);
+    QObject *object = component.create();
+    QVERIFY(object != 0);
+    QCOMPARE(object->property("value").toInt(),123);
+    delete object;
 }
 
 void tst_qqmlmoduleplugin::incorrectPluginCase()
@@ -630,128 +578,6 @@ void tst_qqmlmoduleplugin::importProtectedModule()
     QScopedPointer<QObject> object(component.create());
     //qDebug() << component.errorString();
     QVERIFY(object != 0);
-}
-
-void tst_qqmlmoduleplugin::importVersionedModule()
-{
-    qmlRegisterType<QObject>("org.qtproject.VersionedModule", 1, 0, "TestType");
-    qmlRegisterModule("org.qtproject.VersionedModule", 1, 1);
-
-    QQmlEngine engine;
-    engine.addImportPath(m_importsDirectory);
-
-    QUrl url(testFileUrl("empty.qml"));
-
-    QQmlComponent component(&engine);
-    component.setData("import org.qtproject.VersionedModule 1.0\n TestType {}\n", url);
-    QScopedPointer<QObject> object10(component.create());
-    QVERIFY(!object10.isNull());
-
-    component.setData("import org.qtproject.VersionedModule 1.1\n TestType {}\n", url);
-    QScopedPointer<QObject> object11(component.create());
-    QVERIFY(!object11.isNull());
-
-    component.setData("import org.qtproject.VersionedModule 1.2\n TestType {}\n", url);
-    QTest::ignoreMessage(QtWarningMsg, "QQmlComponent: Component is not ready");
-    QScopedPointer<QObject> object12(component.create());
-    QVERIFY(object12.isNull());
-    QCOMPARE(component.errorString(), QString("%1:1 module \"org.qtproject.VersionedModule\" version 1.2 is not installed\n").arg(url.toString()));
-}
-
-void tst_qqmlmoduleplugin::importsChildPlugin()
-{
-    QQmlEngine engine;
-    engine.addImportPath(m_importsDirectory);
-    QTest::ignoreMessage(QtWarningMsg, "child plugin created");
-    QTest::ignoreMessage(QtWarningMsg, "child import worked");
-    QTest::ignoreMessage(QtWarningMsg, "Module 'org.qtproject.AutoTestQmlPluginType.ChildPlugin' does not contain a module identifier directive - it cannot be protected from external registrations.");
-    QQmlComponent component(&engine, testFileUrl(QStringLiteral("child.qml")));
-    foreach (QQmlError err, component.errors())
-        qWarning() << err;
-    VERIFY_ERRORS(0);
-    QObject *object = component.create();
-    QVERIFY(object != 0);
-    QCOMPARE(object->property("value").toInt(),123);
-    delete object;
-}
-
-void tst_qqmlmoduleplugin::importsChildPlugin2()
-{
-    QQmlEngine engine;
-    engine.addImportPath(m_importsDirectory);
-    QTest::ignoreMessage(QtWarningMsg, "child plugin2 created");
-    QTest::ignoreMessage(QtWarningMsg, "child import2 worked");
-    QTest::ignoreMessage(QtWarningMsg, "Module 'org.qtproject.AutoTestQmlPluginType.ChildPlugin' does not contain a module identifier directive - it cannot be protected from external registrations.");
-    QQmlComponent component(&engine, testFileUrl(QStringLiteral("child2.qml")));
-    foreach (QQmlError err, component.errors())
-        qWarning() << err;
-    VERIFY_ERRORS(0);
-    QObject *object = component.create();
-    QVERIFY(object != 0);
-    QCOMPARE(object->property("value").toInt(),123);
-    delete object;
-}
-
-void tst_qqmlmoduleplugin::importsChildPlugin21()
-{
-    QQmlEngine engine;
-    engine.addImportPath(m_importsDirectory);
-    QTest::ignoreMessage(QtWarningMsg, "child plugin2.1 created");
-    QTest::ignoreMessage(QtWarningMsg, "child import2.1 worked");
-    QTest::ignoreMessage(QtWarningMsg, "Module 'org.qtproject.AutoTestQmlPluginType.ChildPlugin' does not contain a module identifier directive - it cannot be protected from external registrations.");
-    QQmlComponent component(&engine, testFileUrl(QStringLiteral("child21.qml")));
-    foreach (QQmlError err, component.errors())
-        qWarning() << err;
-    VERIFY_ERRORS(0);
-    QObject *object = component.create();
-    QVERIFY(object != 0);
-    QCOMPARE(object->property("value").toInt(),123);
-    delete object;
-}
-
-void tst_qqmlmoduleplugin::parallelPluginImport()
-{
-    QMutexLocker locker(&PluginThatWaits::initializeEngineEntered);
-
-    QThread worker;
-    QObject::connect(&worker, &QThread::started, [&worker](){
-        // Engines in separate threads are tricky, but as long as we do not create a graphical
-        // object and move objects created by the engines across thread boundaries, this is safe.
-        // At the same time this allows us to place the engine's loader thread into the position
-        // where, without the fix for this bug, the global lock is acquired.
-        QQmlEngine engineInThread;
-
-        QQmlComponent component(&engineInThread);
-        component.setData("import moduleWithWaitingPlugin 1.0\nimport QtQml 2.0\nQtObject {}",
-                          QUrl());
-
-        QScopedPointer<QObject> obj(component.create());
-        QVERIFY(!obj.isNull());
-
-        worker.quit();
-    });
-    worker.start();
-
-    PluginThatWaits::waitingForInitializeEngineEntry.wait(&PluginThatWaits::initializeEngineEntered);
-
-    {
-        // After acquiring this lock, the engine in the other thread as well as its type loader
-        // thread are blocked. However they should not hold the global plugin lock
-        // qmlEnginePluginsWithRegisteredTypes()->mutex in qqmllimports.cpp, allowing for the load
-        // of a component in a different engine with its own plugin to proceed.
-        QMutexLocker continuationLock(&PluginThatWaits::leavingInitializeEngine);
-
-        QQmlEngine secondEngine;
-        QQmlComponent secondComponent(&secondEngine);
-        secondComponent.setData("import moduleWithStaticPlugin 1.0\nimport QtQml 2.0\nQtObject {}",
-                                QUrl());
-        QScopedPointer<QObject> o(secondComponent.create());
-        QVERIFY(!o.isNull());
-
-        PluginThatWaits::waitingForInitializeEngineLeave.wakeOne();
-    }
-
-    worker.wait();
 }
 
 QTEST_MAIN(tst_qqmlmoduleplugin)

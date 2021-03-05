@@ -31,9 +31,7 @@ class Trim11 : angle::NonCopyable
 
   private:
     Renderer11 *mRenderer;
-#if defined (ANGLE_ENABLE_WINDOWS_STORE)
     EventRegistrationToken mApplicationSuspendedEventToken;
-#endif
 
     void trim();
     bool registerForRendererTrimRequest();

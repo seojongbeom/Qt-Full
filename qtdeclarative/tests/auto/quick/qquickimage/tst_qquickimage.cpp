@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -145,9 +150,9 @@ void tst_qquickimage::imageSource_data()
     QTest::newRow("remote") << "/colors.png" << 120.0 << 120.0 << true << false << true << "";
     QTest::newRow("remote redirected") << "/oldcolors.png" << 120.0 << 120.0 << true << false << false << "";
     if (QImageReader::supportedImageFormats().contains("svg"))
-        QTest::newRow("remote svg") << "/heart.svg" << 595.0 << 841.0 << true << false << false << "";
+        QTest::newRow("remote svg") << "/heart.svg" << 550.0 << 500.0 << true << false << false << "";
     if (QImageReader::supportedImageFormats().contains("svgz"))
-        QTest::newRow("remote svgz") << "/heart.svgz" << 595.0 << 841.0 << true << false << false << "";
+        QTest::newRow("remote svgz") << "/heart.svgz" << 550.0 << 500.0 << true << false << false << "";
     QTest::newRow("remote not found") << "/no-such-file.png" << 0.0 << 0.0 << true
         << false << true << "<Unknown File>:2:1: QML Image: Error transferring {{ServerBaseUrl}}/no-such-file.png - server replied: Not found";
 
@@ -306,9 +311,12 @@ void tst_qquickimage::mirror()
 
     qreal width = 300;
     qreal height = 250;
-    qreal devicePixelRatio = 1.0;
 
     foreach (QQuickImage::FillMode fillMode, fillModes) {
+#if defined(Q_OS_BLACKBERRY)
+        QWindow dummy;          // On BlackBerry first window is always full screen,
+        dummy.showFullScreen(); // so make test window a second window.
+#endif
         QScopedPointer<QQuickView> window(new QQuickView);
         window->setSource(testFileUrl("mirror.qml"));
 
@@ -322,15 +330,13 @@ void tst_qquickimage::mirror()
 
         QImage screenshot = window->grabWindow();
         screenshots[fillMode] = screenshot;
-        devicePixelRatio = window->devicePixelRatio();
     }
 
     foreach (QQuickImage::FillMode fillMode, fillModes) {
         QPixmap srcPixmap;
         QVERIFY(srcPixmap.load(testFile("pattern.png")));
 
-        QPixmap expected(width * (int)devicePixelRatio, height * (int)devicePixelRatio);
-        expected.setDevicePixelRatio(devicePixelRatio);
+        QPixmap expected(width, height);
         expected.fill();
         QPainter p_e(&expected);
         QTransform transform;
@@ -373,7 +379,7 @@ void tst_qquickimage::mirror()
         }
 
         QImage img = expected.toImage();
-        QCOMPARE(screenshots[fillMode].convertToFormat(img.format()), img);
+        QCOMPARE(screenshots[fillMode], img);
     }
 }
 
@@ -398,12 +404,12 @@ void tst_qquickimage::svg()
     component.setData(componentStr.toLatin1(), QUrl::fromLocalFile(""));
     QQuickImage *obj = qobject_cast<QQuickImage*>(component.create());
     QVERIFY(obj != 0);
-    QCOMPARE(int(obj->width()), 212); // round down: highdpi can give back fractional values
-    QCOMPARE(obj->height(), 300.0);
+    QCOMPARE(obj->width(), 300.0);
+    QCOMPARE(obj->height(), 273.0);
     obj->setSourceSize(QSize(200,200));
 
-    QCOMPARE(int(obj->width()), 141); // round down: highdpi can give back fractional values
-    QCOMPARE(obj->height(), 200.0);
+    QCOMPARE(obj->width(), 200.0);
+    QCOMPARE(obj->height(), 182.0);
     delete obj;
 }
 

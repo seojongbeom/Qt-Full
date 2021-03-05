@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,8 +43,6 @@ using namespace QV4;
 QT_WARNING_SUPPRESS_GCC_TAUTOLOGICAL_COMPARE_ON
 
 const QV4::VTable QV4::ArrayData::static_vtbl = {
-    0,
-    0,
     0,
     QV4::ArrayData::IsExecutionContext,
     QV4::ArrayData::IsString,
@@ -149,13 +141,13 @@ void ArrayData::realloc(Object *o, Type newType, uint requested, bool enforceAtt
     Scoped<ArrayData> newData(scope);
     if (newType < Heap::ArrayData::Sparse) {
         Heap::SimpleArrayData *n = scope.engine->memoryManager->allocManaged<SimpleArrayData>(size);
-        n->init();
+        new (n) Heap::SimpleArrayData;
         n->offset = 0;
         n->len = d ? d->d()->len : 0;
         newData = n;
     } else {
         Heap::SparseArrayData *n = scope.engine->memoryManager->allocManaged<SparseArrayData>(size);
-        n->init();
+        new (n) Heap::SparseArrayData;
         newData = n;
     }
     newData->setAlloc(alloc);
@@ -214,8 +206,8 @@ void ArrayData::realloc(Object *o, Type newType, uint requested, bool enforceAtt
             sparse->arrayData[i].setEmpty();
             lastFree = &sparse->arrayData[i].rawValueRef();
         }
+        storeValue(lastFree, UINT_MAX);
     }
-    storeValue(lastFree, UINT_MAX);
 
     Q_ASSERT(Value::fromReturnedValue(sparse->freeList).isEmpty());
     // ### Could explicitly free the old data
@@ -235,39 +227,12 @@ void ArrayData::ensureAttributes(Object *o)
     ArrayData::realloc(o, Heap::ArrayData::Simple, 0, true);
 }
 
-// Note: This function, and the calls from SimpleArrayData::markObjects, is a partial backport
-// of the functionality of ValueArray in 5.11. It prevents huge arrays to overflow the JS stack
-// during the mark phase by draining it while marking the array contents.
-static void drainMarkStack(QV4::ExecutionEngine *engine, Value *markBase)
-{
-    while (engine->jsStackTop > markBase) {
-        Heap::Base *h = engine->popForGC();
-        Q_ASSERT(h); // at this point we should only have Heap::Base objects in this area on the stack. If not, weird things might happen.
-        Q_ASSERT (h->vtable()->markObjects);
-        h->vtable()->markObjects(h, engine);
-    }
-}
 
 void SimpleArrayData::markObjects(Heap::Base *d, ExecutionEngine *e)
 {
-    Value *markBase = e->jsStackTop;
-    const auto *maxMarkStack = markBase + 32 * 1024;
-
     Heap::SimpleArrayData *dd = static_cast<Heap::SimpleArrayData *>(d);
-    uint end = dd->offset + dd->len;
-    if (end > dd->alloc) {
-        for (uint i = 0; i < end - dd->alloc; ++i) {
-            if (e->jsStackTop > maxMarkStack)
-                drainMarkStack(e, markBase);
-            dd->arrayData[i].mark(e);
-        }
-        end = dd->alloc;
-    }
-    for (uint i = dd->offset; i < end; ++i) {
-        if (e->jsStackTop > maxMarkStack)
-            drainMarkStack(e, markBase);
-        dd->arrayData[i].mark(e);
-    }
+    for (uint i = 0; i < dd->len; ++i)
+        dd->arrayData[dd->mappedIndex(i)].mark(e);
 }
 
 ReturnedValue SimpleArrayData::get(const Heap::ArrayData *d, uint index)
@@ -647,7 +612,7 @@ uint ArrayData::append(Object *obj, ArrayObject *otherObj, uint n)
         uint toCopy = n;
         uint chunk = toCopy;
         if (chunk > os->alloc - os->offset)
-            chunk = os->alloc - os->offset;
+            chunk -= os->alloc - os->offset;
         obj->arrayPut(oldSize, os->arrayData + os->offset, chunk);
         toCopy -= chunk;
         if (toCopy)
@@ -720,7 +685,7 @@ bool ArrayElementLessThan::operator()(Value v1, Value v2) const
         callData->thisObject = Primitive::undefinedValue();
         callData->args[0] = v1;
         callData->args[1] = v2;
-        result = QV4::Runtime::method_callValue(scope.engine, m_comparefn, callData);
+        result = Runtime::callValue(scope.engine, m_comparefn, callData);
 
         return result->toNumber() < 0;
     }

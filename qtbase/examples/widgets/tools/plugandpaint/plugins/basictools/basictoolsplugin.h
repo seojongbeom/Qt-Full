@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -78,22 +68,22 @@ class BasicToolsPlugin : public QObject,
 public:
 //! [1]
     // BrushInterface
-    QStringList brushes() const override;
+    QStringList brushes() const Q_DECL_OVERRIDE;
     QRect mousePress(const QString &brush, QPainter &painter,
-                     const QPoint &pos) override;
+                     const QPoint &pos) Q_DECL_OVERRIDE;
     QRect mouseMove(const QString &brush, QPainter &painter,
-                    const QPoint &oldPos, const QPoint &newPos) override;
+                    const QPoint &oldPos, const QPoint &newPos) Q_DECL_OVERRIDE;
     QRect mouseRelease(const QString &brush, QPainter &painter,
-                       const QPoint &pos) override;
+                       const QPoint &pos) Q_DECL_OVERRIDE;
 
     // ShapeInterface
-    QStringList shapes() const override;
-    QPainterPath generateShape(const QString &shape, QWidget *parent) override;
+    QStringList shapes() const Q_DECL_OVERRIDE;
+    QPainterPath generateShape(const QString &shape, QWidget *parent) Q_DECL_OVERRIDE;
 
     // FilterInterface
-    QStringList filters() const override;
+    QStringList filters() const Q_DECL_OVERRIDE;
     QImage filterImage(const QString &filter, const QImage &image,
-                       QWidget *parent) override;
+                       QWidget *parent) Q_DECL_OVERRIDE;
 //! [3]
 };
 //! [2] //! [3]

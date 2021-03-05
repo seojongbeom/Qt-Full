@@ -1,7 +1,7 @@
 TEMPLATE = app
 TARGET = tst_startup
 
-CONFIG += console
+CONFIG += console c++11
 macos:CONFIG -= app_bundle
 
 SOURCES += \

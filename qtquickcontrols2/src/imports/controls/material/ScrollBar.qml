@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,55 +34,50 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.ScrollBar {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            handle.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
+                             handle.implicitHeight + topPadding + bottomPadding)
 
-    padding: control.interactive ? 1 : 2
-    visible: control.policy !== T.ScrollBar.AlwaysOff
+    padding: 2
 
-    contentItem: Rectangle {
-        implicitWidth: control.interactive ? 13 : 4
-        implicitHeight: control.interactive ? 13 : 4
+    //! [handle]
+    handle: Rectangle {
+        id: handle
 
-        color: control.pressed ? control.Material.scrollBarPressedColor :
-               control.interactive && control.hovered ? control.Material.scrollBarHoveredColor : control.Material.scrollBarColor
+        implicitWidth: 4
+        implicitHeight: 4
+
+        color: control.pressed ? control.Material.scrollBarPressedColor : control.Material.scrollBarColor
+        visible: control.size < 1.0
         opacity: 0.0
-    }
 
-    background: Rectangle {
-        implicitWidth: control.interactive ? 16 : 4
-        implicitHeight: control.interactive ? 16 : 4
-        color: "#0e000000"
-        opacity: 0.0
-        visible: control.interactive
-    }
+        readonly property bool horizontal: control.orientation === Qt.Horizontal
+        x: control.leftPadding + (horizontal ? control.position * control.availableWidth : 0)
+        y: control.topPadding + (horizontal ? 0 : control.position * control.availableHeight)
+        width: horizontal ? control.size * control.availableWidth : implicitWidth
+        height: horizontal ? implicitHeight : control.size * control.availableHeight
 
-    states: State {
-        name: "active"
-        when: control.policy === T.ScrollBar.AlwaysOn || (control.active && control.size < 1.0)
-    }
+        states: State {
+            name: "active"
+            when: control.active
+            PropertyChanges { target: handle; opacity: 0.75 }
+        }
 
-    transitions: [
-        Transition {
-            to: "active"
-            NumberAnimation { targets: [contentItem, background]; property: "opacity"; to: 1.0 }
-        },
-        Transition {
+        transitions: Transition {
             from: "active"
             SequentialAnimation {
-                PropertyAction{ targets: [contentItem, background]; property: "opacity"; value: 1.0 }
-                PauseAnimation { duration: 2450 }
-                NumberAnimation { targets: [contentItem, background]; property: "opacity"; to: 0.0 }
+                PauseAnimation { duration: 450 }
+                NumberAnimation { target: handle; duration: 200; property: "opacity"; to: 0.0 }
             }
         }
-    ]
+    }
+    //! [handle]
 }

@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -43,7 +40,7 @@ QT_BEGIN_NAMESPACE
 
 /*!
     \qmltype Stack
-    \instantiates QQuickStack1
+    \instantiates QQuickStack
     \inqmlmodule QtQuick.Controls
     \ingroup controls
     \brief Provides attached properties for items pushed onto a StackView.
@@ -55,7 +52,7 @@ QT_BEGIN_NAMESPACE
     \sa StackView
 */
 
-QQuickStack1::QQuickStack1(QObject *object)
+QQuickStack::QQuickStack(QObject *object)
     : QObject(object),
       m_index(-1),
       m_status(Inactive),
@@ -63,9 +60,9 @@ QQuickStack1::QQuickStack1(QObject *object)
 {
 }
 
-QQuickStack1 *QQuickStack1::qmlAttachedProperties(QObject *object)
+QQuickStack *QQuickStack::qmlAttachedProperties(QObject *object)
 {
-    return new QQuickStack1(object);
+    return new QQuickStack(object);
 }
 
 /*!
@@ -76,12 +73,12 @@ QQuickStack1 *QQuickStack1::qmlAttachedProperties(QObject *object)
     so that \l{StackView::get()}{StackView.get(index)} will return the item itself.
     If \l{Stack::view}{view} is \c null, \a index will be \c -1.
 */
-int QQuickStack1::index() const
+int QQuickStack::index() const
 {
     return m_index;
 }
 
-void QQuickStack1::setIndex(int index)
+void QQuickStack::setIndex(int index)
 {
     if (m_index != index) {
         m_index = index;
@@ -101,12 +98,12 @@ void QQuickStack1::setIndex(int index)
     \li \c Stack.Deactivating: the item is transitioning into becoming inactive
     \endlist
 */
-QQuickStack1::Status QQuickStack1::status() const
+QQuickStack::Status QQuickStack::status() const
 {
     return m_status;
 }
 
-void QQuickStack1::setStatus(Status status)
+void QQuickStack::setStatus(Status status)
 {
     if (m_status != status) {
         m_status = status;
@@ -121,12 +118,12 @@ void QQuickStack1::setStatus(Status status)
     This property holds the StackView the item is in. If the item is not inside
     a StackView, \a view will be \c null.
 */
-QQuickItem *QQuickStack1::view() const
+QQuickItem *QQuickStack::view() const
 {
     return m_view;
 }
 
-void QQuickStack1::setView(QQuickItem *view)
+void QQuickStack::setView(QQuickItem *view)
 {
     if (m_view != view) {
         m_view = view;

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,7 +47,6 @@
 
 #include "qv4jsir_p.h"
 #include "qv4isel_util_p.h"
-#include <private/qv4util_p.h>
 #include <QtCore/QSharedPointer>
 
 QT_BEGIN_NAMESPACE
@@ -63,28 +56,20 @@ class QQmlEnginePrivate;
 namespace QV4 {
 namespace IR {
 
-struct LifeTimeIntervalRange {
-    int start;
-    int end;
-
-    LifeTimeIntervalRange(int start = -1, int end = -1)
-        : start(start)
-        , end(end)
-    {}
-
-    bool covers(int position) const { return start <= position && position <= end; }
-};
-} // IR namespace
-} // QV4 namespace
-
-Q_DECLARE_TYPEINFO(QV4::IR::LifeTimeIntervalRange, Q_PRIMITIVE_TYPE);
-
-namespace QV4 {
-namespace IR {
-
 class Q_AUTOTEST_EXPORT LifeTimeInterval {
 public:
-    typedef QVarLengthArray<LifeTimeIntervalRange, 4> Ranges;
+    struct Range {
+        int start;
+        int end;
+
+        Range(int start = InvalidPosition, int end = InvalidPosition)
+            : start(start)
+            , end(end)
+        {}
+
+        bool covers(int position) const { return start <= position && position <= end; }
+    };
+    typedef QVector<Range> Ranges;
 
 private:
     Temp _temp;
@@ -98,7 +83,7 @@ public:
     enum { InvalidPosition = -1 };
     enum { InvalidRegister = -1 };
 
-    explicit LifeTimeInterval(int rangeCapacity = 4)
+    explicit LifeTimeInterval(int rangeCapacity = 2)
         : _end(InvalidPosition)
         , _reg(InvalidRegister)
         , _isFixedInterval(0)
@@ -145,7 +130,7 @@ public:
         // Validate the new range
         if (_end != InvalidPosition) {
             Q_ASSERT(!_ranges.isEmpty());
-            for (const LifeTimeIntervalRange &range : qAsConst(_ranges)) {
+            foreach (const Range &range, _ranges) {
                 Q_ASSERT(range.start >= 0);
                 Q_ASSERT(range.end >= 0);
                 Q_ASSERT(range.start <= range.end);
@@ -154,17 +139,6 @@ public:
 #endif
     }
 };
-
-inline bool LifeTimeInterval::lessThan(const LifeTimeInterval *r1, const LifeTimeInterval *r2)
-{
-    if (r1->_ranges.first().start == r2->_ranges.first().start) {
-        if (r1->isSplitFromInterval() == r2->isSplitFromInterval())
-            return r1->_ranges.last().end < r2->_ranges.last().end;
-        else
-            return r1->isSplitFromInterval();
-    } else
-        return r1->_ranges.first().start < r2->_ranges.first().start;
-}
 
 class LifeTimeIntervals
 {
@@ -255,7 +229,7 @@ public:
 
     LifeTimeIntervals::Ptr lifeTimeIntervals() const;
 
-    BitVector calculateOptionalJumps();
+    QSet<IR::Jump *> calculateOptionalJumps();
 
     static void showMeTheCode(Function *function, const char *marker);
 
@@ -265,18 +239,15 @@ private:
     QHash<BasicBlock *, BasicBlock *> startEndLoops;
 };
 
-class Q_QML_AUTOTEST_EXPORT MoveMapping
+class MoveMapping
 {
-#ifdef V4_AUTOTEST
-public:
-#endif
     struct Move {
         Expr *from;
         Temp *to;
         bool needsSwap;
 
-        Move(Expr *from, Temp *to, bool needsSwap = false)
-            : from(from), to(to), needsSwap(needsSwap)
+        Move(Expr *from, Temp *to)
+            : from(from), to(to), needsSwap(false)
         {}
 
         bool operator==(const Move &other) const
@@ -296,7 +267,9 @@ public:
     void dump() const;
 
 private:
-    int findLeaf() const;
+    enum Action { NormalMove, NeedsSwap };
+    Action schedule(const Move &m, QList<Move> &todo, QList<Move> &delayed, QList<Move> &output,
+                    QList<Move> &swaps) const;
 };
 
 /*
@@ -350,7 +323,7 @@ public:
     }
 
 protected:
-    int allocateFreeSlot() override
+    virtual int allocateFreeSlot()
     {
         for (int i = 0, ei = _slotIsInUse.size(); i != ei; ++i) {
             if (!_slotIsInUse[i]) {
@@ -367,7 +340,7 @@ protected:
         return -1;
     }
 
-    void process(IR::Stmt *s) override
+    virtual void process(IR::Stmt *s)
     {
 //        qDebug("L%d statement %d:", _currentBasicBlock->index, s->id);
 
@@ -400,30 +373,30 @@ protected:
                 _unhandled.removeLast();
             }
 
-            visit(s);
+            s->accept(this);
         }
 
         if (IR::Jump *jump = s->asJump()) {
             IR::MoveMapping moves;
-            for (IR::Stmt *succStmt : jump->target->statements()) {
+            foreach (IR::Stmt *succStmt, jump->target->statements()) {
                 if (IR::Phi *phi = succStmt->asPhi()) {
                     forceActivation(*phi->targetTemp);
-                    for (int i = 0, ei = phi->incoming.size(); i != ei; ++i) {
-                        IR::Expr *e = phi->incoming[i];
+                    for (int i = 0, ei = phi->d->incoming.size(); i != ei; ++i) {
+                        IR::Expr *e = phi->d->incoming[i];
                         if (IR::Temp *t = e->asTemp()) {
                             forceActivation(*t);
                         }
                         if (jump->target->in[i] == _currentBasicBlock)
-                            moves.add(phi->incoming[i], phi->targetTemp);
+                            moves.add(phi->d->incoming[i], phi->targetTemp);
                     }
                 } else {
                     break;
                 }
             }
             moves.order();
-            const QList<IR::Move *> newMoves = moves.insertMoves(_currentBasicBlock, _function, true);
-            for (IR::Move *move : newMoves)
-                visit(move);
+            QList<IR::Move *> newMoves = moves.insertMoves(_currentBasicBlock, _function, true);
+            foreach (IR::Move *move, newMoves)
+                move->accept(this);
         }
     }
 
@@ -447,13 +420,13 @@ protected:
 //        qDebug() << "\t - force activating temp" << t.index << "on slot" << _stackSlotForTemp[t.index];
     }
 
-    void visitPhi(IR::Phi *phi) override
+    virtual void visitPhi(IR::Phi *phi)
     {
         Q_UNUSED(phi);
 #if !defined(QT_NO_DEBUG)
         Q_ASSERT(_stackSlotForTemp.contains(phi->targetTemp->index));
         Q_ASSERT(_slotIsInUse[_stackSlotForTemp[phi->targetTemp->index]]);
-        for (IR::Expr *e : phi->incoming) {
+        foreach (IR::Expr *e, phi->d->incoming) {
             if (IR::Temp *t = e->asTemp())
                 Q_ASSERT(_stackSlotForTemp.contains(t->index));
         }
@@ -466,6 +439,7 @@ protected:
 
 
 Q_DECLARE_TYPEINFO(QV4::IR::LifeTimeInterval, Q_MOVABLE_TYPE);
+Q_DECLARE_TYPEINFO(QV4::IR::LifeTimeInterval::Range, Q_PRIMITIVE_TYPE);
 
 QT_END_NAMESPACE
 

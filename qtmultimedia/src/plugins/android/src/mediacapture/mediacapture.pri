@@ -14,7 +14,6 @@ SOURCES += \
     $$PWD/qandroidcameracapturebufferformatcontrol.cpp \
     $$PWD/qandroidcameraflashcontrol.cpp \
     $$PWD/qandroidcamerafocuscontrol.cpp \
-    $$PWD/qandroidviewfindersettingscontrol.cpp \
     $$PWD/qandroidcameralockscontrol.cpp \
     $$PWD/qandroidcapturesession.cpp \
     $$PWD/qandroidmediarecordercontrol.cpp \
@@ -40,7 +39,6 @@ HEADERS += \
     $$PWD/qandroidcameracapturebufferformatcontrol.h \
     $$PWD/qandroidcameraflashcontrol.h \
     $$PWD/qandroidcamerafocuscontrol.h \
-    $$PWD/qandroidviewfindersettingscontrol.h \
     $$PWD/qandroidcameralockscontrol.h \
     $$PWD/qandroidcapturesession.h \
     $$PWD/qandroidmediarecordercontrol.h \

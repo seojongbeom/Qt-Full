@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Kurt Pattyn <pattyn.kurt@gmail.com>.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Kurt Pattyn <pattyn.kurt@gmail.com>.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -173,8 +178,6 @@ private Q_SLOTS:
     void minimumSizeRequirement();
     void minimumSizeRequirement_data();
 
-    void clearDataBuffers(); // qtbug-55506
-
 private:
     //helper function that constructs a new row of test data for invalid UTF8 sequences
     void invalidUTF8(const char *dataTag, const char *utf8Sequence, bool isCloseFrame);
@@ -245,7 +248,7 @@ void tst_DataProcessor::goodBinaryFrame()
     QWebSocketDataProcessor dataProcessor;
     QFETCH(QByteArray, payload);
 
-    data.append(char(FIN | QWebSocketProtocol::OpCodeBinary));
+    data.append((char)(FIN | QWebSocketProtocol::OpCodeBinary));
 
     if (payload.length() < 126)
     {
@@ -339,7 +342,7 @@ void tst_DataProcessor::goodTextFrame()
     QFETCH(QByteArray, payload);
     QFETCH(int, size);
 
-    data.append(char(FIN | QWebSocketProtocol::OpCodeText));
+    data.append((char)(FIN | QWebSocketProtocol::OpCodeText));
 
     if (payload.length() < 126)
     {
@@ -409,7 +412,7 @@ void tst_DataProcessor::goodControlFrame()
     QSignalSpy pingReceivedSpy(&dataProcessor, SIGNAL(pingReceived(QByteArray)));
     QSignalSpy pongReceivedSpy(&dataProcessor, SIGNAL(pongReceived(QByteArray)));
 
-    data.append(char(FIN | QWebSocketProtocol::OpCodePing));
+    data.append((char)(FIN | QWebSocketProtocol::OpCodePing));
     data.append(QChar::fromLatin1(0));
     buffer.setData(data);
     buffer.open(QIODevice::ReadOnly);
@@ -427,7 +430,7 @@ void tst_DataProcessor::goodControlFrame()
     data.clear();
     pingReceivedSpy.clear();
     pongReceivedSpy.clear();
-    data.append(char(FIN | QWebSocketProtocol::OpCodePong));
+    data.append((char)(FIN | QWebSocketProtocol::OpCodePong));
     data.append(QChar::fromLatin1(0));
     buffer.setData(data);
     buffer.open(QIODevice::ReadOnly);
@@ -539,7 +542,7 @@ void tst_DataProcessor::goodOpcodes()
     QWebSocketDataProcessor dataProcessor;
     QFETCH(QWebSocketProtocol::OpCode, opCode);
 
-    data.append(char(FIN | opCode));
+    data.append((char)(FIN | opCode));
     data.append(char(0));   //zero length
 
     buffer.setData(data);
@@ -586,7 +589,7 @@ void tst_DataProcessor::goodCloseFrame()
     quint16 swapped = qToBigEndian<quint16>(closeCode);
     const char *wireRepresentation = static_cast<const char *>(static_cast<const void *>(&swapped));
 
-    data.append(char(FIN | QWebSocketProtocol::OpCodeClose));
+    data.append((char)(FIN | QWebSocketProtocol::OpCodeClose));
     if (swapped != 0)
     {
         data.append(char(payload.length() + 2)).append(wireRepresentation, 2).append(payload);
@@ -802,7 +805,7 @@ void tst_DataProcessor::frameTooSmall()
 
     {
         //text frame with final bit not set
-        data.append(char(QWebSocketProtocol::OpCodeText)).append(char(0x0));
+        data.append((char)(QWebSocketProtocol::OpCodeText)).append(char(0x0));
         buffer.setData(data);
         buffer.open(QIODevice::ReadOnly);
 
@@ -844,7 +847,7 @@ void tst_DataProcessor::frameTooSmall()
         data.clear();
 
         //text frame with final bit not set
-        data.append(char(QWebSocketProtocol::OpCodeText)).append(char(0x0));
+        data.append((char)(QWebSocketProtocol::OpCodeText)).append(char(0x0));
         buffer.setData(data);
         buffer.open(QIODevice::ReadOnly);
         dataProcessor.process(&buffer);
@@ -1832,42 +1835,6 @@ void tst_DataProcessor::insertIncompleteSizeFieldTest(quint8 payloadCode, quint8
             << QByteArray(numBytesFollowing, quint8(1))
             << true
             << QWebSocketProtocol::CloseCodeGoingAway;
-}
-
-void tst_DataProcessor::clearDataBuffers()
-{
-    const QByteArray binaryData("Hello!");
-    QByteArray data;
-    data.append(char(FIN | QWebSocketProtocol::OpCodeBinary));
-    data.append(char(binaryData.length()));
-    data.append(binaryData);
-
-    QWebSocketDataProcessor dataProcessor;
-    connect(&dataProcessor, &QWebSocketDataProcessor::binaryMessageReceived,
-            [&binaryData](const QByteArray &message)
-    {
-        QCOMPARE(message, binaryData);
-        QEventLoop loop;
-        QTimer::singleShot(2000, &loop, SLOT(quit()));
-        loop.exec();
-    });
-
-    QBuffer buffer;
-    buffer.setData(data);
-    auto processData = [&dataProcessor, &buffer]()
-    {
-        buffer.open(QIODevice::ReadOnly);
-        dataProcessor.process(&buffer);
-        buffer.close();
-    };
-
-    QTimer timer;
-    timer.setSingleShot(true);
-    connect(&timer, &QTimer::timeout, processData);
-
-    timer.start(1000);
-    processData();
-    QTest::qWait(2000);
 }
 
 QTEST_MAIN(tst_DataProcessor)

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,8 +47,6 @@
 #import <QuartzCore/CAEAGLLayer.h>
 
 #include <QtDebug>
-
-QT_BEGIN_NAMESPACE
 
 QIOSWindow::QIOSWindow(QWindow *window)
     : QPlatformWindow(window)
@@ -213,7 +205,7 @@ void QIOSWindow::applyGeometry(const QRect &rect)
     // The baseclass takes care of persisting this for us.
     QPlatformWindow::setGeometry(rect);
 
-    m_view.frame = rect.toCGRect();
+    m_view.frame = toCGRect(rect);
 
     // iOS will automatically trigger -[layoutSubviews:] for resize,
     // but not for move, so we force it just in case.
@@ -223,16 +215,9 @@ void QIOSWindow::applyGeometry(const QRect &rect)
         [m_view layoutIfNeeded];
 }
 
-QMargins QIOSWindow::safeAreaMargins() const
-{
-    UIEdgeInsets safeAreaInsets = m_view.qt_safeAreaInsets;
-    return QMargins(safeAreaInsets.left, safeAreaInsets.top,
-        safeAreaInsets.right, safeAreaInsets.bottom);
-}
-
 bool QIOSWindow::isExposed() const
 {
-    return qApp->applicationState() != Qt::ApplicationSuspended
+    return qApp->applicationState() >= Qt::ApplicationActive
         && window()->isVisible() && !window()->geometry().isEmpty();
 }
 
@@ -251,25 +236,12 @@ void QIOSWindow::setWindowState(Qt::WindowState state)
         applyGeometry(m_normalGeometry);
         break;
     case Qt::WindowMaximized:
-    case Qt::WindowFullScreen: {
-        // When an application is in split-view mode, the UIScreen still has the
-        // same geometry, but the UIWindow is resized to the area reserved for the
-        // application. We use this to constrain the geometry used when applying the
-        // fullscreen or maximized window states. Note that we do not do this
-        // in applyGeometry(), as we don't want to artificially limit window
-        // placement "outside" of the screen bounds if that's what the user wants.
-
-        QRect uiWindowBounds = QRectF::fromCGRect(m_view.window.bounds).toRect();
-        QRect fullscreenGeometry = screen()->geometry().intersected(uiWindowBounds);
-        QRect maximizedGeometry = window()->flags() & Qt::MaximizeUsingFullscreenGeometryHint ?
-            fullscreenGeometry : screen()->availableGeometry().intersected(uiWindowBounds);
-
-        if (state & Qt::WindowFullScreen)
-            applyGeometry(fullscreenGeometry);
-        else
-            applyGeometry(maximizedGeometry);
+        applyGeometry(window()->flags() & Qt::MaximizeUsingFullscreenGeometryHint ?
+            screen()->geometry() : screen()->availableGeometry());
         break;
-    }
+    case Qt::WindowFullScreen:
+        applyGeometry(screen()->geometry());
+        break;
     case Qt::WindowMinimized:
         applyGeometry(QRect());
         break;

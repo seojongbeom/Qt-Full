@@ -16,14 +16,14 @@
 namespace rx
 {
 
+RenderTarget9 *RenderTarget9::makeRenderTarget9(RenderTargetD3D *target)
+{
+    ASSERT(HAS_DYNAMIC_TYPE(RenderTarget9*, target));
+    return static_cast<RenderTarget9*>(target);
+}
+
 // TODO: AddRef the incoming surface to take ownership instead of expecting that its ref is being given.
-TextureRenderTarget9::TextureRenderTarget9(IDirect3DBaseTexture9 *texture,
-                                           size_t textureLevel,
-                                           IDirect3DSurface9 *surface,
-                                           GLenum internalFormat,
-                                           GLsizei width,
-                                           GLsizei height,
-                                           GLsizei depth,
+TextureRenderTarget9::TextureRenderTarget9(IDirect3DSurface9 *surface, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth,
                                            GLsizei samples)
     : mWidth(width),
       mHeight(height),
@@ -31,8 +31,6 @@ TextureRenderTarget9::TextureRenderTarget9(IDirect3DBaseTexture9 *texture,
       mInternalFormat(internalFormat),
       mD3DFormat(D3DFMT_UNKNOWN),
       mSamples(samples),
-      mTexture(texture),
-      mTextureLevel(textureLevel),
       mRenderTarget(surface)
 {
     ASSERT(mDepth == 1);
@@ -47,7 +45,6 @@ TextureRenderTarget9::TextureRenderTarget9(IDirect3DBaseTexture9 *texture,
 
 TextureRenderTarget9::~TextureRenderTarget9()
 {
-    SafeRelease(mTexture);
     SafeRelease(mRenderTarget);
 }
 
@@ -76,17 +73,7 @@ GLsizei TextureRenderTarget9::getSamples() const
     return mSamples;
 }
 
-IDirect3DBaseTexture9 *TextureRenderTarget9::getTexture() const
-{
-    return mTexture;
-}
-
-size_t TextureRenderTarget9::getTextureLevel() const
-{
-    return mTextureLevel;
-}
-
-IDirect3DSurface9 *TextureRenderTarget9::getSurface() const
+IDirect3DSurface9 *TextureRenderTarget9::getSurface()
 {
     // Caller is responsible for releasing the returned surface reference.
     // TODO: remove the AddRef to match RenderTarget11
@@ -130,7 +117,7 @@ GLsizei SurfaceRenderTarget9::getDepth() const
 
 GLenum SurfaceRenderTarget9::getInternalFormat() const
 {
-    return (mDepth ? mSwapChain->GetDepthBufferInternalFormat() : mSwapChain->GetRenderTargetInternalFormat());
+    return (mDepth ? mSwapChain->GetDepthBufferInternalFormat() : mSwapChain->GetBackBufferInternalFormat());
 }
 
 GLsizei SurfaceRenderTarget9::getSamples() const
@@ -139,19 +126,9 @@ GLsizei SurfaceRenderTarget9::getSamples() const
     return 0;
 }
 
-IDirect3DSurface9 *SurfaceRenderTarget9::getSurface() const
+IDirect3DSurface9 *SurfaceRenderTarget9::getSurface()
 {
     return (mDepth ? mSwapChain->getDepthStencil() : mSwapChain->getRenderTarget());
-}
-
-IDirect3DBaseTexture9 *SurfaceRenderTarget9::getTexture() const
-{
-    return (mDepth ? nullptr : mSwapChain->getOffscreenTexture());
-}
-
-size_t SurfaceRenderTarget9::getTextureLevel() const
-{
-    return 0;
 }
 
 D3DFORMAT SurfaceRenderTarget9::getD3DFormat() const

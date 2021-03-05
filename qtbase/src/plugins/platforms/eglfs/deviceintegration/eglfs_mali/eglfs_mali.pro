@@ -1,11 +1,11 @@
 TARGET = qeglfs-mali-integration
 
-QT += core-private gui-private eglfsdeviceintegration-private
+QT += core-private gui-private platformsupport-private eglfs_device_lib-private
 
-# Avoid X11 header collision, use generic EGL native types
-DEFINES += QT_EGL_NO_X11
+# Avoid X11 header collision
+DEFINES += MESA_EGL_NO_X11_HEADERS
 
-INCLUDEPATH += $$PWD/../../api
+INCLUDEPATH += $$PWD/../..
 CONFIG += egl
 QMAKE_LFLAGS += $$QMAKE_LFLAGS_NOUNDEF
 

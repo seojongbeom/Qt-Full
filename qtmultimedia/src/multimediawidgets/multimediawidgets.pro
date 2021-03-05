@@ -1,8 +1,11 @@
 # distinct from Qt Multimedia
 TARGET = QtMultimediaWidgets
 QT = core gui multimedia-private widgets-private
-qtHaveModule(opengl): \
+qtHaveModule(opengl):!contains(QT_CONFIG, opengles1) {
    QT_PRIVATE += opengl
+} else {
+   DEFINES += QT_NO_OPENGL
+}
 
 PRIVATE_HEADERS += \
     qvideowidget_p.h \
@@ -11,6 +14,7 @@ PRIVATE_HEADERS += \
 PUBLIC_HEADERS += \
     qtmultimediawidgetdefs.h \
     qcameraviewfinder.h \
+    qgraphicsvideoitem.h \
     qvideowidgetcontrol.h \
     qvideowidget.h
 
@@ -20,11 +24,22 @@ SOURCES += \
     qvideowidgetcontrol.cpp \
     qvideowidget.cpp
 
-qtConfig(graphicsview) {
-    SOURCES        += qgraphicsvideoitem.cpp
-    PUBLIC_HEADERS += qgraphicsvideoitem.h
+maemo6 {
+    contains(QT_CONFIG, opengles2) {
+        PRIVATE_HEADERS += qeglimagetexturesurface_p.h
+        SOURCES += qeglimagetexturesurface.cpp
+
+        SOURCES += qgraphicsvideoitem_maemo6.cpp
+
+        LIBS_PRIVATE += -lX11
+    } else {
+        SOURCES += qgraphicsvideoitem.cpp
+    }
 }
 
+!maemo* {
+    SOURCES += qgraphicsvideoitem.cpp
+}
 
 HEADERS += $$PUBLIC_HEADERS $$PRIVATE_HEADERS
 

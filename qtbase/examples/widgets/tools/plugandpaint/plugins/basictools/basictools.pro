@@ -14,4 +14,3 @@ target.path = $$[QT_INSTALL_EXAMPLES]/widgets/tools/plugandpaint/plugins
 INSTALLS += target
 
 CONFIG += install_ok  # Do not cargo-cult this!
-uikit: CONFIG += debug_and_release

@@ -10,27 +10,22 @@
 #define LIBANGLE_RENDERER_RENDERBUFFERIMPL_H_
 
 #include "angle_gl.h"
-#include "common/angleutils.h"
-#include "libANGLE/Error.h"
-#include "libANGLE/FramebufferAttachment.h"
 
-namespace egl
-{
-class Image;
-}
+#include "libANGLE/Error.h"
+
+#include "common/angleutils.h"
 
 namespace rx
 {
 
-class RenderbufferImpl : public FramebufferAttachmentObjectImpl
+class RenderbufferImpl : angle::NonCopyable
 {
   public:
-    RenderbufferImpl() {}
-    virtual ~RenderbufferImpl() {}
+    RenderbufferImpl();
+    virtual ~RenderbufferImpl() = 0;
 
     virtual gl::Error setStorage(GLenum internalformat, size_t width, size_t height) = 0;
     virtual gl::Error setStorageMultisample(size_t samples, GLenum internalformat, size_t width, size_t height) = 0;
-    virtual gl::Error setStorageEGLImageTarget(egl::Image *image) = 0;
 };
 
 }

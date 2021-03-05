@@ -2,8 +2,10 @@ TEMPLATE = subdirs
 
 SUBDIRS += controls
 android: SUBDIRS += controls/Styles/Android
-ios:!static: SUBDIRS += controls/Styles/iOS
+ios: SUBDIRS += controls/Styles/iOS
 winrt: SUBDIRS += controls/Styles/WinRT
+
+SUBDIRS += layouts
 
 SUBDIRS += extras
 SUBDIRS += extras/Styles/styles.pro

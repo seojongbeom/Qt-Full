@@ -12,45 +12,40 @@
 namespace gl
 {
 
-Data::Data(uintptr_t contextIn,
-           GLint clientVersionIn,
-           const State &stateIn,
-           const Caps &capsIn,
-           const TextureCapsMap &textureCapsIn,
-           const Extensions &extensionsIn,
-           const ResourceManager *resourceManagerIn,
-           const Limitations &limitationsIn)
-    : context(contextIn),
-      clientVersion(clientVersionIn),
+Data::Data(GLint clientVersionIn, const State &stateIn, const Caps &capsIn,
+           const TextureCapsMap &textureCapsIn, const Extensions &extensionsIn,
+           const ResourceManager *resourceManagerIn)
+    : clientVersion(clientVersionIn),
       state(&stateIn),
       caps(&capsIn),
       textureCaps(&textureCapsIn),
       extensions(&extensionsIn),
-      resourceManager(resourceManagerIn),
-      limitations(&limitationsIn)
+      resourceManager(resourceManagerIn)
 {}
 
 Data::~Data()
 {
 }
 
-ValidationContext::ValidationContext(GLint clientVersion,
-                                     const State &state,
-                                     const Caps &caps,
-                                     const TextureCapsMap &textureCaps,
-                                     const Extensions &extensions,
-                                     const ResourceManager *resourceManager,
-                                     const Limitations &limitations,
-                                     bool skipValidation)
-    : mData(reinterpret_cast<uintptr_t>(this),
-            clientVersion,
-            state,
-            caps,
-            textureCaps,
-            extensions,
-            resourceManager,
-            limitations),
-      mSkipValidation(skipValidation)
+Data::Data(const Data &other)
+    : clientVersion(other.clientVersion),
+      state(other.state),
+      caps(other.caps),
+      textureCaps(other.textureCaps),
+      extensions(other.extensions),
+      resourceManager(other.resourceManager)
 {
 }
-}  // namespace gl
+
+Data &Data::operator=(const Data &other)
+{
+    clientVersion = other.clientVersion;
+    state = other.state;
+    caps = other.caps;
+    textureCaps = other.textureCaps;
+    extensions = other.extensions;
+    resourceManager = other.resourceManager;
+    return *this;
+}
+
+}

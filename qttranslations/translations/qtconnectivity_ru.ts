@@ -44,6 +44,18 @@
         <translation>Невозможно остановить обнаружение</translation>
     </message>
     <message>
+        <source>No Bluetooth device available</source>
+        <translation>Устройства Bluetooth не обнаружены</translation>
+    </message>
+    <message>
+        <source>Cannot open remote device socket</source>
+        <translation>Невозможно открыть сокет удалённого устройства</translation>
+    </message>
+    <message>
+        <source>Cannot connect to Bluetooth socket notifier</source>
+        <translation>Невозможно подключиться к сокету уведомлений Bluetooth</translation>
+    </message>
+    <message>
         <source>Cannot start device inquiry</source>
         <translation>Невозможно запустить опрос устройств</translation>
     </message>
@@ -108,7 +120,7 @@
     </message>
     <message>
         <source>Object Push</source>
-        <translation>Отправка объекта</translation>
+        <translation type="unfinished">Отправка объекта</translation>
     </message>
     <message>
         <source>File Transfer</source>
@@ -124,11 +136,11 @@
     </message>
     <message>
         <source>Browse Group Descriptor</source>
-        <translation>Дескриптор обзорной группы</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Public Browse Group</source>
-        <translation>Доступная обзорная группа</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Dial-Up Networking</source>
@@ -1374,9 +1386,12 @@
         <source>Error occurred trying to connect to remote device.</source>
         <translation>Возникла ошибка при попытке подключиться к удалённому устройству.</translation>
     </message>
+</context>
+<context>
+    <name>QObject</name>
     <message>
-        <source>Error occurred trying to start advertising</source>
-        <translation>Возникла ошибка при попытке запуска Bluetooth-маркетинга</translation>
+        <source>Operation canceled</source>
+        <translation>Операция отменена</translation>
     </message>
 </context>
 </TS>

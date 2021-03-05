@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -117,7 +111,7 @@ typedef int NativeFileHandle;
 */
 static bool createFileFromTemplate(NativeFileHandle &file,
         QFileSystemEntry::NativePath &path, size_t pos, size_t length, quint32 mode,
-        int flags, QSystemError &error)
+        QSystemError &error)
 {
     Q_ASSERT(length != 0);
     Q_ASSERT(pos < size_t(path.length()));
@@ -151,18 +145,16 @@ static bool createFileFromTemplate(NativeFileHandle &file,
         // Atomically create file and obtain handle
 #if defined(Q_OS_WIN)
         Q_UNUSED(mode);
-        const DWORD shareMode = (flags & QTemporaryFileEngine::Win32NonShared)
-                                ? 0u : (FILE_SHARE_READ | FILE_SHARE_WRITE);
 
 #  ifndef Q_OS_WINRT
         file = CreateFile((const wchar_t *)path.constData(),
                 GENERIC_READ | GENERIC_WRITE,
-                shareMode, NULL, CREATE_NEW,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_NEW,
                 FILE_ATTRIBUTE_NORMAL, NULL);
 #  else // !Q_OS_WINRT
         file = CreateFile2((const wchar_t *)path.constData(),
                 GENERIC_READ | GENERIC_WRITE,
-                shareMode, CREATE_NEW,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, CREATE_NEW,
                 NULL);
 #  endif // Q_OS_WINRT
 
@@ -184,7 +176,6 @@ static bool createFileFromTemplate(NativeFileHandle &file,
             return false;
         }
 #else // POSIX
-        Q_UNUSED(flags)
         file = QT_OPEN(path.constData(),
                 QT_OPEN_CREAT | O_EXCL | QT_OPEN_RDWR | QT_OPEN_LARGEFILE,
                 static_cast<mode_t>(mode));
@@ -345,7 +336,7 @@ bool QTemporaryFileEngine::open(QIODevice::OpenMode openMode)
     NativeFileHandle &file = d->fd;
 #endif
 
-    if (!createFileFromTemplate(file, filename, phPos, phLength, fileMode, flags, error)) {
+    if (!createFileFromTemplate(file, filename, phPos, phLength, fileMode, error)) {
         setError(QFile::OpenError, error.toString());
         return false;
     }
@@ -407,12 +398,7 @@ bool QTemporaryFileEngine::close()
 
 //************* QTemporaryFilePrivate
 
-QTemporaryFilePrivate::QTemporaryFilePrivate()
-{
-}
-
-QTemporaryFilePrivate::QTemporaryFilePrivate(const QString &templateNameIn)
-    : templateName(templateNameIn)
+QTemporaryFilePrivate::QTemporaryFilePrivate() : autoRemove(true)
 {
 }
 
@@ -506,11 +492,15 @@ QString QTemporaryFilePrivate::defaultTemplateName()
 QTemporaryFile::QTemporaryFile()
     : QFile(*new QTemporaryFilePrivate)
 {
+    Q_D(QTemporaryFile);
+    d->templateName = QTemporaryFilePrivate::defaultTemplateName();
 }
 
 QTemporaryFile::QTemporaryFile(const QString &templateName)
-    : QFile(*new QTemporaryFilePrivate(templateName))
+    : QFile(*new QTemporaryFilePrivate)
 {
+    Q_D(QTemporaryFile);
+    d->templateName = templateName;
 }
 
 #else
@@ -523,8 +513,10 @@ QTemporaryFile::QTemporaryFile(const QString &templateName)
     \sa setFileTemplate(), QDir::tempPath()
 */
 QTemporaryFile::QTemporaryFile()
-    : QTemporaryFile(nullptr)
+    : QFile(*new QTemporaryFilePrivate, 0)
 {
+    Q_D(QTemporaryFile);
+    d->templateName = QTemporaryFilePrivate::defaultTemplateName();
 }
 
 /*!
@@ -542,8 +534,10 @@ QTemporaryFile::QTemporaryFile()
     \sa open(), fileTemplate()
 */
 QTemporaryFile::QTemporaryFile(const QString &templateName)
-    : QTemporaryFile(templateName, nullptr)
+    : QFile(*new QTemporaryFilePrivate, 0)
 {
+    Q_D(QTemporaryFile);
+    d->templateName = templateName;
 }
 
 /*!
@@ -557,6 +551,8 @@ QTemporaryFile::QTemporaryFile(const QString &templateName)
 QTemporaryFile::QTemporaryFile(QObject *parent)
     : QFile(*new QTemporaryFilePrivate, parent)
 {
+    Q_D(QTemporaryFile);
+    d->templateName = QTemporaryFilePrivate::defaultTemplateName();
 }
 
 /*!
@@ -575,8 +571,10 @@ QTemporaryFile::QTemporaryFile(QObject *parent)
     \sa open(), fileTemplate()
 */
 QTemporaryFile::QTemporaryFile(const QString &templateName, QObject *parent)
-    : QFile(*new QTemporaryFilePrivate(templateName), parent)
+    : QFile(*new QTemporaryFilePrivate, parent)
 {
+    Q_D(QTemporaryFile);
+    d->templateName = templateName;
 }
 #endif
 
@@ -799,6 +797,4 @@ QT_END_NAMESPACE
 
 #endif // QT_NO_TEMPORARYFILE
 
-#ifndef QT_NO_QOBJECT
-#include "moc_qtemporaryfile.cpp"
-#endif
+

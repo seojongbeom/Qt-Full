@@ -4,6 +4,7 @@ SUBDIRS += \
     gallery \
     tableview \
     touch \
+    basiclayouts \
     styles \
     uiforms
 

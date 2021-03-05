@@ -1,13 +1,15 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += network
 
-qtHaveModule(sql): SUBDIRS += sqldrivers
-qtHaveModule(network):qtConfig(bearermanagement): SUBDIRS += bearer
+load(qfeatures)
+SUBDIRS *= sqldrivers
+qtHaveModule(network):!contains(QT_DISABLED_FEATURES, bearermanagement): SUBDIRS += bearer
 qtHaveModule(gui) {
     SUBDIRS *= platforms platforminputcontexts platformthemes
-    qtConfig(imageformatplugin): SUBDIRS *= imageformats
-    !android:qtConfig(library): SUBDIRS *= generic
+    !contains(QT_DISABLED_FEATURES, imageformatplugin): SUBDIRS *= imageformats
+    !android:!contains(QT_DISABLED_FEATURES, library): SUBDIRS *= generic
 }
+qtHaveModule(widgets): SUBDIRS *= styles
 
-!winrt:qtHaveModule(printsupport): \
+!winrt:!wince*:qtHaveModule(widgets):!contains(QT_DISABLED_FEATURES, printer) {
     SUBDIRS += printsupport
+}

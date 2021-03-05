@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -28,7 +33,6 @@
 
 #include "../../../../shared/fakedirmodel.h"
 #include <QtTest/QtTest>
-#include <QtTest/private/qtesthelpers_p.h>
 #include <qitemdelegate.h>
 #include <qcolumnview.h>
 #include <private/qcolumnviewgrip_p.h>
@@ -47,10 +51,14 @@ class tst_QColumnView : public QObject {
 
 public:
     tst_QColumnView();
+    virtual ~tst_QColumnView();
 
-private slots:
+public Q_SLOTS:
     void initTestCase();
     void init();
+    void cleanup();
+
+private slots:
     void rootIndex();
     void grips();
     void isIndexHidden();
@@ -104,14 +112,12 @@ public:
         for (int j = 0; j < 10; ++j) {
             QStandardItem *parentItem = invisibleRootItem();
             for (int i = 0; i < 10; ++i) {
-                const QString iS =  QString::number(i);
-                const QString itemText = QLatin1String("item ") + iS;
-                QStandardItem *item = new QStandardItem(itemText);
+                QStandardItem *item = new QStandardItem(QString("item %0").arg(i));
                 parentItem->appendRow(item);
-                QStandardItem *item2 = new QStandardItem(itemText);
+                QStandardItem *item2 = new QStandardItem(QString("item %0").arg(i));
                 parentItem->appendRow(item2);
-                item2->appendRow(new QStandardItem(itemText));
-                parentItem->appendRow(new QStandardItem(QLatin1String("file ") + iS));
+                item2->appendRow(new QStandardItem(QString("item %0").arg(i)));
+                parentItem->appendRow(new QStandardItem(QString("file %0").arg(i)));
                 parentItem = item;
             }
         }
@@ -175,6 +181,10 @@ tst_QColumnView::tst_QColumnView()
     m_fakeDirHomeIndex = m_fakeDirModel.indexFromItem(homeItem);
 }
 
+tst_QColumnView::~tst_QColumnView()
+{
+}
+
 void tst_QColumnView::initTestCase()
 {
     QVERIFY(m_fakeDirHomeIndex.isValid());
@@ -184,6 +194,13 @@ void tst_QColumnView::initTestCase()
 void tst_QColumnView::init()
 {
     qApp->setLayoutDirection(Qt::LeftToRight);
+#ifdef Q_OS_WINCE //disable magic for WindowsCE
+    qApp->setAutoMaximizeThreshold(-1);
+#endif
+}
+
+void tst_QColumnView::cleanup()
+{
 }
 
 void tst_QColumnView::rootIndex()
@@ -370,6 +387,12 @@ void tst_QColumnView::scrollTo_data()
     QTest::newRow("reverse") << true << false;
 }
 
+static inline void centerOnScreen(QWidget *w)
+{
+    const QPoint offset = QPoint(w->width() / 2, w->height() / 2);
+    w->move(QGuiApplication::primaryScreen()->availableGeometry().center() - offset);
+}
+
 void tst_QColumnView::scrollTo()
 {
     QFETCH(bool, reverse);
@@ -381,7 +404,7 @@ void tst_QColumnView::scrollTo()
     view.resize(200, 200);
     topLevel.show();
     topLevel.activateWindow();
-    QTestPrivate::centerOnScreen(&topLevel);
+    centerOnScreen(&topLevel);
     QVERIFY(QTest::qWaitForWindowActive(&topLevel));
 
     view.scrollTo(QModelIndex(), QAbstractItemView::EnsureVisible);
@@ -765,15 +788,15 @@ void tst_QColumnView::gripMoved()
 void tst_QColumnView::preview()
 {
     QColumnView view;
-    QCOMPARE(view.previewWidget(), nullptr);
+    QCOMPARE(view.previewWidget(), (QWidget*)0);
     TreeModel model;
     view.setModel(&model);
-    QCOMPARE(view.previewWidget(), nullptr);
+    QCOMPARE(view.previewWidget(), (QWidget*)0);
     QModelIndex home = model.index(0, 0);
     QVERIFY(home.isValid());
     QVERIFY(model.hasChildren(home));
     view.setCurrentIndex(home);
-    QCOMPARE(view.previewWidget(), nullptr);
+    QCOMPARE(view.previewWidget(), (QWidget*)0);
 
     QModelIndex file;
     QVERIFY(model.rowCount(home) > 0);
@@ -999,7 +1022,7 @@ void tst_QColumnView::dynamicModelChanges()
     ColumnView view;
     view.setModel(&model);
     view.setItemDelegate(&delegate);
-    QTestPrivate::centerOnScreen(&view);
+    centerOnScreen(&view);
     view.show();
 
     QStandardItem *item = new QStandardItem(QLatin1String("item"));

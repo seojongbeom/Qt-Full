@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -53,10 +43,9 @@
 #include <QMouseEvent>
 #include <QPainter>
 
-static inline QString defaultState() { return QStringLiteral("---------"); }
-
 TicTacToe::TicTacToe(QWidget *parent)
     : QWidget(parent)
+    , turnNumber(0)
 {
 }
 
@@ -73,7 +62,7 @@ QSize TicTacToe::sizeHint() const
 void TicTacToe::setState(const QString &newState)
 {
     turnNumber = 0;
-    myState = defaultState();
+    myState = "---------";
     int position = 0;
     while (position < 9 && position < newState.length()) {
         QChar mark = newState.at(position);
@@ -93,7 +82,7 @@ QString TicTacToe::state() const
 
 void TicTacToe::clearBoard()
 {
-    myState = defaultState();
+    myState = "---------";
     turnNumber = 0;
     update();
 }

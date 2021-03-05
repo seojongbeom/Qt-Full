@@ -1,7 +1,8 @@
 TARGET = qtmedia_pulse
 QT += multimedia-private
 
-QMAKE_USE += pulseaudio
+CONFIG += link_pkgconfig
+PKGCONFIG += libpulse
 
 HEADERS += qpulseaudioplugin.h \
            qaudiodeviceinfo_pulse.h \

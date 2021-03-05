@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -49,11 +39,12 @@
 ****************************************************************************/
 
 import QtQuick 2.0
-import QtQuick.Layouts 1.1
 import "."
 
 Rectangle {
     id: root
+    width: 440
+    height: 160
     color: "transparent"
 
     property bool drawOpenPrice: openButton.buttonEnabled
@@ -67,93 +58,118 @@ Rectangle {
     property string lowColor: "#f30000"
     property string volumeColor: "#14aaff"
 
-    GridLayout {
-        id: settingsGrid
-        rows: 5
-        columns: 3
-        rowSpacing: 4
-        anchors.fill: parent
+    Text {
+        id: openText
+        anchors.left: root.left
+        anchors.top: root.top
+        color: "#000000"
+        font.family: Settings.fontFamily
+        font.pointSize: 19
+        text: "Open"
+    }
 
-        Item {
-            Layout.fillHeight: true
-            Layout.columnSpan: 3
-        }
+    Text {
+        id: closeText
+        anchors.left: root.left
+        anchors.top: openText.bottom
+        anchors.topMargin: 10
+        color: "#000000"
+        font.family: Settings.fontFamily
+        font.pointSize: 19
+        text: "Close"
+    }
 
-        Text {
-            id: openText
-            color: "#000000"
-            font.family: Settings.fontFamily
-            font.pointSize: 19
-            text: "Open"
-            Layout.leftMargin: 10
-        }
-        Rectangle {
-            Layout.preferredHeight: 4
-            Layout.preferredWidth: 114
-            color: openColor
-        }
-        CheckBox {
-            id: openButton
-            buttonEnabled: false
-            Layout.rightMargin: 10
-        }
+    Text {
+        id: highText
+        anchors.left: root.left
+        anchors.top: closeText.bottom
+        anchors.topMargin: 10
+        color: "#000000"
+        font.family: Settings.fontFamily
+        font.pointSize: 19
+        text: "High"
+    }
 
-        Text {
-            id: closeText
-            Layout.leftMargin: 10
-            color: "#000000"
-            font.family: Settings.fontFamily
-            font.pointSize: 19
-            text: "Close"
-        }
-        Rectangle {
-            Layout.preferredHeight: 4
-            Layout.preferredWidth: 114
-            color: closeColor
-        }
-        CheckBox {
-            id: closeButton
-            buttonEnabled: false
-            Layout.rightMargin: 10
-        }
+    Text {
+        id: lowText
+        anchors.left: root.left
+        anchors.top: highText.bottom
+        anchors.topMargin: 10
+        color: "#000000"
+        font.family: Settings.fontFamily
+        font.pointSize: 19
+        text: "Low"
+    }
 
-        Text {
-            id: highText
-            Layout.leftMargin: 10
-            color: "#000000"
-            font.family: Settings.fontFamily
-            font.pointSize: 19
-            text: "High"
-        }
-        Rectangle {
-            Layout.preferredHeight: 4
-            Layout.preferredWidth: 114
-            color: highColor
-        }
-        CheckBox {
-            id: highButton
-            buttonEnabled: true
-            Layout.rightMargin: 10
-        }
+    Rectangle {
+        height: 4
+        anchors.left: root.left
+        anchors.leftMargin: 114
+        anchors.right: openButton.left
+        anchors.rightMargin: 65
+        anchors.verticalCenter: openText.verticalCenter
+        color: openColor
+    }
 
-        Text {
-            id: lowText
-            Layout.leftMargin: 10
-            color: "#000000"
-            font.family: Settings.fontFamily
-            font.pointSize: 19
-            text: "Low"
-        }
-        Rectangle {
-            Layout.preferredHeight: 4
-            Layout.preferredWidth: 114
-            color: lowColor
-        }
+    Rectangle {
+        height: 4
+        anchors.left: root.left
+        anchors.leftMargin: 114
+        anchors.right: closeButton.left
+        anchors.rightMargin: 65
+        anchors.verticalCenter: closeText.verticalCenter
+        color: closeColor
+    }
 
-        CheckBox {
-            id: lowButton
-            buttonEnabled: true
-            Layout.rightMargin: 10
-        }
+    Rectangle {
+        height: 4
+        anchors.left: root.left
+        anchors.leftMargin: 114
+        anchors.right: highButton.left
+        anchors.rightMargin: 65
+        anchors.verticalCenter: highText.verticalCenter
+        color: highColor
+    }
+
+    Rectangle {
+        height: 4
+        anchors.left: root.left
+        anchors.leftMargin: 114
+        anchors.right: lowButton.left
+        anchors.rightMargin: 65
+        anchors.verticalCenter: lowText.verticalCenter
+        color: lowColor
+    }
+
+    CheckBox {
+        id: openButton
+        buttonEnabled: false
+        anchors.verticalCenter: openText.verticalCenter
+        anchors.right: root.right
+        anchors.rightMargin: 40
+    }
+
+    CheckBox {
+        id: closeButton
+        buttonEnabled: false
+        anchors.verticalCenter: closeText.verticalCenter
+        anchors.right: root.right
+        anchors.rightMargin: 40
+    }
+
+    CheckBox {
+        id: highButton
+        buttonEnabled: true
+        anchors.verticalCenter: highText.verticalCenter
+        anchors.right: root.right
+        anchors.rightMargin: 40
+    }
+
+    CheckBox {
+        id: lowButton
+        buttonEnabled: true
+        anchors.verticalCenter: lowText.verticalCenter
+        anchors.right: root.right
+        anchors.rightMargin: 40
     }
 }

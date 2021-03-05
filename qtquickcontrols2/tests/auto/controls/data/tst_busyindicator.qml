@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -65,39 +55,14 @@ TestCase {
         BusyIndicator { }
     }
 
-    Component {
-        id: mouseArea
-        MouseArea { }
-    }
-
     function test_running() {
-        var control = createTemporaryObject(busyIndicator, testCase)
+        var control = busyIndicator.createObject(testCase)
         verify(control)
 
         compare(control.running, true)
         control.running = false
         compare(control.running, false)
-    }
 
-    // QTBUG-61785
-    function test_mouseArea() {
-        var ma = createTemporaryObject(mouseArea, testCase, {width: testCase.width, height: testCase.height})
-        verify(ma)
-
-        var control = busyIndicator.createObject(ma, {width: testCase.width, height: testCase.height})
-        verify(control)
-
-        mousePress(control)
-        verify(ma.pressed)
-
-        mouseRelease(control)
-        verify(!ma.pressed)
-
-        var touch = touchEvent(control)
-        touch.press(0, control).commit()
-        verify(ma.pressed)
-
-        touch.release(0, control).commit()
-        verify(!ma.pressed)
+        control.destroy()
     }
 }

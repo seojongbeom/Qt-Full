@@ -1,33 +1,37 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include <qglobal.h>
-#include <qhashfunctions.h>
 #include <stdlib.h>
 #include "codemarker.h"
 #include "codeparser.h"
@@ -361,25 +365,30 @@ static void processQdocconfFile(const QString &fileName)
                                                      + Config::dot
                                                      + CONFIG_LANDINGPAGE));
 
-    QSet<QString> excludedDirs = QSet<QString>::fromList(config.getCanonicalPathList(CONFIG_EXCLUDEDIRS));
-    QSet<QString> excludedFiles = QSet<QString>::fromList(config.getCanonicalPathList(CONFIG_EXCLUDEFILES));
-
-    Generator::debug("Adding doc/image dirs found in exampledirs to imagedirs");
-    QSet<QString> exampleImageDirs;
-    QStringList exampleImageList = config.getExampleImageFiles(excludedDirs, excludedFiles);
-    for (int i = 0; i < exampleImageList.size(); ++i) {
-        if (exampleImageList[i].contains("doc/images")) {
-            QString t = exampleImageList[i].left(exampleImageList[i].lastIndexOf("doc/images") + 10);
-            if (!exampleImageDirs.contains(t)) {
-                exampleImageDirs.insert(t);
-            }
-        }
-    }
-    Generator::augmentImageDirs(exampleImageDirs);
+    QSet<QString> excludedDirs;
+    QSet<QString> excludedFiles;
+    QStringList excludedDirsList;
+    QStringList excludedFilesList;
 
     if (!Generator::singleExec() || !Generator::generating()) {
         QStringList headerList;
         QStringList sourceList;
+
+        Generator::debug("Reading excludedirs");
+        excludedDirsList = config.getCanonicalPathList(CONFIG_EXCLUDEDIRS);
+        foreach (const QString &excludeDir, excludedDirsList) {
+            QString p = QDir::fromNativeSeparators(excludeDir);
+            QDir tmp(p);
+            if (tmp.exists())
+                excludedDirs.insert(p);
+        }
+
+        Generator::debug("Reading excludefiles");
+        excludedFilesList = config.getCanonicalPathList(CONFIG_EXCLUDEFILES);
+        foreach (const QString& excludeFile, excludedFilesList) {
+            QString p = QDir::fromNativeSeparators(excludeFile);
+            excludedFiles.insert(p);
+        }
 
         Generator::debug("Reading headerdirs");
         headerList = config.getAllFiles(CONFIG_HEADERS,CONFIG_HEADERDIRS,excludedDirs,excludedFiles);
@@ -421,6 +430,20 @@ static void processQdocconfFile(const QString &fileName)
                 sourceFileNames.insert(t,t);
             }
         }
+
+        Generator::debug("Adding doc/image dirs found in exampledirs to imagedirs");
+        QSet<QString> exampleImageDirs;
+        QStringList exampleImageList = config.getExampleImageFiles(excludedDirs, excludedFiles);
+        for (int i=0; i<exampleImageList.size(); ++i) {
+            if (exampleImageList[i].contains("doc/images")) {
+                QString t = exampleImageList[i].left(exampleImageList[i].lastIndexOf("doc/images")+10);
+                if (!exampleImageDirs.contains(t)) {
+                    exampleImageDirs.insert(t);
+                }
+            }
+        }
+        Generator::augmentImageDirs(exampleImageDirs);
+
         /*
           Parse each header file in the set using the appropriate parser and add it
           to the big tree.
@@ -481,6 +504,34 @@ static void processQdocconfFile(const QString &fileName)
         qdb->resolveIssues();
     }
     else {
+        Generator::debug("Reading excludedirs");
+        excludedDirsList = config.getCanonicalPathList(CONFIG_EXCLUDEDIRS);
+        foreach (const QString &excludeDir, excludedDirsList) {
+            QString p = QDir::fromNativeSeparators(excludeDir);
+            QDir tmp(p);
+            if (tmp.exists())
+                excludedDirs.insert(p);
+        }
+
+        Generator::debug("Reading excludefiles");
+        excludedFilesList = config.getCanonicalPathList(CONFIG_EXCLUDEFILES);
+        foreach (const QString& excludeFile, excludedFilesList) {
+            QString p = QDir::fromNativeSeparators(excludeFile);
+            excludedFiles.insert(p);
+        }
+
+        Generator::debug("Adding doc/image dirs found in exampledirs to imagedirs");
+        QSet<QString> exampleImageDirs;
+        QStringList exampleImageList = config.getExampleImageFiles(excludedDirs, excludedFiles);
+        for (int i=0; i<exampleImageList.size(); ++i) {
+            if (exampleImageList[i].contains("doc/images")) {
+                QString t = exampleImageList[i].left(exampleImageList[i].lastIndexOf("doc/images")+10);
+                if (!exampleImageDirs.contains(t)) {
+                    exampleImageDirs.insert(t);
+                }
+            }
+        }
+        Generator::augmentImageDirs(exampleImageDirs);
         qdb->resolveStuff();
     }
 
@@ -695,6 +746,7 @@ void QDocCommandLineParser::process(const QCoreApplication &app)
     }
 }
 
+extern Q_CORE_EXPORT QBasicAtomicInt qt_qhash_seed;
 QT_END_NAMESPACE
 
 int main(int argc, char **argv)
@@ -703,7 +755,7 @@ int main(int argc, char **argv)
 
     // Initialize Qt:
 #ifndef QT_BOOTSTRAPPED
-    qSetGlobalQHashSeed(0); // set the hash seed to 0 if it wasn't set yet
+    qt_qhash_seed.testAndSetRelaxed(-1, 0); // set the hash seed to 0 if it wasn't set yet
 #endif
     QCoreApplication app(argc, argv);
     app.setApplicationVersion(QLatin1String(QT_VERSION_STR));

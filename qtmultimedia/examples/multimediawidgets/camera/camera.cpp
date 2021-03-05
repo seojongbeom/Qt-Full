@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -68,7 +58,12 @@ Q_DECLARE_METATYPE(QCameraInfo)
 
 Camera::Camera(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::Camera)
+    ui(new Ui::Camera),
+    camera(0),
+    imageCapture(0),
+    mediaRecorder(0),
+    isCapturingImage(false),
+    applicationExiting(false)
 {
     ui->setupUi(this);
 
@@ -76,8 +71,7 @@ Camera::Camera(QWidget *parent) :
 
     QActionGroup *videoDevicesGroup = new QActionGroup(this);
     videoDevicesGroup->setExclusive(true);
-    const QList<QCameraInfo> availableCameras = QCameraInfo::availableCameras();
-    for (const QCameraInfo &cameraInfo : availableCameras) {
+    foreach (const QCameraInfo &cameraInfo, QCameraInfo::availableCameras()) {
         QAction *videoDeviceAction = new QAction(cameraInfo.description(), videoDevicesGroup);
         videoDeviceAction->setCheckable(true);
         videoDeviceAction->setData(QVariant::fromValue(cameraInfo));
@@ -87,8 +81,8 @@ Camera::Camera(QWidget *parent) :
         ui->menuDevices->addAction(videoDeviceAction);
     }
 
-    connect(videoDevicesGroup, &QActionGroup::triggered, this, &Camera::updateCameraDevice);
-    connect(ui->captureWidget, &QTabWidget::currentChanged, this, &Camera::updateCaptureMode);
+    connect(videoDevicesGroup, SIGNAL(triggered(QAction*)), SLOT(updateCameraDevice(QAction*)));
+    connect(ui->captureWidget, SIGNAL(currentChanged(int)), SLOT(updateCaptureMode()));
 
     setCamera(QCameraInfo::defaultCamera());
 }
@@ -108,21 +102,20 @@ void Camera::setCamera(const QCameraInfo &cameraInfo)
 
     camera = new QCamera(cameraInfo);
 
-    connect(camera, &QCamera::stateChanged, this, &Camera::updateCameraState);
-    connect(camera, QOverload<QCamera::Error>::of(&QCamera::error), this, &Camera::displayCameraError);
+    connect(camera, SIGNAL(stateChanged(QCamera::State)), this, SLOT(updateCameraState(QCamera::State)));
+    connect(camera, SIGNAL(error(QCamera::Error)), this, SLOT(displayCameraError()));
 
     mediaRecorder = new QMediaRecorder(camera);
-    connect(mediaRecorder, &QMediaRecorder::stateChanged, this, &Camera::updateRecorderState);
+    connect(mediaRecorder, SIGNAL(stateChanged(QMediaRecorder::State)), this, SLOT(updateRecorderState(QMediaRecorder::State)));
 
     imageCapture = new QCameraImageCapture(camera);
 
-    connect(mediaRecorder, &QMediaRecorder::durationChanged, this, &Camera::updateRecordTime);
-    connect(mediaRecorder, QOverload<QMediaRecorder::Error>::of(&QMediaRecorder::error),
-            this, &Camera::displayRecorderError);
+    connect(mediaRecorder, SIGNAL(durationChanged(qint64)), this, SLOT(updateRecordTime()));
+    connect(mediaRecorder, SIGNAL(error(QMediaRecorder::Error)), this, SLOT(displayRecorderError()));
 
     mediaRecorder->setMetaData(QMediaMetaData::Title, QVariant(QLatin1String("Test Title")));
 
-    connect(ui->exposureCompensation, &QAbstractSlider::valueChanged, this, &Camera::setExposureCompensation);
+    connect(ui->exposureCompensation, SIGNAL(valueChanged(int)), SLOT(setExposureCompensation(int)));
 
     camera->setViewfinder(ui->viewfinder);
 
@@ -130,14 +123,14 @@ void Camera::setCamera(const QCameraInfo &cameraInfo)
     updateLockStatus(camera->lockStatus(), QCamera::UserRequest);
     updateRecorderState(mediaRecorder->state());
 
-    connect(imageCapture, &QCameraImageCapture::readyForCaptureChanged, this, &Camera::readyForCapture);
-    connect(imageCapture, &QCameraImageCapture::imageCaptured, this, &Camera::processCapturedImage);
-    connect(imageCapture, &QCameraImageCapture::imageSaved, this, &Camera::imageSaved);
-    connect(imageCapture, QOverload<int, QCameraImageCapture::Error, const QString &>::of(&QCameraImageCapture::error),
-            this, &Camera::displayCaptureError);
+    connect(imageCapture, SIGNAL(readyForCaptureChanged(bool)), this, SLOT(readyForCapture(bool)));
+    connect(imageCapture, SIGNAL(imageCaptured(int,QImage)), this, SLOT(processCapturedImage(int,QImage)));
+    connect(imageCapture, SIGNAL(imageSaved(int,QString)), this, SLOT(imageSaved(int,QString)));
+    connect(imageCapture, SIGNAL(error(int,QCameraImageCapture::Error,QString)), this,
+            SLOT(displayCaptureError(int,QCameraImageCapture::Error,QString)));
 
-    connect(camera, QOverload<QCamera::LockStatus, QCamera::LockChangeReason>::of(&QCamera::lockStatusChanged),
-            this, &Camera::updateLockStatus);
+    connect(camera, SIGNAL(lockStatusChanged(QCamera::LockStatus,QCamera::LockChangeReason)),
+            this, SLOT(updateLockStatus(QCamera::LockStatus,QCamera::LockChangeReason)));
 
     ui->captureWidget->setTabEnabled(0, (camera->isCaptureModeSupported(QCamera::CaptureStillImage)));
     ui->captureWidget->setTabEnabled(1, (camera->isCaptureModeSupported(QCamera::CaptureVideo)));
@@ -204,7 +197,7 @@ void Camera::processCapturedImage(int requestId, const QImage& img)
 
     // Display captured image for 4 seconds.
     displayCapturedImage();
-    QTimer::singleShot(4000, this, &Camera::displayViewfinder);
+    QTimer::singleShot(4000, this, SLOT(displayViewfinder()));
 }
 
 void Camera::configureCaptureSettings()
@@ -224,7 +217,6 @@ void Camera::configureCaptureSettings()
 void Camera::configureVideoSettings()
 {
     VideoSettings settingsDialog(mediaRecorder);
-    settingsDialog.setWindowFlags(settingsDialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
     settingsDialog.setAudioSettings(audioSettings);
     settingsDialog.setVideoSettings(videoSettings);
@@ -245,7 +237,6 @@ void Camera::configureVideoSettings()
 void Camera::configureImageSettings()
 {
     ImageSettings settingsDialog(imageCapture);
-    settingsDialog.setWindowFlags(settingsDialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
     settingsDialog.setImageSettings(imageSettings);
 
@@ -394,12 +385,12 @@ void Camera::setExposureCompensation(int index)
 
 void Camera::displayRecorderError()
 {
-    QMessageBox::warning(this, tr("Capture Error"), mediaRecorder->errorString());
+    QMessageBox::warning(this, tr("Capture error"), mediaRecorder->errorString());
 }
 
 void Camera::displayCameraError()
 {
-    QMessageBox::warning(this, tr("Camera Error"), camera->errorString());
+    QMessageBox::warning(this, tr("Camera error"), camera->errorString());
 }
 
 void Camera::updateCameraDevice(QAction *action)
@@ -425,7 +416,7 @@ void Camera::readyForCapture(bool ready)
 void Camera::imageSaved(int id, const QString &fileName)
 {
     Q_UNUSED(id);
-    ui->statusbar->showMessage(tr("Captured \"%1\"").arg(QDir::toNativeSeparators(fileName)));
+    Q_UNUSED(fileName);
 
     isCapturingImage = false;
     if (applicationExiting)

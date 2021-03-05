@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,14 +45,13 @@
 // We mean it.
 //
 
-#include <QtWidgets/private/qtwidgetsglobal_p.h>
 #include "QtCore/qrect.h"
 #include "QtCore/qpair.h"
 #include "QtCore/qlist.h"
 #include "QtCore/qvector.h"
 #include "QtWidgets/qlayout.h"
 
-QT_REQUIRE_CONFIG(dockwidget);
+#ifndef QT_NO_DOCKWIDGET
 
 QT_BEGIN_NAMESPACE
 
@@ -89,9 +82,9 @@ struct QDockAreaLayoutItem
 {
     enum ItemFlags { NoFlags = 0, GapItem = 1, KeepSize = 2 };
 
-    explicit QDockAreaLayoutItem(QLayoutItem *_widgetItem = 0);
-    explicit QDockAreaLayoutItem(QDockAreaLayoutInfo *_subinfo);
-    explicit QDockAreaLayoutItem(QPlaceHolderItem *_placeHolderItem);
+    QDockAreaLayoutItem(QLayoutItem *_widgetItem = 0);
+    QDockAreaLayoutItem(QDockAreaLayoutInfo *_subinfo);
+    QDockAreaLayoutItem(QPlaceHolderItem *_placeHolderItem);
     QDockAreaLayoutItem(const QDockAreaLayoutItem &other);
     ~QDockAreaLayoutItem();
 
@@ -116,7 +109,7 @@ class Q_AUTOTEST_EXPORT QPlaceHolderItem
 {
 public:
     QPlaceHolderItem() : hidden(false), window(false) {}
-    explicit QPlaceHolderItem(QWidget *w);
+    QPlaceHolderItem(QWidget *w);
 
     QString objectName;
     bool hidden, window;
@@ -167,7 +160,6 @@ public:
 
     void clear();
     bool isEmpty() const;
-    bool onlyHasPlaceholders() const;
     bool hasFixedSize() const;
     QList<int> findSeparator(const QPoint &pos) const;
     int next(int idx) const;
@@ -176,7 +168,7 @@ public:
     QList<int> indexOf(QWidget *widget) const;
     QList<int> indexOfPlaceHolder(const QString &objectName) const;
 
-    QDockWidget *apply(bool animate);
+    void apply(bool animate);
 
     void paintSeparators(QPainter *p, QWidget *widget, const QRegion &clip,
                             const QPoint &mouse) const;
@@ -196,10 +188,12 @@ public:
     QRect rect;
     QMainWindow *mainWindow;
     QList<QDockAreaLayoutItem> item_list;
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     void updateSeparatorWidgets() const;
     QSet<QWidget*> usedSeparatorWidgets() const;
+#endif //QT_NO_TABBAR
 
+#ifndef QT_NO_TABBAR
     quintptr currentTabId() const;
     void setCurrentTab(QWidget *widget);
     void setCurrentTabId(quintptr id);
@@ -218,7 +212,7 @@ public:
 
     int tabIndexToListIndex(int) const;
     void moveTab(int from, int to);
-#endif // QT_CONFIG(tabbar)
+#endif // QT_NO_TABBAR
 };
 
 class Q_AUTOTEST_EXPORT QDockAreaLayout
@@ -283,9 +277,9 @@ public:
                             const QPoint &mouse) const;
     QRegion separatorRegion() const;
     int separatorMove(const QList<int> &separator, const QPoint &origin, const QPoint &dest);
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     void updateSeparatorWidgets() const;
-#endif // QT_CONFIG(tabbar)
+#endif //QT_NO_TABBAR
 
     QLayoutItem *itemAt(int *x, int index) const;
     QLayoutItem *takeAt(int *x, int index);
@@ -299,13 +293,15 @@ public:
     QRect gapRect(const QList<int> &path) const;
 
     void keepSize(QDockWidget *w);
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     QSet<QTabBar*> usedTabBars() const;
     QSet<QWidget*> usedSeparatorWidgets() const;
-#endif // QT_CONFIG(tabbar)
+#endif //QT_NO_TABBAR
     void styleChangedEvent();
 };
 
 QT_END_NAMESPACE
+
+#endif // QT_NO_QDOCKWIDGET
 
 #endif // QDOCKAREALAYOUT_P_H

@@ -1,4 +1,6 @@
 TEMPLATE = subdirs
 
-qtConfig(private_tests): \
-    SUBDIRS += compile
+contains(QT_CONFIG, private_tests) {
+    SUBDIRS += \
+        compile
+}

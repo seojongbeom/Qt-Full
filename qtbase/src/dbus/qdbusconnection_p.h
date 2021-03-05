@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtDBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,7 +47,6 @@
 #ifndef QDBUSCONNECTION_P_H
 #define QDBUSCONNECTION_P_H
 
-#include <QtDBus/private/qtdbusglobal_p.h>
 #include <qdbuserror.h>
 #include <qdbusconnection.h>
 
@@ -145,6 +138,7 @@ public:
         inline ObjectTreeNode() : obj(0), flags(0) { }
         inline ObjectTreeNode(const QString &n) // intentionally implicit
             : name(n), obj(0), flags(0) { }
+        inline ~ObjectTreeNode() { }
         inline bool operator<(const QString &other) const
             { return name < other; }
         inline bool operator<(const QStringRef &other) const
@@ -280,7 +274,7 @@ public slots:
     void socketWrite(int);
     void objectDestroyed(QObject *o);
     void relaySignal(QObject *obj, const QMetaObject *, int signalId, const QVariantList &args);
-    bool addSignalHook(const QString &key, const SignalHook &hook);
+    void addSignalHook(const QString &key, const SignalHook &hook);
     bool removeSignalHook(const QString &key, const SignalHook &hook);
 
 private slots:
@@ -293,7 +287,7 @@ signals:
     void dispatchStatusChanged();
     void spyHooksFinished(const QDBusMessage &msg);
     void messageNeedsSending(QDBusPendingCallPrivate *pcall, void *msg, int timeout = -1);
-    bool signalNeedsConnecting(const QString &key, const QDBusConnectionPrivate::SignalHook &hook);
+    void signalNeedsConnecting(const QString &key, const QDBusConnectionPrivate::SignalHook &hook);
     bool signalNeedsDisconnecting(const QString &key, const QDBusConnectionPrivate::SignalHook &hook);
     void serviceOwnerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
     void callWithCallbackFailed(const QDBusError &error, const QDBusMessage &message);
@@ -348,6 +342,9 @@ public:
                             QObject *receiver, const char *signal, int minMIdx,
                             bool buildSignature);
     static DBusHandlerResult messageFilter(DBusConnection *, DBusMessage *, void *);
+    static bool checkReplyForDelivery(QDBusConnectionPrivate *target, QObject *object,
+                                      int idx, const QList<int> &metaTypes,
+                                      const QDBusMessage &msg);
     static QDBusCallDeliveryEvent *prepareReply(QDBusConnectionPrivate *target, QObject *object,
                                                 int idx, const QVector<int> &metaTypes,
                                                 const QDBusMessage &msg);

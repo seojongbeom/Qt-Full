@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,6 +36,8 @@
 #include "QtNetwork/qauthenticator.h"
 #include "private/qnoncontiguousbytedevice_p.h"
 #include <QStringList>
+
+#ifndef QT_NO_FTP
 
 QT_BEGIN_NAMESPACE
 
@@ -112,15 +108,14 @@ QNetworkAccessFtpBackend::~QNetworkAccessFtpBackend()
     //if backend destroyed while in use, then abort (this is the code path from QNetworkReply::abort)
     if (ftp && state != Disconnecting)
         ftp->abort();
-    disconnectFromFtp(RemoveCachedConnection);
+    disconnectFromFtp();
 }
 
 void QNetworkAccessFtpBackend::open()
 {
 #ifndef QT_NO_NETWORKPROXY
     QNetworkProxy proxy;
-    const auto proxies = proxyList();
-    for (const QNetworkProxy &p : proxies) {
+    foreach (const QNetworkProxy &p, proxyList()) {
         // use the first FTP proxy
         // or no proxy at all
         if (p.type() == QNetworkProxy::FtpCachingProxy
@@ -304,6 +299,8 @@ void QNetworkAccessFtpBackend::ftpDone()
         state = CheckingFeatures;
         if (operation() == QNetworkAccessManager::GetOperation) {
             // send help command to find out if server supports "SIZE" and "MDTM"
+            QString command = url().path();
+            command.prepend(QLatin1String("%1 "));
             helpId = ftp->rawCommand(QLatin1String("HELP")); // get supported commands
         } else {
             ftpDone();
@@ -312,13 +309,14 @@ void QNetworkAccessFtpBackend::ftpDone()
         state = Statting;
         if (operation() == QNetworkAccessManager::GetOperation) {
             // logged in successfully, send the stat requests (if supported)
-            const QString path = url().path();
+            QString command = url().path();
+            command.prepend(QLatin1String("%1 "));
             if (supportsSize) {
                 ftp->rawCommand(QLatin1String("TYPE I"));
-                sizeId = ftp->rawCommand(QLatin1String("SIZE ") + path); // get size
+                sizeId = ftp->rawCommand(command.arg(QLatin1String("SIZE"))); // get size
             }
             if (supportsMdtm)
-                mdtmId = ftp->rawCommand(QLatin1String("MDTM ") + path); // get modified time
+                mdtmId = ftp->rawCommand(command.arg(QLatin1String("MDTM"))); // get modified time
             if (!supportsSize && !supportsMdtm)
                 ftpDone();      // no commands sent, move to the next state
         } else {
@@ -380,3 +378,5 @@ void QNetworkAccessFtpBackend::ftpRawCommandReply(int code, const QString &text)
 }
 
 QT_END_NAMESPACE
+
+#endif // QT_NO_FTP

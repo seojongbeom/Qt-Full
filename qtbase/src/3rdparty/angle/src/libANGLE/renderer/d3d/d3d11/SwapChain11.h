@@ -20,12 +20,8 @@ class Renderer11;
 class SwapChain11 : public SwapChainD3D
 {
   public:
-    SwapChain11(Renderer11 *renderer,
-                NativeWindow nativeWindow,
-                HANDLE shareHandle,
-                GLenum backBufferFormat,
-                GLenum depthBufferFormat,
-                EGLint orientation);
+    SwapChain11(Renderer11 *renderer, NativeWindow nativeWindow, HANDLE shareHandle,
+                GLenum backBufferFormat, GLenum depthBufferFormat);
     virtual ~SwapChain11();
 
     EGLint resize(EGLint backbufferWidth, EGLint backbufferHeight);
@@ -46,45 +42,29 @@ class SwapChain11 : public SwapChainD3D
 
     EGLint getWidth() const { return mWidth; }
     EGLint getHeight() const { return mHeight; }
-    void *getKeyedMutex() override { return mKeyedMutex; }
 
     virtual void *getDevice();
+
+    static SwapChain11 *makeSwapChain11(SwapChainD3D *swapChain);
 
   private:
     void release();
     void initPassThroughResources();
-
-    void releaseOffscreenColorBuffer();
-    void releaseOffscreenDepthBuffer();
-    EGLint resetOffscreenBuffers(int backbufferWidth, int backbufferHeight);
-    EGLint resetOffscreenColorBuffer(int backbufferWidth, int backbufferHeight);
-    EGLint resetOffscreenDepthBuffer(int backbufferWidth, int backbufferHeight);
-
-    DXGI_FORMAT getSwapChainNativeFormat() const;
-
-    EGLint copyOffscreenToBackbuffer(EGLint x, EGLint y, EGLint width, EGLint height);
-    EGLint present(EGLint x, EGLint y, EGLint width, EGLint height);
+    void releaseOffscreenTexture();
+    EGLint resetOffscreenTexture(int backbufferWidth, int backbufferHeight);
 
     Renderer11 *mRenderer;
-    EGLint mWidth;
     EGLint mHeight;
-    const EGLint mOrientation;
+    EGLint mWidth;
     bool mAppCreatedShareHandle;
     unsigned int mSwapInterval;
     bool mPassThroughResourcesInit;
 
-    bool mFirstSwap;
     DXGISwapChain *mSwapChain;
-#if defined(ANGLE_ENABLE_D3D11_1)
-    IDXGISwapChain1 *mSwapChain1;
-#endif
-    IDXGIKeyedMutex *mKeyedMutex;
 
     ID3D11Texture2D *mBackBufferTexture;
     ID3D11RenderTargetView *mBackBufferRTView;
-    ID3D11ShaderResourceView *mBackBufferSRView;
 
-    const bool mNeedsOffscreenTexture;
     ID3D11Texture2D *mOffscreenTexture;
     ID3D11RenderTargetView *mOffscreenRTView;
     ID3D11ShaderResourceView *mOffscreenSRView;
@@ -98,7 +78,6 @@ class SwapChain11 : public SwapChainD3D
     ID3D11InputLayout *mPassThroughIL;
     ID3D11VertexShader *mPassThroughVS;
     ID3D11PixelShader *mPassThroughPS;
-    ID3D11RasterizerState *mPassThroughRS;
 
     SurfaceRenderTarget11 mColorRenderTarget;
     SurfaceRenderTarget11 mDepthStencilRenderTarget;

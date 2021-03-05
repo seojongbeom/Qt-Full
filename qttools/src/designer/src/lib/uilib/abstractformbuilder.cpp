@@ -1,40 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
-**
+**sw
 ****************************************************************************/
 
 #include "abstractformbuilder.h"
@@ -87,9 +81,6 @@
 #include <QtCore/qdebug.h>
 
 #include <limits.h>
-
-#include <algorithm>
-#include <iterator>
 
 Q_DECLARE_METATYPE(QWidgetList)
 
@@ -170,7 +161,7 @@ QAbstractFormBuilder::~QAbstractFormBuilder()
 // Return UI file version from attribute 'version="4.0"'
 static QPair<int, int> uiVersion(const QString &attr)
 {
-    const QVector<QStringRef> versions = attr.splitRef(QLatin1Char('.'), QString::SkipEmptyParts);
+    const QStringList versions = attr.split(QLatin1Char('.'), QString::SkipEmptyParts);
     if (versions.size() >= 2) {
         bool okMajor, okMinor;
         const int majorVersion = versions.at(0).toInt(&okMajor);
@@ -339,31 +330,27 @@ QWidget *QAbstractFormBuilder::create(DomWidget *ui_widget, QWidget *parentWidge
 
     applyProperties(w, ui_widget->elementProperty());
 
-    const QList<DomAction *> &elementAction = ui_widget->elementAction();
-    for (DomAction *ui_action : elementAction) {
+    foreach (DomAction *ui_action, ui_widget->elementAction()) {
         QAction *child_action = create(ui_action, w);
         Q_UNUSED( child_action );
     }
 
-    const QList<DomActionGroup *> &elementActionGroup = ui_widget->elementActionGroup();
-    for (DomActionGroup *ui_action_group : elementActionGroup) {
+    foreach (DomActionGroup *ui_action_group, ui_widget->elementActionGroup()) {
         QActionGroup *child_action_group = create(ui_action_group, w);
         Q_UNUSED( child_action_group );
     }
 
     QWidgetList children;
-    const QList<DomWidget *> &elementWidget = ui_widget->elementWidget();
-    for (DomWidget *ui_child : elementWidget) {
+    foreach (DomWidget *ui_child, ui_widget->elementWidget()) {
         if (QWidget *child  = create(ui_child, w)) {
             children += child;
         } else {
-            const QString className = ui_child->elementClass().value(0);
+            const QString className = ui_child->elementClass().empty() ? QString() : ui_child->elementClass().front();
             uiLibWarning(QCoreApplication::translate("QAbstractFormBuilder", "The creation of a widget of the class '%1' failed.").arg(className));
         }
     }
 
-    const QList<DomLayout *> &elementLayout = ui_widget->elementLayout();
-    for (DomLayout *ui_lay : elementLayout) {
+    foreach (DomLayout *ui_lay, ui_widget->elementLayout()) {
         QLayout *child_lay = create(ui_lay, 0, w);
         Q_UNUSED( child_lay );
     }
@@ -371,7 +358,7 @@ QWidget *QAbstractFormBuilder::create(DomWidget *ui_widget, QWidget *parentWidge
     const QList<DomActionRef *> addActions = ui_widget->elementAddAction();
     if (!addActions.empty()) {
         const QFormBuilderStrings &strings = QFormBuilderStrings::instance();
-        for (DomActionRef *ui_action_ref : addActions) {
+        foreach (DomActionRef *ui_action_ref, addActions) {
             const QString name = ui_action_ref->attributeName();
             if (name == strings.separator) {
                 QAction *sep = new QAction(w);
@@ -398,7 +385,7 @@ QWidget *QAbstractFormBuilder::create(DomWidget *ui_widget, QWidget *parentWidge
     const QStringList zOrderNames = ui_widget->elementZOrder();
     if (!zOrderNames.isEmpty()) {
         QList<QWidget *> zOrder = qvariant_cast<QWidgetList>(w->property("_q_zOrder"));
-        for (const QString &widgetName : zOrderNames) {
+        foreach (const QString &widgetName, zOrderNames) {
             if (QWidget *child = w->findChild<QWidget*>(widgetName)) {
                 if (child->parentWidget() == w) {
                     zOrder.removeAll(child);
@@ -438,14 +425,12 @@ QActionGroup *QAbstractFormBuilder::create(DomActionGroup *ui_action_group, QObj
     d->m_actionGroups.insert(ui_action_group->attributeName(), a);
     applyProperties(a, ui_action_group->elementProperty());
 
-    const QList<DomAction*> &elementAction = ui_action_group->elementAction();
-    for (DomAction *ui_action : elementAction) {
+    foreach (DomAction *ui_action, ui_action_group->elementAction()) {
         QAction *child_action = create(ui_action, a);
         Q_UNUSED( child_action );
     }
 
-    const QList<DomActionGroup *> &elementActionGroup = ui_action_group->elementActionGroup();
-    for (DomActionGroup *g : elementActionGroup) {
+    foreach (DomActionGroup *g, ui_action_group->elementActionGroup()) {
         QActionGroup *child_action_group = create(g, parent);
         Q_UNUSED( child_action_group );
     }
@@ -681,14 +666,13 @@ void QAbstractFormBuilder::layoutInfo(DomLayout *ui_layout, QObject *parent, int
 
         if (mar == INT_MIN || spac == INT_MIN) {
             QList<DomProperty *> properties = ui_layout->elementProperty();
-            for (auto it = properties.begin(); it != properties.end(); ) {
-                DomProperty *prop = *it;
-                if ((mar == INT_MIN && prop->attributeName() == strings.marginProperty)
-                    || (spac == INT_MIN && prop->attributeName() == strings.spacingProperty)) {
+            QMutableListIterator<DomProperty *> it(properties);
+            while (it.hasNext()) {
+                DomProperty *prop = it.next();
+                if ((mar == INT_MIN && prop->attributeName() == strings.marginProperty) ||
+                        (spac == INT_MIN && prop->attributeName() == strings.spacingProperty)) {
+                    it.remove();
                     delete prop;
-                    it = properties.erase(it);
-                } else {
-                    ++it;
                 }
             }
             ui_layout->setElementProperty(properties);
@@ -784,8 +768,7 @@ QLayout *QAbstractFormBuilder::create(DomLayout *ui_layout, QLayout *parentLayou
 
     applyProperties(layout, ui_layout->elementProperty());
 
-    const QList<DomLayoutItem *> &elementItem = ui_layout->elementItem();
-    for (DomLayoutItem *ui_item : elementItem) {
+    foreach (DomLayoutItem *ui_item, ui_layout->elementItem()) {
         if (QLayoutItem *item = create(ui_item, layout, parentWidget)) {
             addItem(ui_item, item, layout);
         }
@@ -867,8 +850,7 @@ static inline Qt::Alignment alignmentFromDom(const QString &in)
 {
     Qt::Alignment rc = 0;
     if (!in.isEmpty()) {
-        const QVector<QStringRef> flags = in.splitRef(QLatin1Char('|'));
-        for (const QStringRef &f : flags) {
+        foreach (const QString &f, in.split(QLatin1Char('|'))) {
             if (f == QStringLiteral("Qt::AlignLeft")) {
                 rc |= Qt::AlignLeft;
             } else if (f == QStringLiteral("Qt::AlignRight")) {
@@ -954,7 +936,7 @@ QLayoutItem *QAbstractFormBuilder::create(DomLayoutItem *ui_layoutItem, QLayout 
         const QList<DomProperty *> spacerProperties =  ui_spacer->elementProperty();
         if (!spacerProperties.empty()) {
             const QFormBuilderStrings &strings = QFormBuilderStrings::instance();
-            for (DomProperty *p : spacerProperties) {
+            foreach (DomProperty *p, spacerProperties) {
                 const QVariant v = toVariant(&QAbstractFormBuilderGadget::staticMetaObject, p); // ### remove me
                 if (v.isNull())
                     continue;
@@ -1133,7 +1115,9 @@ QBrush QAbstractFormBuilder::setupBrush(DomBrush *brush)
         gr->setCoordinateMode(coord);
 
         const QList<DomGradientStop *> stops = gradient->elementGradientStop();
-        for (const DomGradientStop *stop : stops) {
+        QListIterator<DomGradientStop *> it(stops);
+        while (it.hasNext()) {
+            const DomGradientStop *stop = it.next();
             const DomColor *color = stop->elementColor();
             gr->setColorAt(stop->attributePosition(), QColor::fromRgb(color->elementRed(),
                             color->elementGreen(), color->elementBlue(), color->attributeAlpha()));
@@ -1178,8 +1162,10 @@ DomBrush *QAbstractFormBuilder::saveBrush(const QBrush &br)
         gradient->setAttributeSpread(QLatin1String(gradientSpread_enum.valueToKey(gr->spread())));
         gradient->setAttributeCoordinateMode(QLatin1String(gradientCoordinate_enum.valueToKey(gr->coordinateMode())));
         QList<DomGradientStop *> stops;
-        const QGradientStops st = gr->stops();
-        for (const QGradientStop &pair : st) {
+        QGradientStops st = gr->stops();
+        QVectorIterator<QPair<qreal, QColor> > it(st);
+        while (it.hasNext()) {
+            const QPair<qreal, QColor> pair = it.next();
             DomGradientStop *stop = new DomGradientStop();
             stop->setAttributePosition(pair.first);
             DomColor *color = new DomColor();
@@ -1379,7 +1365,7 @@ DomWidget *QAbstractFormBuilder::createDom(QWidget *widget, DomWidget *ui_parent
         QList<QObject *> childObjects = widget->children();
 
         const QList<QWidget *> list = qvariant_cast<QWidgetList>(widget->property("_q_widgetOrder"));
-        for (QWidget *w : list) {
+        foreach (QWidget *w, list) {
             if (childObjects.contains(w)) {
                 children.append(w);
                 childObjects.removeAll(w);
@@ -1390,24 +1376,26 @@ DomWidget *QAbstractFormBuilder::createDom(QWidget *widget, DomWidget *ui_parent
         const QList<QWidget *> zOrder = qvariant_cast<QWidgetList>(widget->property("_q_zOrder"));
         if (list != zOrder) {
             QStringList zOrderList;
-            zOrderList.reserve(zOrder.size());
-            std::transform(zOrder.cbegin(), zOrder.cend(),
-                           std::back_inserter(zOrderList),
-                           [] (const QWidget *w) { return w->objectName(); });
+            QListIterator<QWidget* > itZOrder(zOrder);
+            while (itZOrder.hasNext())
+                zOrderList.append(itZOrder.next()->objectName());
             ui_widget->setElementZOrder(zOrderList);
         }
     }
 
-    for (QObject *obj : qAsConst(children)) {
+    foreach (QObject *obj, children) {
         if (QWidget *childWidget = qobject_cast<QWidget*>(obj)) {
             if (d->m_laidout.contains(childWidget) || recursive == false)
                 continue;
 
             if (QMenu *menu = qobject_cast<QMenu *>(childWidget)) {
-                const QList<QAction *> actions = menu->parentWidget()->actions();
-                const bool found =
-                    std::any_of(actions.cbegin(), actions.cend(),
-                                [menu] (const QAction *a) { return a->menu() == menu; });
+                QList<QAction *> actions = menu->parentWidget()->actions();
+                QListIterator<QAction *> it(actions);
+                bool found = false;
+                while (it.hasNext()) {
+                    if (it.next()->menu() == menu)
+                        found = true;
+                }
                 if (!found)
                     continue;
             }
@@ -1433,8 +1421,7 @@ DomWidget *QAbstractFormBuilder::createDom(QWidget *widget, DomWidget *ui_parent
 
     // add-action
     QList<DomActionRef*> ui_action_refs;
-    const QList<QAction *> &actions = widget->actions();
-    for (QAction *action : actions) {
+    foreach (QAction *action, widget->actions()) {
         if (DomActionRef *ui_action_ref = createActionRefDom(action)) {
             ui_action_refs.append(ui_action_ref);
         }
@@ -1586,7 +1573,7 @@ DomLayout *QAbstractFormBuilder::createDom(QLayout *layout, DomLayout *ui_layout
     }
 
     QList<DomLayoutItem*> ui_items;
-    for (const FormBuilderSaveLayoutEntry &item : qAsConst(newList)) {
+    foreach (const FormBuilderSaveLayoutEntry &item, newList) {
         if (DomLayoutItem *ui_item = createDom(item.item, lay, ui_parentWidget)) {
             if (item.row >= 0)
                 ui_item->setAttributeRow(item.row);
@@ -1739,7 +1726,7 @@ QAbstractFormBuilder::DomPropertyHash QAbstractFormBuilder::propertyMap(const QL
 {
     DomPropertyHash map;
 
-    for (DomProperty *p : properties)
+    foreach (DomProperty *p, properties)
         map.insert(p->attributeName(), p);
 
     return map;
@@ -1881,11 +1868,11 @@ static void storeItemProps(QAbstractFormBuilder *abstractFormBuilder, const T *i
     DomProperty *p;
     QVariant v;
 
-    for (const QFormBuilderStrings::TextRoleNName &it : strings.itemTextRoles)
+    foreach (const QFormBuilderStrings::TextRoleNName &it, strings.itemTextRoles)
         if ((p = formBuilder->saveText(it.second, item->data(it.first.second))))
             properties->append(p);
 
-    for (const QFormBuilderStrings::RoleNName &it : strings.itemRoles)
+    foreach (const QFormBuilderStrings::RoleNName &it, strings.itemRoles)
         if ((v = item->data(it.first)).isValid() &&
             (p = variantToDomProperty(abstractFormBuilder,
                 static_cast<const QMetaObject *>(&QAbstractFormBuilderGadget::staticMetaObject),
@@ -1914,7 +1901,7 @@ static void loadItemProps(QAbstractFormBuilder *abstractFormBuilder, T *item,
     DomProperty *p;
     QVariant v;
 
-    for (const QFormBuilderStrings::TextRoleNName &it : strings.itemTextRoles)
+    foreach (const QFormBuilderStrings::TextRoleNName &it, strings.itemTextRoles)
         if ((p = properties.value(it.second))) {
             v = formBuilder->textBuilder()->loadText(p);
             QVariant nativeValue = formBuilder->textBuilder()->toNativeValue(v);
@@ -1922,7 +1909,7 @@ static void loadItemProps(QAbstractFormBuilder *abstractFormBuilder, T *item,
             item->setData(it.first.second, v);
         }
 
-    for (const QFormBuilderStrings::RoleNName &it : strings.itemRoles)
+    foreach (const QFormBuilderStrings::RoleNName &it, strings.itemRoles)
         if ((p = properties.value(it.second)) &&
             (v = formBuilder->toVariant(&QAbstractFormBuilderGadget::staticMetaObject, p)).isValid())
             item->setData(it.first, v);
@@ -1966,7 +1953,7 @@ void QAbstractFormBuilder::saveTreeWidgetExtraInfo(QTreeWidget *treeWidget, DomW
 
         QList<DomProperty*> properties;
 
-        for (const QFormBuilderStrings::TextRoleNName &it : strings.itemTextRoles) {
+        foreach (const QFormBuilderStrings::TextRoleNName &it, strings.itemTextRoles) {
             p = saveText(it.second, treeWidget->headerItem()->data(c, it.first.second));
             // Prevent uic 4.4.X from crashing if it cannot find a column text
             if (!p && it.first.first == Qt::EditRole && it.second == QStringLiteral("text")) {
@@ -1981,7 +1968,7 @@ void QAbstractFormBuilder::saveTreeWidgetExtraInfo(QTreeWidget *treeWidget, DomW
                 properties.append(p);
         }
 
-        for (const QFormBuilderStrings::RoleNName &it : strings.itemRoles)
+        foreach (const QFormBuilderStrings::RoleNName &it, strings.itemRoles)
             if ((v = treeWidget->headerItem()->data(c, it.first)).isValid() &&
                 (p = variantToDomProperty(this, &QAbstractFormBuilderGadget::staticMetaObject, it.second, v)))
                 properties.append(p);
@@ -1999,7 +1986,7 @@ void QAbstractFormBuilder::saveTreeWidgetExtraInfo(QTreeWidget *treeWidget, DomW
 
     QQueue<QPair<QTreeWidgetItem *, DomItem *> > pendingQueue;
     for (int i = 0; i < treeWidget->topLevelItemCount(); i++)
-        pendingQueue.enqueue(qMakePair(treeWidget->topLevelItem(i), nullptr));
+        pendingQueue.enqueue(qMakePair(treeWidget->topLevelItem(i), (DomItem *)0));
 
     while (!pendingQueue.isEmpty()) {
         const QPair<QTreeWidgetItem *, DomItem *> pair = pendingQueue.dequeue();
@@ -2010,11 +1997,11 @@ void QAbstractFormBuilder::saveTreeWidgetExtraInfo(QTreeWidget *treeWidget, DomW
 
         QList<DomProperty*> properties;
         for (int c = 0; c < treeWidget->columnCount(); c++) {
-            for (const QFormBuilderStrings::TextRoleNName &it : strings.itemTextRoles)
+            foreach (const QFormBuilderStrings::TextRoleNName &it, strings.itemTextRoles)
                 if ((p = saveText(it.second, item->data(c, it.first.second))))
                     properties.append(p);
 
-            for (const QFormBuilderStrings::RoleNName &it : strings.itemRoles)
+            foreach (const QFormBuilderStrings::RoleNName &it, strings.itemRoles)
                 if ((v = item->data(c, it.first)).isValid() &&
                     (p = variantToDomProperty(this, &QAbstractFormBuilderGadget::staticMetaObject, it.second, v)))
                     properties.append(p);
@@ -2175,7 +2162,7 @@ void QAbstractFormBuilder::saveItemViewExtraInfo(const QAbstractItemView *itemVi
     //
     // Special handling for qtableview/qtreeview fake header attributes
     //
-    static const QStringList realPropertyNames =
+    static QStringList realPropertyNames =
             (QStringList() << QStringLiteral("visible")
                            << QStringLiteral("cascadingSectionResizes")
                            << QStringLiteral("defaultSectionSize")
@@ -2186,12 +2173,12 @@ void QAbstractFormBuilder::saveItemViewExtraInfo(const QAbstractItemView *itemVi
 
     if (const QTreeView *treeView = qobject_cast<const QTreeView*>(itemView)) {
         QList<DomProperty*> viewProperties = ui_widget->elementAttribute();
-        const QList<DomProperty*> &headerProperties = computeProperties(treeView->header());
-        for (const QString &realPropertyName : realPropertyNames) {
+        QList<DomProperty*> headerProperties = computeProperties(treeView->header());
+        foreach (const QString &realPropertyName, realPropertyNames) {
             const QString upperPropertyName = realPropertyName.at(0).toUpper()
                                               + realPropertyName.mid(1);
             const QString fakePropertyName = QStringLiteral("header") + upperPropertyName;
-            for (DomProperty *property : headerProperties) {
+            foreach (DomProperty *property, headerProperties) {
                 if (property->attributeName() == realPropertyName) {
                     property->setAttributeName(fakePropertyName);
                     viewProperties << property;
@@ -2200,22 +2187,22 @@ void QAbstractFormBuilder::saveItemViewExtraInfo(const QAbstractItemView *itemVi
         }
         ui_widget->setElementAttribute(viewProperties);
     } else if (const QTableView *tableView = qobject_cast<const QTableView*>(itemView)) {
-        static const QStringList headerPrefixes =
+        static QStringList headerPrefixes =
                 (QStringList() << QStringLiteral("horizontalHeader")
                                << QStringLiteral("verticalHeader"));
 
         QList<DomProperty*> viewProperties = ui_widget->elementAttribute();
-        for (const QString &headerPrefix : headerPrefixes) {
+        foreach (const QString &headerPrefix, headerPrefixes) {
             QList<DomProperty*> headerProperties;
             if (headerPrefix == QStringLiteral("horizontalHeader"))
                 headerProperties = computeProperties(tableView->horizontalHeader());
             else
                 headerProperties = computeProperties(tableView->verticalHeader());
-            for (const QString &realPropertyName : realPropertyNames) {
+            foreach (const QString &realPropertyName, realPropertyNames) {
                 const QString upperPropertyName = realPropertyName.at(0).toUpper()
                                                   + realPropertyName.mid(1);
                 const QString fakePropertyName = headerPrefix + upperPropertyName;
-                for (DomProperty *property : qAsConst(headerProperties)) {
+                foreach (DomProperty *property, headerProperties) {
                     if (property->attributeName() == realPropertyName) {
                         property->setAttributeName(fakePropertyName);
                         viewProperties << property;
@@ -2298,8 +2285,7 @@ void QAbstractFormBuilder::loadListWidgetExtraInfo(DomWidget *ui_widget, QListWi
     Q_UNUSED(parentWidget);
     const QFormBuilderStrings &strings = QFormBuilderStrings::instance();
 
-    const QList<DomItem *> &elementItem = ui_widget->elementItem();
-    for (DomItem *ui_item : elementItem) {
+    foreach (DomItem *ui_item, ui_widget->elementItem()) {
         const DomPropertyHash properties = propertyMap(ui_item->elementProperty());
         QListWidgetItem *item = new QListWidgetItem(listWidget);
         loadItemPropsNFlags<QListWidgetItem>(this, item, properties);
@@ -2329,12 +2315,12 @@ void QAbstractFormBuilder::loadTreeWidgetExtraInfo(DomWidget *ui_widget, QTreeWi
         DomProperty *p;
         QVariant v;
 
-        for (const QFormBuilderStrings::RoleNName &it : strings.itemRoles)
+        foreach (const QFormBuilderStrings::RoleNName &it, strings.itemRoles)
             if ((p = properties.value(it.second)) &&
                 (v = toVariant(&QAbstractFormBuilderGadget::staticMetaObject, p)).isValid())
                 treeWidget->headerItem()->setData(i, it.first, v);
 
-        for (const QFormBuilderStrings::TextRoleNName &it : strings.itemTextRoles)
+        foreach (const QFormBuilderStrings::TextRoleNName &it, strings.itemTextRoles)
             if ((p = properties.value(it.second))) {
                 v = textBuilder()->loadText(p);
                 QVariant nativeValue = textBuilder()->toNativeValue(v);
@@ -2351,9 +2337,8 @@ void QAbstractFormBuilder::loadTreeWidgetExtraInfo(DomWidget *ui_widget, QTreeWi
     }
 
     QQueue<QPair<DomItem *, QTreeWidgetItem *> > pendingQueue;
-    const QList<DomItem *> &widgetElementItem = ui_widget->elementItem();
-    for (DomItem *ui_item : widgetElementItem)
-        pendingQueue.enqueue(qMakePair(ui_item, nullptr));
+    foreach (DomItem *ui_item, ui_widget->elementItem())
+        pendingQueue.enqueue(qMakePair(ui_item, (QTreeWidgetItem *)0));
 
     while (!pendingQueue.isEmpty()) {
         const QPair<DomItem *, QTreeWidgetItem *> pair = pendingQueue.dequeue();
@@ -2369,7 +2354,7 @@ void QAbstractFormBuilder::loadTreeWidgetExtraInfo(DomWidget *ui_widget, QTreeWi
 
         const QList<DomProperty *> properties = domItem->elementProperty();
         int col = -1;
-        for (DomProperty *property : properties) {
+        foreach (DomProperty *property, properties) {
             if (property->attributeName() == strings.flagsAttribute && !property->elementSet().isEmpty()) {
                 currentItem->setFlags(enumKeysToValue<Qt::ItemFlags>(itemFlags_enum, property->elementSet().toLatin1()));
             } else if (property->attributeName() == strings.textAttribute && property->elementString()) {
@@ -2407,8 +2392,7 @@ void QAbstractFormBuilder::loadTreeWidgetExtraInfo(DomWidget *ui_widget, QTreeWi
             }
         }
 
-        const QList<DomItem *> &elementItem = domItem->elementItem();
-        for (DomItem *childItem : elementItem)
+        foreach (DomItem *childItem, domItem->elementItem())
             pendingQueue.enqueue(qMakePair(childItem, currentItem));
 
     }
@@ -2449,8 +2433,7 @@ void QAbstractFormBuilder::loadTableWidgetExtraInfo(DomWidget *ui_widget, QTable
         }
     }
 
-    const QList<DomItem *> &elementItem = ui_widget->elementItem();
-    for (DomItem *ui_item : elementItem) {
+    foreach (DomItem *ui_item, ui_widget->elementItem()) {
         if (ui_item->hasAttributeRow() && ui_item->hasAttributeColumn()) {
             const DomPropertyHash properties = propertyMap(ui_item->elementProperty());
             QTableWidgetItem *item = new QTableWidgetItem;
@@ -2467,8 +2450,7 @@ void QAbstractFormBuilder::loadComboBoxExtraInfo(DomWidget *ui_widget, QComboBox
 {
     Q_UNUSED(parentWidget);
     const QFormBuilderStrings &strings = QFormBuilderStrings::instance();
-    const QList<DomItem *> &elementItem = ui_widget->elementItem();
-    for (DomItem *ui_item : elementItem) {
+    foreach (DomItem *ui_item, ui_widget->elementItem()) {
         const DomPropertyHash properties = propertyMap(ui_item->elementProperty());
         QString text;
         QIcon icon;
@@ -2555,7 +2537,7 @@ void QAbstractFormBuilder::loadItemViewExtraInfo(DomWidget *ui_widget, QAbstract
     //
     // Special handling for qtableview/qtreeview fake header attributes
     //
-    static const QStringList realPropertyNames =
+    static QStringList realPropertyNames =
             (QStringList() << QStringLiteral("visible")
                            << QStringLiteral("cascadingSectionResizes")
                            << QStringLiteral("defaultSectionSize")
@@ -2565,13 +2547,13 @@ void QAbstractFormBuilder::loadItemViewExtraInfo(DomWidget *ui_widget, QAbstract
                            << QStringLiteral("stretchLastSection"));
 
     if (QTreeView *treeView = qobject_cast<QTreeView*>(itemView)) {
-        const QList<DomProperty*> &allAttributes = ui_widget->elementAttribute();
+        QList<DomProperty*> allAttributes = ui_widget->elementAttribute();
         QList<DomProperty*> headerProperties;
-        for (const QString &realPropertyName : realPropertyNames) {
+        foreach (const QString &realPropertyName, realPropertyNames) {
             const QString upperPropertyName = realPropertyName.at(0).toUpper()
                                               + realPropertyName.mid(1);
             const QString fakePropertyName = QStringLiteral("header") + upperPropertyName;
-            for (DomProperty *attr : allAttributes) {
+            foreach (DomProperty *attr, allAttributes) {
                 if (attr->attributeName() == fakePropertyName) {
                     attr->setAttributeName(realPropertyName);
                     headerProperties << attr;
@@ -2580,18 +2562,18 @@ void QAbstractFormBuilder::loadItemViewExtraInfo(DomWidget *ui_widget, QAbstract
         }
         applyProperties(treeView->header(), headerProperties);
     } else if (QTableView *tableView = qobject_cast<QTableView*>(itemView)) {
-        static const QStringList headerPrefixes =
+        static QStringList headerPrefixes =
                 (QStringList() << QStringLiteral("horizontalHeader")
                                << QStringLiteral("verticalHeader"));
 
-        const QList<DomProperty*> allAttributes = ui_widget->elementAttribute();
-        for (const QString &headerPrefix : headerPrefixes) {
+        QList<DomProperty*> allAttributes = ui_widget->elementAttribute();
+        foreach (const QString &headerPrefix, headerPrefixes) {
             QList<DomProperty*> headerProperties;
-            for (const QString &realPropertyName : realPropertyNames) {
+            foreach (const QString &realPropertyName, realPropertyNames) {
                 const QString upperPropertyName = realPropertyName.at(0).toUpper()
                                                   + realPropertyName.mid(1);
                 const QString fakePropertyName = headerPrefix + upperPropertyName;
-                for (DomProperty *attr : allAttributes) {
+                foreach (DomProperty *attr, allAttributes) {
                     if (attr->attributeName() == fakePropertyName) {
                         attr->setAttributeName(realPropertyName);
                         headerProperties << attr;
@@ -2727,8 +2709,7 @@ DomActionGroup *QAbstractFormBuilder::createDom(QActionGroup *actionGroup)
 
     QList<DomAction*> ui_actions;
 
-    const QList<QAction *> &actions = actionGroup->actions();
-    for (QAction *action : actions) {
+    foreach (QAction *action, actionGroup->actions()) {
         if (DomAction *ui_action = createDom(action)) {
             ui_actions.append(ui_action);
         }

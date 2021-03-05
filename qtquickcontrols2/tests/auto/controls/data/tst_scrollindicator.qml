@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -66,11 +56,6 @@ TestCase {
     }
 
     Component {
-        id: mouseArea
-        MouseArea { }
-    }
-
-    Component {
         id: flickable
         Flickable {
             width: 100
@@ -83,11 +68,11 @@ TestCase {
     }
 
     function test_attach() {
-        var container = createTemporaryObject(flickable, testCase)
+        var container = flickable.createObject(testCase)
         verify(container)
         waitForRendering(container)
 
-        var vertical = createTemporaryObject(scrollIndicator, null)
+        var vertical = scrollIndicator.createObject()
         verify(!vertical.parent)
         compare(vertical.size, 0.0)
         compare(vertical.position, 0.0)
@@ -107,17 +92,8 @@ TestCase {
         compare(vertical.y, 0)
         verify(vertical.width > 0)
         compare(vertical.height, container.height)
-        // vertical scroll indicator follows flickable's width
-        container.width += 10
-        compare(vertical.x, container.width - vertical.width)
-        vertical.implicitWidth -= 1
-        compare(vertical.x, container.width - vertical.width)
-        // ...unless explicitly positioned
-        vertical.x = 123
-        container.width += 10
-        compare(vertical.x, 123)
 
-        var horizontal = createTemporaryObject(scrollIndicator, null)
+        var horizontal = scrollIndicator.createObject()
         verify(!horizontal.parent)
         compare(horizontal.size, 0.0)
         compare(horizontal.position, 0.0)
@@ -137,15 +113,6 @@ TestCase {
         compare(horizontal.y, container.height - horizontal.height)
         compare(horizontal.width, container.width)
         verify(horizontal.height > 0)
-        // horizontal scroll indicator follows flickable's height
-        container.height += 10
-        compare(horizontal.y, container.height - horizontal.height)
-        horizontal.implicitHeight -= 1
-        compare(horizontal.y, container.height - horizontal.height)
-        // ...unless explicitly positioned
-        horizontal.y = 123
-        container.height += 10
-        compare(horizontal.y, 123)
 
         var velocity = container.maximumFlickVelocity
 
@@ -169,79 +136,6 @@ TestCase {
         compare(horizontal.size, container.visibleArea.widthRatio)
         compare(horizontal.position, container.visibleArea.xPosition)
 
-        var oldY = vertical.y
-        var oldHeight = vertical.height
-        vertical.parent = testCase
-        vertical.y -= 10
-        container.height += 10
-        compare(vertical.y, oldY - 10)
-        compare(vertical.height, oldHeight)
-
-        var oldX = horizontal.x
-        var oldWidth = horizontal.width
-        horizontal.parent = testCase
-        horizontal.x -= 10
-        container.width += 10
-        compare(horizontal.x, oldX - 10)
-        compare(horizontal.width, oldWidth)
-    }
-
-    function test_warning() {
-        ignoreWarning(Qt.resolvedUrl("tst_scrollindicator.qml") + ":55:1: QML TestCase: ScrollIndicator must be attached to a Flickable")
-        testCase.ScrollIndicator.vertical = null
-    }
-
-    function test_overshoot() {
-        var container = createTemporaryObject(flickable, testCase)
-        verify(container)
-        waitForRendering(container)
-
-        var vertical = scrollIndicator.createObject(container, {size: 0.5})
-        container.ScrollIndicator.vertical = vertical
-
-        var horizontal = scrollIndicator.createObject(container, {size: 0.5})
-        container.ScrollIndicator.horizontal = horizontal
-
-        // negative vertical overshoot (pos < 0)
-        vertical.position = -0.1
-        compare(vertical.contentItem.y, vertical.topPadding)
-        compare(vertical.contentItem.height, 0.4 * vertical.availableHeight)
-
-        // positive vertical overshoot (pos + size > 1)
-        vertical.position = 0.8
-        compare(vertical.contentItem.y, vertical.topPadding + 0.8 * vertical.availableHeight)
-        compare(vertical.contentItem.height, 0.2 * vertical.availableHeight)
-
-        // negative horizontal overshoot (pos < 0)
-        horizontal.position = -0.1
-        compare(horizontal.contentItem.x, horizontal.leftPadding)
-        compare(horizontal.contentItem.width, 0.4 * horizontal.availableWidth)
-
-        // positive horizontal overshoot (pos + size > 1)
-        horizontal.position = 0.8
-        compare(horizontal.contentItem.x, horizontal.leftPadding + 0.8 * horizontal.availableWidth)
-        compare(horizontal.contentItem.width, 0.2 * horizontal.availableWidth)
-    }
-
-    // QTBUG-61785
-    function test_mouseArea() {
-        var ma = createTemporaryObject(mouseArea, testCase, {width: testCase.width, height: testCase.height})
-        verify(ma)
-
-        var control = scrollIndicator.createObject(ma, {active: true, size: 0.9, width: testCase.width, height: testCase.height})
-        verify(control)
-
-        mousePress(control)
-        verify(ma.pressed)
-
-        mouseRelease(control)
-        verify(!ma.pressed)
-
-        var touch = touchEvent(control)
-        touch.press(0, control).commit()
-        verify(ma.pressed)
-
-        touch.release(0, control).commit()
-        verify(!ma.pressed)
+        container.destroy()
     }
 }

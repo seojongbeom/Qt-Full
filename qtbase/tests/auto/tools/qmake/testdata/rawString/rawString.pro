@@ -1,4 +1,4 @@
 DESTDIR = ./
 
-HEADERS += object1.h object2.h
+HEADERS += object1.h
 SOURCES += main.cpp

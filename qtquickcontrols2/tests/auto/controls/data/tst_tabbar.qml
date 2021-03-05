@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -95,21 +85,32 @@ TestCase {
         }
     }
 
-    Component {
-        id: signalSpy
-        SignalSpy { }
+    SignalSpy {
+        id: contentChildrenSpy
+        signalName: "contentChildrenChanged"
+    }
+
+    function init() {
+        verify(!contentChildrenSpy.target)
+        compare(contentChildrenSpy.count, 0)
+    }
+
+    function cleanup() {
+        contentChildrenSpy.target = null
+        contentChildrenSpy.clear()
     }
 
     function test_defaults() {
-        var control = createTemporaryObject(tabBar, testCase)
+        var control = tabBar.createObject(testCase)
         verify(control)
         compare(control.count, 0)
         compare(control.currentIndex, -1)
         compare(control.currentItem, null)
+        control.destroy()
     }
 
     function test_current() {
-        var control = createTemporaryObject(tabBar, testCase)
+        var control = tabBar.createObject(testCase)
 
         compare(control.count, 0)
         compare(control.currentIndex, -1)
@@ -143,35 +144,31 @@ TestCase {
         compare(control.currentItem.text, "2")
         compare(control.currentItem.checked, true)
 
-        control.decrementCurrentIndex()
-        compare(control.currentIndex, 1)
-        compare(control.currentItem.text, "1")
-        compare(control.currentItem.checked, true)
-
-        control.incrementCurrentIndex()
-        compare(control.currentIndex, 2)
-        compare(control.currentItem.text, "2")
-        compare(control.currentItem.checked, true)
+        control.destroy()
     }
 
     function test_current_static() {
-        var control = createTemporaryObject(tabBarStaticTabs, testCase)
+        var control = tabBarStaticTabs.createObject(testCase)
 
         compare(control.count, 2)
         compare(control.currentIndex, 0)
         compare(control.currentItem.text, "0")
         compare(control.currentItem.checked, true)
 
-        control = createTemporaryObject(tabBarStaticTabsCurrent, testCase)
+        control.destroy()
+
+        control = tabBarStaticTabsCurrent.createObject(testCase)
 
         compare(control.count, 2)
         compare(control.currentIndex, 1)
         compare(control.currentItem.text, "1")
         compare(control.currentItem.checked, true)
+
+        control.destroy()
     }
 
     function test_addRemove() {
-        var control = createTemporaryObject(tabBar, testCase)
+        var control = tabBar.createObject(testCase)
 
         function verifyCurrentIndexCountDiff() {
             verify(control.currentIndex < control.count)
@@ -179,7 +176,7 @@ TestCase {
         control.currentIndexChanged.connect(verifyCurrentIndexCountDiff)
         control.countChanged.connect(verifyCurrentIndexCountDiff)
 
-        var contentChildrenSpy = createTemporaryObject(signalSpy, testCase, {target: control, signalName: "contentChildrenChanged"})
+        contentChildrenSpy.target = control
         verify(contentChildrenSpy.valid)
 
         compare(control.count, 0)
@@ -268,6 +265,8 @@ TestCase {
         compare(control.count, 0)
         compare(control.currentIndex, -1)
         compare(contentChildrenSpy.count, 12)
+
+        control.destroy()
     }
 
     Component {
@@ -282,7 +281,7 @@ TestCase {
     }
 
     function test_content() {
-        var control = createTemporaryObject(contentBar, testCase)
+        var control = contentBar.createObject(testCase)
 
         function compareObjectNames(content, names) {
             if (content.length !== names.length)
@@ -294,7 +293,7 @@ TestCase {
             return true
         }
 
-        var contentChildrenSpy = createTemporaryObject(signalSpy, testCase, {target: control, signalName: "contentChildrenChanged"})
+        contentChildrenSpy.target = control
         verify(contentChildrenSpy.valid)
 
         verify(compareObjectNames(control.contentData, ["object", "button1", "timer", "button2", ""]))
@@ -319,6 +318,8 @@ TestCase {
         verify(compareObjectNames(control.contentData, ["object", "button1", "timer", "button2", "", "button3"]))
         verify(compareObjectNames(control.contentChildren, ["button2", "button1", "button3"]))
         compare(contentChildrenSpy.count, 5)
+
+        control.destroy()
     }
 
     Component {
@@ -334,7 +335,7 @@ TestCase {
     }
 
     function test_repeater() {
-        var control = createTemporaryObject(repeated, testCase)
+        var control = repeated.createObject(testCase)
         verify(control)
 
         var model = control.contentModel
@@ -365,6 +366,8 @@ TestCase {
             compare(model.get(j), item2)
             compare(repeater.itemAt(j), item2)
         }
+
+        control.destroy()
     }
 
     Component {
@@ -388,7 +391,7 @@ TestCase {
     }
 
     function test_order() {
-        var control = createTemporaryObject(ordered, testCase)
+        var control = ordered.createObject(testCase)
         verify(control)
 
         compare(control.count, 7)
@@ -399,6 +402,8 @@ TestCase {
         compare(control.itemAt(4).text, "static_4")
         compare(control.itemAt(5).text, "dynamic_5")
         compare(control.itemAt(6).text, "dynamic_6")
+
+        control.destroy()
     }
 
     function test_move_data() {
@@ -437,7 +442,7 @@ TestCase {
     }
 
     function test_move(data) {
-        var control = createTemporaryObject(tabBar, testCase)
+        var control = tabBar.createObject(testCase)
 
         compare(control.count, 0)
         var titles = ["1", "2", "3"]
@@ -463,6 +468,8 @@ TestCase {
         compare(control.count, titles.length)
         for (i = 0; i < control.count; ++i)
             compare(control.itemAt(i).text, titles[i])
+
+        control.destroy()
     }
 
     Component {
@@ -479,7 +486,7 @@ TestCase {
     }
 
     function test_dynamic() {
-        var control = createTemporaryObject(dynamicBar, testCase)
+        var control = dynamicBar.createObject(testCase)
 
         // insertItem(), addItem(), createObject() and static TabButton {}
         compare(control.count, 4)
@@ -493,60 +500,22 @@ TestCase {
 //        tab.destroy()
 //        wait(0)
 //        compare(control.count, 4)
+
+        control.destroy()
     }
 
-    function test_layout_data() {
-        return [
-            { tag: "spacing:0", spacing: 0 },
-            { tag: "spacing:1", spacing: 1 },
-            { tag: "spacing:10", spacing: 10 },
-        ]
-    }
+    function test_layout() {
+        var control = tabBar.createObject(testCase, {spacing: 0, width: 200})
 
-    function test_layout(data) {
-        var control = createTemporaryObject(tabBar, testCase, {spacing: data.spacing, width: 200})
-
-        // remove the implicit size from the background so that it won't affect
-        // the implicit size of the tabbar, so the implicit sizes tested below
-        // are entirely based on the content size
-        control.background.implicitWidth = 0
-
-        var tab1 = tabButton.createObject(control, {text: "First"})
+        var tab1 = tabButton.createObject(control)
         control.addItem(tab1)
         tryCompare(tab1, "width", control.width)
-        compare(control.contentWidth, tab1.implicitWidth)
-        compare(control.implicitWidth, control.contentWidth + control.leftPadding + control.rightPadding)
 
-        var tab2 = tabButton.createObject(control, {text: "Second"})
+        var tab2 = tabButton.createObject(control)
         control.addItem(tab2)
-        tryCompare(tab1, "width", (control.width - data.spacing) / 2)
-        compare(tab2.width, (control.width - data.spacing) / 2)
-        compare(control.contentWidth, tab1.implicitWidth + tab2.implicitWidth + data.spacing)
-        compare(control.implicitWidth, control.contentWidth + control.leftPadding + control.rightPadding)
+        tryCompare(tab1, "width", control.width / 2)
+        tryCompare(tab2, "width", control.width / 2)
 
-        var tab3 = tabButton.createObject(control, {width: 50, text: "Third"})
-        control.addItem(tab3)
-        tryCompare(tab1, "width", (control.width - 2 * data.spacing - 50) / 2)
-        compare(tab2.width, (control.width - 2 * data.spacing - 50) / 2)
-        compare(tab3.width, 50)
-        compare(control.contentWidth, tab1.implicitWidth + tab2.implicitWidth + tab3.width + 2 * data.spacing)
-        compare(control.implicitWidth, control.contentWidth + control.leftPadding + control.rightPadding)
-
-        var expectedWidth = tab3.contentItem.implicitWidth + tab3.leftPadding + tab3.rightPadding
-        tab3.width = tab3.implicitWidth
-        tryCompare(tab1, "width", (control.width - 2 * data.spacing - expectedWidth) / 2)
-        tryCompare(tab2, "width", (control.width - 2 * data.spacing - expectedWidth) / 2)
-        compare(tab3.width, expectedWidth)
-        compare(control.contentWidth, tab1.implicitWidth + tab2.implicitWidth + tab3.implicitWidth + 2 * data.spacing)
-        compare(control.implicitWidth, control.contentWidth + control.leftPadding + control.rightPadding)
-
-        tab3.width = undefined
-        control.width = undefined
-
-        control.contentWidth = 300
-        expectedWidth = (control.contentWidth - 2 * data.spacing) / 3
-        tryCompare(tab1, "width", expectedWidth)
-        tryCompare(tab2, "width", expectedWidth)
-        tryCompare(tab3, "width", expectedWidth)
+        control.destroy()
     }
 }

@@ -1,33 +1,38 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include "qqmlenginedebugclient.h"
-#include <private/qqmldebugconnection_p.h>
+#include "qdatastream.h"
 
 struct QmlObjectData {
     QUrl url;
@@ -41,7 +46,7 @@ struct QmlObjectData {
     int parentId;
 };
 
-QPacket &operator>>(QPacket &ds, QmlObjectData &data)
+QDataStream &operator>>(QDataStream &ds, QmlObjectData &data)
 {
     ds >> data.url >> data.lineNumber >> data.columnNumber >> data.idString
        >> data.objectName >> data.objectType >> data.objectId >> data.contextId
@@ -59,7 +64,7 @@ struct QmlObjectProperty {
     bool hasNotifySignal;
 };
 
-QPacket &operator>>(QPacket &ds, QmlObjectProperty &data)
+QDataStream &operator>>(QDataStream &ds, QmlObjectProperty &data)
 {
     int type;
     ds >> type >> data.name >> data.value >> data.valueTypeName
@@ -72,7 +77,8 @@ QQmlEngineDebugClient::QQmlEngineDebugClient(
         QQmlDebugConnection *connection)
     : QQmlDebugClient(QLatin1String("QmlDebugger"), connection),
       m_nextId(0),
-      m_valid(false)
+      m_valid(false),
+      m_connection(connection)
 {
 }
 
@@ -83,10 +89,11 @@ quint32 QQmlEngineDebugClient::addWatch(
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("WATCH_PROPERTY") << id << property.objectDebugId
            << property.name.toUtf8();
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -108,9 +115,10 @@ quint32 QQmlEngineDebugClient::addWatch(
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("WATCH_EXPR_OBJECT") << id << object.debugId << expr;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -123,9 +131,10 @@ quint32 QQmlEngineDebugClient::addWatch(
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("WATCH_OBJECT") << id << object.debugId;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -143,9 +152,10 @@ void QQmlEngineDebugClient::removeWatch(quint32 id, bool *success)
 {
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("NO_WATCH") << id;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
 }
@@ -157,9 +167,10 @@ quint32 QQmlEngineDebugClient::queryAvailableEngines(bool *success)
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("LIST_ENGINES") << id;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -173,9 +184,10 @@ quint32 QQmlEngineDebugClient::queryRootContexts(
     *success = false;
     if (state() == QQmlDebugClient::Enabled && engine.debugId != -1) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("LIST_OBJECTS") << id << engine.debugId;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -189,9 +201,11 @@ quint32 QQmlEngineDebugClient::queryObject(
     *success = false;
     if (state() == QQmlDebugClient::Enabled && object.debugId != -1) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
-        ds << QByteArray("FETCH_OBJECT") << id << object.debugId << false << true;
-        sendMessage(ds.data());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
+        ds << QByteArray("FETCH_OBJECT") << id << object.debugId << false <<
+              true;
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -205,10 +219,11 @@ quint32 QQmlEngineDebugClient::queryObjectsForLocation(
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("FETCH_OBJECTS_FOR_LOCATION") << id << file << lineNumber
            << columnNumber << false << true;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -222,9 +237,11 @@ quint32 QQmlEngineDebugClient::queryObjectRecursive(
     *success = false;
     if (state() == QQmlDebugClient::Enabled && object.debugId != -1) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
-        ds << QByteArray("FETCH_OBJECT") << id << object.debugId << true << true;
-        sendMessage(ds.data());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
+        ds << QByteArray("FETCH_OBJECT") << id << object.debugId << true <<
+              true;
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -238,10 +255,11 @@ quint32 QQmlEngineDebugClient::queryObjectsForLocationRecursive(const QString &f
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("FETCH_OBJECTS_FOR_LOCATION") << id << file << lineNumber
            << columnNumber << true << true;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -255,10 +273,11 @@ quint32 QQmlEngineDebugClient::queryExpressionResult(
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("EVAL_EXPRESSION") << id << objectDebugId << expr
            << engines()[0].debugId;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -272,9 +291,10 @@ quint32 QQmlEngineDebugClient::queryExpressionResultBC(
     *success = false;
     if (state() == QQmlDebugClient::Enabled) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("EVAL_EXPRESSION") << id << objectDebugId << expr;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -292,10 +312,11 @@ quint32 QQmlEngineDebugClient::setBindingForObject(
     *success = false;
     if (state() == QQmlDebugClient::Enabled && objectDebugId != -1) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("SET_BINDING") << id << objectDebugId << propertyName
            << bindingExpression << isLiteralValue << source << line;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -310,9 +331,10 @@ quint32 QQmlEngineDebugClient::resetBindingForObject(
     *success = false;
     if (state() == QQmlDebugClient::Enabled && objectDebugId != -1) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("RESET_BINDING") << id << objectDebugId << propertyName;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
@@ -326,16 +348,17 @@ quint32 QQmlEngineDebugClient::setMethodBody(
     *success = false;
     if (state() == QQmlDebugClient::Enabled && objectDebugId != -1) {
         id = getId();
-        QPacket ds(connection()->currentDataStreamVersion());
+        QByteArray message;
+        QDataStream ds(&message, QIODevice::WriteOnly);
         ds << QByteArray("SET_METHOD_BODY") << id << objectDebugId
            << methodName << methodBody;
-        sendMessage(ds.data());
+        sendMessage(message);
         *success = true;
     }
     return id;
 }
 
-void QQmlEngineDebugClient::decode(QPacket &ds,
+void QQmlEngineDebugClient::decode(QDataStream &ds,
                                    QmlDebugObjectReference &o,
                                    bool simple)
 {
@@ -386,7 +409,6 @@ void QQmlEngineDebugClient::decode(QPacket &ds,
         {
             QmlDebugObjectReference obj;
             obj.debugId = prop.value.toInt();
-            obj.className = prop.valueTypeName;
             prop.value = qVariantFromValue(obj);
             break;
         }
@@ -397,7 +419,7 @@ void QQmlEngineDebugClient::decode(QPacket &ds,
     }
 }
 
-void QQmlEngineDebugClient::decode(QPacket &ds,
+void QQmlEngineDebugClient::decode(QDataStream &ds,
                                    QList<QmlDebugObjectReference> &o,
                                    bool simple)
 {
@@ -410,7 +432,7 @@ void QQmlEngineDebugClient::decode(QPacket &ds,
     }
 }
 
-void QQmlEngineDebugClient::decode(QPacket &ds,
+void QQmlEngineDebugClient::decode(QDataStream &ds,
                                    QmlDebugContextReference &c)
 {
     ds >> c.name >> c.debugId;
@@ -438,7 +460,9 @@ void QQmlEngineDebugClient::decode(QPacket &ds,
 void QQmlEngineDebugClient::messageReceived(const QByteArray &data)
 {
     m_valid = false;
-    QPacket ds(connection()->currentDataStreamVersion(), data);
+    QDataStream ds(data);
+    ds.setVersion(m_connection->dataStreamVersion());
+
 
     int queryId;
     QByteArray type;
@@ -490,9 +514,7 @@ void QQmlEngineDebugClient::messageReceived(const QByteArray &data)
         return;
 
     } else if (type == "OBJECT_CREATED") {
-        int engineId, objectId, parentId;
-        ds >> engineId >> objectId >> parentId;
-        emit newObject(objectId);
+        emit newObjects();
         return;
     } else if (type == "SET_BINDING_R") {
         ds >> m_valid;

@@ -8,9 +8,13 @@ CONFIG += testcase
 SOURCES += tst_qsoundeffect.cpp
 
 unix:!mac {
-    !qtConfig(pulseaudio) {
+    !contains(QT_CONFIG, pulseaudio) {
         DEFINES += QT_MULTIMEDIA_QMEDIAPLAYER
     }
 }
 
 TESTDATA += test.wav
+
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
+
+config_pulseaudio: CONFIG += insignificant_testcase # Crashes in QSoundEffectPrivate::sampleReady with bufferAttr == 0

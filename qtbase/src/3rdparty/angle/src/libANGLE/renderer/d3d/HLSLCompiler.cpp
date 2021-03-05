@@ -5,20 +5,21 @@
 //
 
 #include "libANGLE/renderer/d3d/HLSLCompiler.h"
-
-#include "common/utilities.h"
 #include "libANGLE/Program.h"
 #include "libANGLE/features.h"
-#include "libANGLE/histogram_macros.h"
+
+#include "common/utilities.h"
+
 #include "third_party/trace_event/trace_event.h"
 
 #ifndef QT_D3DCOMPILER_DLL
 #define QT_D3DCOMPILER_DLL D3DCOMPILER_DLL
 #endif
 
-#if ANGLE_APPEND_ASSEMBLY_TO_SHADER_DEBUG_INFO == ANGLE_ENABLED
+// Definitions local to the translation unit
 namespace
 {
+
 #ifdef CREATE_COMPILER_FLAG_INFO
     #undef CREATE_COMPILER_FLAG_INFO
 #endif
@@ -88,8 +89,19 @@ bool IsCompilerFlagSet(UINT mask, UINT flag)
         return isFlagSet;
     }
 }
-}  // anonymous namespace
-#endif  // ANGLE_APPEND_ASSEMBLY_TO_SHADER_DEBUG_INFO == ANGLE_ENABLED
+
+const char *GetCompilerFlagName(UINT mask, size_t flagIx)
+{
+    const CompilerFlagInfo &flagInfo = CompilerFlagInfos[flagIx];
+    if (IsCompilerFlagSet(mask, flagInfo.mFlag))
+    {
+        return flagInfo.mName;
+    }
+
+    return nullptr;
+}
+
+}
 
 namespace rx
 {
@@ -107,10 +119,9 @@ CompileConfig::CompileConfig(UINT flags, const std::string &name)
 }
 
 HLSLCompiler::HLSLCompiler()
-    : mInitialized(false),
-      mD3DCompilerModule(nullptr),
-      mD3DCompileFunc(nullptr),
-      mD3DDisassembleFunc(nullptr)
+    : mD3DCompilerModule(NULL),
+      mD3DCompileFunc(NULL),
+      mD3DDisassembleFunc(NULL)
 {
 }
 
@@ -119,14 +130,9 @@ HLSLCompiler::~HLSLCompiler()
     release();
 }
 
-gl::Error HLSLCompiler::initialize()
+bool HLSLCompiler::initialize()
 {
-    if (mInitialized)
-    {
-        return gl::Error(GL_NO_ERROR);
-    }
-
-    TRACE_EVENT0("gpu.angle", "HLSLCompiler::initialize");
+    TRACE_EVENT0("gpu", "initializeCompiler");
 #if !defined(ANGLE_ENABLE_WINDOWS_STORE)
 #if defined(ANGLE_PRELOADED_D3DCOMPILER_MODULE_NAMES)
     // Find a D3DCompiler module that had already been loaded based on a predefined list of versions.
@@ -162,7 +168,6 @@ gl::Error HLSLCompiler::initialize()
             break;
     }
 
-
     if (!mD3DCompilerModule)
     {
         // Load the version of the D3DCompiler DLL associated with the Direct3D version ANGLE was built with.
@@ -171,7 +176,8 @@ gl::Error HLSLCompiler::initialize()
 
     if (!mD3DCompilerModule)
     {
-        return gl::Error(GL_INVALID_OPERATION, "No D3D compiler module found - aborting!\n");
+        ERR("No D3D compiler module found - aborting!\n");
+        return false;
     }
 
     mD3DCompileFunc = reinterpret_cast<pD3DCompile>(GetProcAddress(mD3DCompilerModule, "D3DCompile"));
@@ -183,42 +189,29 @@ gl::Error HLSLCompiler::initialize()
 #else
     // D3D Shader compiler is linked already into this module, so the export
     // can be directly assigned.
-    mD3DCompilerModule = nullptr;
+    mD3DCompilerModule = NULL;
     mD3DCompileFunc = reinterpret_cast<pD3DCompile>(D3DCompile);
     mD3DDisassembleFunc = reinterpret_cast<pD3DDisassemble>(D3DDisassemble);
 #endif
 
-    if (mD3DCompileFunc == nullptr)
-    {
-        return gl::Error(GL_INVALID_OPERATION, "Error finding D3DCompile entry point");
-    }
-
-    mInitialized = true;
-    return gl::Error(GL_NO_ERROR);
+    return mD3DCompileFunc != NULL;
 }
 
 void HLSLCompiler::release()
 {
-    if (mInitialized)
+    if (mD3DCompilerModule)
     {
         FreeLibrary(mD3DCompilerModule);
-        mD3DCompilerModule = nullptr;
-        mD3DCompileFunc = nullptr;
-        mD3DDisassembleFunc = nullptr;
-        mInitialized = false;
+        mD3DCompilerModule = NULL;
+        mD3DCompileFunc = NULL;
+        mD3DDisassembleFunc = NULL;
     }
 }
 
 gl::Error HLSLCompiler::compileToBinary(gl::InfoLog &infoLog, const std::string &hlsl, const std::string &profile,
                                         const std::vector<CompileConfig> &configs, const D3D_SHADER_MACRO *overrideMacros,
-                                        ID3DBlob **outCompiledBlob, std::string *outDebugInfo)
+                                        ID3DBlob **outCompiledBlob, std::string *outDebugInfo) const
 {
-    gl::Error error = initialize();
-    if (error.isError())
-    {
-        return error;
-    }
-
 #if !defined(ANGLE_ENABLE_WINDOWS_STORE)
     ASSERT(mD3DCompilerModule);
 #endif
@@ -233,21 +226,15 @@ gl::Error HLSLCompiler::compileToBinary(gl::InfoLog &infoLog, const std::string 
     }
 #endif
 
-    const D3D_SHADER_MACRO *macros = overrideMacros ? overrideMacros : nullptr;
+    const D3D_SHADER_MACRO *macros = overrideMacros ? overrideMacros : NULL;
 
     for (size_t i = 0; i < configs.size(); ++i)
     {
-        ID3DBlob *errorMessage = nullptr;
-        ID3DBlob *binary = nullptr;
-        HRESULT result         = S_OK;
+        ID3DBlob *errorMessage = NULL;
+        ID3DBlob *binary = NULL;
 
-        {
-            TRACE_EVENT0("gpu.angle", "D3DCompile");
-            SCOPED_ANGLE_HISTOGRAM_TIMER("GPU.ANGLE.D3DCompileMS");
-            result = mD3DCompileFunc(hlsl.c_str(), hlsl.length(), gl::g_fakepath, macros, nullptr,
-                                     "main", profile.c_str(), configs[i].flags, 0, &binary,
-                                     &errorMessage);
-        }
+        HRESULT result = mD3DCompileFunc(hlsl.c_str(), hlsl.length(), gl::g_fakepath, macros, NULL, "main", profile.c_str(),
+                                         configs[i].flags, 0, &binary, &errorMessage);
 
         if (errorMessage)
         {
@@ -258,14 +245,13 @@ gl::Error HLSLCompiler::compileToBinary(gl::InfoLog &infoLog, const std::string 
             TRACE("\n%s", hlsl.c_str());
             TRACE("\n%s", message.c_str());
 
-            if ((message.find("error X3531:") != std::string::npos ||  // "can't unroll loops marked with loop attribute"
-                 message.find("error X4014:") != std::string::npos) && // "cannot have gradient operations inside loops with divergent flow control",
-                                                                       // even though it is counter-intuitive to disable unrolling for this error,
-                                                                       // some very long shaders have trouble deciding which loops to unroll and
-                                                                       // turning off forced unrolls allows them to compile properly.
-                macros != nullptr)
+            if (message.find("error X3531:") != std::string::npos || // "can't unroll loops marked with loop attribute"
+                message.find("error X4014:") != std::string::npos)   // "cannot have gradient operations inside loops with divergent flow control",
+                                                                     // even though it is counter-intuitive to disable unrolling for this error,
+                                                                     // some very long shaders have trouble deciding which loops to unroll and
+                                                                     // turning off forced unrolls allows them to compile properly.
             {
-                macros = nullptr;   // Disable [loop] and [flatten]
+                macros = NULL;   // Disable [loop] and [flatten]
 
                 // Retry without changing compiler flags
                 i--;
@@ -277,16 +263,16 @@ gl::Error HLSLCompiler::compileToBinary(gl::InfoLog &infoLog, const std::string 
         {
             *outCompiledBlob = binary;
 
+#if ANGLE_SHADER_DEBUG_INFO == ANGLE_ENABLED
             (*outDebugInfo) += "// COMPILER INPUT HLSL BEGIN\n\n" + hlsl + "\n// COMPILER INPUT HLSL END\n";
-
-#if ANGLE_APPEND_ASSEMBLY_TO_SHADER_DEBUG_INFO == ANGLE_ENABLED
             (*outDebugInfo) += "\n\n// ASSEMBLY BEGIN\n\n";
             (*outDebugInfo) += "// Compiler configuration: " + configs[i].name + "\n// Flags:\n";
             for (size_t fIx = 0; fIx < ArraySize(CompilerFlagInfos); ++fIx)
             {
-                if (IsCompilerFlagSet(configs[i].flags, CompilerFlagInfos[fIx].mFlag))
+                const char *flagName = GetCompilerFlagName(configs[i].flags, fIx);
+                if (flagName != nullptr)
                 {
-                    (*outDebugInfo) += std::string("// ") + CompilerFlagInfos[fIx].mName + "\n";
+                    (*outDebugInfo) += std::string("// ") + flagName + "\n";
                 }
             }
 
@@ -303,65 +289,52 @@ gl::Error HLSLCompiler::compileToBinary(gl::InfoLog &infoLog, const std::string 
                 }
             }
 
-            std::string disassembly;
-            error = disassembleBinary(binary, &disassembly);
-            if (error.isError())
-            {
-                return error;
-            }
-            (*outDebugInfo) += "\n" + disassembly + "\n// ASSEMBLY END\n";
-#endif  // ANGLE_APPEND_ASSEMBLY_TO_SHADER_DEBUG_INFO == ANGLE_ENABLED
+            (*outDebugInfo) += "\n" + disassembleBinary(binary) + "\n// ASSEMBLY END\n";
+#endif
+
             return gl::Error(GL_NO_ERROR);
         }
-
-        if (result == E_OUTOFMEMORY)
+        else
         {
-            *outCompiledBlob = nullptr;
-            return gl::Error(GL_OUT_OF_MEMORY, "HLSL compiler had an unexpected failure, result: 0x%X.", result);
-        }
+            if (result == E_OUTOFMEMORY)
+            {
+                *outCompiledBlob = NULL;
+                return gl::Error(GL_OUT_OF_MEMORY, "HLSL compiler had an unexpected failure, result: 0x%X.", result);
+            }
 
-        infoLog << "Warning: D3D shader compilation failed with " << configs[i].name << " flags. ("
-                << profile << ")";
+            infoLog.append("Warning: D3D shader compilation failed with %s flags.", configs[i].name.c_str());
 
-        if (i + 1 < configs.size())
-        {
-            infoLog << " Retrying with " << configs[i + 1].name;
+            if (i + 1 < configs.size())
+            {
+                infoLog.append(" Retrying with %s.\n", configs[i + 1].name.c_str());
+            }
         }
     }
 
     // None of the configurations succeeded in compiling this shader but the compiler is still intact
-    *outCompiledBlob = nullptr;
+    *outCompiledBlob = NULL;
     return gl::Error(GL_NO_ERROR);
 }
 
-gl::Error HLSLCompiler::disassembleBinary(ID3DBlob *shaderBinary, std::string *disassemblyOut)
+std::string HLSLCompiler::disassembleBinary(ID3DBlob *shaderBinary) const
 {
-    gl::Error error = initialize();
-    if (error.isError())
-    {
-        return error;
-    }
-
     // Retrieve disassembly
     UINT flags = D3D_DISASM_ENABLE_DEFAULT_VALUE_PRINTS | D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING;
-    ID3DBlob *disassembly = nullptr;
+    ID3DBlob *disassembly = NULL;
     pD3DDisassemble disassembleFunc = reinterpret_cast<pD3DDisassemble>(mD3DDisassembleFunc);
     LPCVOID buffer = shaderBinary->GetBufferPointer();
     SIZE_T bufSize = shaderBinary->GetBufferSize();
     HRESULT result = disassembleFunc(buffer, bufSize, flags, "", &disassembly);
 
+    std::string asmSrc;
     if (SUCCEEDED(result))
     {
-        *disassemblyOut = std::string(reinterpret_cast<const char*>(disassembly->GetBufferPointer()));
-    }
-    else
-    {
-        *disassemblyOut = "";
+        asmSrc = reinterpret_cast<const char*>(disassembly->GetBufferPointer());
     }
 
     SafeRelease(disassembly);
 
-    return gl::Error(GL_NO_ERROR);
+    return asmSrc;
 }
 
-}  // namespace rx
+}

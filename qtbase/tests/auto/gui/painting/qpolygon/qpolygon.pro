@@ -1,8 +1,9 @@
 CONFIG += testcase
+CONFIG += parallel_test
 TARGET = tst_qpolygon
 QT += testlib
 SOURCES  += tst_qpolygon.cpp
 
-unix:!darwin:!haiku:!integrity: LIBS += -lm
+unix:!mac:!haiku:LIBS+=-lm
 
 

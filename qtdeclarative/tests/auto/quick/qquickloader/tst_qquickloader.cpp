@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -32,14 +37,9 @@
 #include <QtQml/qqmlengine.h>
 #include <QtQml/qqmlcomponent.h>
 #include <QtQml/qqmlincubator.h>
-#include <QtQuick/qquickview.h>
 #include <private/qquickloader_p.h>
-#include <private/qquickwindowmodule_p.h>
 #include "testhttpserver.h"
 #include "../../shared/util.h"
-#include "../shared/geometrytestutil.h"
-
-Q_LOGGING_CATEGORY(lcTests, "qt.quick.tests")
 
 class SlowComponent : public QQmlComponent
 {
@@ -111,15 +111,11 @@ private slots:
     void asynchronous();
     void asynchronous_clear();
     void simultaneousSyncAsync();
-    void asyncToSync1();
-    void asyncToSync2();
     void loadedSignal();
 
     void parented();
     void sizeBound();
     void QTBUG_30183();
-    void transientWindow();
-    void nestedTransientWindow();
 
     void sourceComponentGarbageCollection();
 
@@ -220,7 +216,7 @@ void tst_QQuickLoader::sourceOrComponent_data()
     QTest::newRow("source with encoded subdir binding") << "source" << "source: encodeURIComponent('subdir/Test.qml')\n" << testFileUrl("subdir/Test.qml") << "";
     QTest::newRow("sourceComponent") << "component" << "Component { id: comp; Rectangle { width: 100; height: 50 } }\n sourceComponent: comp\n" << QUrl() << "";
     QTest::newRow("invalid source") << "source" << "source: 'IDontExist.qml'\n" << testFileUrl("IDontExist.qml")
-            << QString(testFileUrl("IDontExist.qml").toString() + ": No such file or directory");
+            << QString(testFileUrl("IDontExist.qml").toString() + ": File not found");
 }
 
 void tst_QQuickLoader::clear()
@@ -410,16 +406,10 @@ void tst_QQuickLoader::sizeItemToLoader()
     QCOMPARE(rect->height(), 80.0);
 
     // Check resize
-    QSizeChangeListener sizeListener(rect);
-    const QSizeF size(180, 30);
-    loader->setSize(size);
-    QVERIFY2(!sizeListener.isEmpty(), "There should be at least one signal about the size changed");
-    for (const QSizeF sizeOnGeometryChanged : sizeListener) {
-        // Check that we have the correct size on all signals
-        QCOMPARE(sizeOnGeometryChanged, size);
-    }
-    QCOMPARE(rect->width(), size.width());
-    QCOMPARE(rect->height(), size.height());
+    loader->setWidth(180);
+    loader->setHeight(30);
+    QCOMPARE(rect->width(), 180.0);
+    QCOMPARE(rect->height(), 30.0);
 
     // Switch mode
     loader->resetWidth(); // reset explicit size
@@ -482,7 +472,7 @@ void tst_QQuickLoader::networkComponent()
     // because in the synchronous case we're already done loading.
     QTRY_COMPARE(component.status(), QQmlComponent::Ready);
 
-    QScopedPointer<QQuickItem> item(qobject_cast<QQuickItem*>(component.create()));
+    QQuickItem *item = qobject_cast<QQuickItem*>(component.create());
     QVERIFY(item);
 
     QQuickLoader *loader = qobject_cast<QQuickLoader*>(item->children().at(1));
@@ -494,6 +484,7 @@ void tst_QQuickLoader::networkComponent()
     QCOMPARE(loader->status(), QQuickLoader::Ready);
     QCOMPARE(static_cast<QQuickItem*>(loader)->children().count(), 1);
 
+    delete loader;
 }
 
 void tst_QQuickLoader::failNetworkRequest()
@@ -760,7 +751,7 @@ void tst_QQuickLoader::initialPropertyValuesError_data()
             << (QStringList() << QString(testFileUrl("initialPropertyValues.error.1.qml").toString() + ":6:5: QML Loader: setSource: value is not an object"));
 
     QTest::newRow("nonexistent source url") << testFileUrl("initialPropertyValues.error.2.qml")
-            << (QStringList() << QString(testFileUrl("NonexistentSourceComponent.qml").toString() + ": No such file or directory"));
+            << (QStringList() << QString(testFileUrl("NonexistentSourceComponent.qml").toString() + ": File not found"));
 
     QTest::newRow("invalid source url") << testFileUrl("initialPropertyValues.error.3.qml")
             << (QStringList() << QString(testFileUrl("InvalidSourceComponent.qml").toString() + ":5:1: Syntax error"));
@@ -913,7 +904,7 @@ void tst_QQuickLoader::asynchronous_data()
             << QStringList();
 
     QTest::newRow("Non-existent component") << testFileUrl("IDoNotExist.qml")
-            << (QStringList() << QString(testFileUrl("IDoNotExist.qml").toString() + ": No such file or directory"));
+            << (QStringList() << QString(testFileUrl("IDoNotExist.qml").toString() + ": File not found"));
 
     QTest::newRow("Invalid component") << testFileUrl("InvalidSourceComponent.qml")
             << (QStringList() << QString(testFileUrl("InvalidSourceComponent.qml").toString() + ":5:1: Syntax error"));
@@ -1044,73 +1035,6 @@ void tst_QQuickLoader::simultaneousSyncAsync()
     delete root;
 }
 
-void tst_QQuickLoader::asyncToSync1()
-{
-    QQmlEngine engine;
-    PeriodicIncubationController *controller = new PeriodicIncubationController;
-    QQmlIncubationController *previous = engine.incubationController();
-    engine.setIncubationController(controller);
-    delete previous;
-
-    QQmlComponent component(&engine, testFileUrl("asynchronous.qml"));
-    QQuickItem *root = qobject_cast<QQuickItem*>(component.create());
-    QVERIFY(root);
-
-    QQuickLoader *loader = root->findChild<QQuickLoader*>("loader");
-    QVERIFY(loader);
-
-    QVERIFY(!loader->item());
-    root->setProperty("comp", "BigComponent.qml");
-    QMetaObject::invokeMethod(root, "loadComponent");
-    QVERIFY(!loader->item());
-
-    controller->start();
-    QCOMPARE(loader->status(), QQuickLoader::Loading);
-    QCOMPARE(engine.incubationController()->incubatingObjectCount(), 0);
-
-    // force completion before component created
-    loader->setAsynchronous(false);
-    QVERIFY(loader->item());
-    QCOMPARE(loader->progress(), 1.0);
-    QCOMPARE(loader->status(), QQuickLoader::Ready);
-    QCOMPARE(static_cast<QQuickItem*>(loader)->childItems().count(), 1);
-
-    delete root;
-}
-
-void tst_QQuickLoader::asyncToSync2()
-{
-    PeriodicIncubationController *controller = new PeriodicIncubationController;
-    QQmlIncubationController *previous = engine.incubationController();
-    engine.setIncubationController(controller);
-    delete previous;
-
-    QQmlComponent component(&engine, testFileUrl("asynchronous.qml"));
-    QQuickItem *root = qobject_cast<QQuickItem*>(component.create());
-    QVERIFY(root);
-
-    QQuickLoader *loader = root->findChild<QQuickLoader*>("loader");
-    QVERIFY(loader);
-
-    QVERIFY(!loader->item());
-    root->setProperty("comp", "BigComponent.qml");
-    QMetaObject::invokeMethod(root, "loadComponent");
-    QVERIFY(!loader->item());
-
-    controller->start();
-    QCOMPARE(loader->status(), QQuickLoader::Loading);
-    QTRY_COMPARE(engine.incubationController()->incubatingObjectCount(), 1);
-
-    // force completion after component created but before incubation complete
-    loader->setAsynchronous(false);
-    QVERIFY(loader->item());
-    QCOMPARE(loader->progress(), 1.0);
-    QCOMPARE(loader->status(), QQuickLoader::Ready);
-    QCOMPARE(static_cast<QQuickItem*>(loader)->childItems().count(), 1);
-
-    delete root;
-}
-
 void tst_QQuickLoader::loadedSignal()
 {
     PeriodicIncubationController *controller = new PeriodicIncubationController;
@@ -1211,86 +1135,6 @@ void tst_QQuickLoader::QTBUG_30183()
     QCOMPARE(rect->height(), 120.0);
 
     delete loader;
-}
-
-void tst_QQuickLoader::transientWindow() // QTBUG-52944
-{
-    QQuickView view;
-    view.setSource(testFileUrl("itemLoaderWindow.qml"));
-    QQuickItem *root = qobject_cast<QQuickItem*>(view.rootObject());
-    QVERIFY(root);
-    QQuickLoader *loader = root->findChild<QQuickLoader *>();
-    QVERIFY(loader);
-    QTRY_COMPARE(loader->status(), QQuickLoader::Ready);
-    QQuickWindowQmlImpl *loadedWindow = qobject_cast<QQuickWindowQmlImpl *>(loader->item());
-    QVERIFY(loadedWindow);
-    QCOMPARE(loadedWindow->visibility(), QWindow::Hidden);
-
-    QElapsedTimer timer;
-    qint64 viewVisibleTime = -1;
-    qint64 loadedWindowVisibleTime = -1;
-    connect(&view, &QWindow::visibleChanged,
-            [&viewVisibleTime, &timer]() { viewVisibleTime = timer.elapsed(); } );
-    connect(loadedWindow, &QQuickWindowQmlImpl::visibilityChanged,
-            [&loadedWindowVisibleTime, &timer]() { loadedWindowVisibleTime = timer.elapsed(); } );
-    timer.start();
-    view.show();
-
-    QTest::qWaitForWindowExposed(&view);
-    QTRY_VERIFY(loadedWindowVisibleTime >= 0);
-    QVERIFY(viewVisibleTime >= 0);
-
-    // now that we're sure they are both visible, which one became visible first?
-    qCDebug(lcTests) << "transient Window became visible" << (loadedWindowVisibleTime - viewVisibleTime) << "ms after the root Item";
-    QVERIFY((loadedWindowVisibleTime - viewVisibleTime) >= 0);
-
-    QWindowList windows = QGuiApplication::topLevelWindows();
-    QTRY_COMPARE(windows.size(), 2);
-
-    // TODO Ideally we would now close the outer window and make sure the transient window closes too.
-    // It works during manual testing because of QWindowPrivate::maybeQuitOnLastWindowClosed()
-    // but quitting an autotest doesn't make sense.
-}
-
-void tst_QQuickLoader::nestedTransientWindow() // QTBUG-52944
-{
-    QQuickView view;
-    view.setSource(testFileUrl("itemLoaderItemWindow.qml"));
-    QQuickItem *root = qobject_cast<QQuickItem*>(view.rootObject());
-    QVERIFY(root);
-    QQuickLoader *loader = root->findChild<QQuickLoader *>();
-    QVERIFY(loader);
-    QTRY_COMPARE(loader->status(), QQuickLoader::Ready);
-    QQuickItem *loadedItem = qobject_cast<QQuickItem *>(loader->item());
-    QVERIFY(loadedItem);
-    QQuickWindowQmlImpl *loadedWindow = loadedItem->findChild<QQuickWindowQmlImpl *>();
-    QVERIFY(loadedWindow);
-    QCOMPARE(loadedWindow->visibility(), QWindow::Hidden);
-
-    QElapsedTimer timer;
-    qint64 viewVisibleTime = -1;
-    qint64 loadedWindowVisibleTime = -1;
-    connect(&view, &QWindow::visibleChanged,
-            [&viewVisibleTime, &timer]() { viewVisibleTime = timer.elapsed(); } );
-    connect(loadedWindow, &QQuickWindowQmlImpl::visibilityChanged,
-            [&loadedWindowVisibleTime, &timer]() { loadedWindowVisibleTime = timer.elapsed(); } );
-    timer.start();
-    view.show();
-
-    QTest::qWaitForWindowExposed(&view);
-    QTRY_VERIFY(loadedWindowVisibleTime >= 0);
-    QVERIFY(viewVisibleTime >= 0);
-
-    // now that we're sure they are both visible, which one became visible first?
-    qCDebug(lcTests) << "transient Window became visible" << (loadedWindowVisibleTime - viewVisibleTime) << "ms after the root Item";
-    QVERIFY((loadedWindowVisibleTime - viewVisibleTime) >= 0);
-
-    QWindowList windows = QGuiApplication::topLevelWindows();
-    QTRY_COMPARE(windows.size(), 2);
-
-    // TODO Ideally we would now close the outer window and make sure the transient window closes too.
-    // It works during manual testing because of QWindowPrivate::maybeQuitOnLastWindowClosed()
-    // but quitting an autotest doesn't make sense.
 }
 
 void tst_QQuickLoader::sourceComponentGarbageCollection()

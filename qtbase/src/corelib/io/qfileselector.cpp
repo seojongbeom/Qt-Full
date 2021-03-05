@@ -1,38 +1,31 @@
 /***************************************************************************
 **
 ** Copyright (C) 2013 BlackBerry Limited. All rights reserved.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -54,6 +47,8 @@ QT_BEGIN_NAMESPACE
 
 //Environment variable to allow tooling full control of file selectors
 static const char env_override[] = "QT_NO_BUILTIN_SELECTORS";
+
+static const ushort selectorIndicator = '+';
 
 Q_GLOBAL_STATIC(QFileSelectorSharedData, sharedData);
 static QBasicMutex sharedDataMutex;
@@ -97,6 +92,8 @@ QFileSelectorPrivate::QFileSelectorPrivate()
     QString defaultsPath = "data/defaults.conf";
 #if defined(Q_OS_ANDROID)
     defaultsPath = "data/android/defaults.conf";
+#elif defined(Q_OS_BLACKBERRY)
+    defaultsPath = "data/blackberry/defaults.conf";
 #elif defined(Q_OS_IOS)
     defaultsPath = "data/ios/defaults.conf";
 #endif
@@ -119,6 +116,7 @@ QFileSelectorPrivate::QFileSelectorPrivate()
     \code
     data/defaults.conf
     data/+android/defaults.conf
+    data/+blackberry/defaults.conf
     data/+ios/+en_GB/defaults.conf
     \endcode
 
@@ -129,13 +127,14 @@ QFileSelectorPrivate::QFileSelectorPrivate()
     \code
     images/background.png
     images/+android/+en_GB/background.png
+    images/+blackberry/+en_GB/background.png
     \endcode
-    With those files available, you would select a different file on the android platform,
+    With those files available, you would select a different file on android and blackberry platforms,
     but only if the locale was en_GB.
 
-    For error handling in the case no valid selectors are present, it is recommended to have a default or
-    error-handling file in the base file location even if you expect selectors to be present for all
-    deployments.
+    QFileSelector will not attempt to select if the base file does not exist. For error handling in
+    the case no valid selectors are present, it is recommended to have a default or error-handling
+    file in the base file location even if you expect selectors to be present for all deployments.
 
     In a future version, some may be marked as deploy-time static and be moved during the
     deployment step as an optimization. As selectors come with a performance cost, it is
@@ -146,8 +145,8 @@ QFileSelectorPrivate::QFileSelectorPrivate()
     Selectors normally available are
     \list
     \li platform, any of the following strings which match the platform the application is running
-        on (list not exhaustive): android, ios, osx, darwin, mac, macos, linux, qnx, unix, windows.
-        On Linux, if it can be determined, the name of the distribution too, like debian,
+        on (list not exhaustive): android, blackberry, ios, osx, darwin, mac, linux, wince, unix,
+        windows. On Linux, if it can be determined, the name of the distribution too, like debian,
         fedora or opensuse.
     \li locale, same as QLocale().name().
     \endlist
@@ -265,7 +264,7 @@ QUrl QFileSelector::select(const QUrl &filePath) const
     return ret;
 }
 
-QString QFileSelectorPrivate::selectionHelper(const QString &path, const QString &fileName, const QStringList &selectors, const QChar &indicator)
+static QString selectionHelper(const QString &path, const QString &fileName, const QStringList &selectors)
 {
     /* selectionHelper does a depth-first search of possible selected files. Because there is strict
        selector ordering in the API, we can stop checking as soon as we find the file in a directory
@@ -273,16 +272,13 @@ QString QFileSelectorPrivate::selectionHelper(const QString &path, const QString
     */
     Q_ASSERT(path.isEmpty() || path.endsWith(QLatin1Char('/')));
 
-    for (const QString &s : selectors) {
-        QString prospectiveBase = path;
-        if (!indicator.isNull())
-            prospectiveBase += indicator;
-        prospectiveBase += s + QLatin1Char('/');
+    foreach (const QString &s, selectors) {
+        QString prospectiveBase = path + QLatin1Char(selectorIndicator) + s + QLatin1Char('/');
         QStringList remainingSelectors = selectors;
         remainingSelectors.removeAll(s);
         if (!QDir(prospectiveBase).exists())
             continue;
-        QString prospectiveFile = selectionHelper(prospectiveBase, fileName, remainingSelectors, indicator);
+        QString prospectiveFile = selectionHelper(prospectiveBase, fileName, remainingSelectors);
         if (!prospectiveFile.isEmpty())
             return prospectiveFile;
     }
@@ -298,6 +294,9 @@ QString QFileSelectorPrivate::select(const QString &filePath) const
 {
     Q_Q(const QFileSelector);
     QFileInfo fi(filePath);
+    // If file doesn't exist, don't select
+    if (!fi.exists())
+        return filePath;
 
     QString ret = selectionHelper(fi.path().isEmpty() ? QString() : fi.path() + QLatin1Char('/'),
             fi.fileName(), q->allSelectors());
@@ -363,29 +362,33 @@ void QFileSelectorPrivate::updateSelectors()
 QStringList QFileSelectorPrivate::platformSelectors()
 {
     // similar, but not identical to QSysInfo::osType
-    // ### Qt6: remove macOS fallbacks to "mac" and the future compatibility
     QStringList ret;
 #if defined(Q_OS_WIN)
+    // can't fall back to QSysInfo because we need both "winphone" and "winrt" for the Windows Phone case
     ret << QStringLiteral("windows");
-    ret << QSysInfo::kernelType();  // "winnt"
+    ret << QSysInfo::kernelType();  // "wince" and "winnt"
 #  if defined(Q_OS_WINRT)
     ret << QStringLiteral("winrt");
+#    if defined(Q_OS_WINPHONE)
+    ret << QStringLiteral("winphone");
+#    endif
 #  endif
 #elif defined(Q_OS_UNIX)
     ret << QStringLiteral("unix");
-#  if !defined(Q_OS_ANDROID) && !defined(Q_OS_QNX)
-    // we don't want "linux" for Android or two instances of "qnx" for QNX
+#  if !defined(Q_OS_ANDROID) && !defined(Q_OS_BLACKBERRY)
+    // we don't want "linux" for Android or "qnx" for Blackberry here
     ret << QSysInfo::kernelType();
 #     ifdef Q_OS_MAC
     ret << QStringLiteral("mac"); // compatibility, since kernelType() is "darwin"
 #     endif
 #  endif
     QString productName = QSysInfo::productType();
+#     ifdef Q_OS_MACOS
+    if (productName != QStringLiteral("osx"))
+        ret << QStringLiteral("osx"); // compatibility
+#     endif
     if (productName != QLatin1String("unknown"))
-        ret << productName; // "opensuse", "fedora", "osx", "ios", "android"
-#  if defined(Q_OS_MACOS)
-    ret << QStringLiteral("macos"); // future compatibility
-#  endif
+        ret << productName; // "opensuse", "fedora", "macos", "ios", "blackberry", "android"
 #endif
     return ret;
 }
@@ -394,7 +397,6 @@ void QFileSelectorPrivate::addStatics(const QStringList &statics)
 {
     QMutexLocker locker(&sharedDataMutex);
     sharedData->preloadedStatics << statics;
-    sharedData->staticSelectors.clear();
 }
 
 QT_END_NAMESPACE

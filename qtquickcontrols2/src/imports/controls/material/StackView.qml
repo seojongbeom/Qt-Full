@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,45 +34,57 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.4
+import Qt.labs.templates 1.0 as T
 
 T.StackView {
-    id: control
+    id: root
 
+    //! [popEnter]
     popEnter: Transition {
         // slide_in_left
-        NumberAnimation { property: "x"; from: (control.mirrored ? -0.5 : 0.5) *  -control.width; to: 0; duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "x"; from: (root.mirrored ? -0.5 : 0.5) *  -root.width; to: 0; duration: 200; easing.type: Easing.OutCubic }
         NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
     }
+    //! [popEnter]
 
+    //! [popExit]
     popExit: Transition {
         // slide_out_right
-        NumberAnimation { property: "x"; from: 0; to: (control.mirrored ? -0.5 : 0.5) * control.width; duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "x"; from: 0; to: (root.mirrored ? -0.5 : 0.5) * root.width; duration: 200; easing.type: Easing.OutCubic }
         NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 200; easing.type: Easing.OutCubic }
     }
+    //! [popExit]
 
+    //! [pushEnter]
     pushEnter: Transition {
         // slide_in_right
-        NumberAnimation { property: "x"; from: (control.mirrored ? -0.5 : 0.5) * control.width; to: 0; duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "x"; from: (root.mirrored ? -0.5 : 0.5) * root.width; to: 0; duration: 200; easing.type: Easing.OutCubic }
         NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
     }
+    //! [pushEnter]
 
+    //! [pushExit]
     pushExit: Transition {
         // slide_out_left
-        NumberAnimation { property: "x"; from: 0; to: (control.mirrored ? -0.5 : 0.5) * -control.width; duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "x"; from: 0; to: (root.mirrored ? -0.5 : 0.5) * -root.width; duration: 200; easing.type: Easing.OutCubic }
         NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 200; easing.type: Easing.OutCubic }
     }
+    //! [pushExit]
 
+    //! [replaceEnter]
     replaceEnter: Transition {
         // slide_in_right
-        NumberAnimation { property: "x"; from: (control.mirrored ? -0.5 : 0.5) * control.width; to: 0; duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "x"; from: (root.mirrored ? -0.5 : 0.5) * root.width; to: 0; duration: 200; easing.type: Easing.OutCubic }
         NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
     }
+    //! [replaceEnter]
 
+    //! [replaceExit]
     replaceExit: Transition {
         // slide_out_left
-        NumberAnimation { property: "x"; from: 0; to: (control.mirrored ? -0.5 : 0.5) * -control.width; duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "x"; from: 0; to: (root.mirrored ? -0.5 : 0.5) * -root.width; duration: 200; easing.type: Easing.OutCubic }
         NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 200; easing.type: Easing.OutCubic }
     }
+    //! [replaceExit]
 }

@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -56,14 +46,14 @@ VariantDelegate::VariantDelegate(QObject *parent)
     : QItemDelegate(parent)
 {
     boolExp.setPattern("true|false");
-    boolExp.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
+    boolExp.setCaseSensitivity(Qt::CaseInsensitive);
 
     byteArrayExp.setPattern("[\\x00-\\xff]*");
     charExp.setPattern(".");
-    colorExp.setPattern("^\\(([0-9]*),([0-9]*),([0-9]*),([0-9]*)\\)$");
+    colorExp.setPattern("\\(([0-9]*),([0-9]*),([0-9]*),([0-9]*)\\)");
     doubleExp.setPattern("");
-    pointExp.setPattern("^\\((-?[0-9]*),(-?[0-9]*)\\)$");
-    rectExp.setPattern("^\\((-?[0-9]*),(-?[0-9]*),(-?[0-9]*),(-?[0-9]*)\\)$");
+    pointExp.setPattern("\\((-?[0-9]*),(-?[0-9]*)\\)");
+    rectExp.setPattern("\\((-?[0-9]*),(-?[0-9]*),(-?[0-9]*),(-?[0-9]*)\\)");
     signedIntegerExp.setPattern("-?[0-9]*");
     sizeExp = pointExp;
     unsignedIntegerExp.setPattern("[0-9]*");
@@ -104,7 +94,7 @@ QWidget *VariantDelegate::createEditor(QWidget *parent,
     QLineEdit *lineEdit = new QLineEdit(parent);
     lineEdit->setFrame(false);
 
-    QRegularExpression regExp;
+    QRegExp regExp;
 
     switch (originalValue.type()) {
     case QVariant::Bool:
@@ -152,8 +142,8 @@ QWidget *VariantDelegate::createEditor(QWidget *parent,
         ;
     }
 
-    if (regExp.isValid()) {
-        QValidator *validator = new QRegularExpressionValidator(regExp, lineEdit);
+    if (!regExp.isEmpty()) {
+        QValidator *validator = new QRegExpValidator(regExp, lineEdit);
         lineEdit->setValidator(validator);
     }
 
@@ -185,18 +175,17 @@ void VariantDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
 
     QVariant originalValue = index.model()->data(index, Qt::UserRole);
     QVariant value;
-    QRegularExpressionMatch match;
 
     switch (originalValue.type()) {
     case QVariant::Char:
         value = text.at(0);
         break;
     case QVariant::Color:
-        match = colorExp.match(text);
-        value = QColor(qMin(match.captured(1).toInt(), 255),
-                       qMin(match.captured(2).toInt(), 255),
-                       qMin(match.captured(3).toInt(), 255),
-                       qMin(match.captured(4).toInt(), 255));
+        colorExp.exactMatch(text);
+        value = QColor(qMin(colorExp.cap(1).toInt(), 255),
+                       qMin(colorExp.cap(2).toInt(), 255),
+                       qMin(colorExp.cap(3).toInt(), 255),
+                       qMin(colorExp.cap(4).toInt(), 255));
         break;
     case QVariant::Date:
         {
@@ -215,17 +204,17 @@ void VariantDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
         }
         break;
     case QVariant::Point:
-        match = pointExp.match(text);
-        value = QPoint(match.captured(1).toInt(), match.captured(2).toInt());
+        pointExp.exactMatch(text);
+        value = QPoint(pointExp.cap(1).toInt(), pointExp.cap(2).toInt());
         break;
     case QVariant::Rect:
-        match = rectExp.match(text);
-        value = QRect(match.captured(1).toInt(), match.captured(2).toInt(),
-                      match.captured(3).toInt(), match.captured(4).toInt());
+        rectExp.exactMatch(text);
+        value = QRect(rectExp.cap(1).toInt(), rectExp.cap(2).toInt(),
+                      rectExp.cap(3).toInt(), rectExp.cap(4).toInt());
         break;
     case QVariant::Size:
-        match = sizeExp.match(text);
-        value = QSize(match.captured(1).toInt(), match.captured(2).toInt());
+        sizeExp.exactMatch(text);
+        value = QSize(sizeExp.cap(1).toInt(), sizeExp.cap(2).toInt());
         break;
     case QVariant::StringList:
         value = text.split(',');

@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Ruslan Baratov
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -75,18 +68,11 @@ public:
     void setCaptureMode(QCamera::CaptureModes mode);
     bool isCaptureModeSupported(QCamera::CaptureModes mode) const;
 
-    QCameraViewfinderSettings viewfinderSettings() const { return m_actualViewfinderSettings; }
-    void setViewfinderSettings(const QCameraViewfinderSettings &settings);
-    void applyViewfinderSettings(const QSize &captureSize = QSize(), bool restartPreview = true);
-
     QAndroidVideoOutput *videoOutput() const { return m_videoOutput; }
     void setVideoOutput(QAndroidVideoOutput *output);
+    void adjustViewfinderSize(const QSize &captureSize, bool restartPreview = true);
 
-    QList<QSize> getSupportedPreviewSizes() const;
-    QList<QVideoFrame::PixelFormat> getSupportedPixelFormats() const;
-    QList<AndroidCamera::FpsRange> getSupportedPreviewFpsRange() const;
-
-    QImageEncoderSettings imageSettings() const { return m_actualImageSettings; }
+    QImageEncoderSettings imageSettings() const { return m_imageSettings; }
     void setImageSettings(const QImageEncoderSettings &settings);
 
     bool isCaptureDestinationSupported(QCameraImageCapture::CaptureDestinations destination) const;
@@ -162,9 +148,6 @@ private:
                               QCameraImageCapture::CaptureDestinations dest,
                               const QString &fileName);
 
-    static QVideoFrame::PixelFormat QtPixelFormatFromAndroidImageFormat(AndroidCamera::ImageFormat);
-    static AndroidCamera::ImageFormat AndroidImageFormatFromQtPixelFormat(QVideoFrame::PixelFormat);
-
     int m_selectedCamera;
     AndroidCamera *m_camera;
     int m_nativeOrientation;
@@ -176,11 +159,8 @@ private:
     QCamera::Status m_status;
     bool m_previewStarted;
 
-    QCameraViewfinderSettings m_requestedViewfinderSettings;
-    QCameraViewfinderSettings m_actualViewfinderSettings;
-
-    QImageEncoderSettings m_requestedImageSettings;
-    QImageEncoderSettings m_actualImageSettings;
+    QImageEncoderSettings m_imageSettings;
+    bool m_imageSettingsDirty;
     QCameraImageCapture::CaptureDestinations m_captureDestination;
     QCameraImageCapture::DriveMode m_captureImageDriveMode;
     int m_lastImageCaptureId;

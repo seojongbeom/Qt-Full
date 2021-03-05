@@ -1,11 +1,8 @@
 TARGET = qsqlpsql
 
-HEADERS += $$PWD/qsql_psql_p.h
-SOURCES += $$PWD/qsql_psql.cpp $$PWD/main.cpp
-
-QMAKE_USE += psql
-
+SOURCES = main.cpp
 OTHER_FILES += psql.json
+include(../../../sql/drivers/psql/qsql_psql.pri)
 
 PLUGIN_CLASS_NAME = QPSQLDriverPlugin
 include(../qsqldriverbase.pri)

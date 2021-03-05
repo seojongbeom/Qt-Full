@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,17 +41,41 @@
 
 QGstreamerVideoEncode::QGstreamerVideoEncode(QGstreamerCaptureSession *session)
     :QVideoEncoderSettingsControl(session), m_session(session)
-    , m_codecs(QGstCodecsInfo::VideoEncoder)
 {
-    for (const QString& codecName : supportedVideoCodecs()) {
-        GstElementFactory *factory = gst_element_factory_find(m_codecs.codecElement(codecName).constData());
+    QList<QByteArray> codecCandidates;
+    codecCandidates << "video/h264" << "video/xvid" << "video/mpeg4" << "video/mpeg1" << "video/mpeg2" << "video/theora";
+
+    m_elementNames["video/h264"] = "x264enc";
+    m_elementNames["video/xvid"] = "xvidenc";
+    m_elementNames["video/mpeg4"] = "ffenc_mpeg4";
+    m_elementNames["video/mpeg1"] = "ffenc_mpeg1video";
+    m_elementNames["video/mpeg2"] = "ffenc_mpeg2video";
+    m_elementNames["video/theora"] = "theoraenc";
+
+    m_codecOptions["video/h264"] = QStringList() << "quantizer";
+    m_codecOptions["video/xvid"] = QStringList() << "quantizer" << "profile";
+    m_codecOptions["video/mpeg4"] = QStringList() << "quantizer";
+    m_codecOptions["video/mpeg1"] = QStringList() << "quantizer";
+    m_codecOptions["video/mpeg2"] = QStringList() << "quantizer";
+    m_codecOptions["video/theora"] = QStringList();
+
+    foreach( const QByteArray& codecName, codecCandidates ) {
+        QByteArray elementName = m_elementNames[codecName];
+        GstElementFactory *factory = gst_element_factory_find(elementName.constData());
         if (factory) {
+            m_codecs.append(codecName);
+            const gchar *descr = gst_element_factory_get_description(factory);
+            m_codecDescriptions.insert(codecName, QString::fromUtf8(descr));
+
             m_streamTypes.insert(codecName,
                                  QGstreamerMediaContainerControl::supportedStreamTypes(factory, GST_PAD_SRC));
 
             gst_object_unref(GST_OBJECT(factory));
         }
     }
+
+    //if (!m_codecs.isEmpty())
+    //    m_videoSettings.setCodec(m_codecs[0]);
 }
 
 QGstreamerVideoEncode::~QGstreamerVideoEncode()
@@ -82,17 +100,17 @@ QList< qreal > QGstreamerVideoEncode::supportedFrameRates(const QVideoEncoderSet
 
 QStringList QGstreamerVideoEncode::supportedVideoCodecs() const
 {
-    return m_codecs.supportedCodecs();
+    return m_codecs;
 }
 
 QString QGstreamerVideoEncode::videoCodecDescription(const QString &codecName) const
 {
-    return m_codecs.codecDescription(codecName);
+    return m_codecDescriptions.value(codecName);
 }
 
 QStringList QGstreamerVideoEncode::supportedEncodingOptions(const QString &codec) const
 {
-    return m_codecs.codecOptions(codec);
+    return m_codecOptions.value(codec);
 }
 
 QVariant QGstreamerVideoEncode::encodingOption(const QString &codec, const QString &name) const
@@ -119,28 +137,28 @@ void QGstreamerVideoEncode::setVideoSettings(const QVideoEncoderSettings &settin
 GstElement *QGstreamerVideoEncode::createEncoder()
 {
     QString codec = m_videoSettings.codec();
-    GstElement *encoderElement = gst_element_factory_make(m_codecs.codecElement(codec).constData(), "video-encoder");
+    //qDebug() << "create encoder for video codec" << codec;
+    GstElement *encoderElement = gst_element_factory_make( m_elementNames.value(codec).constData(), "video-encoder");
     if (!encoderElement)
         return 0;
 
     GstBin *encoderBin = GST_BIN(gst_bin_new("video-encoder-bin"));
 
-    GstElement *sinkCapsFilter = gst_element_factory_make("capsfilter", "capsfilter-video");
-    GstElement *srcCapsFilter = gst_element_factory_make("capsfilter", "capsfilter-video");
-    gst_bin_add_many(encoderBin, sinkCapsFilter, srcCapsFilter, NULL);
+    GstElement *capsFilter = gst_element_factory_make("capsfilter", "capsfilter-video");
+    gst_bin_add(encoderBin, capsFilter);
 
     GstElement *colorspace = gst_element_factory_make(QT_GSTREAMER_COLORCONVERSION_ELEMENT_NAME, NULL);
     gst_bin_add(encoderBin, colorspace);
     gst_bin_add(encoderBin, encoderElement);
 
-    gst_element_link_many(sinkCapsFilter, colorspace, encoderElement, srcCapsFilter, NULL);
+    gst_element_link_many(capsFilter, colorspace, encoderElement, NULL);
 
     // add ghostpads
-    GstPad *pad = gst_element_get_static_pad(sinkCapsFilter, "sink");
+    GstPad *pad = gst_element_get_static_pad(capsFilter, "sink");
     gst_element_add_pad(GST_ELEMENT(encoderBin), gst_ghost_pad_new("sink", pad));
     gst_object_unref(GST_OBJECT(pad));
 
-    pad = gst_element_get_static_pad(srcCapsFilter, "src");
+    pad = gst_element_get_static_pad(encoderElement, "src");
     gst_element_add_pad(GST_ELEMENT(encoderBin), gst_ghost_pad_new("src", pad));
     gst_object_unref(GST_OBJECT(pad));
 
@@ -148,7 +166,7 @@ GstElement *QGstreamerVideoEncode::createEncoder()
         if (m_videoSettings.encodingMode() == QMultimedia::ConstantQualityEncoding) {
             QMultimedia::EncodingQuality qualityValue = m_videoSettings.quality();
 
-            if (codec == QLatin1String("video/x-h264")) {
+            if (codec == QLatin1String("video/h264")) {
                 //constant quantizer mode
                 g_object_set(G_OBJECT(encoderElement), "pass", 4, NULL);
                 int qualityTable[] = {
@@ -159,7 +177,7 @@ GstElement *QGstreamerVideoEncode::createEncoder()
                     8 //VeryHigh
                 };
                 g_object_set(G_OBJECT(encoderElement), "quantizer", qualityTable[qualityValue], NULL);
-            } else if (codec == QLatin1String("video/x-xvid")) {
+            } else if (codec == QLatin1String("video/xvid")) {
                 //constant quantizer mode
                 g_object_set(G_OBJECT(encoderElement), "pass", 3, NULL);
                 int qualityTable[] = {
@@ -171,7 +189,9 @@ GstElement *QGstreamerVideoEncode::createEncoder()
                 };
                 int quant = qualityTable[qualityValue];
                 g_object_set(G_OBJECT(encoderElement), "quantizer", quant, NULL);
-            } else if (codec.startsWith(QLatin1String("video/mpeg"))) {
+            } else if (codec == QLatin1String("video/mpeg4") ||
+                       codec == QLatin1String("video/mpeg1") ||
+                       codec == QLatin1String("video/mpeg2") ) {
                 //constant quantizer mode
                 g_object_set(G_OBJECT(encoderElement), "pass", 2, NULL);
                 //quant from 1 to 30, default ~3
@@ -184,7 +204,7 @@ GstElement *QGstreamerVideoEncode::createEncoder()
                 };
                 double quant = qualityTable[qualityValue];
                 g_object_set(G_OBJECT(encoderElement), "quantizer", quant, NULL);
-            } else if (codec == QLatin1String("video/x-theora")) {
+            } else if (codec == QLatin1String("video/theora")) {
                 int qualityTable[] = {
                     8, //VeryLow
                     16, //Low
@@ -252,17 +272,10 @@ GstElement *QGstreamerVideoEncode::createEncoder()
 
         //qDebug() << "set video caps filter:" << gst_caps_to_string(caps);
 
-        g_object_set(G_OBJECT(sinkCapsFilter), "caps", caps, NULL);
+        g_object_set(G_OBJECT(capsFilter), "caps", caps, NULL);
 
         gst_caps_unref(caps);
     }
-
-    // Some encoders support several codecs. Setting a caps filter downstream with the desired
-    // codec (which is actually a string representation of the caps) will make sure we use the
-    // correct codec.
-    GstCaps *caps = gst_caps_from_string(codec.toUtf8().constData());
-    g_object_set(G_OBJECT(srcCapsFilter), "caps", caps, NULL);
-    gst_caps_unref(caps);
 
     return GST_ELEMENT(encoderBin);
 }
@@ -280,7 +293,7 @@ QPair<int,int> QGstreamerVideoEncode::rateAsRational() const
         int num = 1;
         int denum = 1;
 
-        for (int curDenum : qAsConst(denumCandidates)) {
+        foreach (int curDenum, denumCandidates) {
             int curNum = qRound(frameRate*curDenum);
             qreal curError = qAbs(qreal(curNum)/curDenum - frameRate);
 

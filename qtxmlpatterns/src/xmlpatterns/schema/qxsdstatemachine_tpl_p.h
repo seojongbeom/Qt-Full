@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtXmlPatterns module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -74,7 +68,9 @@ typename XsdStateMachine<TransitionType>::StateId XsdStateMachine<TransitionType
 #ifndef QT_NO_DEBUG
     // make sure we don't have two start states
     if (type == StartState) {
-        for (auto it = m_states.cbegin(), end = m_states.cend(); it != end; ++it) {
+        QHashIterator<StateId, StateType> it(m_states);
+        while (it.hasNext()) {
+            it.next();
             Q_ASSERT(it.value() != StartState && it.value() != StartEndState);
         }
     }
@@ -111,9 +107,9 @@ template <typename TransitionType>
 void XsdStateMachine<TransitionType>::reset()
 {
     // reset the machine to the start state
-    auto it = m_states.cbegin();
-    auto end = m_states.cend();
-    for ( ; it != end; ++it) {
+    QHashIterator<StateId, StateType> it(m_states);
+    while (it.hasNext()) {
+        it.next();
         if (it.value() == StartState || it.value() == StartEndState) {
             m_currentState = it.key();
             return;
@@ -177,9 +173,9 @@ bool XsdStateMachine<TransitionType>::proceed(InputType input)
 
     // fetch the transition entry for the current state
     const QHash<TransitionType, QVector<StateId> > &entry = m_transitions[m_currentState];
-    auto it = entry.cbegin();
-    auto end = entry.cend();
-    for ( ; it != end; ++it) {
+    QHashIterator<TransitionType, QVector<StateId> > it(entry);
+    while (it.hasNext()) {
+        it.next();
         if (inputEqualsTransition(input, it.key())) {
             m_currentState = it.value().first();
             m_lastTransition = it.key();
@@ -216,9 +212,9 @@ TransitionType XsdStateMachine<TransitionType>::lastTransition() const
 template <typename TransitionType>
 typename XsdStateMachine<TransitionType>::StateId XsdStateMachine<TransitionType>::startState() const
 {
-    auto it = m_states.cbegin();
-    auto end = m_states.cend();
-    for ( ; it != end; ++it) {
+    QHashIterator<StateId, StateType> it(m_states);
+    while (it.hasNext()) {
+        it.next();
         if (it.value() == StartState || it.value() == StartEndState)
             return it.key();
     }
@@ -246,39 +242,49 @@ bool XsdStateMachine<TransitionType>::outputGraph(QIODevice *device, const QStri
     QByteArray graph;
     QTextStream s(&graph);
 
+    QHashIterator<StateId, QHash<TransitionType, QVector<StateId> > > it(m_transitions);
+    QHashIterator<StateId, StateType> it3(m_states);
+
     s << "digraph " << graphName << " {\n";
     s << "  mindist = 2.0\n";
 
     // draw edges
-    for (auto it = m_transitions.cbegin(), end = m_transitions.cend(); it != end; ++it) {
+    while (it.hasNext()) {
+        it.next();
 
-        for (auto it2 = it.value().cbegin(), end = it.value().cend(); it2 != end; ++it2) {
+        QHashIterator<TransitionType, QVector<StateId> > it2(it.value());
+        while (it2.hasNext()) {
+            it2.next();
             for (int i = 0; i < it2.value().count(); ++i)
                 s << "  " << it.key() << " -> " << it2.value().at(i) << " [label=\"" << transitionTypeToString(it2.key()) << "\"]\n";
         }
     }
 
-    for (auto it = m_epsilonTransitions.cbegin(), end = m_epsilonTransitions.cend(); it != end; ++it) {
-        const QVector<StateId> states = it.value();
+    QHashIterator<StateId, QVector<StateId> > it4(m_epsilonTransitions);
+    while (it4.hasNext()) {
+        it4.next();
+
+        const QVector<StateId> states = it4.value();
         for (int i = 0; i < states.count(); ++i)
-            s << "  " << it.key() << " -> " << states.at(i) << " [label=\"&#949;\"]\n";
+            s << "  " << it4.key() << " -> " << states.at(i) << " [label=\"&#949;\"]\n";
     }
 
     // draw node info
-    for (auto it = m_states.cbegin(), end = m_states.cend(); it != end; ++it) {
+    while (it3.hasNext()) {
+        it3.next();
 
         QString style;
-        if (it.value() == StartState) {
+        if (it3.value() == StartState) {
             style = QLatin1String("shape=circle, style=filled, color=blue");
-        } else if (it.value() == StartEndState) {
+        } else if (it3.value() == StartEndState) {
             style = QLatin1String("shape=doublecircle, style=filled, color=blue");
-        } else if (it.value() == InternalState) {
+        } else if (it3.value() == InternalState) {
             style = QLatin1String("shape=circle, style=filled, color=red");
-        } else if (it.value() == EndState) {
+        } else if (it3.value() == EndState) {
             style = QLatin1String("shape=doublecircle, style=filled, color=green");
         }
 
-        s << "  " << it.key() << " [" << style << "]\n";
+        s << "  " << it3.key() << " [" << style << "]\n";
     }
 
     s << "}\n";
@@ -308,9 +314,11 @@ typename XsdStateMachine<TransitionType>::StateId XsdStateMachine<TransitionType
     // state, in that case our new DFA state will be a
     // Start or End state as well
     StateType type = InternalState;
+    QSetIterator<StateId> it(nfaState);
     bool hasStartState = false;
     bool hasEndState = false;
-    for (const StateId state : qAsConst(nfaState)) {
+    while (it.hasNext()) {
+        const StateId state = it.next();
         if (m_states.value(state) == EndState) {
             hasEndState = true;
         } else if (m_states.value(state) == StartState) {
@@ -345,11 +353,11 @@ XsdStateMachine<TransitionType> XsdStateMachine<TransitionType>::toDFA() const
 
     // search the start state as the algorithm starts with it...
     StateId startState = -1;
-    auto it = m_states.cbegin();
-    auto end = m_states.cend();
-    for ( ; it != end; ++it) {
-        if (it.value() == StartState) {
-            startState = it.key();
+    QHashIterator<StateId, StateType> stateTypeIt(m_states);
+    while (stateTypeIt.hasNext()) {
+        stateTypeIt.next();
+        if (stateTypeIt.value() == StartState) {
+            startState = stateTypeIt.key();
             break;
         }
     }
@@ -376,8 +384,12 @@ XsdStateMachine<TransitionType> XsdStateMachine<TransitionType>::toDFA() const
         // the 'states' set
         QList<TransitionType> input;
 
-        for (const StateId state : states)
-            input << m_transitions.value(state).keys();
+        {
+            QSetIterator<StateId> it(states);
+            while (it.hasNext()) {
+                input << m_transitions.value(it.next()).keys();
+            }
+        }
 
         // get the state in DFA that corresponds to the 'states' set in the NFA
         const StateId dfaBegin = dfaStateForNfaState(states, table, dfa);

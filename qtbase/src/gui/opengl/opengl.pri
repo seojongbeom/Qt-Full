@@ -1,9 +1,9 @@
 # Qt gui library, opengl module
 
-qtConfig(opengl): CONFIG += opengl
-qtConfig(opengles2): CONFIG += opengles2
+contains(QT_CONFIG, opengl):CONFIG += opengl
+contains(QT_CONFIG, opengles2):CONFIG += opengles2
 
-qtConfig(opengl) {
+contains(QT_CONFIG, opengl)|contains(QT_CONFIG, opengles2) {
 
     HEADERS += opengl/qopengl.h \
                opengl/qopengl_p.h \
@@ -22,19 +22,22 @@ qtConfig(opengl) {
                opengl/qopenglpaintengine_p.h \
                opengl/qopenglengineshadersource_p.h \
                opengl/qopenglcustomshaderstage_p.h \
+               opengl/qtriangulatingstroker_p.h \
                opengl/qopengltextureglyphcache_p.h \
                opengl/qopenglshadercache_p.h \
+               opengl/qopenglshadercache_meego_p.h \
+               opengl/qtriangulator_p.h \
+               opengl/qrbtree_p.h \
                opengl/qopenglversionfunctions.h \
                opengl/qopenglversionfunctionsfactory_p.h \
                opengl/qopenglvertexarrayobject.h \
                opengl/qopengldebug.h \
-               opengl/qopengltextureblitter.h \
+               opengl/qopengltextureblitter_p.h \
                opengl/qopengltexture.h \
                opengl/qopengltexture_p.h \
                opengl/qopengltexturehelper_p.h \
                opengl/qopenglpixeltransferoptions.h \
-               opengl/qopenglextrafunctions.h \
-               opengl/qopenglprogrambinarycache_p.h
+               opengl/qopenglextrafunctions.h
 
     SOURCES += opengl/qopengl.cpp \
                opengl/qopenglfunctions.cpp \
@@ -48,7 +51,9 @@ qtConfig(opengl) {
                opengl/qopengl2pexvertexarray.cpp \
                opengl/qopenglpaintengine.cpp \
                opengl/qopenglcustomshaderstage.cpp \
+               opengl/qtriangulatingstroker.cpp \
                opengl/qopengltextureglyphcache.cpp \
+               opengl/qtriangulator.cpp \
                opengl/qopenglversionfunctions.cpp \
                opengl/qopenglversionfunctionsfactory.cpp \
                opengl/qopenglvertexarrayobject.cpp \
@@ -56,10 +61,9 @@ qtConfig(opengl) {
                opengl/qopengltextureblitter.cpp \
                opengl/qopengltexture.cpp \
                opengl/qopengltexturehelper.cpp \
-               opengl/qopenglpixeltransferoptions.cpp \
-               opengl/qopenglprogrambinarycache.cpp
+               opengl/qopenglpixeltransferoptions.cpp
 
-    !qtConfig(opengles2) {
+    !contains(QT_CONFIG, opengles2) {
         HEADERS += opengl/qopenglfunctions_1_0.h \
                    opengl/qopenglfunctions_1_1.h \
                    opengl/qopenglfunctions_1_2.h \
@@ -118,7 +122,7 @@ qtConfig(opengl) {
                    opengl/qopengltimerquery.cpp
     }
 
-    qtConfig(opengles2) {
+    contains(QT_CONFIG, opengles2) {
         HEADERS += opengl/qopenglfunctions_es2.h
 
         SOURCES += opengl/qopenglfunctions_es2.cpp

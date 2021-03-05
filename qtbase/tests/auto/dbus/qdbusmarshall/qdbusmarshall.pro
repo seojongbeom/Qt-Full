@@ -6,4 +6,4 @@ SUBDIRS = qpong qdbusmarshall
 
 QT = core-private testlib
 
-requires(qtConfig(private_tests))
+requires(contains(QT_CONFIG,private_tests))

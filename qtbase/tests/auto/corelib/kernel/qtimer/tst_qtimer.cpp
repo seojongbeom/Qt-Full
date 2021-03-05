@@ -1,27 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -37,7 +41,6 @@
 
 #include <qtimer.h>
 #include <qthread.h>
-#include <qoperatingsystemversion.h>
 
 #if defined Q_OS_UNIX
 #include <unistd.h>
@@ -53,7 +56,6 @@ private slots:
     void remainingTime();
     void remainingTimeDuringActivation_data();
     void remainingTimeDuringActivation();
-    void basic_chrono();
     void livelock_data();
     void livelock();
     void timerInfiniteRecursion_data();
@@ -70,7 +72,6 @@ private slots:
     void singleShotStaticFunctionZeroTimeout();
     void recurseOnTimeoutAndStopTimer();
     void singleShotToFunctors();
-    void singleShot_chrono();
     void crossThreadSingleShotToFunctor();
 
     void dontBlockEvents();
@@ -145,10 +146,12 @@ void tst_QTimer::timeout()
 
     QCOMPARE(helper.count, 0);
 
-    QTRY_VERIFY_WITH_TIMEOUT(helper.count > 0, TIMEOUT_TIMEOUT);
+    QTest::qWait(TIMEOUT_TIMEOUT);
+    QVERIFY(helper.count > 0);
     int oldCount = helper.count;
 
-    QTRY_VERIFY_WITH_TIMEOUT(helper.count > oldCount, TIMEOUT_TIMEOUT);
+    QTest::qWait(TIMEOUT_TIMEOUT);
+    QVERIFY(helper.count > oldCount);
 }
 
 void tst_QTimer::remainingTime()
@@ -157,7 +160,6 @@ void tst_QTimer::remainingTime()
     QTimer timer;
 
     connect(&timer, SIGNAL(timeout()), &helper, SLOT(timeout()));
-    timer.setTimerType(Qt::PreciseTimer);
     timer.start(200);
 
     QCOMPARE(helper.count, 0);
@@ -214,67 +216,6 @@ void tst_QTimer::remainingTimeDuringActivation()
         QVERIFY(!QTestEventLoop::instance().timeout());
         QCOMPARE(helper.remainingTime, timeout);
     }
-}
-
-namespace {
-
-#if QT_HAS_INCLUDE(<chrono>)
-    template <typename T>
-    std::chrono::milliseconds to_ms(T t)
-    { return std::chrono::duration_cast<std::chrono::milliseconds>(t); }
-#endif
-
-} // unnamed namespace
-
-void tst_QTimer::basic_chrono()
-{
-#if !QT_HAS_INCLUDE(<chrono>)
-    QSKIP("This test requires C++11 <chrono> support");
-#else
-    // duplicates zeroTimer, singleShotTimeout, interval and remainingTime
-    using namespace std::chrono;
-    TimerHelper helper;
-    QTimer timer;
-    timer.setInterval(to_ms(nanoseconds(0)));
-    timer.start();
-    QCOMPARE(timer.intervalAsDuration().count(), milliseconds::rep(0));
-    QCOMPARE(timer.remainingTimeAsDuration().count(), milliseconds::rep(0));
-
-    connect(&timer, SIGNAL(timeout()), &helper, SLOT(timeout()));
-
-    QCoreApplication::processEvents();
-
-    QCOMPARE(helper.count, 1);
-
-    helper.count = 0;
-    timer.start(milliseconds(100));
-    QCOMPARE(helper.count, 0);
-
-    QTest::qWait(TIMEOUT_TIMEOUT);
-    QVERIFY(helper.count > 0);
-    int oldCount = helper.count;
-
-    QTest::qWait(TIMEOUT_TIMEOUT);
-    QVERIFY(helper.count > oldCount);
-
-    helper.count = 0;
-    timer.start(to_ms(microseconds(200000)));
-    QCOMPARE(timer.intervalAsDuration().count(), milliseconds::rep(200));
-    QTest::qWait(50);
-    QCOMPARE(helper.count, 0);
-
-    milliseconds rt = timer.remainingTimeAsDuration();
-    QVERIFY2(qAbs(rt.count() - 150) < 50, qPrintable(QString::number(rt.count())));
-
-    helper.count = 0;
-    timer.setSingleShot(true);
-    timer.start(milliseconds(100));
-    QTest::qWait(500);
-    QCOMPARE(helper.count, 1);
-    QTest::qWait(500);
-    QCOMPARE(helper.count, 1);
-    helper.count = 0;
-#endif
 }
 
 void tst_QTimer::livelock_data()
@@ -358,6 +299,9 @@ void tst_QTimer::livelock()
     QTRY_COMPARE(tester.timeoutsForFirst, 1);
     QCOMPARE(tester.timeoutsForExtra, 0);
     QTRY_COMPARE(tester.timeoutsForSecond, 1);
+#if defined(Q_OS_WINCE)
+    QEXPECT_FAIL("non-zero timer", "Windows CE devices often too slow", Continue);
+#endif
     QVERIFY(tester.postEventAtRightTime);
 }
 
@@ -499,9 +443,6 @@ void tst_QTimer::moveToThread()
 {
 #if defined(Q_OS_WIN32)
     QSKIP("Does not work reliably on Windows :(");
-#elif defined(Q_OS_MACOS)
-    if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::MacOSSierra)
-        QSKIP("Does not work reliably on macOS 10.12 (QTBUG-59679)");
 #endif
     QTimer ti1;
     QTimer ti2;
@@ -588,7 +529,7 @@ void tst_QTimer::restartedTimerFiresTooSoon()
 {
     RestartedTimerFiresTooSoonObject object;
     object.timerFired();
-    QCOMPARE(object.eventLoop.exec(), 0);
+    QVERIFY(object.eventLoop.exec() == 0);
 }
 
 class LongLastingSlotClass : public QObject
@@ -770,11 +711,6 @@ class StaticEventLoop
 public:
     static void quitEventLoop()
     {
-        quitEventLoop_noexcept();
-    }
-
-    static void quitEventLoop_noexcept() Q_DECL_NOTHROW
-    {
         QVERIFY(!_e.isNull());
         _e->quit();
         if (_t)
@@ -793,9 +729,6 @@ void tst_QTimer::singleShotToFunctors()
     QCOMPARE(count, 1);
 
     QTimer::singleShot(0, &StaticEventLoop::quitEventLoop);
-    QCOMPARE(_e->exec(), 0);
-
-    QTimer::singleShot(0, &StaticEventLoop::quitEventLoop_noexcept);
     QCOMPARE(_e->exec(), 0);
 
     QThread t1;
@@ -859,51 +792,6 @@ void tst_QTimer::singleShotToFunctors()
 
     _e.reset();
     _t = Q_NULLPTR;
-}
-
-void tst_QTimer::singleShot_chrono()
-{
-#if !QT_HAS_INCLUDE(<chrono>)
-    QSKIP("This test requires C++11 <chrono> support");
-#else
-    // duplicates singleShotStaticFunctionZeroTimeout and singleShotToFunctors
-    using namespace std::chrono;
-    TimerHelper helper;
-
-    QTimer::singleShot(hours(0), &helper, SLOT(timeout()));
-    QTest::qWait(500);
-    QCOMPARE(helper.count, 1);
-    QTest::qWait(500);
-    QCOMPARE(helper.count, 1);
-
-    TimerHelper nhelper;
-
-    QTimer::singleShot(seconds(0), &nhelper, &TimerHelper::timeout);
-    QCoreApplication::processEvents();
-    QCOMPARE(nhelper.count, 1);
-    QCoreApplication::processEvents();
-    QCOMPARE(nhelper.count, 1);
-
-    int count = 0;
-    QTimer::singleShot(to_ms(microseconds(0)), CountedStruct(&count));
-    QCoreApplication::processEvents();
-    QCOMPARE(count, 1);
-
-    _e.reset(new QEventLoop);
-    QTimer::singleShot(0, &StaticEventLoop::quitEventLoop);
-    QCOMPARE(_e->exec(), 0);
-
-    QObject c3;
-    QTimer::singleShot(milliseconds(500), &c3, CountedStruct(&count));
-    QTest::qWait(800);
-    QCOMPARE(count, 2);
-
-    QTimer::singleShot(0, [&count] { ++count; });
-    QCoreApplication::processEvents();
-    QCOMPARE(count, 3);
-
-    _e.reset();
-#endif
 }
 
 class DontBlockEvents : public QObject

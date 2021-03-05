@@ -1,6 +1,13 @@
 import QtQuick 2.5
-import QtQuick.Controls 2.1
+import QtQuick.Window 2.2
+import Qt.labs.controls 1.0
 
-Label {
-    text: "Label"
+Window {
+    visible: true
+
+    Label {
+        id: label
+        objectName: "label"
+        text: "Label"
+    }
 }

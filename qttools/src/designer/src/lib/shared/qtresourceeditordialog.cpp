@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -193,8 +198,9 @@ QDomElement saveResourcePrefixData(QDomDocument &doc, const QtResourcePrefixData
     if (!prefixData.language.isEmpty())
         prefixElem.setAttribute(QLatin1String(rccLangAttribute), prefixData.language);
 
-    for (const QtResourceFileData &rfd : prefixData.resourceFileList) {
-        QDomElement fileElem = saveResourceFileData(doc, rfd);
+    QListIterator<QtResourceFileData> itFile(prefixData.resourceFileList);
+    while (itFile.hasNext()) {
+        QDomElement fileElem = saveResourceFileData(doc, itFile.next());
         prefixElem.appendChild(fileElem);
     }
 
@@ -205,8 +211,9 @@ QDomDocument saveQrcFileData(const QtQrcFileData &qrcFileData)
 {
     QDomDocument doc;
     QDomElement docElem = doc.createElement(QLatin1String(rccRootTag));
-    for (const QtResourcePrefixData &prefixData : qrcFileData.resourceList) {
-        QDomElement prefixElem = saveResourcePrefixData(doc, prefixData);
+    QListIterator<QtResourcePrefixData> itPrefix(qrcFileData.resourceList);
+    while (itPrefix.hasNext()) {
+        QDomElement prefixElem = saveResourcePrefixData(doc, itPrefix.next());
 
         docElem.appendChild(prefixElem);
     }
@@ -283,11 +290,13 @@ public:
     // helpers
     QtQrcFile *qrcFileOf(const QString &path) const;
     QtQrcFile *qrcFileOf(QtResourcePrefix *resourcePrefix) const;
+    QtQrcFile *qrcFileOf(QtResourceFile *resourceFile) const;
     QtResourcePrefix *resourcePrefixOf(QtResourceFile *resourceFile) const;
 
     QtQrcFile *importQrcFile(const QtQrcFileData &qrcFileData, QtQrcFile *beforeQrcFile = 0);
     void exportQrcFile(QtQrcFile *qrcFile, QtQrcFileData *qrcFileData) const;
 
+    QList<QtResourceFile *> resourceFilesOf(const QString &resourceFullPath) const;
     QIcon icon(const QString &resourceFullPath) const;
     bool exists(const QString &resourceFullPath) const;
     bool exists(QtQrcFile *qrcFile) const;
@@ -374,6 +383,11 @@ QtQrcFile *QtQrcManager::qrcFileOf(QtResourcePrefix *resourcePrefix) const
     return m_prefixToQrc.value(resourcePrefix);
 }
 
+QtQrcFile *QtQrcManager::qrcFileOf(QtResourceFile *resourceFile) const
+{
+    return qrcFileOf(resourcePrefixOf(resourceFile));
+}
+
 QtResourcePrefix *QtQrcManager::resourcePrefixOf(QtResourceFile *resourceFile) const
 {
     return m_fileToPrefix.value(resourceFile);
@@ -384,10 +398,15 @@ QtQrcFile *QtQrcManager::importQrcFile(const QtQrcFileData &qrcFileData, QtQrcFi
     QtQrcFile *qrcFile = insertQrcFile(qrcFileData.qrcPath, beforeQrcFile);
     if (!qrcFile)
         return 0;
-    for (const QtResourcePrefixData &prefixData : qrcFileData.resourceList) {
+    QListIterator<QtResourcePrefixData> itPrefix(qrcFileData.resourceList);
+    while (itPrefix.hasNext()) {
+        const QtResourcePrefixData &prefixData = itPrefix.next();
         QtResourcePrefix *resourcePrefix = insertResourcePrefix(qrcFile, prefixData.prefix, prefixData.language, 0);
-        for (const QtResourceFileData &fileData : prefixData.resourceFileList)
+        QListIterator<QtResourceFileData> itFile(prefixData.resourceFileList);
+        while (itFile.hasNext()) {
+            const QtResourceFileData &fileData = itFile.next();
             insertResourceFile(resourcePrefix, fileData.path, fileData.alias, 0);
+        }
     }
     setInitialState(qrcFile, qrcFileData);
     return qrcFile;
@@ -405,11 +424,17 @@ void QtQrcManager::exportQrcFile(QtQrcFile *qrcFile, QtQrcFileData *qrcFileData)
 
     QList<QtResourcePrefixData> resourceList;
 
-    const QList<QtResourcePrefix *> resourcePrefixes = qrcFile->resourcePrefixList();
-    for (const QtResourcePrefix *prefix : resourcePrefixes) {
+    QList<QtResourcePrefix *> resourcePrefixes = qrcFile->resourcePrefixList();
+    QListIterator<QtResourcePrefix *> itPrefix(resourcePrefixes);
+    while (itPrefix.hasNext()) {
         QList<QtResourceFileData> resourceFileList;
-        const QList<QtResourceFile *> resourceFiles = prefix->resourceFiles();
-        for (QtResourceFile *file : resourceFiles) {
+
+        QtResourcePrefix *prefix = itPrefix.next();
+
+        QList<QtResourceFile *> resourceFiles = prefix->resourceFiles();
+        QListIterator<QtResourceFile *> itFile(resourceFiles);
+        while (itFile.hasNext()) {
+            QtResourceFile *file = itFile.next();
             QtResourceFileData fileData;
             fileData.path = file->path();
             fileData.alias = file->alias();
@@ -425,6 +450,11 @@ void QtQrcManager::exportQrcFile(QtQrcFile *qrcFile, QtQrcFileData *qrcFileData)
     data = QtQrcFileData();
     data.qrcPath = qrcFile->path();
     data.resourceList = resourceList;
+}
+
+QList<QtResourceFile *> QtQrcManager::resourceFilesOf(const QString &resourcePath) const
+{
+    return m_fullPathToResourceFiles.value(resourcePath);
 }
 
 QIcon QtQrcManager::icon(const QString &resourceFullPath) const
@@ -508,9 +538,10 @@ QtResourceFile *QtQrcManager::nextResourceFile(QtResourceFile *resourceFile) con
 
 void QtQrcManager::clear()
 {
-    const QList<QtQrcFile *> oldQrcFiles = qrcFiles();
-    for (QtQrcFile *qf : oldQrcFiles)
-        removeQrcFile(qf);
+    QList<QtQrcFile *> oldQrcFiles = qrcFiles();
+    QListIterator<QtQrcFile *> it(oldQrcFiles);
+    while (it.hasNext())
+        removeQrcFile(it.next());
 }
 
 QtQrcFile *QtQrcManager::insertQrcFile(const QString &path, QtQrcFile *beforeQrcFile, bool newFile)
@@ -575,9 +606,10 @@ void QtQrcManager::removeQrcFile(QtQrcFile *qrcFile)
     if (idx < 0)
         return;
 
-    const QList<QtResourcePrefix *> resourcePrefixes = qrcFile->resourcePrefixList();
-    for (QtResourcePrefix *rp : resourcePrefixes)
-        removeResourcePrefix(rp);
+    QList<QtResourcePrefix *> resourcePrefixes = qrcFile->resourcePrefixList();
+    QListIterator<QtResourcePrefix *> it(resourcePrefixes);
+    while (it.hasNext())
+        removeResourcePrefix(it.next());
 
     emit qrcFileRemoved(qrcFile);
 
@@ -678,9 +710,10 @@ void QtQrcManager::removeResourcePrefix(QtResourcePrefix *resourcePrefix)
 
     const int idx = qrcFile->m_resourcePrefixes.indexOf(resourcePrefix);
 
-    const QList<QtResourceFile *> resourceFiles = resourcePrefix->resourceFiles();
-    for (QtResourceFile *rf : resourceFiles)
-        removeResourceFile(rf);
+    QList<QtResourceFile *> resourceFiles = resourcePrefix->resourceFiles();
+    QListIterator<QtResourceFile *> it(resourceFiles);
+    while (it.hasNext())
+        removeResourceFile(it.next());
 
     emit resourcePrefixRemoved(resourcePrefix);
 
@@ -1221,11 +1254,13 @@ void QtResourceEditorDialogPrivate::slotCurrentQrcFileChanged(QListWidgetItem *i
 
     if (m_currentQrcFile) {
         QMap<QtResourcePrefix *, QStandardItem *> currentPrefixList = m_resourcePrefixToPrefixItem;
-        for (auto it = currentPrefixList.cbegin(), end = currentPrefixList.cend(); it != end; ++it) {
-            QtResourcePrefix *resourcePrefix = it.key();
-            const QList<QtResourceFile *> currentResourceFiles = resourcePrefix->resourceFiles();
-            for (QtResourceFile *rf : currentResourceFiles)
-                slotResourceFileRemoved(rf);
+        QMapIterator<QtResourcePrefix *, QStandardItem *> itPrefix(currentPrefixList);
+        while (itPrefix.hasNext()) {
+            QtResourcePrefix *resourcePrefix = itPrefix.next().key();
+            QList<QtResourceFile *> currentResourceFiles = resourcePrefix->resourceFiles();
+            QListIterator<QtResourceFile *> itFile(currentResourceFiles);
+            while (itFile.hasNext())
+                slotResourceFileRemoved(itFile.next());
             slotResourcePrefixRemoved(resourcePrefix);
         }
     }
@@ -1234,14 +1269,17 @@ void QtResourceEditorDialogPrivate::slotCurrentQrcFileChanged(QListWidgetItem *i
     slotCurrentTreeViewItemChanged(QModelIndex());
     QStandardItem *firstPrefix = 0; // select first prefix
     if (m_currentQrcFile) {
-        const QList<QtResourcePrefix *> newPrefixList = m_currentQrcFile->resourcePrefixList();
-        for (QtResourcePrefix *resourcePrefix : newPrefixList) {
+        QList<QtResourcePrefix *> newPrefixList = m_currentQrcFile->resourcePrefixList();
+        QListIterator<QtResourcePrefix *> itPrefix(newPrefixList);
+        while (itPrefix.hasNext()) {
+            QtResourcePrefix *resourcePrefix = itPrefix.next();
             if (QStandardItem *newPrefixItem = insertResourcePrefix(resourcePrefix))
                 if (!firstPrefix)
                     firstPrefix = newPrefixItem;
-            const QList<QtResourceFile *> newResourceFiles = resourcePrefix->resourceFiles();
-            for (QtResourceFile *rf : newResourceFiles)
-                slotResourceFileInserted(rf);
+            QList<QtResourceFile *> newResourceFiles = resourcePrefix->resourceFiles();
+            QListIterator<QtResourceFile *> itFile(newResourceFiles);
+            while (itFile.hasNext())
+                slotResourceFileInserted(itFile.next());
         }
     }
     m_ui.resourceTreeView->setCurrentIndex(firstPrefix ? m_treeModel->indexFromItem(firstPrefix) : QModelIndex());
@@ -1584,7 +1622,9 @@ void QtResourceEditorDialogPrivate::slotAddFiles()
     const QFileInfo fi(m_currentQrcFile->path());
     const QString destDir = fi.absolutePath();
     const QDir dir(fi.absolutePath());
-    for (QString resourcePath : resourcePaths) {
+    QStringListIterator itResourcePath(resourcePaths);
+    while (itResourcePath.hasNext()) {
+        QString resourcePath = itResourcePath.next();
         QString relativePath = dir.relativeFilePath(resourcePath);
         if (relativePath.startsWith(QStringLiteral(".."))) {
             QMessageBox msgBox(QMessageBox::Warning,
@@ -1694,8 +1734,10 @@ void QtResourceEditorDialogPrivate::slotClonePrefix()
     QtResourcePrefix *newResourcePrefix = m_qrcManager->insertResourcePrefix(m_currentQrcFile, currentResourcePrefix->prefix(),
                                     currentResourcePrefix->language(), m_qrcManager->nextResourcePrefix(currentResourcePrefix));
     if (newResourcePrefix) {
-        const QList<QtResourceFile *> files = currentResourcePrefix->resourceFiles();
-        for (QtResourceFile *resourceFile : files) {
+        QList<QtResourceFile *> files = currentResourcePrefix->resourceFiles();
+        QListIterator<QtResourceFile *> itFile(files);
+        while (itFile.hasNext()) {
+            QtResourceFile *resourceFile = itFile.next();
             QString path = resourceFile->path();
             QFileInfo fi(path);
             QDir dir(fi.dir());
@@ -2000,8 +2042,7 @@ QtResourceEditorDialog::QtResourceEditorDialog(QDesignerFormEditorInterface *cor
     d_ptr->m_ui.resourceTreeView->setModel(d_ptr->m_treeModel);
     d_ptr->m_ui.resourceTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
     d_ptr->m_treeSelection = d_ptr->m_ui.resourceTreeView->selectionModel();
-    connect(d_ptr->m_ui.resourceTreeView->header(), &QHeaderView::sectionDoubleClicked,
-            d_ptr->m_ui.resourceTreeView, &QTreeView::resizeColumnToContents);
+    connect(d_ptr->m_ui.resourceTreeView->header(), SIGNAL(sectionDoubleClicked(int)), d_ptr->m_ui.resourceTreeView, SLOT(resizeColumnToContents(int)));
     d_ptr->m_ui.resourceTreeView->setTextElideMode(Qt::ElideLeft);
 
     connect(d_ptr->m_ui.resourceTreeView, SIGNAL(customContextMenuRequested(QPoint)),
@@ -2058,8 +2099,10 @@ void QtResourceEditorDialog::setResourceModel(QtResourceModel *model)
 
     // enable qrcBox
 
-    const QStringList paths = resourceSet->activeResourceFilePaths();
-    for (const QString &path : paths) {
+    QStringList paths = resourceSet->activeResourceFilePaths();
+    QStringListIterator it(paths);
+    while (it.hasNext()) {
+        const QString path = it.next();
         QtQrcFileData qrcFileData;
         d_ptr->loadQrcFile(path, &qrcFileData);
         d_ptr->m_initialState << qrcFileData;
@@ -2123,8 +2166,10 @@ void QtResourceEditorDialog::accept()
     QStringList newQrcPaths;
     QList<QtQrcFileData> currentState;
 
-    const QList<QtQrcFile *> qrcFiles = d_ptr->m_qrcManager->qrcFiles();
-    for (QtQrcFile *qrcFile : qrcFiles) {
+    QList<QtQrcFile *> qrcFiles = d_ptr->m_qrcManager->qrcFiles();
+    QListIterator<QtQrcFile *> itQrc(qrcFiles);
+    while (itQrc.hasNext()) {
+        QtQrcFile *qrcFile = itQrc.next();
         QtQrcFileData qrcFileData;
         d_ptr->m_qrcManager->exportQrcFile(qrcFile, &qrcFileData);
         currentState << qrcFileData;

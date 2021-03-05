@@ -2,8 +2,6 @@ TARGET = QtWinExtras
 
 QT += gui-private core-private
 
-DEFINES += QT_NO_FOREACH
-
 SOURCES += \
     qwinfunctions.cpp \
     qwinfunctions_p.cpp \
@@ -45,8 +43,9 @@ HEADERS += \
 
 QMAKE_DOCS = $$PWD/doc/qtwinextras.qdocconf
 
-LIBS_PRIVATE += -lole32 -lshlwapi -lshell32 -ldwmapi
-win32:!qtHaveModule(opengl)|qtConfig(dynamicgl):LIBS_PRIVATE += -lgdi32
+DEFINES += NTDDI_VERSION=0x06010000 _WIN32_WINNT=0x0601
+LIBS_PRIVATE += -lole32 -lshlwapi -lshell32
+win32:!qtHaveModule(opengl)|contains(QT_CONFIG, dynamicgl):LIBS_PRIVATE += -lgdi32
 
 OTHER_FILES += \
     doc/qtwinextras.qdocconf \

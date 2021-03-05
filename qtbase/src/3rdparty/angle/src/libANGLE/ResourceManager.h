@@ -25,14 +25,13 @@ class ImplFactory;
 namespace gl
 {
 class Buffer;
-struct Data;
-class FenceSync;
-struct Limitations;
+class Shader;
 class Program;
+class Texture;
 class Renderbuffer;
 class Sampler;
-class Shader;
-class Texture;
+class FenceSync;
+struct Data;
 
 class ResourceManager : angle::NonCopyable
 {
@@ -44,7 +43,7 @@ class ResourceManager : angle::NonCopyable
     void release();
 
     GLuint createBuffer();
-    GLuint createShader(const gl::Limitations &rendererLimitations, GLenum type);
+    GLuint createShader(const gl::Data &data, GLenum type);
     GLuint createProgram();
     GLuint createTexture();
     GLuint createRenderbuffer();

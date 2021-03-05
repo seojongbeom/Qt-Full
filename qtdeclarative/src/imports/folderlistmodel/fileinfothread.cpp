@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -46,7 +40,7 @@
 FileInfoThread::FileInfoThread(QObject *parent)
     : QThread(parent),
       abort(false),
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
       watcher(0),
 #endif
       sortFlags(QDir::Name),
@@ -58,14 +52,13 @@ FileInfoThread::FileInfoThread(QObject *parent)
       showDirsFirst(false),
       showDotAndDotDot(false),
       showHidden(false),
-      showOnlyReadable(false),
-      caseSensitive(true)
+      showOnlyReadable(false)
 {
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
     watcher = new QFileSystemWatcher(this);
     connect(watcher, SIGNAL(directoryChanged(QString)), this, SLOT(dirChanged(QString)));
     connect(watcher, SIGNAL(fileChanged(QString)), this, SLOT(updateFile(QString)));
-#endif // filesystemwatcher
+#endif // !QT_NO_FILESYSTEMWATCHER
 }
 
 FileInfoThread::~FileInfoThread()
@@ -80,7 +73,7 @@ FileInfoThread::~FileInfoThread()
 void FileInfoThread::clear()
 {
     QMutexLocker locker(&mutex);
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
     watcher->removePaths(watcher->files());
     watcher->removePaths(watcher->directories());
 #endif
@@ -89,7 +82,7 @@ void FileInfoThread::clear()
 void FileInfoThread::removePath(const QString &path)
 {
     QMutexLocker locker(&mutex);
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
     if (!path.startsWith(QLatin1Char(':')))
         watcher->removePath(path);
 #else
@@ -103,7 +96,7 @@ void FileInfoThread::setPath(const QString &path)
     Q_ASSERT(!path.isEmpty());
 
     QMutexLocker locker(&mutex);
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
     if (!path.startsWith(QLatin1Char(':')))
         watcher->addPath(path);
 #endif
@@ -120,7 +113,7 @@ void FileInfoThread::setRootPath(const QString &path)
     rootPath = path;
 }
 
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
 void FileInfoThread::dirChanged(const QString &directoryPath)
 {
     Q_UNUSED(directoryPath);
@@ -196,15 +189,7 @@ void FileInfoThread::setShowOnlyReadable(bool on)
     condition.wakeAll();
 }
 
-void FileInfoThread::setCaseSensitive(bool on)
-{
-    QMutexLocker locker(&mutex);
-    caseSensitive = on;
-    folderUpdate = true;
-    condition.wakeAll();
-}
-
-#if QT_CONFIG(filesystemwatcher)
+#ifndef QT_NO_FILESYSTEMWATCHER
 void FileInfoThread::updateFile(const QString &path)
 {
     Q_UNUSED(path);
@@ -242,8 +227,7 @@ void FileInfoThread::run()
 void FileInfoThread::getFileInfos(const QString &path)
 {
     QDir::Filters filter;
-    if (caseSensitive)
-        filter = QDir::CaseSensitive;
+    filter = QDir::CaseSensitive;
     if (showFiles)
         filter = filter | QDir::Files;
     if (showDirs)
@@ -260,13 +244,14 @@ void FileInfoThread::getFileInfos(const QString &path)
         sortFlags = sortFlags | QDir::DirsFirst;
 
     QDir currentDir(path, QString(), sortFlags);
+    QFileInfoList fileInfoList;
     QList<FileProperty> filePropertyList;
 
-    const QFileInfoList fileInfoList = currentDir.entryInfoList(nameFilters, filter, sortFlags);
+    fileInfoList = currentDir.entryInfoList(nameFilters, filter, sortFlags);
 
     if (!fileInfoList.isEmpty()) {
         filePropertyList.reserve(fileInfoList.count());
-        for (const QFileInfo &info : fileInfoList) {
+        foreach (const QFileInfo &info, fileInfoList) {
             //qDebug() << "Adding file : " << info.fileName() << "to list ";
             filePropertyList << FileProperty(info);
         }

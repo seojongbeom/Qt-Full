@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,8 +45,9 @@
 // We mean it.
 //
 
-#include <QtWidgets/private/qtwidgetsglobal_p.h>
 #include "qfilesystemmodel.h"
+
+#ifndef QT_NO_FILESYSTEMMODEL
 
 #include <private/qabstractitemmodel_p.h>
 #include <qabstractitemmodel.h>
@@ -64,30 +59,11 @@
 #include <qtimer.h>
 #include <qhash.h>
 
-QT_REQUIRE_CONFIG(filesystemmodel);
-
 QT_BEGIN_NAMESPACE
 
 class ExtendedInformation;
 class QFileSystemModelPrivate;
 class QFileIconProvider;
-
-#if defined(Q_OS_WIN)
-class QFileSystemModelNodePathKey : public QString
-{
-public:
-    QFileSystemModelNodePathKey() {}
-    QFileSystemModelNodePathKey(const QString &other) : QString(other) {}
-    QFileSystemModelNodePathKey(const QFileSystemModelNodePathKey &other) : QString(other) {}
-    bool operator==(const QFileSystemModelNodePathKey &other) const { return !compare(other, Qt::CaseInsensitive); }
-};
-
-Q_DECLARE_TYPEINFO(QFileSystemModelNodePathKey, Q_MOVABLE_TYPE);
-
-inline uint qHash(const QFileSystemModelNodePathKey &key) { return qHash(key.toCaseFolded()); }
-#else // Q_OS_WIN
-typedef QString QFileSystemModelNodePathKey;
-#endif
 
 class Q_AUTOTEST_EXPORT QFileSystemModelPrivate : public QAbstractItemModelPrivate
 {
@@ -102,14 +78,18 @@ public:
         explicit QFileSystemNode(const QString &filename = QString(), QFileSystemNode *p = 0)
             : fileName(filename), populatedChildren(false), isVisible(false), dirtyChildrenIndex(-1), parent(p), info(0) {}
         ~QFileSystemNode() {
-            qDeleteAll(children);
+            QHash<QString, QFileSystemNode*>::const_iterator i = children.constBegin();
+            while (i != children.constEnd()) {
+                    delete i.value();
+                    ++i;
+            }
             delete info;
             info = 0;
             parent = 0;
         }
 
         QString fileName;
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE)
         QString volumeName;
 #endif
 
@@ -177,36 +157,38 @@ public:
         void updateIcon(QFileIconProvider *iconProvider, const QString &path) {
             if (info)
                 info->icon = iconProvider->icon(QFileInfo(path));
-            for (QFileSystemNode *child : qAsConst(children)) {
+            QHash<QString, QFileSystemNode *>::const_iterator iterator;
+            for(iterator = children.constBegin() ; iterator != children.constEnd() ; ++iterator) {
                 //On windows the root (My computer) has no path so we don't want to add a / for nothing (e.g. /C:/)
                 if (!path.isEmpty()) {
                     if (path.endsWith(QLatin1Char('/')))
-                        child->updateIcon(iconProvider, path + child->fileName);
+                        iterator.value()->updateIcon(iconProvider, path + iterator.value()->fileName);
                     else
-                        child->updateIcon(iconProvider, path + QLatin1Char('/') + child->fileName);
+                        iterator.value()->updateIcon(iconProvider, path + QLatin1Char('/') + iterator.value()->fileName);
                 } else
-                    child->updateIcon(iconProvider, child->fileName);
+                    iterator.value()->updateIcon(iconProvider, iterator.value()->fileName);
             }
         }
 
         void retranslateStrings(QFileIconProvider *iconProvider, const QString &path) {
             if (info)
                 info->displayType = iconProvider->type(QFileInfo(path));
-            for (QFileSystemNode *child : qAsConst(children)) {
+            QHash<QString, QFileSystemNode *>::const_iterator iterator;
+            for(iterator = children.constBegin() ; iterator != children.constEnd() ; ++iterator) {
                 //On windows the root (My computer) has no path so we don't want to add a / for nothing (e.g. /C:/)
                 if (!path.isEmpty()) {
                     if (path.endsWith(QLatin1Char('/')))
-                        child->retranslateStrings(iconProvider, path + child->fileName);
+                        iterator.value()->retranslateStrings(iconProvider, path + iterator.value()->fileName);
                     else
-                        child->retranslateStrings(iconProvider, path + QLatin1Char('/') + child->fileName);
+                        iterator.value()->retranslateStrings(iconProvider, path + QLatin1Char('/') + iterator.value()->fileName);
                 } else
-                    child->retranslateStrings(iconProvider, child->fileName);
+                    iterator.value()->retranslateStrings(iconProvider, iterator.value()->fileName);
             }
         }
 
         bool populatedChildren;
         bool isVisible;
-        QHash<QFileSystemModelNodePathKey, QFileSystemNode *> children;
+        QHash<QString,QFileSystemNode *> children;
         QList<QString> visibleChildren;
         int dirtyChildrenIndex;
         QFileSystemNode *parent;
@@ -280,6 +262,16 @@ public:
             delayedSortTimer.start(0);
     }
 
+    static bool caseInsensitiveLessThan(const QString &s1, const QString &s2)
+    {
+       return QString::compare(s1, s2, Qt::CaseInsensitive) < 0;
+    }
+
+    static bool nodeCaseInsensitiveLessThan(const QFileSystemModelPrivate::QFileSystemNode &s1, const QFileSystemModelPrivate::QFileSystemNode &s2)
+    {
+       return QString::compare(s1.fileName, s2.fileName, Qt::CaseInsensitive) < 0;
+    }
+
     QIcon icon(const QModelIndex &index) const;
     QString name(const QModelIndex &index) const;
     QString displayName(const QModelIndex &index) const;
@@ -326,11 +318,13 @@ public:
         QString file;
         const QFileSystemNode *node;
     };
-    QVector<Fetching> toFetch;
+    QList<Fetching> toFetch;
 
 };
 Q_DECLARE_TYPEINFO(QFileSystemModelPrivate::Fetching, Q_MOVABLE_TYPE);
+#endif // QT_NO_FILESYSTEMMODEL
 
 QT_END_NAMESPACE
 
 #endif
+

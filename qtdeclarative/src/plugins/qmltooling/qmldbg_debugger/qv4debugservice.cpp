@@ -1,51 +1,43 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include "qv4debugservice.h"
-#include "qv4debugjob.h"
 #include "qqmlengine.h"
-#include "qqmldebugpacket.h"
-
 #include <private/qv4engine_p.h>
 #include <private/qv4isel_moth_p.h>
 #include <private/qv4function_p.h>
 #include <private/qqmldebugconnector_p.h>
+
 #include <private/qv8engine_p.h>
 
 #include <QtCore/QJsonArray>
@@ -71,6 +63,7 @@ QT_BEGIN_NAMESPACE
 class V8CommandHandler;
 class UnknownV8CommandHandler;
 
+int QV4DebugServiceImpl::debuggerIndex = 0;
 int QV4DebugServiceImpl::sequence = 0;
 
 class V8CommandHandler
@@ -90,7 +83,7 @@ public:
         TRACE_PROTOCOL(qDebug() << "handling command" << command() << "...");
 
         req = request;
-        seq = req.value(QLatin1String("seq"));
+        seq = req.value(QStringLiteral("seq"));
         debugService = s;
 
         handleRequest();
@@ -111,7 +104,7 @@ protected:
     void addCommand() { response.insert(QStringLiteral("command"), cmd); }
     void addRequestSequence() { response.insert(QStringLiteral("request_seq"), seq); }
     void addSuccess(bool success) { response.insert(QStringLiteral("success"), success); }
-    void addBody(const QJsonValue &body)
+    void addBody(const QJsonObject &body)
     {
         response.insert(QStringLiteral("body"), body);
     }
@@ -121,24 +114,14 @@ protected:
         response.insert(QStringLiteral("running"), debugService->debuggerAgent.isRunning());
     }
 
-    QV4DataCollector *saneCollector(QV4Debugger *debugger)
-    {
-        QV4DataCollector *collector = debugger->collector();
-        collector->setNamesAsObjects(debugService->clientRequiresNamesAsObjects());
-        collector->setRedundantRefs(debugService->clientRequiresRedundantRefs());
-        return collector;
-    }
-
-    // TODO: drop this method once we don't need to support redundantRefs anymore.
     void addRefs(const QJsonArray &refs)
     {
-        Q_ASSERT(debugService->clientRequiresRedundantRefs());
         response.insert(QStringLiteral("refs"), refs);
     }
 
     void createErrorResponse(const QString &msg)
     {
-        QJsonValue command = req.value(QLatin1String("command"));
+        QJsonValue command = req.value(QStringLiteral("command"));
         response.insert(QStringLiteral("command"), command);
         addRequestSequence();
         addSuccess(false);
@@ -162,11 +145,11 @@ class UnknownV8CommandHandler: public V8CommandHandler
 public:
     UnknownV8CommandHandler(): V8CommandHandler(QString()) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
-        QString msg = QLatin1String("unimplemented command \"")
-                + req.value(QLatin1String("command")).toString()
-                + QLatin1Char('"');
+        QString msg = QStringLiteral("unimplemented command \"");
+        msg += req.value(QStringLiteral("command")).toString();
+        msg += QLatin1Char('"');
         createErrorResponse(msg);
     }
 };
@@ -177,7 +160,7 @@ class V8VersionRequest: public V8CommandHandler
 public:
     V8VersionRequest(): V8CommandHandler(QStringLiteral("version")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         addCommand();
         addRequestSequence();
@@ -186,8 +169,6 @@ public:
         QJsonObject body;
         body.insert(QStringLiteral("V8Version"),
                     QLatin1String("this is not V8, this is V4 in Qt " QT_VERSION_STR));
-        body.insert(QStringLiteral("UnpausedEvaluate"), true);
-        body.insert(QStringLiteral("ContextEvaluate"), true);
         addBody(body);
     }
 };
@@ -197,26 +178,26 @@ class V8SetBreakPointRequest: public V8CommandHandler
 public:
     V8SetBreakPointRequest(): V8CommandHandler(QStringLiteral("setbreakpoint")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
-        QJsonObject args = req.value(QLatin1String("arguments")).toObject();
+        QJsonObject args = req.value(QStringLiteral("arguments")).toObject();
         if (args.isEmpty())
             return;
 
-        QString type = args.value(QLatin1String("type")).toString();
-        if (type != QLatin1String("scriptRegExp")) {
+        QString type = args.value(QStringLiteral("type")).toString();
+        if (type != QStringLiteral("scriptRegExp")) {
             createErrorResponse(QStringLiteral("breakpoint type \"%1\" is not implemented").arg(type));
             return;
         }
 
-        QString fileName = args.value(QLatin1String("target")).toString();
+        QString fileName = args.value(QStringLiteral("target")).toString();
         if (fileName.isEmpty()) {
             createErrorResponse(QStringLiteral("breakpoint has no file name"));
             return;
         }
 
-        int line = args.value(QLatin1String("line")).toInt(-1);
+        int line = args.value(QStringLiteral("line")).toInt(-1);
         if (line < 0) {
             createErrorResponse(QStringLiteral("breakpoint has an invalid line number"));
             return;
@@ -248,14 +229,14 @@ class V8ClearBreakPointRequest: public V8CommandHandler
 public:
     V8ClearBreakPointRequest(): V8CommandHandler(QStringLiteral("clearbreakpoint")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
-        QJsonObject args = req.value(QLatin1String("arguments")).toObject();
+        QJsonObject args = req.value(QStringLiteral("arguments")).toObject();
         if (args.isEmpty())
             return;
 
-        int id = args.value(QLatin1String("breakpoint")).toInt(-1);
+        int id = args.value(QStringLiteral("breakpoint")).toInt(-1);
         if (id < 0) {
             createErrorResponse(QStringLiteral("breakpoint has an invalid number"));
             return;
@@ -281,23 +262,17 @@ class V8BacktraceRequest: public V8CommandHandler
 public:
     V8BacktraceRequest(): V8CommandHandler(QStringLiteral("backtrace")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
 
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        int fromFrame = arguments.value(QLatin1String("fromFrame")).toInt(0);
-        int toFrame = arguments.value(QLatin1String("toFrame")).toInt(fromFrame + 10);
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+        int fromFrame = arguments.value(QStringLiteral("fromFrame")).toInt(0);
+        int toFrame = arguments.value(QStringLiteral("toFrame")).toInt(fromFrame + 10);
         // no idea what the bottom property is for, so we'll ignore it.
 
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            createErrorResponse(QStringLiteral("Debugger has to be paused to retrieve backtraces."));
-            return;
-        }
-
-        BacktraceJob job(saneCollector(debugger), fromFrame, toFrame);
-        debugger->runInEngine(&job);
+        BacktraceJob job(debugService->collector(), fromFrame, toFrame);
+        debugService->debuggerAgent.firstDebugger()->runInEngine(&job);
 
         // response:
         addCommand();
@@ -305,8 +280,7 @@ public:
         addSuccess(true);
         addRunning();
         addBody(job.returnValue());
-        if (debugService->clientRequiresRedundantRefs())
-            addRefs(job.refs());
+        addRefs(job.refs());
     }
 };
 
@@ -315,26 +289,20 @@ class V8FrameRequest: public V8CommandHandler
 public:
     V8FrameRequest(): V8CommandHandler(QStringLiteral("frame")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        const int frameNr = arguments.value(QLatin1String("number")).toInt(
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+        const int frameNr = arguments.value(QStringLiteral("number")).toInt(
                     debugService->selectedFrame());
-
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            createErrorResponse(QStringLiteral("Debugger has to be paused to retrieve frames."));
-            return;
-        }
 
         if (frameNr < 0) {
             createErrorResponse(QStringLiteral("frame command has invalid frame number"));
             return;
         }
 
-        FrameJob job(saneCollector(debugger), frameNr);
-        debugger->runInEngine(&job);
+        FrameJob job(debugService->collector(), frameNr);
+        debugService->debuggerAgent.firstDebugger()->runInEngine(&job);
         if (!job.wasSuccessful()) {
             createErrorResponse(QStringLiteral("frame retrieval failed"));
             return;
@@ -348,8 +316,7 @@ public:
         addSuccess(true);
         addRunning();
         addBody(job.returnValue());
-        if (debugService->clientRequiresRedundantRefs())
-            addRefs(job.refs());
+        addRefs(job.refs());
     }
 };
 
@@ -358,19 +325,13 @@ class V8ScopeRequest: public V8CommandHandler
 public:
     V8ScopeRequest(): V8CommandHandler(QStringLiteral("scope")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        const int frameNr = arguments.value(QLatin1String("frameNumber")).toInt(
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+        const int frameNr = arguments.value(QStringLiteral("frameNumber")).toInt(
                     debugService->selectedFrame());
-        const int scopeNr = arguments.value(QLatin1String("number")).toInt(0);
-
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            createErrorResponse(QStringLiteral("Debugger has to be paused to retrieve scope."));
-            return;
-        }
+        const int scopeNr = arguments.value(QStringLiteral("number")).toInt(0);
 
         if (frameNr < 0) {
             createErrorResponse(QStringLiteral("scope command has invalid frame number"));
@@ -381,8 +342,8 @@ public:
             return;
         }
 
-        ScopeJob job(saneCollector(debugger), frameNr, scopeNr);
-        debugger->runInEngine(&job);
+        ScopeJob job(debugService->collector(), frameNr, scopeNr);
+        debugService->debuggerAgent.firstDebugger()->runInEngine(&job);
         if (!job.wasSuccessful()) {
             createErrorResponse(QStringLiteral("scope retrieval failed"));
             return;
@@ -394,8 +355,7 @@ public:
         addSuccess(true);
         addRunning();
         addBody(job.returnValue());
-        if (debugService->clientRequiresRedundantRefs())
-            addRefs(job.refs());
+        addRefs(job.refs());
     }
 };
 
@@ -404,27 +364,14 @@ class V8LookupRequest: public V8CommandHandler
 public:
     V8LookupRequest(): V8CommandHandler(QStringLiteral("lookup")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        QJsonArray handles = arguments.value(QLatin1String("handles")).toArray();
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+        QJsonArray handles = arguments.value(QStringLiteral("handles")).toArray();
 
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            const QList<QV4Debugger *> &debuggers = debugService->debuggerAgent.debuggers();
-            if (debuggers.count() > 1) {
-                createErrorResponse(QStringLiteral("Cannot lookup values if multiple debuggers are running and none is paused"));
-                return;
-            } else if (debuggers.count() == 0) {
-                createErrorResponse(QStringLiteral("No debuggers available to lookup values"));
-                return;
-            }
-            debugger = debuggers.first();
-        }
-
-        ValueLookupJob job(handles, saneCollector(debugger));
-        debugger->runInEngine(&job);
+        ValueLookupJob job(handles, debugService->collector());
+        debugService->debuggerAgent.firstDebugger()->runInEngine(&job);
         if (!job.exceptionMessage().isEmpty()) {
             createErrorResponse(job.exceptionMessage());
         } else {
@@ -434,8 +381,7 @@ public:
             addSuccess(true);
             addRunning();
             addBody(job.returnValue());
-            if (debugService->clientRequiresRedundantRefs())
-                addRefs(job.refs());
+            addRefs(job.refs());
         }
     }
 };
@@ -445,33 +391,28 @@ class V8ContinueRequest: public V8CommandHandler
 public:
     V8ContinueRequest(): V8CommandHandler(QStringLiteral("continue")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         // decypher the payload:
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
 
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            createErrorResponse(QStringLiteral("Debugger has to be paused in order to continue."));
-            return;
-        }
-        debugService->debuggerAgent.clearAllPauseRequests();
+        QV4::Debugging::V4Debugger *debugger = debugService->debuggerAgent.firstDebugger();
 
         if (arguments.empty()) {
-            debugger->resume(QV4Debugger::FullThrottle);
+            debugger->resume(QV4::Debugging::V4Debugger::FullThrottle);
         } else {
-            QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-            QString stepAction = arguments.value(QLatin1String("stepaction")).toString();
-            const int stepcount = arguments.value(QLatin1String("stepcount")).toInt(1);
+            QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+            QString stepAction = arguments.value(QStringLiteral("stepaction")).toString();
+            const int stepcount = arguments.value(QStringLiteral("stepcount")).toInt(1);
             if (stepcount != 1)
                 qWarning() << "Step count other than 1 is not supported.";
 
-            if (stepAction == QLatin1String("in")) {
-                debugger->resume(QV4Debugger::StepIn);
-            } else if (stepAction == QLatin1String("out")) {
-                debugger->resume(QV4Debugger::StepOut);
-            } else if (stepAction == QLatin1String("next")) {
-                debugger->resume(QV4Debugger::StepOver);
+            if (stepAction == QStringLiteral("in")) {
+                debugger->resume(QV4::Debugging::V4Debugger::StepIn);
+            } else if (stepAction == QStringLiteral("out")) {
+                debugger->resume(QV4::Debugging::V4Debugger::StepOut);
+            } else if (stepAction == QStringLiteral("next")) {
+                debugger->resume(QV4::Debugging::V4Debugger::StepOver);
             } else {
                 createErrorResponse(QStringLiteral("continue command has invalid stepaction"));
                 return;
@@ -491,7 +432,7 @@ class V8DisconnectRequest: public V8CommandHandler
 public:
     V8DisconnectRequest(): V8CommandHandler(QStringLiteral("disconnect")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         debugService->debuggerAgent.removeAllBreakPoints();
         debugService->debuggerAgent.resumeAll();
@@ -509,18 +450,18 @@ class V8SetExceptionBreakRequest: public V8CommandHandler
 public:
     V8SetExceptionBreakRequest(): V8CommandHandler(QStringLiteral("setexceptionbreak")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         bool wasEnabled = debugService->debuggerAgent.breakOnThrow();
 
         //decypher the payload:
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        QString type = arguments.value(QLatin1String("type")).toString();
-        bool enabled = arguments.value(QLatin1String("number")).toBool(!wasEnabled);
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+        QString type = arguments.value(QStringLiteral("type")).toString();
+        bool enabled = arguments.value(QStringLiteral("number")).toBool(!wasEnabled);
 
-        if (type == QLatin1String("all")) {
+        if (type == QStringLiteral("all")) {
             // that's fine
-        } else if (type == QLatin1String("uncaught")) {
+        } else if (type == QStringLiteral("uncaught")) {
             createErrorResponse(QStringLiteral("breaking only on uncaught exceptions is not supported yet"));
             return;
         } else {
@@ -549,11 +490,11 @@ class V8ScriptsRequest: public V8CommandHandler
 public:
     V8ScriptsRequest(): V8CommandHandler(QStringLiteral("scripts")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
         //decypher the payload:
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        int types = arguments.value(QLatin1String("types")).toInt(-1);
+        QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+        int types = arguments.value(QStringLiteral("types")).toInt(-1);
         if (types < 0 || types > 7) {
             createErrorResponse(QStringLiteral("invalid types value in scripts command"));
             return;
@@ -563,28 +504,11 @@ public:
         }
 
         // do it:
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            createErrorResponse(QStringLiteral("Debugger has to be paused to retrieve scripts."));
-            return;
-        }
-
-        GatherSourcesJob job(debugger->engine());
+        QV4::Debugging::V4Debugger *debugger = debugService->debuggerAgent.firstDebugger();
+        GatherSourcesJob job(debugger->engine(), requestSequenceNr());
         debugger->runInEngine(&job);
 
-        QJsonArray body;
-        for (const QString &source : job.result()) {
-            QJsonObject src;
-            src[QLatin1String("name")] = source;
-            src[QLatin1String("scriptType")] = 4;
-            body.append(src);
-        }
-
-        addSuccess(true);
-        addRunning();
-        addBody(body);
-        addCommand();
-        addRequestSequence();
+        // response will be send by
     }
 };
 
@@ -621,41 +545,29 @@ class V8EvaluateRequest: public V8CommandHandler
 public:
     V8EvaluateRequest(): V8CommandHandler(QStringLiteral("evaluate")) {}
 
-    void handleRequest() override
+    virtual void handleRequest()
     {
-        QJsonObject arguments = req.value(QLatin1String("arguments")).toObject();
-        QString expression = arguments.value(QLatin1String("expression")).toString();
-        int context = arguments.value(QLatin1String("context")).toInt(-1);
-        int frame = -1;
+        QV4::Debugging::V4Debugger *debugger = debugService->debuggerAgent.firstDebugger();
+        if (debugger->state() == QV4::Debugging::V4Debugger::Paused) {
+            QJsonObject arguments = req.value(QStringLiteral("arguments")).toObject();
+            QString expression = arguments.value(QStringLiteral("expression")).toString();
+            const int frame = arguments.value(QStringLiteral("frame")).toInt(0);
 
-        QV4Debugger *debugger = debugService->debuggerAgent.pausedDebugger();
-        if (!debugger) {
-            const QList<QV4Debugger *> &debuggers = debugService->debuggerAgent.debuggers();
-            if (debuggers.count() > 1) {
-                createErrorResponse(QStringLiteral("Cannot evaluate expressions if multiple debuggers are running and none is paused"));
-                return;
-            } else if (debuggers.count() == 0) {
-                createErrorResponse(QStringLiteral("No debuggers available to evaluate expressions"));
-                return;
-            }
-            debugger = debuggers.first();
-        } else {
-            frame = arguments.value(QLatin1String("frame")).toInt(0);
-        }
-
-        ExpressionEvalJob job(debugger->engine(), frame, context, expression,
-                              saneCollector(debugger));
-        debugger->runInEngine(&job);
-        if (job.hasExeption()) {
-            createErrorResponse(job.exceptionMessage());
-        } else {
-            addCommand();
-            addRequestSequence();
-            addSuccess(true);
-            addRunning();
-            addBody(job.returnValue());
-            if (debugService->clientRequiresRedundantRefs())
+            QV4DataCollector *collector = debugService->collector();
+            ExpressionEvalJob job(debugger->engine(), frame, expression, collector);
+            debugger->runInEngine(&job);
+            if (job.hasExeption()) {
+                createErrorResponse(job.exceptionMessage());
+            } else {
+                addCommand();
+                addRequestSequence();
+                addSuccess(true);
+                addRunning();
+                addBody(job.returnValue());
                 addRefs(job.refs());
+            }
+        } else {
+            createErrorResponse(QStringLiteral("Debugger has to be paused for evaluate to work."));
         }
     }
 };
@@ -677,7 +589,7 @@ V8CommandHandler *QV4DebugServiceImpl::v8CommandHandler(const QString &command) 
 
 QV4DebugServiceImpl::QV4DebugServiceImpl(QObject *parent) :
     QQmlConfigurableDebugService<QV4DebugService>(1, parent),
-    debuggerAgent(this), theSelectedFrame(0), redundantRefs(true), namesAsObjects(true),
+    debuggerAgent(this), version(1), theSelectedFrame(0),
     unknownV8CommandHandler(new UnknownV8CommandHandler)
 {
     addHandler(new V8VersionRequest);
@@ -699,7 +611,7 @@ QV4DebugServiceImpl::~QV4DebugServiceImpl()
     qDeleteAll(handlers);
 }
 
-void QV4DebugServiceImpl::engineAdded(QJSEngine *engine)
+void QV4DebugServiceImpl::engineAdded(QQmlEngine *engine)
 {
     QMutexLocker lock(&m_configMutex);
     if (engine) {
@@ -707,9 +619,10 @@ void QV4DebugServiceImpl::engineAdded(QJSEngine *engine)
         if (QQmlDebugConnector *server = QQmlDebugConnector::instance()) {
             if (ee) {
                 ee->iselFactory.reset(new QV4::Moth::ISelFactory);
-                QV4Debugger *debugger = new QV4Debugger(ee);
+                QV4::Debugging::V4Debugger *debugger = new QV4::Debugging::V4Debugger(ee);
                 if (state() == Enabled)
                     ee->setDebugger(debugger);
+                debuggerMap.insert(debuggerIndex++, debugger);
                 debuggerAgent.addDebugger(debugger);
                 debuggerAgent.moveToThread(server->thread());
             }
@@ -718,15 +631,25 @@ void QV4DebugServiceImpl::engineAdded(QJSEngine *engine)
     QQmlConfigurableDebugService<QV4DebugService>::engineAdded(engine);
 }
 
-void QV4DebugServiceImpl::engineAboutToBeRemoved(QJSEngine *engine)
+void QV4DebugServiceImpl::engineAboutToBeRemoved(QQmlEngine *engine)
 {
     QMutexLocker lock(&m_configMutex);
     if (engine){
         const QV4::ExecutionEngine *ee = QV8Engine::getV4(engine->handle());
         if (ee) {
-            QV4Debugger *debugger = qobject_cast<QV4Debugger *>(ee->debugger());
-            if (debugger)
+            QV4::Debugging::V4Debugger *debugger
+                    = qobject_cast<QV4::Debugging::V4Debugger *>(ee->debugger);
+            if (debugger) {
+                typedef QMap<int, QV4::Debugging::V4Debugger *>::const_iterator DebuggerMapIterator;
+                const DebuggerMapIterator end = debuggerMap.constEnd();
+                for (DebuggerMapIterator i = debuggerMap.constBegin(); i != end; ++i) {
+                    if (i.value() == debugger) {
+                        debuggerMap.remove(i.key());
+                        break;
+                    }
+                }
                 debuggerAgent.removeDebugger(debugger);
+            }
         }
     }
     QQmlConfigurableDebugService<QV4DebugService>::engineAboutToBeRemoved(engine);
@@ -736,11 +659,12 @@ void QV4DebugServiceImpl::stateAboutToBeChanged(State state)
 {
     QMutexLocker lock(&m_configMutex);
     if (state == Enabled) {
-        const auto debuggers = debuggerAgent.debuggers();
-        for (QV4Debugger *debugger : debuggers) {
-            QV4::ExecutionEngine *ee = debugger->engine();
-            if (!ee->debugger())
-                ee->setDebugger(debugger);
+        typedef QMap<int, QV4::Debugging::V4Debugger *>::const_iterator DebuggerMapIterator;
+        const DebuggerMapIterator end = debuggerMap.constEnd();
+        for (DebuggerMapIterator i = debuggerMap.constBegin(); i != end; ++i) {
+            QV4::ExecutionEngine *ee = i.value()->engine();
+            if (!ee->debugger)
+                ee->setDebugger(i.value());
         }
     }
     QQmlConfigurableDebugService<QV4DebugService>::stateAboutToBeChanged(state);
@@ -756,7 +680,7 @@ void QV4DebugServiceImpl::signalEmitted(const QString &signal)
     //Normalize to Lower case.
     QString signalName = signal.left(signal.indexOf(QLatin1Char('('))).toLower();
 
-    for (const QString &signal : qAsConst(breakOnSignals)) {
+    foreach (const QString &signal, breakOnSignals) {
         if (signal == signalName) {
             // TODO: pause debugger
             break;
@@ -768,7 +692,7 @@ void QV4DebugServiceImpl::messageReceived(const QByteArray &message)
 {
     QMutexLocker lock(&m_configMutex);
 
-    QQmlDebugPacket ms(message);
+    QQmlDebugStream ms(message);
     QByteArray header;
     ms >> header;
 
@@ -781,14 +705,6 @@ void QV4DebugServiceImpl::messageReceived(const QByteArray &message)
         TRACE_PROTOCOL(qDebug() << "... type:" << type);
 
         if (type == V4_CONNECT) {
-            QJsonObject parameters = QJsonDocument::fromJson(payload).object();
-            namesAsObjects = true;
-            redundantRefs = true;
-            if (parameters.contains("namesAsObjects"))
-                namesAsObjects = parameters.value("namesAsObjects").toBool();
-            if (parameters.contains("redundantRefs"))
-                redundantRefs = parameters.value("redundantRefs").toBool();
-
             emit messageToClient(name(), packMessage(type));
             stopWaiting();
         } else if (type == V4_PAUSE) {
@@ -817,10 +733,11 @@ void QV4DebugServiceImpl::messageReceived(const QByteArray &message)
 
 void QV4DebugServiceImpl::sendSomethingToSomebody(const char *type, int magicNumber)
 {
-    QQmlDebugPacket rs;
+    QByteArray response;
+    QQmlDebugStream rs(&response, QIODevice::WriteOnly);
     rs << QByteArray(type)
-       << QByteArray::number(int(version())) << QByteArray::number(magicNumber);
-    emit messageToClient(name(), packMessage(type, rs.data()));
+       << QByteArray::number(version) << QByteArray::number(magicNumber);
+    emit messageToClient(name(), packMessage(type, response));
 }
 
 void QV4DebugServiceImpl::handleV8Request(const QByteArray &payload)
@@ -829,9 +746,9 @@ void QV4DebugServiceImpl::handleV8Request(const QByteArray &payload)
 
     QJsonDocument request = QJsonDocument::fromJson(payload);
     QJsonObject o = request.object();
-    QJsonValue type = o.value(QLatin1String("type"));
-    if (type.toString() == QLatin1String("request")) {
-        QJsonValue command = o.value(QLatin1String("command"));
+    QJsonValue type = o.value(QStringLiteral("type"));
+    if (type.toString() == QStringLiteral("request")) {
+        QJsonValue command = o.value(QStringLiteral("command"));
         V8CommandHandler *h = v8CommandHandler(command.toString());
         if (h)
             h->handle(o, this);
@@ -840,10 +757,11 @@ void QV4DebugServiceImpl::handleV8Request(const QByteArray &payload)
 
 QByteArray QV4DebugServiceImpl::packMessage(const QByteArray &command, const QByteArray &message)
 {
-    QQmlDebugPacket rs;
+    QByteArray reply;
+    QQmlDebugStream rs(&reply, QIODevice::WriteOnly);
     static const QByteArray cmd("V8DEBUG");
     rs << cmd << command << message;
-    return rs.data();
+    return reply;
 }
 
 void QV4DebugServiceImpl::send(QJsonObject v8Payload)
@@ -862,6 +780,16 @@ void QV4DebugServiceImpl::send(QJsonObject v8Payload)
     emit messageToClient(name(), packMessage("v8message", responseData));
 }
 
+void QV4DebugServiceImpl::clearHandles(QV4::ExecutionEngine *engine)
+{
+    theCollector.reset(new QV4DataCollector(engine));
+}
+
+QV4DataCollector *QV4DebugServiceImpl::collector() const
+{
+    return theCollector.data();
+}
+
 void QV4DebugServiceImpl::selectFrame(int frameNr)
 {
     theSelectedFrame = frameNr;
@@ -873,5 +801,3 @@ int QV4DebugServiceImpl::selectedFrame() const
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qv4debugservice.cpp"

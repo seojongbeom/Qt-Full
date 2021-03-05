@@ -1,48 +1,50 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
+#include <qtest.h>
+#include <QSignalSpy>
+#include <QTimer>
+#include <QHostAddress>
+#include <QDebug>
+#include <QThread>
+#include <QLibraryInfo>
 
-
-#include "qqmldebugtestservice.h"
-#include "debugutil_p.h"
-#include "../../../shared/util.h"
-
-#include <private/qqmldebugclient_p.h>
-#include <private/qqmldebugconnection_p.h>
-#include <private/qqmldebugconnector_p.h>
-
-#include <QtTest/qtest.h>
-#include <QtTest/qsignalspy.h>
-#include <QtNetwork/qhostaddress.h>
 #include <QtQml/qqmlengine.h>
-#include <QtCore/qtimer.h>
-#include <QtCore/qdebug.h>
-#include <QtCore/qthread.h>
-#include <QtCore/qlibraryinfo.h>
+
+#include "../../../shared/util.h"
+#include "debugutil_p.h"
+#include "qqmldebugclient.h"
+#include "qqmldebugtestservice.h"
+#include <private/qqmldebugconnector_p.h>
 
 #define PORT 3769
 #define STR_PORT "3769"
@@ -72,18 +74,9 @@ void tst_QQmlDebugService::initTestCase()
 {
     QQmlDataTest::initTestCase();
     QQmlDebugConnector::setPluginKey(QLatin1String("QQmlDebugServer"));
-    QQmlDebugConnector::setServices(QStringList()
-                                    << QStringLiteral("tst_QQmlDebugService"));
     QTest::ignoreMessage(QtWarningMsg,
                          "QML debugger: Cannot set plugin key after loading the plugin.");
     m_service = new QQmlDebugTestService("tst_QQmlDebugService", 2);
-
-    foreach (const QString &service, QQmlDebuggingEnabler::debuggerServices())
-        QCOMPARE(QQmlDebugConnector::instance()->service(service), (QQmlDebugService *)0);
-    foreach (const QString &service, QQmlDebuggingEnabler::inspectorServices())
-        QCOMPARE(QQmlDebugConnector::instance()->service(service), (QQmlDebugService *)0);
-    foreach (const QString &service, QQmlDebuggingEnabler::profilerServices())
-        QCOMPARE(QQmlDebugConnector::instance()->service(service), (QQmlDebugService *)0);
 
     const QString waitingMsg = QString("QML Debugger: Waiting for connection on port %1...").arg(PORT);
     QTest::ignoreMessage(QtDebugMsg, waitingMsg.toLatin1().constData());
@@ -202,7 +195,7 @@ void tst_QQmlDebugService::checkSupportForDataStreamVersion()
     client.sendMessage(msg);
     QByteArray resp = client.waitForResponse();
     QCOMPARE(resp, msg);
-    QCOMPARE(m_conn->currentDataStreamVersion(), int(QDataStream::Qt_DefaultCompiledVersion));
+    QCOMPARE(m_conn->dataStreamVersion(), int(QDataStream::Qt_5_0));
 }
 
 void tst_QQmlDebugService::idForObject()
@@ -245,7 +238,7 @@ void tst_QQmlDebugService::checkSupportForOldDataStreamVersion()
     //create a new connection;
     delete m_conn;
     m_conn = new QQmlDebugConnection(this);
-    m_conn->setMaximumDataStreamVersion(QDataStream::Qt_5_0);
+    m_conn->setDataStreamVersion(QDataStream::Qt_4_7);
     for (int i = 0; i < 50; ++i) {
         // try for 5 seconds ...
         m_conn->connectToHost("127.0.0.1", PORT);
@@ -265,7 +258,7 @@ void tst_QQmlDebugService::checkSupportForOldDataStreamVersion()
     client.sendMessage(msg);
     QByteArray resp = client.waitForResponse();
     QCOMPARE(resp, msg);
-    QCOMPARE(m_conn->currentDataStreamVersion(), int(QDataStream::Qt_5_0));
+    QCOMPARE(m_conn->dataStreamVersion(), int(QDataStream::Qt_4_7));
 }
 
 QTEST_MAIN(tst_QQmlDebugService)

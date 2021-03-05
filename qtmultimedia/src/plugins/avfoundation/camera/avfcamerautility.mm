@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,7 +34,6 @@
 #include "avfcamerautility.h"
 #include "avfcameradebug.h"
 
-#include <QtCore/qoperatingsystemversion.h>
 #include <QtCore/qvector.h>
 #include <QtCore/qpair.h>
 #include <private/qmultimediautils_p.h>
@@ -67,16 +60,25 @@ AVFPSRange qt_connection_framerates(AVCaptureConnection *videoConnection)
         }
     }
 
-    if (videoConnection.supportsVideoMaxFrameDuration) {
-        const CMTime cmMax = videoConnection.videoMaxFrameDuration;
-        if (CMTimeCompare(cmMax, kCMTimeInvalid)) {
-            if (const Float64 maxSeconds = CMTimeGetSeconds(cmMax))
-                newRange.first = 1. / maxSeconds;
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_9, __IPHONE_5_0)
+#if QT_OSX_DEPLOYMENT_TARGET_BELOW(__MAC_10_9)
+    if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_9)
+#endif
+    {
+        if (videoConnection.supportsVideoMaxFrameDuration) {
+            const CMTime cmMax = videoConnection.videoMaxFrameDuration;
+            if (CMTimeCompare(cmMax, kCMTimeInvalid)) {
+                if (const Float64 maxSeconds = CMTimeGetSeconds(cmMax))
+                    newRange.first = 1. / maxSeconds;
+            }
         }
     }
+#endif
 
     return newRange;
 }
+
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
 
 namespace {
 
@@ -181,7 +183,7 @@ QSize qt_device_format_high_resolution(AVCaptureDeviceFormat *format)
     Q_ASSERT(format);
     QSize res;
 #if defined(Q_OS_IOS) && QT_IOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__IPHONE_8_0)
-    if (QOperatingSystemVersion::current() >= QOperatingSystemVersion(QOperatingSystemVersion::IOS, 8)) {
+    if (QSysInfo::MacintoshVersion >= QSysInfo::MV_IOS_8_0) {
         const CMVideoDimensions hrDim(format.highResolutionStillImageDimensions);
         res.setWidth(hrDim.width);
         res.setHeight(hrDim.height);
@@ -428,6 +430,8 @@ bool qt_set_active_format(AVCaptureDevice *captureDevice, AVCaptureDeviceFormat 
     return true;
 }
 
+#endif // SDK
+
 void qt_set_framerate_limits(AVCaptureConnection *videoConnection, qreal minFPS, qreal maxFPS)
 {
     Q_ASSERT(videoConnection);
@@ -448,16 +452,31 @@ void qt_set_framerate_limits(AVCaptureConnection *videoConnection, qreal minFPS,
     if (videoConnection.supportsVideoMinFrameDuration)
         videoConnection.videoMinFrameDuration = minDuration;
 
-    CMTime maxDuration = kCMTimeInvalid;
-    if (minFPS > 0.) {
-        if (!videoConnection.supportsVideoMaxFrameDuration)
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_9, __IPHONE_5_0)
+#if QT_OSX_DEPLOYMENT_TARGET_BELOW(__MAC_10_9)
+    if (QSysInfo::MacintoshVersion < QSysInfo::MV_10_9) {
+        if (minFPS > 0.)
             qDebugCamera() << Q_FUNC_INFO << "minimum framerate is not supported";
-        else
-            maxDuration = CMTimeMake(1, minFPS);
+    } else
+#endif
+    {
+        CMTime maxDuration = kCMTimeInvalid;
+        if (minFPS > 0.) {
+            if (!videoConnection.supportsVideoMaxFrameDuration)
+                qDebugCamera() << Q_FUNC_INFO << "minimum framerate is not supported";
+            else
+                maxDuration = CMTimeMake(1, minFPS);
+        }
+        if (videoConnection.supportsVideoMaxFrameDuration)
+            videoConnection.videoMaxFrameDuration = maxDuration;
     }
-    if (videoConnection.supportsVideoMaxFrameDuration)
-        videoConnection.videoMaxFrameDuration = maxDuration;
+#else
+    if (minFPS > 0.)
+        qDebugCamera() << Q_FUNC_INFO << "minimum framerate is not supported";
+#endif
 }
+
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
 
 CMTime qt_adjusted_frame_duration(AVFrameRateRange *range, qreal fps)
 {
@@ -524,7 +543,7 @@ void qt_set_framerate_limits(AVCaptureDevice *captureDevice, qreal minFPS, qreal
 #ifdef Q_OS_IOS
     [captureDevice setActiveVideoMinFrameDuration:minFrameDuration];
     [captureDevice setActiveVideoMaxFrameDuration:maxFrameDuration];
-#elif defined(Q_OS_MACOS)
+#else // Q_OS_OSX
     if (CMTimeCompare(minFrameDuration, kCMTimeInvalid) == 0
             && CMTimeCompare(maxFrameDuration, kCMTimeInvalid) == 0) {
         AVFrameRateRange *range = captureDevice.activeFormat.videoSupportedFrameRateRanges.firstObject;
@@ -535,35 +554,66 @@ void qt_set_framerate_limits(AVCaptureDevice *captureDevice, qreal minFPS, qreal
     if (CMTimeCompare(minFrameDuration, kCMTimeInvalid))
         [captureDevice setActiveVideoMinFrameDuration:minFrameDuration];
 
-    if (CMTimeCompare(maxFrameDuration, kCMTimeInvalid))
-        [captureDevice setActiveVideoMaxFrameDuration:maxFrameDuration];
-#endif // Q_OS_MACOS
+#if QT_OSX_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_9)
+#if QT_OSX_DEPLOYMENT_TARGET_BELOW(__MAC_10_9)
+    if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_9)
+#endif
+    {
+        if (CMTimeCompare(maxFrameDuration, kCMTimeInvalid))
+            [captureDevice setActiveVideoMaxFrameDuration:maxFrameDuration];
+    }
+#endif // QT_OSX_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_9)
+#endif // Q_OS_OSX
 }
+
+#endif // Platform SDK >= 10.9, >= 7.0.
 
 void qt_set_framerate_limits(AVCaptureDevice *captureDevice, AVCaptureConnection *videoConnection,
                              qreal minFPS, qreal maxFPS)
 {
-    Q_UNUSED(videoConnection);
     Q_ASSERT(captureDevice);
-    qt_set_framerate_limits(captureDevice, minFPS, maxFPS);
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_9, QSysInfo::MV_IOS_7_0))
+        qt_set_framerate_limits(captureDevice, minFPS, maxFPS);
+    else
+#endif
+    if (videoConnection)
+        qt_set_framerate_limits(videoConnection, minFPS, maxFPS);
+
 }
 
 AVFPSRange qt_current_framerates(AVCaptureDevice *captureDevice, AVCaptureConnection *videoConnection)
 {
-    Q_UNUSED(videoConnection);
     Q_ASSERT(captureDevice);
 
     AVFPSRange fps;
-    const CMTime minDuration = captureDevice.activeVideoMinFrameDuration;
-    if (CMTimeCompare(minDuration, kCMTimeInvalid)) {
-        if (const Float64 minSeconds = CMTimeGetSeconds(minDuration))
-            fps.second = 1. / minSeconds; // Max FPS = 1 / MinDuration.
-    }
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_7, QSysInfo::MV_IOS_7_0)) {
+        const CMTime minDuration = captureDevice.activeVideoMinFrameDuration;
+        if (CMTimeCompare(minDuration, kCMTimeInvalid)) {
+            if (const Float64 minSeconds = CMTimeGetSeconds(minDuration))
+                fps.second = 1. / minSeconds; // Max FPS = 1 / MinDuration.
+        }
 
-    const CMTime maxDuration = captureDevice.activeVideoMaxFrameDuration;
-    if (CMTimeCompare(maxDuration, kCMTimeInvalid)) {
-        if (const Float64 maxSeconds = CMTimeGetSeconds(maxDuration))
-            fps.first = 1. / maxSeconds; // Min FPS = 1 / MaxDuration.
+#if QT_OSX_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_9)
+#if QT_OSX_DEPLOYMENT_TARGET_BELOW(__MAC_10_9)
+        if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_9)
+#endif
+        {
+            const CMTime maxDuration = captureDevice.activeVideoMaxFrameDuration;
+            if (CMTimeCompare(maxDuration, kCMTimeInvalid)) {
+                if (const Float64 maxSeconds = CMTimeGetSeconds(maxDuration))
+                    fps.first = 1. / maxSeconds; // Min FPS = 1 / MaxDuration.
+            }
+        }
+#endif // QT_OSX_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_9)
+
+    } else {
+#else // OSX < 10.7 or iOS < 7.0
+    {
+#endif // QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+        if (videoConnection)
+            fps = qt_connection_framerates(videoConnection);
     }
 
     return fps;

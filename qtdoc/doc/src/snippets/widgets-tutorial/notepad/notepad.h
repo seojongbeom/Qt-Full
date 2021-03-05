@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -51,62 +41,29 @@
 #ifndef NOTEPAD_H
 #define NOTEPAD_H
 
-//! [all]
-//! [1]
 #include <QMainWindow>
-//! [1]
 
-//! [2]
 namespace Ui {
 class Notepad;
 }
-//! [2]
 
-//! [3]
 class Notepad : public QMainWindow
 {
     Q_OBJECT
-//! [3]
 
-//! [4]
 public:
     explicit Notepad(QWidget *parent = 0);
-//! [4]
-//! [5]
     ~Notepad();
-//! [5]
 
 private slots:
-    void on_actionNew_triggered();
+    void on_quitButton_clicked();
 
     void on_actionOpen_triggered();
 
     void on_actionSave_triggered();
 
-    void on_actionSave_as_triggered();
-
-    void on_actionPrint_triggered();
-
-    void on_actionExit_triggered();
-
-    void on_actionCopy_triggered();
-
-    void on_actionCut_triggered();
-
-    void on_actionPaste_triggered();
-
-    void on_actionUndo_triggered();
-
-    void on_actionRedo_triggered();
-
-    void on_actionFont_triggered();
-
-//! [6]
 private:
     Ui::Notepad *ui;
-    QString CurrentFile;
-//! [6]
 };
-//! [all]
 
 #endif // NOTEPAD_H

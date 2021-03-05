@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -69,22 +63,17 @@
 
 QT_BEGIN_NAMESPACE
 
-Q_DECLARE_LOGGING_CATEGORY(DBG_HOVER_TRACE)
 
 const QChar QQuickTextPrivate::elideChar = QChar(0x2026);
 
 QQuickTextPrivate::QQuickTextPrivate()
-    : fontInfo(font), elideLayout(0), textLine(0), lineWidth(0)
+    : elideLayout(0), textLine(0), lineWidth(0)
     , color(0xFF000000), linkColor(0xFF0000FF), styleColor(0xFF000000)
     , lineCount(1), multilengthEos(-1)
     , elideMode(QQuickText::ElideNone), hAlign(QQuickText::AlignLeft), vAlign(QQuickText::AlignTop)
     , format(QQuickText::AutoText), wrapMode(QQuickText::NoWrap)
     , style(QQuickText::Normal)
-#if defined(QT_QUICK_DEFAULT_TEXT_RENDER_TYPE)
-    , renderType(QQuickText::QT_QUICK_DEFAULT_TEXT_RENDER_TYPE)
-#else
     , renderType(QQuickText::QtRendering)
-#endif
     , updateType(UpdatePaintNode)
     , maximumLineCountValid(false), updateOnComponentComplete(true), richText(false)
     , styledText(false), widthExceeded(false), heightExceeded(false), internalWidthUpdate(false)
@@ -274,9 +263,15 @@ void QQuickTextPrivate::updateLayout()
                     elideLayout->clearFormats();
                 QString tmp = text;
                 multilengthEos = tmp.indexOf(QLatin1Char('\x9c'));
-                if (multilengthEos != -1)
+                if (multilengthEos != -1) {
                     tmp = tmp.mid(0, multilengthEos);
-                tmp.replace(QLatin1Char('\n'), QChar::LineSeparator);
+                    tmp.replace(QLatin1Char('\n'), QChar::LineSeparator);
+                } else if (tmp.contains(QLatin1Char('\n'))) {
+                    // Replace always does a detach.  Checking for the new line character first
+                    // means iterating over those items again if found but prevents a realloc
+                    // otherwise.
+                    tmp.replace(QLatin1Char('\n'), QChar::LineSeparator);
+                }
                 layout.setText(tmp);
             }
             textHasChanged = false;
@@ -316,7 +311,7 @@ void QQuickText::imageDownloadFinished()
 
     if (d->extra.isAllocated() && d->extra->nbActiveDownloads == 0) {
         bool needToUpdateLayout = false;
-        for (QQuickStyledTextImgTag *img : qAsConst(d->extra->visibleImgTags)) {
+        foreach (QQuickStyledTextImgTag *img, d->extra->visibleImgTags) {
             if (!img->size.isValid()) {
                 img->size = img->pix->implicitSize();
                 needToUpdateLayout = true;
@@ -643,11 +638,6 @@ QRectF QQuickTextPrivate::setupTextLayout(qreal *const baseline)
         if (lineCount) {
             lineCount = 0;
             emit q->lineCountChanged();
-        }
-
-        if (qFuzzyIsNull(q->width())) {
-            layout.setText(QString());
-            textHasChanged = true;
         }
 
         QFontMetricsF fm(font);
@@ -1012,17 +1002,6 @@ QRectF QQuickTextPrivate::setupTextLayout(qreal *const baseline)
     implicitWidthValid = true;
     implicitHeightValid = true;
 
-    QFontInfo scaledFontInfo(scaledFont);
-    if (fontInfo.weight() != scaledFontInfo.weight()
-            || fontInfo.pixelSize() != scaledFontInfo.pixelSize()
-            || fontInfo.italic() != scaledFontInfo.italic()
-            || !qFuzzyCompare(fontInfo.pointSizeF(), scaledFontInfo.pointSizeF())
-            || fontInfo.family() != scaledFontInfo.family()
-            || fontInfo.styleName() != scaledFontInfo.styleName()) {
-        fontInfo = scaledFontInfo;
-        emit q->fontInfoChanged();
-    }
-
     if (eos != multilengthEos)
         truncated = true;
 
@@ -1120,7 +1099,7 @@ void QQuickTextPrivate::setLineGeometry(QTextLine &line, qreal lineWidth, qreal 
     QList<QQuickStyledTextImgTag *> imagesInLine;
 
     if (extra.isAllocated()) {
-        for (QQuickStyledTextImgTag *image : qAsConst(extra->imgTags)) {
+        foreach (QQuickStyledTextImgTag *image, extra->imgTags) {
             if (image->position >= line.textStart() &&
                 image->position < line.textStart() + line.textLength()) {
 
@@ -1140,7 +1119,7 @@ void QQuickTextPrivate::setLineGeometry(QTextLine &line, qreal lineWidth, qreal 
                             needToUpdateLayout = true;
                         }
                     } else if (image->pix->isError()) {
-                        qmlWarning(q) << image->pix->error();
+                        qmlInfo(q) << image->pix->error();
                     }
                 }
 
@@ -1157,7 +1136,7 @@ void QQuickTextPrivate::setLineGeometry(QTextLine &line, qreal lineWidth, qreal 
         }
     }
 
-    for (QQuickStyledTextImgTag *image : qAsConst(imagesInLine)) {
+    foreach (QQuickStyledTextImgTag *image, imagesInLine) {
         totalLineHeight = qMax(totalLineHeight, textTop + image->pos.y() + image->size.height());
         const int leadX = line.cursorToX(image->position);
         const int trailX = line.cursorToX(image->position, QTextLine::Trailing);
@@ -1435,39 +1414,6 @@ QQuickText::~QQuickText()
 
     \qml
     Text { text: "Hello"; font.capitalization: Font.AllLowercase }
-    \endqml
-*/
-
-/*!
-    \qmlproperty enumeration QtQuick::Text::font.hintingPreference
-    \since 5.8
-
-    Sets the preferred hinting on the text. This is a hint to the underlying text rendering system
-    to use a certain level of hinting, and has varying support across platforms. See the table in
-    the documentation for QFont::HintingPreference for more details.
-
-    \note This property only has an effect when used together with render type Text.NativeRendering.
-
-    \list
-    \value Font.PreferDefaultHinting - Use the default hinting level for the target platform.
-    \value Font.PreferNoHinting - If possible, render text without hinting the outlines
-           of the glyphs. The text layout will be typographically accurate, using the same metrics
-           as are used e.g. when printing.
-    \value Font.PreferVerticalHinting - If possible, render text with no horizontal hinting,
-           but align glyphs to the pixel grid in the vertical direction. The text will appear
-           crisper on displays where the density is too low to give an accurate rendering
-           of the glyphs. But since the horizontal metrics of the glyphs are unhinted, the text's
-           layout will be scalable to higher density devices (such as printers) without impacting
-           details such as line breaks.
-    \value Font.PreferFullHinting - If possible, render text with hinting in both horizontal and
-           vertical directions. The text will be altered to optimize legibility on the target
-           device, but since the metrics will depend on the target size of the text, the positions
-           of glyphs, line breaks, and other typographical detail will not scale, meaning that a
-           text layout may look different on devices with different pixel densities.
-    \endlist
-
-    \qml
-    Text { text: "Hello"; renderType: Text.NativeRendering; font.hintingPreference: Font.PreferVerticalHinting }
     \endqml
 */
 QFont QQuickText::font() const
@@ -1824,7 +1770,7 @@ bool QQuickTextPrivate::setHAlign(QQuickText::HAlignment alignment, bool forceAl
 bool QQuickTextPrivate::determineHorizontalAlignment()
 {
     if (hAlignImplicit) {
-#if QT_CONFIG(im)
+#ifndef QT_NO_IM
         bool alignToRight = text.isEmpty() ? QGuiApplication::inputMethod()->inputDirection() == Qt::RightToLeft : rightToLeftText;
 #else
         bool alignToRight = rightToLeftText;
@@ -2347,7 +2293,7 @@ QSGNode *QQuickText::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *data
             node->addTextLayout(QPointF(dx, dy), d->elideLayout, color, d->style, styleColor, linkColor);
 
         if (d->extra.isAllocated()) {
-            for (QQuickStyledTextImgTag *img : qAsConst(d->extra->visibleImgTags)) {
+            foreach (QQuickStyledTextImgTag *img, d->extra->visibleImgTags) {
                 QQuickPixmap *pix = img->pix;
                 if (pix && pix->isReady())
                     node->addImage(QRectF(img->pos.x() + dx, img->pos.y() + dy, pix->width(), pix->height()), pix->image());
@@ -2601,8 +2547,7 @@ QString QQuickTextPrivate::anchorAt(const QTextLayout *layout, const QPointF &mo
         QTextLine line = layout->lineAt(i);
         if (line.naturalTextRect().contains(mousePos)) {
             int charPos = line.xToCursor(mousePos.x(), QTextLine::CursorOnCharacter);
-            const auto formats = layout->formats();
-            for (const QTextLayout::FormatRange &formatRange : formats) {
+            foreach (const QTextLayout::FormatRange &formatRange, layout->formats()) {
                 if (formatRange.format.isAnchor()
                         && charPos >= formatRange.start
                         && charPos < formatRange.start + formatRange.length) {
@@ -2718,12 +2663,12 @@ QString QQuickText::hoveredLink() const
         if (d->extra.isAllocated())
             return d->extra->hoveredLink;
     } else {
-#if QT_CONFIG(cursor)
+#ifndef QT_NO_CURSOR
         if (QQuickWindow *wnd = window()) {
             QPointF pos = QCursor::pos(wnd->screen()) - wnd->position() - mapToScene(QPointF(0, 0));
             return d->anchorAt(pos);
         }
-#endif // cursor
+#endif // QT_NO_CURSOR
     }
     return QString();
 }
@@ -2731,7 +2676,6 @@ QString QQuickText::hoveredLink() const
 void QQuickTextPrivate::processHoverEvent(QHoverEvent *event)
 {
     Q_Q(QQuickText);
-    qCDebug(DBG_HOVER_TRACE) << q;
     QString link;
     if (isLinkHoveredConnected()) {
         if (event->type() != QEvent::HoverLeave)
@@ -2800,22 +2744,10 @@ void QQuickText::setRenderType(QQuickText::RenderType renderType)
 
 /*!
     \qmlmethod QtQuick::Text::doLayout()
-    \deprecated
-
-    Use \l forceLayout() instead.
-*/
-void QQuickText::doLayout()
-{
-    forceLayout();
-}
-
-/*!
-    \qmlmethod QtQuick::Text::forceLayout()
-    \since 5.9
 
     Triggers a re-layout of the displayed text.
 */
-void QQuickText::forceLayout()
+void QQuickText::doLayout()
 {
     Q_D(QQuickText);
     d->updateSize();
@@ -2979,82 +2911,4 @@ void QQuickText::resetBottomPadding()
     d->setBottomPadding(0, true);
 }
 
-/*!
-    \qmlproperty string QtQuick::Text::fontInfo.family
-    \since 5.9
-
-    The family name of the font that has been resolved for the current font
-    and fontSizeMode.
-*/
-
-/*!
-    \qmlproperty string QtQuick::Text::fontInfo.styleName
-    \since 5.9
-
-    The style name of the font info that has been resolved for the current font
-    and fontSizeMode.
-*/
-
-/*!
-    \qmlproperty bool QtQuick::Text::fontInfo.bold
-    \since 5.9
-
-    The bold state of the font info that has been resolved for the current font
-    and fontSizeMode. This is true if the weight of the resolved font is bold or higher.
-*/
-
-/*!
-    \qmlproperty int QtQuick::Text::fontInfo.weight
-    \since 5.9
-
-    The weight of the font info that has been resolved for the current font
-    and fontSizeMode.
-*/
-
-/*!
-    \qmlproperty bool QtQuick::Text::fontInfo.italic
-    \since 5.9
-
-    The italic state of the font info that has been resolved for the current font
-    and fontSizeMode.
-*/
-
-/*!
-    \qmlproperty real QtQuick::Text::fontInfo.pointSize
-    \since 5.9
-
-    The pointSize of the font info that has been resolved for the current font
-    and fontSizeMode.
-*/
-
-/*!
-    \qmlproperty string QtQuick::Text::fontInfo.pixelSize
-    \since 5.9
-
-    The pixel size of the font info that has been resolved for the current font
-    and fontSizeMode.
-*/
-QJSValue QQuickText::fontInfo() const
-{
-    Q_D(const QQuickText);
-
-    QJSEngine *engine = qjsEngine(this);
-    if (!engine) {
-        qmlWarning(this) << "fontInfo: item has no JS engine";
-        return QJSValue();
-    }
-
-    QJSValue value = engine->newObject();
-    value.setProperty(QStringLiteral("family"), d->fontInfo.family());
-    value.setProperty(QStringLiteral("styleName"), d->fontInfo.styleName());
-    value.setProperty(QStringLiteral("bold"), d->fontInfo.bold());
-    value.setProperty(QStringLiteral("weight"), d->fontInfo.weight());
-    value.setProperty(QStringLiteral("italic"), d->fontInfo.italic());
-    value.setProperty(QStringLiteral("pointSize"), d->fontInfo.pointSizeF());
-    value.setProperty(QStringLiteral("pixelSize"), d->fontInfo.pixelSize());
-    return value;
-}
-
 QT_END_NAMESPACE
-
-#include "moc_qquicktext_p.cpp"

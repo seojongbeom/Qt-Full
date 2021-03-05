@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -389,7 +383,7 @@ void QtGradientStopsControllerPrivate::slotUpdatePositionSpinBox()
 
     m_ui->positionSpinBox->blockSignals(true);
     if (spinMin != newMin || spinMax != newMax) {
-        m_ui->positionSpinBox->setRange(double(newMin) / 1000, double(newMax) / 1000);
+        m_ui->positionSpinBox->setRange((double)newMin / 1000, (double)newMax / 1000);
     }
     if (m_ui->positionSpinBox->value() != pos)
         m_ui->positionSpinBox->setValue(pos);
@@ -402,8 +396,10 @@ void QtGradientStopsControllerPrivate::slotChangeColor(const QColor &color)
     if (!stop)
         return;
     m_model->changeStop(stop, color);
-    const QList<QtGradientStop *> stops = m_model->selectedStops();
-    for (QtGradientStop *s : stops) {
+    QList<QtGradientStop *> stops = m_model->selectedStops();
+    QListIterator<QtGradientStop *> itStop(stops);
+    while (itStop.hasNext()) {
+        QtGradientStop *s = itStop.next();
         if (s != stop)
             m_model->changeStop(s, color);
     }
@@ -415,8 +411,10 @@ void QtGradientStopsControllerPrivate::slotChangeHue(const QColor &color)
     if (!stop)
         return;
     m_model->changeStop(stop, color);
-    const QList<QtGradientStop *> stops = m_model->selectedStops();
-    for (QtGradientStop *s : stops) {
+    QList<QtGradientStop *> stops = m_model->selectedStops();
+    QListIterator<QtGradientStop *> itStop(stops);
+    while (itStop.hasNext()) {
+        QtGradientStop *s = itStop.next();
         if (s != stop) {
             QColor c = s->color();
             if (m_ui->hsvRadioButton->isChecked())
@@ -432,7 +430,7 @@ void QtGradientStopsControllerPrivate::slotChangeHue(int color)
 {
     QColor c = m_ui->hueColorLine->color();
     if (m_ui->hsvRadioButton->isChecked())
-        c.setHsvF(qreal(color) / 360.0, c.saturationF(), c.valueF(), c.alphaF());
+        c.setHsvF((qreal)color / 360.0, c.saturationF(), c.valueF(), c.alphaF());
     else
         c.setRed(color);
     slotChangeHue(c);
@@ -444,8 +442,10 @@ void QtGradientStopsControllerPrivate::slotChangeSaturation(const QColor &color)
     if (!stop)
         return;
     m_model->changeStop(stop, color);
-    const QList<QtGradientStop *> stops = m_model->selectedStops();
-    for (QtGradientStop *s : stops) {
+    QList<QtGradientStop *> stops = m_model->selectedStops();
+    QListIterator<QtGradientStop *> itStop(stops);
+    while (itStop.hasNext()) {
+        QtGradientStop *s = itStop.next();
         if (s != stop) {
             QColor c = s->color();
             if (m_ui->hsvRadioButton->isChecked()) {
@@ -465,7 +465,7 @@ void QtGradientStopsControllerPrivate::slotChangeSaturation(int color)
 {
     QColor c = m_ui->saturationColorLine->color();
     if (m_ui->hsvRadioButton->isChecked())
-        c.setHsvF(c.hueF(), qreal(color) / 255, c.valueF(), c.alphaF());
+        c.setHsvF(c.hueF(), (qreal)color / 255, c.valueF(), c.alphaF());
     else
         c.setGreen(color);
     slotChangeSaturation(c);
@@ -477,8 +477,10 @@ void QtGradientStopsControllerPrivate::slotChangeValue(const QColor &color)
     if (!stop)
         return;
     m_model->changeStop(stop, color);
-    const QList<QtGradientStop *> stops = m_model->selectedStops();
-    for (QtGradientStop *s : stops) {
+    QList<QtGradientStop *> stops = m_model->selectedStops();
+    QListIterator<QtGradientStop *> itStop(stops);
+    while (itStop.hasNext()) {
+        QtGradientStop *s = itStop.next();
         if (s != stop) {
             QColor c = s->color();
             if (m_ui->hsvRadioButton->isChecked()) {
@@ -498,7 +500,7 @@ void QtGradientStopsControllerPrivate::slotChangeValue(int color)
 {
     QColor c = m_ui->valueColorLine->color();
     if (m_ui->hsvRadioButton->isChecked())
-        c.setHsvF(c.hueF(), c.saturationF(), qreal(color) / 255, c.alphaF());
+        c.setHsvF(c.hueF(), c.saturationF(), (qreal)color / 255, c.alphaF());
     else
         c.setBlue(color);
     slotChangeValue(c);
@@ -510,8 +512,10 @@ void QtGradientStopsControllerPrivate::slotChangeAlpha(const QColor &color)
     if (!stop)
         return;
     m_model->changeStop(stop, color);
-    const QList<QtGradientStop *> stops = m_model->selectedStops();
-    for (QtGradientStop *s : stops) {
+    QList<QtGradientStop *> stops = m_model->selectedStops();
+    QListIterator<QtGradientStop *> itStop(stops);
+    while (itStop.hasNext()) {
+        QtGradientStop *s = itStop.next();
         if (s != stop) {
             QColor c = s->color();
             if (m_ui->hsvRadioButton->isChecked()) {
@@ -531,7 +535,7 @@ void QtGradientStopsControllerPrivate::slotChangeAlpha(int color)
 {
     QColor c = m_ui->alphaColorLine->color();
     if (m_ui->hsvRadioButton->isChecked())
-        c.setHsvF(c.hueF(), c.saturationF(), c.valueF(), qreal(color) / 255);
+        c.setHsvF(c.hueF(), c.saturationF(), c.valueF(), (qreal)color / 255);
     else
         c.setAlpha(color);
     slotChangeAlpha(c);
@@ -663,8 +667,10 @@ QtGradientStopsController::~QtGradientStopsController()
 void QtGradientStopsController::setGradientStops(const QGradientStops &stops)
 {
     d_ptr->m_model->clear();
+    QVectorIterator<QPair<qreal, QColor> > it(stops);
     QtGradientStop *first = 0;
-    for (const QPair<qreal, QColor> &pair : stops) {
+    while (it.hasNext()) {
+        QPair<qreal, QColor> pair = it.next();
         QtGradientStop *stop = d_ptr->m_model->addStop(pair.first, pair.second);
         if (!first)
             first = stop;
@@ -676,9 +682,12 @@ void QtGradientStopsController::setGradientStops(const QGradientStops &stops)
 QGradientStops QtGradientStopsController::gradientStops() const
 {
     QGradientStops stops;
-    const QList<QtGradientStop *> stopsList = d_ptr->m_model->stops().values();
-    for (const QtGradientStop *stop : stopsList)
+    QList<QtGradientStop *> stopsList = d_ptr->m_model->stops().values();
+    QListIterator<QtGradientStop *> itStop(stopsList);
+    while (itStop.hasNext()) {
+        QtGradientStop *stop = itStop.next();
         stops << QPair<qreal, QColor>(stop->position(), stop->color());
+    }
     return stops;
 }
 

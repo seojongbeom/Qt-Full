@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,42 +34,50 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.ScrollBar {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            handle.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
+                             handle.implicitHeight + topPadding + bottomPadding)
 
     padding: 2
-    visible: control.policy !== T.ScrollBar.AlwaysOff
 
-    contentItem: Rectangle {
-        implicitWidth: control.interactive ? 6 : 2
-        implicitHeight: control.interactive ? 6 : 2
+    //! [handle]
+    handle: Rectangle {
+        id: handle
+
+        implicitWidth: 6
+        implicitHeight: 6
 
         radius: width / 2
-        color: control.pressed ? Default.scrollBarPressedColor : Default.scrollBarColor
+        color: control.pressed ? "#28282a" : "#bdbebf"
+        visible: control.size < 1.0
         opacity: 0.0
+
+        readonly property bool horizontal: control.orientation === Qt.Horizontal
+        x: control.leftPadding + (horizontal ? control.position * control.availableWidth : 0)
+        y: control.topPadding + (horizontal ? 0 : control.position * control.availableHeight)
+        width: horizontal ? control.size * control.availableWidth : implicitWidth
+        height: horizontal ? implicitHeight : control.size * control.availableHeight
 
         states: State {
             name: "active"
-            when: control.policy === T.ScrollBar.AlwaysOn || (control.active && control.size < 1.0)
-            PropertyChanges { target: control.contentItem; opacity: 0.75 }
+            when: control.active
+            PropertyChanges { target: handle; opacity: 0.75 }
         }
 
         transitions: Transition {
             from: "active"
             SequentialAnimation {
                 PauseAnimation { duration: 450 }
-                NumberAnimation { target: control.contentItem; duration: 200; property: "opacity"; to: 0.0 }
+                NumberAnimation { target: handle; duration: 200; property: "opacity"; to: 0.0 }
             }
         }
     }
+    //! [handle]
 }

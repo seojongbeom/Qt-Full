@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,10 +49,7 @@
 #include <qmenu.h>
 #include <qactiongroup.h>
 #include <qimagewriter.h>
-#include <qscreen.h>
 #include <qstandardpaths.h>
-#include <qtextstream.h>
-#include <qwindow.h>
 #include <private/qhighdpiscaling_p.h>
 
 #include <qdebug.h>
@@ -266,9 +268,6 @@ void QPixelTool::keyPressEvent(QKeyEvent *e)
     case Qt::Key_Control:
         grabKeyboard();
         break;
-    case Qt::Key_F1:
-        aboutPixelTool();
-        break;
     }
 }
 
@@ -385,7 +384,6 @@ void QPixelTool::contextMenuEvent(QContextMenuEvent *e)
 
     menu.addSeparator();
     menu.addAction(QLatin1String("About Qt"), qApp, &QApplication::aboutQt);
-    menu.addAction(QLatin1String("About Qt Pixeltool"), this, &QPixelTool::aboutPixelTool);
 
     menu.exec(mapToGlobal(e->pos()));
 
@@ -551,8 +549,7 @@ void QPixelTool::saveToFile()
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
     fileDialog.setDirectory(QStandardPaths::writableLocation(QStandardPaths::PicturesLocation));
     QStringList mimeTypes;
-    const QByteArrayList supportedMimeTypes = QImageWriter::supportedMimeTypes();
-    for (const QByteArray &mimeTypeB : supportedMimeTypes)
+    foreach (const QByteArray &mimeTypeB, QImageWriter::supportedMimeTypes())
         mimeTypes.append(QString::fromLatin1(mimeTypeB));
     fileDialog.setMimeTypeFilters(mimeTypes);
     const QString pngType = QLatin1String("image/png");
@@ -562,49 +559,12 @@ void QPixelTool::saveToFile()
     }
 
     while (fileDialog.exec() == QDialog::Accepted
-        && !m_buffer.save(fileDialog.selectedFiles().constFirst())) {
+        && !m_buffer.save(fileDialog.selectedFiles().first())) {
         QMessageBox::warning(this, QLatin1String("Unable to write image"),
                              QLatin1String("Unable to write ")
                              + QDir::toNativeSeparators(fileDialog.selectedFiles().first()));
     }
     m_freeze = oldFreeze;
-}
-
-QTextStream &operator<<(QTextStream &str, const QScreen *screen)
-{
-    const QRect geometry = screen->geometry();
-    str << '"' << screen->name() << "\" " << geometry.width()
-        << 'x' << geometry.height() << forcesign << geometry.x() << geometry.y()
-        << noforcesign << ", " << qRound(screen->logicalDotsPerInch()) << "DPI"
-        << ", Depth: " << screen->depth() << ", " << screen->refreshRate() << "Hz";
-    const qreal dpr = screen->devicePixelRatio();
-    if (!qFuzzyCompare(dpr, qreal(1)))
-        str << ", DPR: " << dpr;
-    return str;
-}
-
-QString QPixelTool::aboutText() const
-{
-    const QList<QScreen *> screens = QGuiApplication::screens();
-    const QScreen *windowScreen = windowHandle()->screen();
-
-    QString result;
-    QTextStream str(&result);
-    str << "<html></head><body><h2>Qt Pixeltool</h2><p>Qt " << QT_VERSION_STR
-        << "</p><p>Copyright (C) 2017 The Qt Company Ltd.</p><h3>Screens</h3><ul>";
-    for (const QScreen *screen : screens)
-        str << "<li>" << (screen == windowScreen ? "* " : "  ") << screen << "</li>";
-    str << "<ul></body></html>";
-    return result;
-}
-
-void QPixelTool::aboutPixelTool()
-{
-    QMessageBox aboutBox(QMessageBox::Information, tr("About Qt Pixeltool"), aboutText(),
-                         QMessageBox::Close, this);
-    aboutBox.setWindowFlags(aboutBox.windowFlags() & ~Qt::WindowContextHelpButtonHint);
-    aboutBox.setTextInteractionFlags(Qt::TextBrowserInteraction);
-    aboutBox.exec();
 }
 
 QT_END_NAMESPACE

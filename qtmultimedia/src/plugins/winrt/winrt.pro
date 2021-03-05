@@ -6,7 +6,6 @@ LIBS += -lmfplat -lmfuuid -loleaut32 -ld3d11 -lruntimeobject
 HEADERS += \
     qwinrtabstractvideorenderercontrol.h \
     qwinrtcameracontrol.h \
-    qwinrtcameraflashcontrol.h \
     qwinrtcamerafocuscontrol.h \
     qwinrtcameraimagecapturecontrol.h \
     qwinrtcamerainfocontrol.h \
@@ -24,7 +23,6 @@ HEADERS += \
 SOURCES += \
     qwinrtabstractvideorenderercontrol.cpp \
     qwinrtcameracontrol.cpp \
-    qwinrtcameraflashcontrol.cpp \
     qwinrtcamerafocuscontrol.cpp \
     qwinrtcameraimagecapturecontrol.cpp \
     qwinrtcamerainfocontrol.cpp \

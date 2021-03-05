@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,20 +38,14 @@
 #include <QtQuick/private/qsgtexture_p.h>
 #include "qquickcontext2dcommandbuffer_p.h"
 #include <QOpenGLPaintDevice>
-#if QT_CONFIG(opengl)
+
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFramebufferObjectFormat>
-#include <QOpenGLFunctions>
-#include <QtGui/private/qopenglextensions_p.h>
-#endif
 #include <QtCore/QThread>
 #include <QtGui/QGuiApplication>
 
 QT_BEGIN_NAMESPACE
 
-Q_LOGGING_CATEGORY(lcCanvas, "qt.quick.canvas")
-
-#if QT_CONFIG(opengl)
 #define QT_MINIMUM_FBO_SIZE 64
 
 static inline int qt_next_power_of_two(int v)
@@ -92,25 +80,11 @@ struct GLAcquireContext {
     QOpenGLContext *ctx;
 };
 
-class QSGPlainTextureWithSubRect : public QSGPlainTexture
-{
-public:
-    QSGPlainTextureWithSubRect(const QRectF &subRect) : m_subRect(subRect) {}
-    QRectF normalizedTextureSubRect() const override { return m_subRect; }
-
-private:
-    QRectF m_subRect;
-};
-
-#endif
 QQuickContext2DTexture::QQuickContext2DTexture()
     : m_context(0)
-#if QT_CONFIG(opengl)
     , m_gl(0)
-#endif
     , m_surface(0)
     , m_item(0)
-    , m_canvasDevicePixelRatio(1)
     , m_canvasWindowChanged(false)
     , m_dirtyTexture(false)
     , m_smooth(true)
@@ -176,29 +150,19 @@ void QQuickContext2DTexture::setItem(QQuickCanvasItem* item)
 
 bool QQuickContext2DTexture::setCanvasWindow(const QRect& r)
 {
-    qreal canvasDevicePixelRatio = (m_item && m_item->window()) ?
-        m_item->window()->effectiveDevicePixelRatio() : qApp->devicePixelRatio();
-    if (!qFuzzyCompare(m_canvasDevicePixelRatio, canvasDevicePixelRatio)) {
-        qCDebug(lcCanvas, "%s device pixel ratio %.1lf -> %.1lf",
-                (m_item->objectName().isEmpty() ? "Canvas" : qPrintable(m_item->objectName())),
-                m_canvasDevicePixelRatio, canvasDevicePixelRatio);
-        m_canvasDevicePixelRatio = canvasDevicePixelRatio;
-        m_canvasWindowChanged = true;
-    }
-
     if (m_canvasWindow != r) {
         m_canvasWindow = r;
         m_canvasWindowChanged = true;
+        return true;
     }
-
-    return m_canvasWindowChanged;
+    return false;
 }
 
 bool QQuickContext2DTexture::setDirtyRect(const QRect &r)
 {
     bool doDirty = false;
     if (m_tiledCanvas) {
-        for (QQuickContext2DTile* t : qAsConst(m_tiles)) {
+        foreach (QQuickContext2DTile* t, m_tiles) {
             bool dirty = t->rect().intersected(r).isValid();
             t->markDirty(dirty);
             if (dirty)
@@ -280,9 +244,9 @@ void QQuickContext2DTexture::paint(QQuickContext2DCommandBuffer *ccb)
         return;
     }
     QQuickContext2D::mutex.unlock();
-#if QT_CONFIG(opengl)
+
     GLAcquireContext currentContext(m_gl, m_surface);
-#endif
+
     if (!m_tiledCanvas) {
         paintWithoutTiles(ccb);
         delete ccb;
@@ -292,7 +256,7 @@ void QQuickContext2DTexture::paint(QQuickContext2DCommandBuffer *ccb)
     QRect tiledRegion = createTiles(m_canvasWindow.intersected(QRect(QPoint(0, 0), m_canvasSize)));
     if (!tiledRegion.isEmpty()) {
         QRect dirtyRect;
-        for (QQuickContext2DTile* tile : qAsConst(m_tiles)) {
+        foreach (QQuickContext2DTile* tile, m_tiles) {
             if (tile->dirty()) {
                 if (dirtyRect.isEmpty())
                     dirtyRect = tile->rect();
@@ -303,7 +267,7 @@ void QQuickContext2DTexture::paint(QQuickContext2DCommandBuffer *ccb)
 
         if (beginPainting()) {
             QQuickContext2D::State oldState = m_state;
-            for (QQuickContext2DTile* tile : qAsConst(m_tiles)) {
+            foreach (QQuickContext2DTile* tile, m_tiles) {
                 if (tile->dirty()) {
                     ccb->replay(tile->createPainter(m_smooth, m_antialiasing), oldState, scaleFactor());
                     tile->drawFinished();
@@ -409,7 +373,7 @@ bool QQuickContext2DTexture::event(QEvent *e)
     }
     return QObject::event(e);
 }
-#if QT_CONFIG(opengl)
+
 static inline QSize npotAdjustedSize(const QSize &size)
 {
     static bool checked = false;
@@ -465,18 +429,14 @@ QVector2D QQuickContext2DFBOTexture::scaleFactor() const
 
 QSGTexture *QQuickContext2DFBOTexture::textureForNextFrame(QSGTexture *lastTexture, QQuickWindow *)
 {
-    QSGPlainTextureWithSubRect *texture = static_cast<QSGPlainTextureWithSubRect *>(lastTexture);
+    QSGPlainTexture *texture = static_cast<QSGPlainTexture *>(lastTexture);
 
     if (m_onCustomThread)
         m_mutex.lock();
 
     if (m_fbo) {
         if (!texture) {
-            // Since the FBO might be have a POT size, we need to set a sub rect
-            qreal normalizedCanvasWidth = m_canvasDevicePixelRatio * qreal(m_canvasSize.width()) / m_fbo->size().width();
-            qreal normalizedCanvasHeight = m_canvasDevicePixelRatio * qreal(m_canvasSize.height()) / m_fbo->size().height();
-
-            texture = new QSGPlainTextureWithSubRect(QRectF(0, 0, normalizedCanvasWidth, normalizedCanvasHeight));
+            texture = new QSGPlainTexture();
             texture->setHasAlphaChannel(true);
             texture->setOwnsTexture(false);
             m_dirtyTexture = true;
@@ -529,9 +489,9 @@ bool QQuickContext2DFBOTexture::doMultisampling() const
     static bool multisamplingSupported = false;
 
     if (!extensionsChecked) {
-        QOpenGLExtensions *e = static_cast<QOpenGLExtensions *>(QOpenGLContext::currentContext()->functions());
-        multisamplingSupported = e->hasOpenGLExtension(QOpenGLExtensions::FramebufferMultisample)
-            && e->hasOpenGLExtension(QOpenGLExtensions::FramebufferBlit);
+        const QSet<QByteArray> extensions = QOpenGLContext::currentContext()->extensions();
+        multisamplingSupported = extensions.contains(QByteArrayLiteral("GL_EXT_framebuffer_multisample"))
+            && extensions.contains(QByteArrayLiteral("GL_EXT_framebuffer_blit"));
         extensionsChecked = true;
     }
 
@@ -578,6 +538,9 @@ QPaintDevice* QQuickContext2DFBOTexture::beginPainting()
 {
     QQuickContext2DTexture::beginPainting();
 
+    const qreal devicePixelRatio = (m_item && m_item->window()) ?
+        m_item->window()->effectiveDevicePixelRatio() : qApp->devicePixelRatio();
+
     if (m_canvasWindow.size().isEmpty()) {
         delete m_fbo;
         delete m_multisampledFbo;
@@ -592,7 +555,7 @@ QPaintDevice* QQuickContext2DFBOTexture::beginPainting()
         delete m_paint_device;
         m_paint_device = 0;
 
-        m_fboSize = npotAdjustedSize(m_canvasWindow.size() * m_canvasDevicePixelRatio);
+        m_fboSize = npotAdjustedSize(m_canvasWindow.size() * devicePixelRatio);
         m_canvasWindowChanged = false;
 
         if (doMultisampling()) {
@@ -630,10 +593,7 @@ QPaintDevice* QQuickContext2DFBOTexture::beginPainting()
         QOpenGLPaintDevice *gl_device = new QOpenGLPaintDevice(m_fbo->size());
         gl_device->setPaintFlipped(true);
         gl_device->setSize(m_fbo->size());
-        gl_device->setDevicePixelRatio(m_canvasDevicePixelRatio);
-        qCDebug(lcCanvas, "%s size %.1lf x %.1lf painting with size %d x %d DPR %.1lf",
-                (m_item->objectName().isEmpty() ? "Canvas" : qPrintable(m_item->objectName())),
-                m_item->width(), m_item->height(), m_fbo->size().width(), m_fbo->size().height(), m_canvasDevicePixelRatio);
+        gl_device->setDevicePixelRatio(devicePixelRatio);
         m_paint_device = gl_device;
     }
 
@@ -684,7 +644,6 @@ void QQuickContext2DFBOTexture::endPainting()
 
     m_fbo->bindDefault();
 }
-#endif
 
 QQuickContext2DImageTexture::QQuickContext2DImageTexture()
     : QQuickContext2DTexture()
@@ -739,15 +698,14 @@ QPaintDevice* QQuickContext2DImageTexture::beginPainting()
     if (m_canvasWindow.size().isEmpty())
         return 0;
 
+    const qreal devicePixelRatio = (m_item && m_item->window()) ?
+        m_item->window()->effectiveDevicePixelRatio() : qApp->devicePixelRatio();
 
     if (m_canvasWindowChanged) {
-        m_image = QImage(m_canvasWindow.size() * m_canvasDevicePixelRatio, QImage::Format_ARGB32_Premultiplied);
-        m_image.setDevicePixelRatio(m_canvasDevicePixelRatio);
+        m_image = QImage(m_canvasWindow.size() * devicePixelRatio, QImage::Format_ARGB32_Premultiplied);
+        m_image.setDevicePixelRatio(devicePixelRatio);
         m_image.fill(0x00000000);
         m_canvasWindowChanged = false;
-        qCDebug(lcCanvas, "%s size %.1lf x %.1lf painting with size %d x %d DPR %.1lf",
-                (m_item->objectName().isEmpty() ? "Canvas" : qPrintable(m_item->objectName())),
-                m_item->width(), m_item->height(), m_image.size().width(), m_image.size().height(), m_canvasDevicePixelRatio);
     }
 
     return &m_image;
@@ -781,5 +739,3 @@ void QQuickContext2DImageTexture::compositeTile(QQuickContext2DTile* tile)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qquickcontext2dtexture_p.cpp"

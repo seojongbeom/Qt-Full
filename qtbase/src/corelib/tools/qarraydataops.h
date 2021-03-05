@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -48,11 +42,6 @@
 QT_BEGIN_NAMESPACE
 
 namespace QtPrivate {
-
-QT_WARNING_PUSH
-#if defined(Q_CC_GNU) && Q_CC_GNU >= 700
-QT_WARNING_DISABLE_GCC("-Wstringop-overflow")
-#endif
 
 template <class T>
 struct QPodArrayOps
@@ -76,8 +65,7 @@ struct QPodArrayOps
         Q_ASSERT(b < e);
         Q_ASSERT(size_t(e - b) <= this->alloc - uint(this->size));
 
-        ::memcpy(static_cast<void *>(this->end()), static_cast<const void *>(b),
-                 (e - b) * sizeof(T));
+        ::memcpy(this->end(), b, (e - b) * sizeof(T));
         this->size += e - b;
     }
 
@@ -137,7 +125,6 @@ struct QPodArrayOps
         this->size -= (e - b);
     }
 };
-QT_WARNING_POP
 
 template <class T>
 struct QGenericArrayOps
@@ -152,7 +139,7 @@ struct QGenericArrayOps
 
         T *const begin = this->begin();
         do {
-            new (begin + this->size) T;
+            new (begin + this->size) T();
         } while (uint(++this->size) != newSize);
     }
 
@@ -326,8 +313,7 @@ struct QMovableArrayOps
                 , end(finish)
                 , displace(diff)
             {
-                ::memmove(static_cast<void *>(begin + displace), static_cast<void *>(begin),
-                          (end - begin) * sizeof(T));
+                ::memmove(begin + displace, begin, (end - begin) * sizeof(T));
             }
 
             void commit() { displace = 0; }
@@ -335,8 +321,7 @@ struct QMovableArrayOps
             ~ReversibleDisplace()
             {
                 if (displace)
-                    ::memmove(static_cast<void *>(begin), static_cast<void *>(begin + displace),
-                              (end - begin) * sizeof(T));
+                    ::memmove(begin, begin + displace, (end - begin) * sizeof(T));
             }
 
             T *const begin;
@@ -393,7 +378,7 @@ struct QMovableArrayOps
 
             ~Mover()
             {
-                ::memmove(static_cast<void *>(destination), static_cast<const void *>(source), n * sizeof(T));
+                ::memmove(destination, source, n * sizeof(T));
                 size -= (source - destination);
             }
 
@@ -418,18 +403,18 @@ struct QArrayOpsSelector
 
 template <class T>
 struct QArrayOpsSelector<T,
-    typename std::enable_if<
-        !QTypeInfoQuery<T>::isComplex && QTypeInfoQuery<T>::isRelocatable
-    >::type>
+    typename QEnableIf<
+        !QTypeInfo<T>::isComplex && !QTypeInfo<T>::isStatic
+    >::Type>
 {
     typedef QPodArrayOps<T> Type;
 };
 
 template <class T>
 struct QArrayOpsSelector<T,
-    typename std::enable_if<
-        QTypeInfoQuery<T>::isComplex && QTypeInfoQuery<T>::isRelocatable
-    >::type>
+    typename QEnableIf<
+        QTypeInfo<T>::isComplex && !QTypeInfo<T>::isStatic
+    >::Type>
 {
     typedef QMovableArrayOps<T> Type;
 };

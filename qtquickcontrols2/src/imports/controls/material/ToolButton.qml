@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,46 +34,44 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.ToolButton {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            label ? label.implicitWidth + leftPadding + rightPadding : 0)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+                             label ? label.implicitHeight + topPadding + bottomPadding : 0)
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 6
 
-    contentItem: Text {
+    //! [label]
+    label: Text {
+        x: control.leftPadding
+        y: control.topPadding
+        width: control.availableWidth
+        height: control.availableHeight
+
         text: control.text
         font: control.font
-        color: !control.enabled ? control.Material.hintTextColor :
-                control.checked || control.highlighted ? control.Material.accent : control.Material.foreground
+        color: control.enabled ? control.Material.primaryTextColor : control.Material.hintTextColor
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 
-    background: Ripple {
+    //! [background]
+    background: Rectangle {
         implicitWidth: 48
         implicitHeight: 48
 
-        readonly property bool square: control.contentItem.width <= control.contentItem.height
-
-        x: (parent.width - width) / 2
-        y: (parent.height - height) / 2
-        clip: !square
-        width: square ? parent.height / 2 : parent.width
-        height: square ? parent.height / 2 : parent.height
-        pressed: control.pressed
-        anchor: control
-        active: control.enabled && (control.down || control.visualFocus || control.hovered)
-        color: control.Material.rippleColor
+        color: control.pressed ? control.Material.flatButtonPressColor : control.Material.flatButtonFocusColor
+        visible: control.enabled && (control.pressed || control.activeFocus || control.checked || control.highlighted)
     }
+    //! [background]
 }

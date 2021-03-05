@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Milian Wolff <milian.wolff@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Milian Wolff <milian.wolff@kdab.com>
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWebChannel module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -31,7 +36,6 @@
 
 #include <QObject>
 #include <QVariant>
-#include <QVector>
 #include <QJsonValue>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -54,18 +58,10 @@ public:
         emit messageReceived(message, this);
     }
 
-    QVector<QJsonObject> messagesSent() const
-    {
-        return mMessagesSent;
-    }
-
 public slots:
-    void sendMessage(const QJsonObject &message) Q_DECL_OVERRIDE
+    void sendMessage(const QJsonObject &/*message*/) Q_DECL_OVERRIDE
     {
-        mMessagesSent.push_back(message);
     }
-private:
-    QVector<QJsonObject> mMessagesSent;
 };
 
 class TestObject : public QObject
@@ -267,21 +263,20 @@ public:
     explicit TestWebChannel(QObject *parent = 0);
     virtual ~TestWebChannel();
 
-public slots:
     int readInt() const;
-    void setInt(int i);
+    Q_INVOKABLE void setInt(int i);
     bool readBool() const;
-    void setBool(bool b);
+    Q_INVOKABLE void setBool(bool b);
     double readDouble() const;
-    void setDouble(double d);
+    Q_INVOKABLE void setDouble(double d);
     QVariant readVariant() const;
-    void setVariant(const QVariant &v);
+    Q_INVOKABLE void setVariant(const QVariant &v);
     QJsonValue readJsonValue() const;
-    void setJsonValue(const QJsonValue &v);
+    Q_INVOKABLE void setJsonValue(const QJsonValue &v);
     QJsonObject readJsonObject() const;
-    void setJsonObject(const QJsonObject &v);
+    Q_INVOKABLE void setJsonObject(const QJsonObject &v);
     QJsonArray readJsonArray() const;
-    void setJsonArray(const QJsonArray &v);
+    Q_INVOKABLE void setJsonArray(const QJsonArray &v);
 
 signals:
     void lastIntChanged();
@@ -305,8 +300,6 @@ private slots:
     void testPassWrappedObjectBack();
     void testInfiniteRecursion();
     void testAsyncObject();
-    void testDeletionDuringMethodInvocation_data();
-    void testDeletionDuringMethodInvocation();
 
     void benchClassInfo();
     void benchInitializeClients();

@@ -1,26 +1,27 @@
 TARGET = qeglfs-kms-egldevice-integration
 
-QT += core-private gui-private eglfsdeviceintegration-private eglfs_kms_support-private kms_support-private
+QT += core-private gui-private platformsupport-private eglfs_device_lib-private
 
-INCLUDEPATH += $$PWD/../../api $$PWD/../eglfs_kms_support
+INCLUDEPATH += $$PWD/../..
 
-# Avoid X11 header collision, use generic EGL native types
-DEFINES += QT_EGL_NO_X11
+DEFINES += MESA_EGL_NO_X11_HEADERS
 
-QMAKE_USE += drm
 CONFIG += egl
 QMAKE_LFLAGS += $$QMAKE_LFLAGS_NOUNDEF
 
 SOURCES += $$PWD/qeglfskmsegldevicemain.cpp \
-           $$PWD/qeglfskmsegldeviceintegration.cpp \
-    qeglfskmsegldevice.cpp \
-    qeglfskmsegldevicescreen.cpp
+           $$PWD/qeglfskmsegldeviceintegration.cpp
 
-HEADERS += $$PWD/qeglfskmsegldeviceintegration.h \
-    qeglfskmsegldevice.h \
-    qeglfskmsegldevicescreen.h
+HEADERS += $$PWD/qeglfskmsegldeviceintegration.h
 
 OTHER_FILES += $$PWD/eglfs_kms_egldevice.json
+
+!contains(QT_CONFIG, no-pkg-config) {
+    CONFIG += link_pkgconfig
+    PKGCONFIG += libdrm
+} else {
+    LIBS += -ldrm
+}
 
 PLUGIN_TYPE = egldeviceintegrations
 PLUGIN_CLASS_NAME = QEglFSKmsEglDeviceIntegrationPlugin

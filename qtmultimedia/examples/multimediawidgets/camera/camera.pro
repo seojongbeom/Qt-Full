@@ -19,10 +19,7 @@ FORMS += \
     videosettings.ui \
     imagesettings.ui
 
-RESOURCES += camera.qrc
-
 target.path = $$[QT_INSTALL_EXAMPLES]/multimediawidgets/camera
 INSTALLS += target
 
 QT+=widgets
-include(../../shared/shared.pri)

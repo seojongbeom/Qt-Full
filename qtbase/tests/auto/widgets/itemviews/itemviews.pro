@@ -17,7 +17,7 @@ SUBDIRS=\
    qtreewidget \
    qtreewidgetitemiterator \
 
-!qtConfig(private_tests): SUBDIRS -= \
+!contains(QT_CONFIG, private_tests): SUBDIRS -= \
     qcolumnview \
     qlistwidget \
 

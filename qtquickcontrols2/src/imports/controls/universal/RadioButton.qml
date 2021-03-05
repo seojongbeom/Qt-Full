@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,42 +34,85 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
-import QtQuick.Controls.Universal.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.RadioButton {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            (label ? label.implicitWidth : 0) +
+                            (indicator ? indicator.implicitWidth : 0) +
+                            (label && indicator ? spacing : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
+                             Math.max(label ? label.implicitHeight : 0,
                                       indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 6
     spacing: 8
 
     property bool useSystemFocusVisuals: true
 
-    indicator: RadioIndicator {
+    //! [indicator]
+    indicator: Rectangle {
+        id: outerEllipse
+        implicitWidth: 20
+        implicitHeight: 20
         x: text ? (control.mirrored ? control.width - width - control.rightPadding : control.leftPadding) : control.leftPadding + (control.availableWidth - width) / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        control: control
-    }
 
-    contentItem: Text {
-        leftPadding: control.indicator && !control.mirrored ? control.indicator.width + control.spacing : 0
-        rightPadding: control.indicator && control.mirrored ? control.indicator.width + control.spacing : 0
+        radius: width / 2
+        color: "transparent"
+        border.width: 2 // RadioButtonBorderThemeThickness
+        border.color:  control.checked ? "transparent" :
+                      !control.enabled ? control.Universal.baseLowColor :
+                       control.pressed ? control.Universal.baseMediumColor : control.Universal.baseMediumHighColor
+
+        Rectangle {
+            id: checkOuterEllipse
+            width: parent.width
+            height: parent.height
+
+            radius: width / 2
+            opacity: control.checked ? 1 : 0
+            color: "transparent"
+            border.width: 2 // RadioButtonBorderThemeThickness
+            border.color: !control.enabled ? control.Universal.baseLowColor :
+                           control.pressed ? control.Universal.baseMediumColor : control.Universal.accent
+        }
+
+        Rectangle {
+            id: checkGlyph
+            x: (parent.width - width) / 2
+            y: (parent.height - height) / 2
+            width: parent.width / 2
+            height: parent.height / 2
+
+            radius: width / 2
+            opacity: control.checked ? 1 : 0
+            color: !control.enabled ? control.Universal.baseLowColor :
+                    control.pressed ? control.Universal.baseMediumColor : control.Universal.baseMediumHighColor
+        }
+    }
+    //! [indicator]
+
+    //! [label]
+    label: Text {
+        x: control.mirrored ? control.leftPadding : (indicator.x + indicator.width + control.spacing)
+        y: control.topPadding
+        width: control.availableWidth - indicator.width - control.spacing
+        height: control.availableHeight
 
         text: control.text
         font: control.font
         elide: Text.ElideRight
+        visible: control.text
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
 
-        opacity: enabled ? 1.0 : 0.2
-        color: control.Universal.foreground
+        color: !control.enabled ? control.Universal.baseLowColor : control.Universal.baseHighColor
     }
+    //! [label]
 }

@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -65,9 +55,9 @@ public:
     RobotPart(QGraphicsItem *parent = 0);
 
 protected:
-    void dragEnterEvent(QGraphicsSceneDragDropEvent *event) override;
-    void dragLeaveEvent(QGraphicsSceneDragDropEvent *event) override;
-    void dropEvent(QGraphicsSceneDragDropEvent *event) override;
+    void dragEnterEvent(QGraphicsSceneDragDropEvent *event) Q_DECL_OVERRIDE;
+    void dragLeaveEvent(QGraphicsSceneDragDropEvent *event) Q_DECL_OVERRIDE;
+    void dropEvent(QGraphicsSceneDragDropEvent *event) Q_DECL_OVERRIDE;
 
     QColor color;
     bool dragOver;
@@ -80,12 +70,12 @@ class RobotHead : public RobotPart
 public:
     RobotHead(QGraphicsItem *parent = 0);
 
-    QRectF boundingRect() const override;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
+    QRectF boundingRect() const Q_DECL_OVERRIDE;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;
 
 protected:
-    void dragEnterEvent(QGraphicsSceneDragDropEvent *event) override;
-    void dropEvent(QGraphicsSceneDragDropEvent *event) override;
+    void dragEnterEvent(QGraphicsSceneDragDropEvent *event) Q_DECL_OVERRIDE;
+    void dropEvent(QGraphicsSceneDragDropEvent *event) Q_DECL_OVERRIDE;
 
 private:
     QPixmap pixmap;
@@ -98,8 +88,8 @@ class RobotTorso : public RobotPart
 public:
     RobotTorso(QGraphicsItem *parent = 0);
 
-    QRectF boundingRect() const override;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
+    QRectF boundingRect() const Q_DECL_OVERRIDE;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;
 };
 //! [2]
 
@@ -109,8 +99,8 @@ class RobotLimb : public RobotPart
 public:
     RobotLimb(QGraphicsItem *parent = 0);
 
-    QRectF boundingRect() const override;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
+    QRectF boundingRect() const Q_DECL_OVERRIDE;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;
 };
 //! [3]
 
@@ -120,8 +110,8 @@ class Robot : public RobotPart
 public:
     Robot(QGraphicsItem *parent = 0);
 
-    QRectF boundingRect() const override;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
+    QRectF boundingRect() const Q_DECL_OVERRIDE;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;
 };
 //! [4]
 

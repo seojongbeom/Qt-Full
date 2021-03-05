@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -77,11 +67,6 @@ TestCase {
                 readonly property int year: model.year
             }
         }
-    }
-
-    Component {
-        id: signalSpy
-        SignalSpy { }
     }
 
     function test_locale() {
@@ -148,28 +133,28 @@ TestCase {
         control.month = 0
         compare(control.month, 0)
 
-        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":65:9: QML AbstractMonthGrid: month -1 is out of range [0...11]")
+        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":55:9: QML AbstractMonthGrid: month -1 is out of range [0...11]")
         control.month = -1
         compare(control.month, 0)
 
         control.month = 11
         compare(control.month, 11)
 
-        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":65:9: QML AbstractMonthGrid: month 12 is out of range [0...11]")
+        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":55:9: QML AbstractMonthGrid: month 12 is out of range [0...11]")
         control.month = 12
         compare(control.month, 11)
 
         control.year = -271820
         compare(control.year, -271820)
 
-        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":65:9: QML AbstractMonthGrid: year -271821 is out of range [-271820...275759]")
+        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":55:9: QML AbstractMonthGrid: year -271821 is out of range [-271820...275759]")
         control.year = -271821
         compare(control.year, -271820)
 
         control.year = 275759
         compare(control.year, 275759)
 
-        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":65:9: QML AbstractMonthGrid: year 275760 is out of range [-271820...275759]")
+        ignoreWarning(Qt.resolvedUrl("tst_monthgrid.qml") + ":55:9: QML AbstractMonthGrid: year 275760 is out of range [-271820...275759]")
         control.year = 275760
         compare(control.year, 275759)
 
@@ -231,53 +216,5 @@ TestCase {
         compare(control.contentItem.children[0].font.pixelSize, 123)
 
         control.destroy()
-    }
-
-    function test_clicked_data() {
-        return [
-            { tag: "mouse", touch: false },
-            { tag: "touch", touch: true }
-        ]
-    }
-
-    function test_clicked(data) {
-        var control = createTemporaryObject(defaultGrid, testCase)
-        verify(control)
-
-        compare(control.contentItem.children.length, 6 * 7 + 1)
-
-        var pressedSpy = signalSpy.createObject(control, {target: control, signalName: "pressed"})
-        verify(pressedSpy.valid)
-
-        var releasedSpy = signalSpy.createObject(control, {target: control, signalName: "released"})
-        verify(releasedSpy.valid)
-
-        var clickedSpy = signalSpy.createObject(control, {target: control, signalName: "clicked"})
-        verify(clickedSpy.valid)
-
-        var touch = touchEvent(control)
-
-        for (var i = 0; i < 42; ++i) {
-            var cell = control.contentItem.children[i]
-            verify(cell)
-
-            if (data.touch)
-                touch.press(0, cell).commit()
-            else
-                mousePress(cell)
-
-            compare(pressedSpy.count, i + 1)
-            compare(releasedSpy.count, i)
-            compare(clickedSpy.count, i)
-
-            if (data.touch)
-                touch.release(0, cell).commit()
-            else
-                mouseRelease(cell)
-
-            compare(pressedSpy.count, i + 1)
-            compare(releasedSpy.count, i + 1)
-            compare(clickedSpy.count, i + 1)
-        }
     }
 }

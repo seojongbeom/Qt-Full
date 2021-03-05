@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,49 +34,53 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.Slider {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                           (handle ? handle.implicitWidth : 0) + leftPadding + rightPadding)
+                            Math.max(track ? track.implicitWidth : 0,
+                                     handle ? handle.implicitWidth : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                            (handle ? handle.implicitHeight : 0) + topPadding + bottomPadding)
+                             Math.max(track ? track.implicitHeight : 0,
+                                      handle ? handle.implicitHeight : 0) + topPadding + bottomPadding)
 
     padding: 6
 
+    //! [handle]
     handle: SliderHandle {
         x: control.leftPadding + (horizontal ? control.visualPosition * (control.availableWidth - width) : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : control.visualPosition * (control.availableHeight - height))
         value: control.value
-        handleHasFocus: control.visualFocus
+        handleHasFocus: control.activeFocus
         handlePressed: control.pressed
-        handleHovered: control.hovered
     }
+    //! [handle]
 
-    background: Rectangle {
+    //! [track]
+    track: Rectangle {
         x: control.leftPadding + (horizontal ? 0 : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : 0)
-        implicitWidth: horizontal ? 200 : 48
-        implicitHeight: horizontal ? 48 : 200
-        width: horizontal ? control.availableWidth : 1
-        height: horizontal ? 1 : control.availableHeight
-        color: control.Material.foreground
+        implicitWidth: horizontal ? 200 : 1
+        implicitHeight: horizontal ? 1 : 200
+        width: horizontal ? control.availableWidth : implicitWidth
+        height: horizontal ? 1 : control.position * implicitHeight - 4
+        color: control.Material.primaryTextColor
         scale: horizontal && control.mirrored ? -1 : 1
 
         readonly property bool horizontal: control.orientation === Qt.Horizontal
 
         Rectangle {
-            x: parent.horizontal ? 0 : (parent.width - width) / 2
-            y: parent.horizontal ? (parent.height - height) / 2 : control.visualPosition * parent.height
+            x: 0
+            y: parent.horizontal ? -1 : control.visualPosition * parent.height + 3
             width: parent.horizontal ? control.position * parent.width : 3
-            height: parent.horizontal ? 3 : control.position * parent.height
+            height: parent.horizontal ? 3 : control.availableHeight
 
             color: control.Material.accentColor
         }
     }
+    //! [track]
 }

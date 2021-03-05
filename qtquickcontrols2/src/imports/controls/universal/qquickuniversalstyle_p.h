@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -49,19 +49,17 @@
 //
 
 #include <QtGui/qcolor.h>
-#include <QtQuickControls2/private/qquickstyleattached_p.h>
+#include <QtLabsControls/private/qquickstyle_p.h>
 
 QT_BEGIN_NAMESPACE
 
 class QQuickUniversalStylePrivate;
 
-class QQuickUniversalStyle : public QQuickStyleAttached
+class QQuickUniversalStyle : public QQuickStyle
 {
     Q_OBJECT
     Q_PROPERTY(Theme theme READ theme WRITE setTheme RESET resetTheme NOTIFY themeChanged FINAL)
     Q_PROPERTY(QVariant accent READ accent WRITE setAccent RESET resetAccent NOTIFY accentChanged FINAL)
-    Q_PROPERTY(QVariant foreground READ foreground WRITE setForeground RESET resetForeground NOTIFY foregroundChanged FINAL)
-    Q_PROPERTY(QVariant background READ background WRITE setBackground RESET resetBackground NOTIFY backgroundChanged FINAL)
 
     Q_PROPERTY(QColor altHighColor READ altHighColor NOTIFY paletteChanged FINAL)
     Q_PROPERTY(QColor altLowColor READ altLowColor NOTIFY paletteChanged FINAL)
@@ -89,11 +87,11 @@ class QQuickUniversalStyle : public QQuickStyleAttached
     Q_PROPERTY(QColor listMediumColor READ listMediumColor NOTIFY paletteChanged FINAL)
 
 public:
-    explicit QQuickUniversalStyle(QObject *parent = nullptr);
+    explicit QQuickUniversalStyle(QObject *parent = Q_NULLPTR);
 
     static QQuickUniversalStyle *qmlAttachedProperties(QObject *object);
 
-    enum Theme { Light, Dark, System };
+    enum Theme { Light, Dark };
     Q_ENUM(Theme)
 
     Theme theme() const;
@@ -102,7 +100,7 @@ public:
     void propagateTheme();
     void resetTheme();
 
-    enum Color {
+    enum Accent {
         Lime,
         Green,
         Emerald,
@@ -124,27 +122,13 @@ public:
         Mauve,
         Taupe
     };
-    Q_ENUM(Color)
+    Q_ENUM(Accent)
 
     QVariant accent() const;
     void setAccent(const QVariant &accent);
     void inheritAccent(QRgb accent);
     void propagateAccent();
     void resetAccent();
-
-    QVariant foreground() const;
-    void setForeground(const QVariant &foreground);
-    void inheritForeground(QRgb foreground, bool has);
-    void propagateForeground();
-    void resetForeground();
-
-    QVariant background() const;
-    void setBackground(const QVariant &background);
-    void inheritBackground(QRgb background, bool has);
-    void propagateBackground();
-    void resetBackground();
-
-    Q_INVOKABLE QColor color(Color color) const;
 
     QColor altHighColor() const;
     QColor altLowColor() const;
@@ -177,7 +161,7 @@ public:
         AltMedium,
         AltMediumHigh,
         AltMediumLow,
-        BaseHigh,
+        BaseHighColor,
         BaseLow,
         BaseMedium,
         BaseMediumHigh,
@@ -198,39 +182,23 @@ public:
         ListMedium
     };
 
-    QColor systemColor(SystemColor role) const;
+    QColor getColor(SystemColor role) const;
 
 Q_SIGNALS:
     void themeChanged();
     void accentChanged();
-    void foregroundChanged();
-    void backgroundChanged();
     void paletteChanged();
 
 protected:
-    void parentStyleChange(QQuickStyleAttached *newParent, QQuickStyleAttached *oldParent) override;
+    void parentStyleChange(QQuickStyle *newParent, QQuickStyle *oldParent) Q_DECL_OVERRIDE;
 
 private:
     void init();
-    bool variantToRgba(const QVariant &var, const char *name, QRgb *rgba) const;
 
-    // These reflect whether a color value was explicitly set on the specific
-    // item that this attached style object represents.
-    bool m_explicitTheme;
-    bool m_explicitAccent;
-    bool m_explicitForeground;
-    bool m_explicitBackground;
-    // These will be true when this item has an explicit or inherited foreground/background
-    // color, or these colors were declared globally via settings (e.g. conf or env vars).
-    // Some color properties of the style will return different values depending on whether
-    // or not these are set.
-    bool m_hasForeground;
-    bool m_hasBackground;
-    // The actual values for this item, whether explicit, inherited or globally set.
+    bool m_hasTheme;
+    bool m_hasAccent;
     QQuickUniversalStyle::Theme m_theme;
     QRgb m_accent;
-    QRgb m_foreground;
-    QRgb m_background;
 };
 
 QT_END_NAMESPACE

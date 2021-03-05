@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -106,10 +100,10 @@ public:
     QQuickTransitionManager *manager;
 
 protected:
-    void updateState(QAbstractAnimationJob::State newState, QAbstractAnimationJob::State oldState) override;
+    virtual void updateState(QAbstractAnimationJob::State newState, QAbstractAnimationJob::State oldState);
 };
 
-class QQuickTransitionPrivate : public QObjectPrivate
+class QQuickTransitionPrivate : public QObjectPrivate, QAnimationJobChangeListener
 {
     Q_DECLARE_PUBLIC(QQuickTransition)
 public:
@@ -120,8 +114,11 @@ public:
     {
     }
 
-    static QQuickTransitionPrivate *get(QQuickTransition *q) { return q->d_func(); }
-    void animationStateChanged(QAbstractAnimationJob::State newState);
+    void removeStateChangeListener(QAbstractAnimationJob *anim)
+    {
+        if (anim)
+            anim->removeAnimationChangeListener(this, QAbstractAnimationJob::StateChange);
+    }
 
     QString fromState;
     QString toState;
@@ -131,6 +128,7 @@ public:
     bool reversible;
     bool enabled;
 protected:
+    virtual void animationStateChanged(QAbstractAnimationJob *, QAbstractAnimationJob::State, QAbstractAnimationJob::State);
 
     static void append_animation(QQmlListProperty<QQuickAbstractAnimation> *list, QQuickAbstractAnimation *a);
     static int animation_count(QQmlListProperty<QQuickAbstractAnimation> *list);
@@ -167,16 +165,7 @@ void QQuickTransitionPrivate::clear_animations(QQmlListProperty<QQuickAbstractAn
     }
 }
 
-void QQuickTransitionInstance::animationStateChanged(QAbstractAnimationJob *, QAbstractAnimationJob::State newState, QAbstractAnimationJob::State)
-{
-    if (!m_transition)
-        return;
-
-    QQuickTransitionPrivate *transition = QQuickTransitionPrivate::get(m_transition);
-    transition->animationStateChanged(newState);
-}
-
-void QQuickTransitionPrivate::animationStateChanged(QAbstractAnimationJob::State newState)
+void QQuickTransitionPrivate::animationStateChanged(QAbstractAnimationJob *, QAbstractAnimationJob::State newState, QAbstractAnimationJob::State)
 {
     Q_Q(QQuickTransition);
 
@@ -202,16 +191,15 @@ void ParallelAnimationWrapper::updateState(QAbstractAnimationJob::State newState
     }
 }
 
-QQuickTransitionInstance::QQuickTransitionInstance(QQuickTransition *transition, QAbstractAnimationJob *anim)
+QQuickTransitionInstance::QQuickTransitionInstance(QQuickTransitionPrivate *transition, QAbstractAnimationJob *anim)
     : m_transition(transition)
     , m_anim(anim)
 {
-    anim->addAnimationChangeListener(this, QAbstractAnimationJob::StateChange);
 }
 
 QQuickTransitionInstance::~QQuickTransitionInstance()
 {
-    removeStateChangeListener();
+    m_transition->removeStateChangeListener(m_anim);
     delete m_anim;
 }
 
@@ -276,7 +264,8 @@ QQuickTransitionInstance *QQuickTransition::prepare(QQuickStateOperation::Action
 
     group->setDirection(d->reversed ? QAbstractAnimationJob::Backward : QAbstractAnimationJob::Forward);
 
-    QQuickTransitionInstance *wrapper = new QQuickTransitionInstance(this, group);
+    group->addAnimationChangeListener(d, QAbstractAnimationJob::StateChange);
+    QQuickTransitionInstance *wrapper = new QQuickTransitionInstance(d, group);
     return wrapper;
 }
 
@@ -462,5 +451,3 @@ QQmlListProperty<QQuickAbstractAnimation> QQuickTransition::animations()
 QT_END_NAMESPACE
 
 //#include <qquicktransition.moc>
-
-#include "moc_qquicktransition_p.cpp"

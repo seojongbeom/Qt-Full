@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Linguist of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -100,28 +105,6 @@ static bool hasFormPreview(const QString &fileName)
 {
     return fileName.endsWith(QLatin1String(".ui"))
       || fileName.endsWith(QLatin1String(".jui"));
-}
-
-static QString leadingWhitespace(const QString &str)
-{
-    int i = 0;
-    for (; i < str.size(); i++) {
-        if (!str[i].isSpace()) {
-            break;
-        }
-    }
-    return str.left(i);
-}
-
-static QString trailingWhitespace(const QString &str)
-{
-    int i = str.size();
-    while (--i >= 0) {
-        if (!str[i].isSpace()) {
-            break;
-        }
-    }
-    return str.mid(i + 1);
 }
 
 static Ending ending(QString str, QLocale::Language lang)
@@ -287,7 +270,7 @@ MainWindow::MainWindow()
     setUnifiedTitleAndToolBarOnMac(true);
     m_ui.setupUi(this);
 
-#if !defined(Q_OS_OSX) && !defined(Q_OS_WIN)
+#ifndef Q_OS_MAC
     setWindowIcon(QPixmap(QLatin1String(":/images/appicon.png") ));
 #endif
 
@@ -765,11 +748,11 @@ static QString fileFilters(bool allFirst)
     QString filter;
     foreach (const Translator::FileFormat &format, Translator::registeredFileFormats()) {
         if (format.fileType == Translator::FileFormat::TranslationSource && format.priority >= 0) {
-            filter.append(pattern.arg(format.description(), format.extension));
+            filter.append(pattern.arg(format.description).arg(format.extension));
             allExtensions.append(QLatin1String("*.") + format.extension);
         }
     }
-    QString allFilter = QObject::tr("Translation files (%1);;").arg(allExtensions.join(QLatin1Char(' ')));
+    QString allFilter = QObject::tr("Translation files (%1);;").arg(allExtensions.join(QLatin1String(" ")));
     if (allFirst)
         filter.prepend(allFilter);
     else
@@ -932,7 +915,7 @@ void MainWindow::print()
                         }
                         if (m->message().isPlural() && m_dataModel->language(k) != QLocale::C) {
                             QStringList transls = m->translations();
-                            pout.addBox(40, transls.join(QLatin1Char('\n')));
+                            pout.addBox(40, transls.join(QLatin1String("\n")));
                         } else {
                             pout.addBox(40, m->translation());
                         }
@@ -1355,7 +1338,7 @@ void MainWindow::about()
                     "<p>Qt Linguist is a tool for adding translations to Qt "
                     "applications.</p>"
                     "<p>Copyright (C) %2 The Qt Company Ltd."
-                   ).arg(version, QStringLiteral("2019")));
+                   ).arg(version, QStringLiteral("2017")));
 
     box.setWindowTitle(QApplication::translate("AboutDialog", "Qt Linguist"));
     box.setIcon(QMessageBox::NoIcon);
@@ -1444,7 +1427,6 @@ void MainWindow::updateCaption()
     m_ui.actionCloseAll->setEnabled(enable);
     m_ui.actionPrint->setEnabled(enable);
     m_ui.actionAccelerators->setEnabled(enable);
-    m_ui.actionSurroundingWhitespace->setEnabled(enable);
     m_ui.actionEndingPunctuation->setEnabled(enable);
     m_ui.actionPhraseMatches->setEnabled(enable);
     m_ui.actionPlaceMarkerMatches->setEnabled(enable);
@@ -1838,7 +1820,6 @@ void MainWindow::setupMenuBar()
     m_ui.actionNext->setIcon(QIcon(prefix + QStringLiteral("/next.png")));
     m_ui.actionNextUnfinished->setIcon(QIcon(prefix + QStringLiteral("/nextunfinished.png")));
     m_ui.actionPhraseMatches->setIcon(QIcon(prefix + QStringLiteral("/phrase.png")));
-    m_ui.actionSurroundingWhitespace->setIcon(QIcon(prefix + QStringLiteral("/surroundingwhitespace.png")));
     m_ui.actionEndingPunctuation->setIcon(QIcon(prefix + QStringLiteral("/punctuation.png")));
     m_ui.actionPrev->setIcon(QIcon(prefix + QStringLiteral("/prev.png")));
     m_ui.actionPrevUnfinished->setIcon(QIcon(prefix + QStringLiteral("/prevunfinished.png")));
@@ -1910,7 +1891,6 @@ void MainWindow::setupMenuBar()
 
     // Validation menu
     connect(m_ui.actionAccelerators, SIGNAL(triggered()), this, SLOT(revalidate()));
-    connect(m_ui.actionSurroundingWhitespace, SIGNAL(triggered()), this, SLOT(revalidate()));
     connect(m_ui.actionEndingPunctuation, SIGNAL(triggered()), this, SLOT(revalidate()));
     connect(m_ui.actionPhraseMatches, SIGNAL(triggered()), this, SLOT(revalidate()));
     connect(m_ui.actionPlaceMarkerMatches, SIGNAL(triggered()), this, SLOT(revalidate()));
@@ -2184,7 +2164,6 @@ void MainWindow::setupToolBars()
     translationst->addAction(m_ui.actionDoneAndNext);
 
     validationt->addAction(m_ui.actionAccelerators);
-    validationt->addAction(m_ui.actionSurroundingWhitespace);
     validationt->addAction(m_ui.actionEndingPunctuation);
     validationt->addAction(m_ui.actionPhraseMatches);
     validationt->addAction(m_ui.actionPlaceMarkerMatches);
@@ -2463,19 +2442,6 @@ void MainWindow::updateDanger(const MultiDataIndex &index, bool verbose)
                     danger = true;
                 }
             }
-            if (m_ui.actionSurroundingWhitespace->isChecked()) {
-                bool whitespaceok = true;
-                for (int i = 0; i < translations.count() && whitespaceok; ++i) {
-                    whitespaceok &= (leadingWhitespace(source) == leadingWhitespace(translations[i]));
-                    whitespaceok &= (trailingWhitespace(source) == trailingWhitespace(translations[i]));
-                }
-
-                if (!whitespaceok) {
-                    if (verbose)
-                        m_errorsView->addError(mi, ErrorsView::SurroundingWhitespaceDiffers);
-                    danger = true;
-                }
-            }
             if (m_ui.actionEndingPunctuation->isChecked()) {
                 bool endingok = true;
                 for (int i = 0; i < translations.count() && endingok; ++i) {
@@ -2485,7 +2451,7 @@ void MainWindow::updateDanger(const MultiDataIndex &index, bool verbose)
 
                 if (!endingok) {
                     if (verbose)
-                        m_errorsView->addError(mi, ErrorsView::PunctuationDiffers);
+                        m_errorsView->addError(mi, ErrorsView::PunctuationDiffer);
                     danger = true;
                 }
             }
@@ -2596,8 +2562,6 @@ void MainWindow::readConfig()
 
     m_ui.actionAccelerators->setChecked(
         config.value(settingPath("Validators/Accelerator"), true).toBool());
-    m_ui.actionSurroundingWhitespace->setChecked(
-        config.value(settingPath("Validators/SurroundingWhitespace"), true).toBool());
     m_ui.actionEndingPunctuation->setChecked(
         config.value(settingPath("Validators/EndingPunctuation"), true).toBool());
     m_ui.actionPhraseMatches->setChecked(
@@ -2629,8 +2593,6 @@ void MainWindow::writeConfig()
         saveGeometry());
     config.setValue(settingPath("Validators/Accelerator"),
         m_ui.actionAccelerators->isChecked());
-    config.setValue(settingPath("Validators/SurroundingWhitespace"),
-        m_ui.actionSurroundingWhitespace->isChecked());
     config.setValue(settingPath("Validators/EndingPunctuation"),
         m_ui.actionEndingPunctuation->isChecked());
     config.setValue(settingPath("Validators/PhraseMatch"),

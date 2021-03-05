@@ -135,10 +135,6 @@ Przyjmie on uniwersalną formę liczby pojedynczej.</translation>
         <translation>Prawdopodobnie brakuje klawisza skrótu w tłumaczeniu.</translation>
     </message>
     <message>
-        <source>Translation does not have same leading and trailing whitespace as the source text.</source>
-        <translation>Tłumaczenie nie zawiera tych samych początkowych i końcowych białych znaków co tekst źródłowy.</translation>
-    </message>
-    <message>
         <source>Translation does not end with the same punctuation as the source text.</source>
         <translation>Tłumaczenie nie kończy się tym samym znakiem interpunkcyjnym co tekst źródłowy.</translation>
     </message>
@@ -151,39 +147,12 @@ Przyjmie on uniwersalną formę liczby pojedynczej.</translation>
         <translation>Tłumaczenie nie zawiera tych samych znaczników co tekst źródłowy.</translation>
     </message>
     <message>
-        <source>Translation does not contain the necessary %n/%Ln place marker.</source>
-        <translation>Tłumaczenie nie zawiera koniecznego znacznika %n/%Ln.</translation>
+        <source>Translation does not contain the necessary %n place marker.</source>
+        <translation>Tłumaczenie nie zawiera koniecznego znacznika %n.</translation>
     </message>
     <message>
         <source>Unknown error</source>
         <translation>Nieznany błąd</translation>
-    </message>
-</context>
-<context>
-    <name>FMT</name>
-    <message>
-        <source>GNU Gettext localization files</source>
-        <translation>Pliki lokalizacyjne GNU Gettext</translation>
-    </message>
-    <message>
-        <source>GNU Gettext localization template files</source>
-        <translation>Szablony plików lokalizacyjnych GNU Gettext</translation>
-    </message>
-    <message>
-        <source>Compiled Qt translations</source>
-        <translation>Skompilowane tłumaczenia Qt</translation>
-    </message>
-    <message>
-        <source>Qt Linguist &apos;Phrase Book&apos;</source>
-        <translation>&quot;Książka wyrażeń&quot; Qt Linguista</translation>
-    </message>
-    <message>
-        <source>Qt translation sources</source>
-        <translation>Źródła tłumaczeń Qt</translation>
-    </message>
-    <message>
-        <source>XLIFF localization files</source>
-        <translation>Pliki lokalizacyjne XLIFF</translation>
     </message>
 </context>
 <context>
@@ -329,10 +298,37 @@ Przyjmie on uniwersalną formę liczby pojedynczej.</translation>
     <message numerus="yes">
         <source>    Ignored %n untranslated source text(s)</source>
         <translation>
-            <numerusform>    Pominięto %n nieprzetłumaczony tekst źródłowy</numerusform>
+            <numerusform>    Pominięto %n nieprzetłumaczony tekst źródłowy￼</numerusform>
             <numerusform>    Pominięto %n nieprzetłumaczone teksty źródłowe</numerusform>
-            <numerusform>    Pominięto %n nieprzetłumaczonych tekstów źródłowych</numerusform>
+            <numerusform>    Pominięto %n nieprzetłumaczonych tekstów źródłowy￼ch</numerusform>
         </translation>
+    </message>
+</context>
+<context>
+    <name>Linguist</name>
+    <message>
+        <source>GNU Gettext localization files</source>
+        <translation>Pliki GNU Gettext</translation>
+    </message>
+    <message>
+        <source>GNU Gettext localization template files</source>
+        <translation>Szablony plików GNU Gettext</translation>
+    </message>
+    <message>
+        <source>Compiled Qt translations</source>
+        <translation>Skompilowane tłumaczenia Qt</translation>
+    </message>
+    <message>
+        <source>Qt Linguist &apos;Phrase Book&apos;</source>
+        <translation>&quot;Książka wyrażeń&quot; Qt Linguista</translation>
+    </message>
+    <message>
+        <source>Qt translation sources</source>
+        <translation>Źródła tłumaczeń Qt</translation>
+    </message>
+    <message>
+        <source>XLIFF localization files</source>
+        <translation>Pliki XLIFF</translation>
     </message>
 </context>
 <context>
@@ -837,7 +833,7 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>&lt;center&gt;&lt;img src=&quot;:/images/splash.png&quot;/&gt;&lt;/img&gt;&lt;p&gt;%1&lt;/p&gt;&lt;/center&gt;&lt;p&gt;Qt Linguist is a tool for adding translations to Qt applications.&lt;/p&gt;&lt;p&gt;Copyright (C) %2 The Qt Company Ltd.</source>
-        <translation>&lt;center&gt;&lt;img src=&quot;:/images/splash.png&quot;/&gt;&lt;/img&gt;&lt;p&gt;%1&lt;/p&gt;&lt;/center&gt;&lt;p&gt;Qt Linguist jest narzędziem umożliwiającym dodawanie tłumaczeń do aplikacji używających Qt.&lt;/p&gt;&lt;p&gt;Prawa autorskie %2 The Qt Company Ltd.</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Do you want to save the modified files?</source>
@@ -961,7 +957,7 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>Do you want to save phrase book &apos;%1&apos;?</source>
-        <translation>Czy chcesz zachować książkę wyrażeń &apos;%1&apos;?</translation>
+        <translation>Czy chcesz zachować książke wyrażeń &apos;%1&apos;?</translation>
     </message>
     <message>
         <source>All</source>
@@ -1061,7 +1057,7 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>Toggle the validity check of ending punctuation. If the check fails, a message is shown in the warnings window.</source>
-        <translation>Przełącza sprawdzanie zgodności końcowych znaków interpunkcyjnych. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
+        <translation>Przełącz sprawdzanie zgodności końcowych znaków interpunkcyjnych. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
     </message>
     <message>
         <source>&amp;New Phrase Book...</source>
@@ -1141,7 +1137,7 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>Toggle the validity check of accelerators, i.e. whether the number of ampersands in the source and translation text is the same. If the check fails, a message is shown in the warnings window.</source>
-        <translation>Przełącza sprawdzanie zgodności klawiszy skrótów, tzn. czy liczba znaków: &amp; w tekście źródłowym i w tłumaczeniu jest taka sama. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
+        <translation>Przełącz sprawdzanie zgodności klawiszy skrótów, tzn. czy liczba znaków: &amp; w tekście źródłowym i w tłumaczeniu jest taka sama. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
     </message>
     <message>
         <source>Close</source>
@@ -1157,11 +1153,11 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>Toggle checking that phrase suggestions are used. If the check fails, a message is shown in the warnings window.</source>
-        <translation>Przełącza sprawdzanie czy użyto zasugerowanego wyrażenia. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
+        <translation>Przełącz sprawdzanie czy użyto zasugerowanego wyrażenia. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
     </message>
     <message>
         <source>Toggle the validity check of place markers, i.e. whether %1, %2, ... are used consistently in the source text and translation text. If the check fails, a message is shown in the warnings window.</source>
-        <translation>Przełącza sprawdzanie zgodności znaczników, tzn. czy: %1, %2, ... są spójnie użyte w tekście źródłowym i tłumaczeniu. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
+        <translation>Przełącz sprawdzanie zgodności znaczników, tzn. czy: %1, %2, ... są spójnie użyte w tekście źródłowym i tłumaczeniu. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
     </message>
     <message>
         <source>Ctrl+J</source>
@@ -1197,19 +1193,19 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>Toggle the validity check of accelerators</source>
-        <translation>Przełącza sprawdzanie zgodności klawiszy skrótów</translation>
+        <translation>Przełącz sprawdzanie zgodności klawiszy skrótów</translation>
     </message>
     <message>
         <source>Toggle the validity check of ending punctuation</source>
-        <translation>Przełącza sprawdzanie zgodności końcowych znaków interpunkcyjnych</translation>
+        <translation>Przełącz sprawdzanie zgodności końcowych znaków interpunkcyjnych</translation>
     </message>
     <message>
         <source>Toggle checking that phrase suggestions are used</source>
-        <translation>Przełącza sprawdzanie czy użyto zasugerowanego wyrażenia</translation>
+        <translation>Przełącz sprawdzanie czy użyto zasugerowanego wyrażenia</translation>
     </message>
     <message>
         <source>Toggle the validity check of place markers</source>
-        <translation>Przełącza sprawdzanie zgodności znaczników</translation>
+        <translation>Przełącz sprawdzanie zgodności znaczników</translation>
     </message>
     <message>
         <source>Create a Qt message file suitable for released applications from the current message file. The filename will automatically be determined from the name of the TS file.</source>
@@ -1258,18 +1254,6 @@ Wszystkie pliki (*)</translation>
     <message>
         <source>Ctrl+0</source>
         <translation>Ctrl+0</translation>
-    </message>
-    <message>
-        <source>Surrounding &amp;Whitespace.</source>
-        <translation>Otaczające &amp;białe znaki</translation>
-    </message>
-    <message>
-        <source>Toggle the validity check of surrounding whitespace.</source>
-        <translation>Przełącza sprawdzanie zgodności otaczających białych znaków.</translation>
-    </message>
-    <message>
-        <source>Toggle the validity check of surrounding whitespace. If the check fails, a message is shown in the warnings window.</source>
-        <translation>Przełącza sprawdzanie zgodności otaczających białych znaków. W przypadku niezgodności pojawia się komunikat w oknie z ostrzeżeniami.</translation>
     </message>
 </context>
 <context>
@@ -1349,7 +1333,7 @@ Wszystkie pliki (*)</translation>
     </message>
     <message>
         <source>%1 translator comments</source>
-        <translation>Komentarze tłumacza (język %1)</translation>
+        <translation>Komentarze tłumacza (język %1).</translation>
     </message>
     <message>
         <source>&apos;%1&apos;
@@ -1424,7 +1408,7 @@ Linia: %2</translation>
     </message>
     <message>
         <source>Settin&amp;gs...</source>
-        <translation>&amp;Ustawienia...</translation>
+        <translation>&amp;Ustawienia</translation>
     </message>
     <message>
         <source>Click here to close this window.</source>

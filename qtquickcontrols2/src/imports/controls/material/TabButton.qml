@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,38 +34,40 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.TabButton {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            label ? label.contentWidth + leftPadding + rightPadding : 0)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+                             label ? label.contentHeight + topPadding + bottomPadding : 0)
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 12
 
-    contentItem: Text {
+    //! [label]
+    label: Text {
+        x: control.leftPadding
+        y: control.topPadding
+        width: control.availableWidth
+        height: control.availableHeight
+
         text: control.text
         font: control.font
         elide: Text.ElideRight
-        color: !control.enabled ? control.Material.hintTextColor : control.down || control.checked ? control.Material.accentColor : control.Material.foreground
+        color: !control.enabled ? control.Material.hintTextColor : control.pressed || control.checked ? control.Material.accentColor : control.Material.primaryTextColor
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 
-    background: Ripple {
+    //! [background]
+    background: Item {
         implicitHeight: 48
-
-        clip: true
-        pressed: control.pressed
-        anchor: control
-        active: control.down || control.visualFocus || control.hovered
-        color: control.Material.rippleColor
     }
+    //! [background]
 }

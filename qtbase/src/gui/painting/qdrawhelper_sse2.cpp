@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -101,6 +94,7 @@ void qt_blend_rgb32_on_rgb32_sse2(uchar *destPixels, int dbpl,
     quint32 *dst = (quint32 *) destPixels;
     if (const_alpha != 256) {
         if (const_alpha != 0) {
+            const __m128i nullVector = _mm_set1_epi32(0);
             const __m128i half = _mm_set1_epi16(0x80);
             const __m128i colorMask = _mm_set1_epi32(0x00ff00ff);
 
@@ -118,13 +112,16 @@ void qt_blend_rgb32_on_rgb32_sse2(uchar *destPixels, int dbpl,
 
                 for (; x < w-3; x += 4) {
                     __m128i srcVector = _mm_loadu_si128((const __m128i *)&src[x]);
-                    const __m128i dstVector = _mm_load_si128((__m128i *)&dst[x]);
-                    __m128i result;
-                    INTERPOLATE_PIXEL_255_SSE2(result, srcVector, dstVector, constAlphaVector, oneMinusConstAlpha, colorMask, half);
-                    _mm_store_si128((__m128i *)&dst[x], result);
+                    if (_mm_movemask_epi8(_mm_cmpeq_epi32(srcVector, nullVector)) != 0xffff) {
+                        const __m128i dstVector = _mm_load_si128((__m128i *)&dst[x]);
+                        __m128i result;
+                        INTERPOLATE_PIXEL_255_SSE2(result, srcVector, dstVector, constAlphaVector, oneMinusConstAlpha, colorMask, half);
+                        _mm_store_si128((__m128i *)&dst[x], result);
+                    }
                 }
-                SIMD_EPILOGUE(x, w, 3)
+                for (; x<w; ++x) {
                     dst[x] = INTERPOLATE_PIXEL_255(src[x], const_alpha, dst[x], one_minus_const_alpha);
+                }
                 dst = (quint32 *)(((uchar *) dst) + dbpl);
                 src = (const quint32 *)(((const uchar *) src) + sbpl);
             }
@@ -173,7 +170,7 @@ void QT_FASTCALL comp_func_Plus_sse2(uint *dst, const uint *src, int length, uin
         }
 
         // 3) Epilogue:
-        SIMD_EPILOGUE(x, length, 3)
+        for (; x < length; ++x)
             dst[x] = comp_func_Plus_one_pixel(dst[x], src[x]);
     } else {
         const int one_minus_const_alpha = 255 - const_alpha;
@@ -197,7 +194,7 @@ void QT_FASTCALL comp_func_Plus_sse2(uint *dst, const uint *src, int length, uin
         }
 
         // 3) Epilogue:
-        SIMD_EPILOGUE(x, length, 3)
+        for (; x < length; ++x)
             dst[x] = comp_func_Plus_one_pixel_const_alpha(dst[x], src[x], const_alpha, one_minus_const_alpha);
     }
 }
@@ -228,7 +225,7 @@ void QT_FASTCALL comp_func_Source_sse2(uint *dst, const uint *src, int length, u
         }
 
         // 3) Epilogue
-        SIMD_EPILOGUE(x, length, 3)
+        for (; x < length; ++x)
             dst[x] = INTERPOLATE_PIXEL_255(src[x], const_alpha, dst[x], ialpha);
     }
 }
@@ -237,11 +234,11 @@ void qt_memfill32(quint32 *dest, quint32 value, int count)
 {
     if (count < 7) {
         switch (count) {
-        case 6: *dest++ = value; Q_FALLTHROUGH();
-        case 5: *dest++ = value; Q_FALLTHROUGH();
-        case 4: *dest++ = value; Q_FALLTHROUGH();
-        case 3: *dest++ = value; Q_FALLTHROUGH();
-        case 2: *dest++ = value; Q_FALLTHROUGH();
+        case 6: *dest++ = value;
+        case 5: *dest++ = value;
+        case 4: *dest++ = value;
+        case 3: *dest++ = value;
+        case 2: *dest++ = value;
         case 1: *dest   = value;
         }
         return;
@@ -249,16 +246,16 @@ void qt_memfill32(quint32 *dest, quint32 value, int count)
 
     const int align = (quintptr)(dest) & 0xf;
     switch (align) {
-    case 4:  *dest++ = value; --count; Q_FALLTHROUGH();
-    case 8:  *dest++ = value; --count; Q_FALLTHROUGH();
+    case 4:  *dest++ = value; --count;
+    case 8:  *dest++ = value; --count;
     case 12: *dest++ = value; --count;
     }
 
     const int rest = count & 0x3;
     if (rest) {
         switch (rest) {
-        case 3: dest[count - 3] = value; Q_FALLTHROUGH();
-        case 2: dest[count - 2] = value; Q_FALLTHROUGH();
+        case 3: dest[count - 3] = value;
+        case 2: dest[count - 2] = value;
         case 1: dest[count - 1] = value;
         }
     }
@@ -277,8 +274,8 @@ void qt_memfill32(quint32 *dest, quint32 value, int count)
     }
 
     switch (count128 & 0x3) {
-    case 3:      _mm_stream_si128(dst128++, value128); Q_FALLTHROUGH();
-    case 2:      _mm_stream_si128(dst128++, value128); Q_FALLTHROUGH();
+    case 3:      _mm_stream_si128(dst128++, value128);
+    case 2:      _mm_stream_si128(dst128++, value128);
     case 1:      _mm_stream_si128(dst128++, value128);
     }
 }
@@ -309,7 +306,7 @@ void QT_FASTCALL comp_func_solid_SourceOver_sse2(uint *destPixels, int length, u
             dstVector = _mm_add_epi8(colorVector, dstVector);
             _mm_store_si128((__m128i *)&dst[x], dstVector);
         }
-        SIMD_EPILOGUE(x, length, 3)
+        for (;x < length; ++x)
             destPixels[x] = color + BYTE_MUL(destPixels[x], minusAlphaOfColor);
     }
 }
@@ -318,7 +315,7 @@ void qt_memfill16(quint16 *dest, quint16 value, int count)
 {
     if (count < 3) {
         switch (count) {
-        case 2: *dest++ = value; Q_FALLTHROUGH();
+        case 2: *dest++ = value;
         case 1: *dest = value;
         }
         return;
@@ -558,16 +555,6 @@ void qt_scale_image_argb32_on_argb32_sse2(uchar *destPixels, int dbpl,
 
     // this bounds check here is required as floating point rounding above might in some cases lead to
     // w/h values that are one pixel too large, falling outside of the valid image area.
-    const int ystart = srcy >> 16;
-    if (ystart >= srch && iy < 0) {
-        srcy += iy;
-        --h;
-    }
-    const int xstart = basex >> 16;
-    if (xstart >=  (int)(sbpl/sizeof(quint32)) && ix < 0) {
-        basex += ix;
-        --w;
-    }
     int yend = (srcy + iy * (h - 1)) >> 16;
     if (yend < 0 || yend >= srch)
         --h;
@@ -598,7 +585,7 @@ void qt_scale_image_argb32_on_argb32_sse2(uchar *destPixels, int dbpl,
             BLEND_SOURCE_OVER_ARGB32_SSE2_helper(dst, srcVector, nullVector, half, one, colorMask, alphaMask);
         }
 
-        SIMD_EPILOGUE(x, w, 3) {
+        for (; x<w; x++) {
             uint s = src[(basex + x*ix) >> 16];
             dst[x] = s + BYTE_MUL(dst[x], qAlpha(~s));
         }

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -207,12 +212,9 @@ quint32        initval)         /* the previous hash, or an arbitrary value */
   switch(length)                     /* all the case statements fall through */
   {
   case 3 : c+=k[2];
-           Q_FALLTHROUGH();
   case 2 : b+=k[1];
-           Q_FALLTHROUGH();
   case 1 : a+=k[0];
-           final(a,b,c);
-           Q_FALLTHROUGH();
+    final(a,b,c);
   case 0:     /* case 0: nothing left to add */
     break;
   }
@@ -256,12 +258,9 @@ quint32       *pb)               /* IN: more seed OUT: secondary hash value */
   switch(length)                     /* all the case statements fall through */
   {
   case 3 : c+=k[2];
-           Q_FALLTHROUGH();
   case 2 : b+=k[1];
-           Q_FALLTHROUGH();
   case 1 : a+=k[0];
     final(a,b,c);
-           Q_FALLTHROUGH();
   case 0:     /* case 0: nothing left to add */
     break;
   }
@@ -355,24 +354,16 @@ quint32 hashlittle( const void *key, size_t length, quint32 initval)
     switch(length)
     {
     case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
-    case 11: c+=((quint32)k8[10])<<16;
-             Q_FALLTHROUGH();
-    case 10: c+=((quint32)k8[9])<<8;
-             Q_FALLTHROUGH();
-    case 9 : c+=k8[8];
-             Q_FALLTHROUGH();
+    case 11: c+=((quint32)k8[10])<<16;  /* fall through */
+    case 10: c+=((quint32)k8[9])<<8;    /* fall through */
+    case 9 : c+=k8[8];                   /* fall through */
     case 8 : b+=k[1]; a+=k[0]; break;
-    case 7 : b+=((quint32)k8[6])<<16;
-             Q_FALLTHROUGH();
-    case 6 : b+=((quint32)k8[5])<<8;
-             Q_FALLTHROUGH();
-    case 5 : b+=k8[4];
-             Q_FALLTHROUGH();
+    case 7 : b+=((quint32)k8[6])<<16;   /* fall through */
+    case 6 : b+=((quint32)k8[5])<<8;    /* fall through */
+    case 5 : b+=k8[4];                   /* fall through */
     case 4 : a+=k[0]; break;
-    case 3 : a+=((quint32)k8[2])<<16;
-             Q_FALLTHROUGH();
-    case 2 : a+=((quint32)k8[1])<<8;
-             Q_FALLTHROUGH();
+    case 3 : a+=((quint32)k8[2])<<16;   /* fall through */
+    case 2 : a+=((quint32)k8[1])<<8;    /* fall through */
     case 1 : a+=k8[0]; break;
     case 0 : return c;
     }
@@ -402,28 +393,23 @@ quint32 hashlittle( const void *key, size_t length, quint32 initval)
              b+=k[2]+(((quint32)k[3])<<16);
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 11: c+=((quint32)k8[10])<<16;
-             Q_FALLTHROUGH();
+    case 11: c+=((quint32)k8[10])<<16;     /* fall through */
     case 10: c+=k[4];
              b+=k[2]+(((quint32)k[3])<<16);
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 9 : c+=k8[8];
-             Q_FALLTHROUGH();
+    case 9 : c+=k8[8];                      /* fall through */
     case 8 : b+=k[2]+(((quint32)k[3])<<16);
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 7 : b+=((quint32)k8[6])<<16;
-             Q_FALLTHROUGH();
+    case 7 : b+=((quint32)k8[6])<<16;      /* fall through */
     case 6 : b+=k[2];
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 5 : b+=k8[4];
-             Q_FALLTHROUGH();
+    case 5 : b+=k8[4];                      /* fall through */
     case 4 : a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 3 : a+=((quint32)k8[2])<<16;
-             Q_FALLTHROUGH();
+    case 3 : a+=((quint32)k8[2])<<16;      /* fall through */
     case 2 : a+=k[0];
              break;
     case 1 : a+=k8[0];
@@ -458,27 +444,16 @@ quint32 hashlittle( const void *key, size_t length, quint32 initval)
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=((quint32)k[11])<<24;
-             Q_FALLTHROUGH();
     case 11: c+=((quint32)k[10])<<16;
-             Q_FALLTHROUGH();
     case 10: c+=((quint32)k[9])<<8;
-             Q_FALLTHROUGH();
     case 9 : c+=k[8];
-             Q_FALLTHROUGH();
     case 8 : b+=((quint32)k[7])<<24;
-             Q_FALLTHROUGH();
     case 7 : b+=((quint32)k[6])<<16;
-             Q_FALLTHROUGH();
     case 6 : b+=((quint32)k[5])<<8;
-             Q_FALLTHROUGH();
     case 5 : b+=k[4];
-             Q_FALLTHROUGH();
     case 4 : a+=((quint32)k[3])<<24;
-             Q_FALLTHROUGH();
     case 3 : a+=((quint32)k[2])<<16;
-             Q_FALLTHROUGH();
     case 2 : a+=((quint32)k[1])<<8;
-             Q_FALLTHROUGH();
     case 1 : a+=k[0];
              break;
     case 0 : return c;
@@ -563,24 +538,16 @@ void hashlittle2(
     switch(length)
     {
     case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
-    case 11: c+=((quint32)k8[10])<<16;
-             Q_FALLTHROUGH();
-    case 10: c+=((quint32)k8[9])<<8;
-             Q_FALLTHROUGH();
-    case 9 : c+=k8[8];
-             Q_FALLTHROUGH();
+    case 11: c+=((quint32)k8[10])<<16;  /* fall through */
+    case 10: c+=((quint32)k8[9])<<8;    /* fall through */
+    case 9 : c+=k8[8];                   /* fall through */
     case 8 : b+=k[1]; a+=k[0]; break;
-    case 7 : b+=((quint32)k8[6])<<16;
-             Q_FALLTHROUGH();
-    case 6 : b+=((quint32)k8[5])<<8;
-             Q_FALLTHROUGH();
-    case 5 : b+=k8[4];
-             Q_FALLTHROUGH();
+    case 7 : b+=((quint32)k8[6])<<16;   /* fall through */
+    case 6 : b+=((quint32)k8[5])<<8;    /* fall through */
+    case 5 : b+=k8[4];                   /* fall through */
     case 4 : a+=k[0]; break;
-    case 3 : a+=((quint32)k8[2])<<16;
-             Q_FALLTHROUGH();
-    case 2 : a+=((quint32)k8[1])<<8;
-             Q_FALLTHROUGH();
+    case 3 : a+=((quint32)k8[2])<<16;   /* fall through */
+    case 2 : a+=((quint32)k8[1])<<8;    /* fall through */
     case 1 : a+=k8[0]; break;
     case 0 : *pc=c; *pb=b; return;  /* zero length strings require no mixing */
     }
@@ -610,28 +577,23 @@ void hashlittle2(
              b+=k[2]+(((quint32)k[3])<<16);
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 11: c+=((quint32)k8[10])<<16;
-             Q_FALLTHROUGH();
+    case 11: c+=((quint32)k8[10])<<16;     /* fall through */
     case 10: c+=k[4];
              b+=k[2]+(((quint32)k[3])<<16);
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 9 : c+=k8[8];
-             Q_FALLTHROUGH();
+    case 9 : c+=k8[8];                      /* fall through */
     case 8 : b+=k[2]+(((quint32)k[3])<<16);
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 7 : b+=((quint32)k8[6])<<16;
-             Q_FALLTHROUGH();
+    case 7 : b+=((quint32)k8[6])<<16;      /* fall through */
     case 6 : b+=k[2];
              a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 5 : b+=k8[4];
-             Q_FALLTHROUGH();
+    case 5 : b+=k8[4];                      /* fall through */
     case 4 : a+=k[0]+(((quint32)k[1])<<16);
              break;
-    case 3 : a+=((quint32)k8[2])<<16;
-             Q_FALLTHROUGH();
+    case 3 : a+=((quint32)k8[2])<<16;      /* fall through */
     case 2 : a+=k[0];
              break;
     case 1 : a+=k8[0];
@@ -666,27 +628,16 @@ void hashlittle2(
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=((quint32)k[11])<<24;
-             Q_FALLTHROUGH();
     case 11: c+=((quint32)k[10])<<16;
-             Q_FALLTHROUGH();
     case 10: c+=((quint32)k[9])<<8;
-             Q_FALLTHROUGH();
     case 9 : c+=k[8];
-             Q_FALLTHROUGH();
     case 8 : b+=((quint32)k[7])<<24;
-             Q_FALLTHROUGH();
     case 7 : b+=((quint32)k[6])<<16;
-             Q_FALLTHROUGH();
     case 6 : b+=((quint32)k[5])<<8;
-             Q_FALLTHROUGH();
     case 5 : b+=k[4];
-             Q_FALLTHROUGH();
     case 4 : a+=((quint32)k[3])<<24;
-             Q_FALLTHROUGH();
     case 3 : a+=((quint32)k[2])<<16;
-             Q_FALLTHROUGH();
     case 2 : a+=((quint32)k[1])<<8;
-             Q_FALLTHROUGH();
     case 1 : a+=k[0];
              break;
     case 0 : *pc=c; *pb=b; return;  /* zero length strings require no mixing */
@@ -763,24 +714,16 @@ quint32 hashbig( const void *key, size_t length, quint32 initval)
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
-    case 11: c+=((quint32)k8[10])<<8;
-             Q_FALLTHROUGH();
-    case 10: c+=((quint32)k8[9])<<16;
-             Q_FALLTHROUGH();
-    case 9 : c+=((quint32)k8[8])<<24;
-             Q_FALLTHROUGH();
+    case 11: c+=((quint32)k8[10])<<8;  /* fall through */
+    case 10: c+=((quint32)k8[9])<<16;  /* fall through */
+    case 9 : c+=((quint32)k8[8])<<24;  /* fall through */
     case 8 : b+=k[1]; a+=k[0]; break;
-    case 7 : b+=((quint32)k8[6])<<8;
-             Q_FALLTHROUGH();
-    case 6 : b+=((quint32)k8[5])<<16;
-             Q_FALLTHROUGH();
-    case 5 : b+=((quint32)k8[4])<<24;
-             Q_FALLTHROUGH();
+    case 7 : b+=((quint32)k8[6])<<8;   /* fall through */
+    case 6 : b+=((quint32)k8[5])<<16;  /* fall through */
+    case 5 : b+=((quint32)k8[4])<<24;  /* fall through */
     case 4 : a+=k[0]; break;
-    case 3 : a+=((quint32)k8[2])<<8;
-             Q_FALLTHROUGH();
-    case 2 : a+=((quint32)k8[1])<<16;
-             Q_FALLTHROUGH();
+    case 3 : a+=((quint32)k8[2])<<8;   /* fall through */
+    case 2 : a+=((quint32)k8[1])<<16;  /* fall through */
     case 1 : a+=((quint32)k8[0])<<24; break;
     case 0 : return c;
     }
@@ -814,27 +757,16 @@ quint32 hashbig( const void *key, size_t length, quint32 initval)
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=k[11];
-             Q_FALLTHROUGH();
     case 11: c+=((quint32)k[10])<<8;
-             Q_FALLTHROUGH();
     case 10: c+=((quint32)k[9])<<16;
-             Q_FALLTHROUGH();
     case 9 : c+=((quint32)k[8])<<24;
-             Q_FALLTHROUGH();
     case 8 : b+=k[7];
-             Q_FALLTHROUGH();
     case 7 : b+=((quint32)k[6])<<8;
-             Q_FALLTHROUGH();
     case 6 : b+=((quint32)k[5])<<16;
-             Q_FALLTHROUGH();
     case 5 : b+=((quint32)k[4])<<24;
-             Q_FALLTHROUGH();
     case 4 : a+=k[3];
-             Q_FALLTHROUGH();
     case 3 : a+=((quint32)k[2])<<8;
-             Q_FALLTHROUGH();
     case 2 : a+=((quint32)k[1])<<16;
-             Q_FALLTHROUGH();
     case 1 : a+=((quint32)k[0])<<24;
              break;
     case 0 : return c;

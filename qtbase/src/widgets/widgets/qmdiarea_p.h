@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,11 +45,10 @@
 // We mean it.
 //
 
-#include <QtWidgets/private/qtwidgetsglobal_p.h>
 #include "qmdiarea.h"
 #include "qmdisubwindow.h"
 
-QT_REQUIRE_CONFIG(mdiarea);
+#ifndef QT_NO_MDIAREA
 
 #include <QList>
 #include <QVector>
@@ -144,26 +137,26 @@ public:
     QMdi::Rearranger *regularTiler;
     QMdi::Rearranger *iconTiler;
     QMdi::Placer *placer;
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     QRubberBand *rubberBand;
 #endif
     QMdiAreaTabBar *tabBar;
     QList<QMdi::Rearranger *> pendingRearrangements;
     QVector< QPointer<QMdiSubWindow> > pendingPlacements;
     QVector< QPointer<QMdiSubWindow> > childWindows;
-    QVector<int> indicesToActivatedChildren;
+    QList<int> indicesToActivatedChildren;
     QPointer<QMdiSubWindow> active;
     QPointer<QMdiSubWindow> aboutToBecomeActive;
     QBrush background;
     QMdiArea::WindowOrder activationOrder;
     QMdiArea::AreaOptions options;
     QMdiArea::ViewMode viewMode;
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     bool documentMode;
     bool tabsClosable;
     bool tabsMovable;
 #endif
-#if QT_CONFIG(tabwidget)
+#ifndef QT_NO_TABWIDGET
     QTabWidget::TabShape tabShape;
     QTabWidget::TabPosition tabPosition;
 #endif
@@ -213,7 +206,7 @@ public:
     QList<QMdiSubWindow *> subWindowList(QMdiArea::WindowOrder, bool reversed = false) const;
     void disconnectSubWindow(QObject *subWindow);
     void setViewMode(QMdiArea::ViewMode mode);
-#if QT_CONFIG(tabbar)
+#ifndef QT_NO_TABBAR
     void updateTabBarGeometry();
     void refreshTabBar();
 #endif
@@ -254,7 +247,7 @@ public:
             subWindow->d_func()->setActive(active, changeFocus);
     }
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     void showRubberBandFor(QMdiSubWindow *subWindow);
 
     inline void hideRubberBand()
@@ -263,8 +256,10 @@ public:
             rubberBand->hide();
         indexToHighlighted = -1;
     }
-#endif // QT_CONFIG(rubberband)
+#endif // QT_NO_RUBBERBAND
 };
+
+#endif // QT_NO_MDIAREA
 
 QT_END_NAMESPACE
 

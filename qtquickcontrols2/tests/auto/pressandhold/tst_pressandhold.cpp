@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -37,14 +37,13 @@
 #include <QtTest>
 #include <QtQuick>
 
+// TODO: add QStyleHints::setMousePressAndHoldInterval() to speedup the test
+
 class tst_PressAndHold : public QObject
 {
     Q_OBJECT
 
 private slots:
-    void initTestCase();
-    void cleanupTestCase();
-
     void pressAndHold_data();
     void pressAndHold();
 
@@ -52,25 +51,14 @@ private slots:
     void keepSelection();
 };
 
-void tst_PressAndHold::initTestCase()
-{
-    QGuiApplication::styleHints()->setMousePressAndHoldInterval(100);
-}
-
-void tst_PressAndHold::cleanupTestCase()
-{
-    QGuiApplication::styleHints()->setMousePressAndHoldInterval(-1);
-}
-
 void tst_PressAndHold::pressAndHold_data()
 {
     QTest::addColumn<QByteArray>("data");
     QTest::addColumn<QByteArray>("signal");
 
-    QTest::newRow("Button") << QByteArray("import QtQuick.Controls 2.1; Button { text: 'Button' }") << QByteArray(SIGNAL(pressAndHold()));
-    QTest::newRow("SwipeDelegate") << QByteArray("import QtQuick.Controls 2.1; SwipeDelegate { text: 'SwipeDelegate' }") << QByteArray(SIGNAL(pressAndHold()));
-    QTest::newRow("TextField") << QByteArray("import QtQuick.Controls 2.1; TextField { text: 'TextField' }") << QByteArray(SIGNAL(pressAndHold(QQuickMouseEvent*)));
-    QTest::newRow("TextArea") << QByteArray("import QtQuick.Controls 2.1; TextArea { text: 'TextArea' }") << QByteArray(SIGNAL(pressAndHold(QQuickMouseEvent*)));
+    QTest::newRow("Button") << QByteArray("import Qt.labs.controls 1.0; Button { text: 'Button' }") << QByteArray(SIGNAL(pressAndHold()));
+    QTest::newRow("TextField") << QByteArray("import Qt.labs.controls 1.0; TextField { text: 'TextField' }") << QByteArray(SIGNAL(pressAndHold(QQuickMouseEvent*)));
+    QTest::newRow("TextArea") << QByteArray("import Qt.labs.controls 1.0; TextArea { text: 'TextArea' }") << QByteArray(SIGNAL(pressAndHold(QQuickMouseEvent*)));
 }
 
 void tst_PressAndHold::pressAndHold()
@@ -144,8 +132,8 @@ void tst_PressAndHold::keepSelection_data()
 {
     QTest::addColumn<QByteArray>("data");
 
-    QTest::newRow("TextField") << QByteArray("import QtQuick.Controls 2.1; TextField { text: 'TextField' }");
-    QTest::newRow("TextArea") << QByteArray("import QtQuick.Controls 2.1; TextArea { text: 'TextArea' }");
+    QTest::newRow("TextField") << QByteArray("import Qt.labs.controls 1.0; TextField { text: 'TextField' }");
+    QTest::newRow("TextArea") << QByteArray("import Qt.labs.controls 1.0; TextArea { text: 'TextArea' }");
 }
 
 void tst_PressAndHold::keepSelection()

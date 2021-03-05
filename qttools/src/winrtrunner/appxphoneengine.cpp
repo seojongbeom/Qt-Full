@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -213,9 +210,7 @@ RunnerEngine *AppxPhoneEngine::create(Runner *runner)
 QStringList AppxPhoneEngine::deviceNames()
 {
     QStringList deviceNames;
-
-    const QList<CoreConDevice *> devices = coreConServer->devices();
-    for (const CoreConDevice *device : devices)
+    foreach (const CoreConDevice *device, coreConServer->devices())
         deviceNames.append(device->name());
     return deviceNames;
 }
@@ -269,12 +264,35 @@ AppxPhoneEngine::~AppxPhoneEngine()
 
 QString AppxPhoneEngine::extensionSdkPath() const
 {
+#if _MSC_VER >= 1900
     const QByteArray extensionSdkDirRaw = qgetenv("ExtensionSdkDir");
     if (extensionSdkDirRaw.isEmpty()) {
         qCWarning(lcWinRtRunner) << "The environment variable ExtensionSdkDir is not set.";
         return QString();
     }
     return QString::fromLocal8Bit(extensionSdkDirRaw);
+#else // _MSC_VER < 1900
+    HKEY regKey;
+    LONG hr = RegOpenKeyEx(
+                HKEY_LOCAL_MACHINE,
+                L"SOFTWARE\\Wow6432Node\\Microsoft\\Microsoft SDKs\\WindowsPhoneApp\\v8.1",
+                0, KEY_READ, &regKey);
+    if (hr != ERROR_SUCCESS) {
+        qCWarning(lcWinRtRunner) << "Failed to open registry key:" << qt_error_string(hr);
+        return QString();
+    }
+
+    wchar_t pathData[MAX_PATH];
+    DWORD pathLength = MAX_PATH;
+    hr = RegGetValue(regKey, L"Install Path", L"Install Path", RRF_RT_REG_SZ, NULL, pathData, &pathLength);
+    if (hr != ERROR_SUCCESS) {
+        qCWarning(lcWinRtRunner) << "Failed to get installation path value:" << qt_error_string(hr);
+        return QString();
+    }
+
+    return QString::fromWCharArray(pathData, (pathLength - 1) / sizeof(wchar_t))
+            + QLatin1String("ExtensionSDKs");
+#endif // _MSC_VER < 1900
 }
 
 bool AppxPhoneEngine::installPackage(IAppxManifestReader *reader, const QString &filePath)

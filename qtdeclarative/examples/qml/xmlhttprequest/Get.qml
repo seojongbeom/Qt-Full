@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,15 +40,56 @@
 
 import QtQuick 2.0
 
-import "methods.js" as Utils
+Rectangle {
+    width: 350; height: 400
 
-GetForm
-{
-    anchors.fill: parent
+    function showRequestInfo(text) {
+        log.text = log.text + "\n" + text
+        console.log(text)
+    }
 
-    mouseArea.onClicked: Utils.makeRequest()
+    Text { id: log; anchors.fill: parent; anchors.margins: 10 }
 
-    button.border.width: button.pressed ? 2 : 1
-    text.text: "Request data.xml"
+    Rectangle {
+        id: button
+        anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.margins: 10
+        width: buttonText.width + 10; height: buttonText.height + 10
+        border.width: mouseArea.pressed ? 2 : 1
+        radius : 5; antialiasing: true
 
+        Text { id: buttonText; anchors.centerIn: parent; text: "Request data.xml" }
+
+        MouseArea {
+            id: mouseArea
+            anchors.fill: parent
+            onClicked: {
+                log.text = ""
+                console.log("\n")
+
+                var doc = new XMLHttpRequest();
+                doc.onreadystatechange = function() {
+                    if (doc.readyState == XMLHttpRequest.HEADERS_RECEIVED) {
+                        showRequestInfo("Headers -->");
+                        showRequestInfo(doc.getAllResponseHeaders ());
+                        showRequestInfo("Last modified -->");
+                        showRequestInfo(doc.getResponseHeader ("Last-Modified"));
+
+                    } else if (doc.readyState == XMLHttpRequest.DONE) {
+                        var a = doc.responseXML.documentElement;
+                        for (var ii = 0; ii < a.childNodes.length; ++ii) {
+                            showRequestInfo(a.childNodes[ii].nodeName);
+                        }
+                        showRequestInfo("Headers -->");
+                        showRequestInfo(doc.getAllResponseHeaders ());
+                        showRequestInfo("Last modified -->");
+                        showRequestInfo(doc.getResponseHeader ("Last-Modified"));
+                    }
+                }
+
+                doc.open("GET", "data.xml");
+                doc.send();
+            }
+        }
+    }
 }
+

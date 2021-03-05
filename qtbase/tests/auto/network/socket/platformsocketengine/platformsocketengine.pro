@@ -4,7 +4,7 @@ SOURCES  += tst_platformsocketengine.cpp
 
 include(../platformsocketengine/platformsocketengine.pri)
 
-requires(qtConfig(private_tests))
+requires(contains(QT_CONFIG,private_tests))
 
 MOC_DIR=tmp
 

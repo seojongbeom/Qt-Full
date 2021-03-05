@@ -1623,8 +1623,6 @@ const char* ARMv7DOpcodeVCVT::format()
     default:
         n1 = "vcvt.?";
         n2 = ".?";
-        dregPrefix = '?';
-        mregPrefix = '?';
         break;
     }
 

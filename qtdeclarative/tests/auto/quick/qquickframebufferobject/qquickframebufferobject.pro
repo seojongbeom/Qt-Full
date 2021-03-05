@@ -7,6 +7,7 @@ include(../../shared/util.pri)
 
 macx:CONFIG -= app_bundle
 
+CONFIG += parallel_test
 QT += quick testlib
 
 OTHER_FILES += \

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -204,8 +209,10 @@ void QtResourceModelPrivate::registerResourceSet(QtResourceSet *resourceSet)
         return;
 
     // unregister old paths (all because the order of registration is important), later it can be optimized a bit
-    const QStringList toRegister = resourceSet->activeResourceFilePaths();
-    for (const QString &path : toRegister) {
+    QStringList toRegister = resourceSet->activeResourceFilePaths();
+    QStringListIterator itRegister(toRegister);
+    while (itRegister.hasNext()) {
+        const QString path = itRegister.next();
         if (debugResourceModel)
             qDebug() << "registerResourceSet " << path;
         const PathDataMap::const_iterator itRcc = m_pathToData.constFind(path);
@@ -215,8 +222,10 @@ void QtResourceModelPrivate::registerResourceSet(QtResourceSet *resourceSet)
                 if (!QResource::registerResource(reinterpret_cast<const uchar *>(data->constData()))) {
                     qWarning() << "** WARNING: Failed to register " << path << " (QResource failure).";
                 } else {
-                    const QStringList contents = m_pathToContents.value(path);
-                    for (const QString &filePath : contents) {
+                    QStringList contents = m_pathToContents.value(path);
+                    QStringListIterator itContents(contents);
+                    while (itContents.hasNext()) {
+                        const QString filePath = itContents.next();
                         if (!m_fileToQrc.contains(filePath)) // the first loaded resource has higher priority in qt resource system
                             m_fileToQrc.insert(filePath, path);
                     }
@@ -232,8 +241,10 @@ void QtResourceModelPrivate::unregisterResourceSet(QtResourceSet *resourceSet)
         return;
 
     // unregister old paths (all because the order of registration is importans), later it can be optimized a bit
-    const QStringList toUnregister = resourceSet->activeResourceFilePaths();
-    for (const QString &path : toUnregister) {
+    QStringList toUnregister = resourceSet->activeResourceFilePaths();
+    QStringListIterator itUnregister(toUnregister);
+    while (itUnregister.hasNext()) {
+        const QString path = itUnregister.next();
         if (debugResourceModel)
             qDebug() << "unregisterResourceSet " << path;
         const PathDataMap::const_iterator itRcc = m_pathToData.constFind(path);
@@ -269,7 +280,9 @@ void QtResourceModelPrivate::activate(QtResourceSet *resourceSet, const QStringL
 
     PathDataMap newPathToData = m_pathToData;
 
-    for (const QString &path : newPaths) {
+    QStringListIterator itPath(newPaths);
+    while (itPath.hasNext()) {
+        const QString path = itPath.next();
         if (resourceSet && !m_pathToResourceSet[path].contains(resourceSet))
             m_pathToResourceSet[path].append(resourceSet);
         const QMap<QString, bool>::iterator itMod = m_pathToModified.find(path);
@@ -289,8 +302,10 @@ void QtResourceModelPrivate::activate(QtResourceSet *resourceSet, const QStringL
             newResourceSetChanged = true;
             const QMap<QString, QList<QtResourceSet *> >::iterator itReload = m_pathToResourceSet.find(path);
             if (itReload != m_pathToResourceSet.end()) {
-                const QList<QtResourceSet *> resources = itReload.value();
-                for (QtResourceSet *res : resources) {
+                QList<QtResourceSet *> resources = itReload.value();
+                QListIterator<QtResourceSet *> itRes(resources);
+                while (itRes.hasNext()) {
+                    QtResourceSet *res = itRes.next();
                     if (res != resourceSet) {
                         m_resourceSetToReload[res] = true;
                     }
@@ -300,11 +315,13 @@ void QtResourceModelPrivate::activate(QtResourceSet *resourceSet, const QStringL
         }
     }
 
-    const QList<const QByteArray *> oldData = m_pathToData.values();
-    const QList<const QByteArray *> newData = newPathToData.values();
+    QList<const QByteArray *> oldData = m_pathToData.values();
+    QList<const QByteArray *> newData = newPathToData.values();
 
     QList<const QByteArray *> toDelete;
-    for (const QByteArray *array : oldData) {
+    QListIterator<const QByteArray *> itOld(oldData);
+    if (itOld.hasNext()) {
+        const QByteArray *array = itOld.next();
         if (array && !newData.contains(array))
             toDelete.append(array);
     }
@@ -343,7 +360,7 @@ void QtResourceModelPrivate::activate(QtResourceSet *resourceSet, const QStringL
     }
 
     if (!newResourceSetChanged && !needReregister && (m_currentResourceSet == resourceSet)) {
-        for (const QByteArray *data : qAsConst(toDelete))
+        foreach (const QByteArray *data, toDelete)
             deleteResource(data);
 
         return; // nothing changed
@@ -352,7 +369,7 @@ void QtResourceModelPrivate::activate(QtResourceSet *resourceSet, const QStringL
     if (needReregister)
         unregisterResourceSet(m_currentResourceSet);
 
-    for (const QByteArray *data : qAsConst(toDelete))
+    foreach (const QByteArray *data, toDelete)
         deleteResource(data);
 
     m_pathToData = newPathToData;
@@ -376,10 +393,12 @@ void QtResourceModelPrivate::activate(QtResourceSet *resourceSet, const QStringL
 
 void QtResourceModelPrivate::removeOldPaths(QtResourceSet *resourceSet, const QStringList &newPaths)
 {
-    const QStringList oldPaths = m_resourceSetToPaths.value(resourceSet);
+    QStringList oldPaths = m_resourceSetToPaths.value(resourceSet);
     if (oldPaths != newPaths) {
         // remove old
-        for (const QString &oldPath : oldPaths) {
+        QStringListIterator itOldPaths(oldPaths);
+        while (itOldPaths.hasNext()) {
+            QString oldPath = itOldPaths.next();
             if (!newPaths.contains(oldPath)) {
                 const QMap<QString, QList<QtResourceSet *> >::iterator itRemove = m_pathToResourceSet.find(oldPath);
                 if (itRemove != m_pathToResourceSet.end()) {
@@ -460,9 +479,10 @@ QtResourceModel::QtResourceModel(QObject *parent) :
 QtResourceModel::~QtResourceModel()
 {
     blockSignals(true);
-    const QList<QtResourceSet *> resourceList = resourceSets();
-    for (QtResourceSet *rs : resourceList)
-        removeResourceSet(rs);
+    QList<QtResourceSet *> resourceList = resourceSets();
+    QListIterator<QtResourceSet *> it(resourceList);
+    while (it.hasNext())
+        removeResourceSet(it.next());
     blockSignals(false);
 }
 
@@ -473,7 +493,7 @@ QStringList QtResourceModel::loadedQrcFiles() const
 
 bool QtResourceModel::isModified(const QString &path) const
 {
-    QMap<QString, bool>::const_iterator it = d_ptr->m_pathToModified.constFind(path);
+    QMap<QString, bool>::const_iterator it = d_ptr->m_pathToModified.find(path);
     if (it != d_ptr->m_pathToModified.constEnd())
         return it.value();
     return true;
@@ -481,7 +501,7 @@ bool QtResourceModel::isModified(const QString &path) const
 
 void QtResourceModel::setModified(const QString &path)
 {
-    QMap<QString, bool>::const_iterator itMod = d_ptr->m_pathToModified.constFind(path);
+    QMap<QString, bool>::const_iterator itMod = d_ptr->m_pathToModified.find(path);
     if (itMod == d_ptr->m_pathToModified.constEnd())
         return;
 
@@ -490,9 +510,10 @@ void QtResourceModel::setModified(const QString &path)
     if (it == d_ptr->m_pathToResourceSet.constEnd())
         return;
 
-    const QList<QtResourceSet *> resourceList = it.value();
-    for (QtResourceSet *rs : resourceList)
-        d_ptr->m_resourceSetToReload.insert(rs, true);
+    QList<QtResourceSet *> resourceList = it.value();
+    QListIterator<QtResourceSet *> itReload(resourceList);
+    while (itReload.hasNext())
+        d_ptr->m_resourceSetToReload.insert(itReload.next(), true);
 }
 
 QList<QtResourceSet *> QtResourceModel::resourceSets() const
@@ -516,8 +537,11 @@ QtResourceSet *QtResourceModel::addResourceSet(const QStringList &paths)
     d_ptr->m_resourceSetToPaths.insert(newResource, paths);
     d_ptr->m_resourceSetToReload.insert(newResource, false);
     d_ptr->m_newlyCreated.insert(newResource, true);
-    for (const QString &path : paths)
+    QStringListIterator it(paths);
+    while (it.hasNext()) {
+        const QString path = it.next();
         d_ptr->m_pathToResourceSet[path].append(newResource);
+    }
     return newResource;
 }
 
@@ -581,8 +605,9 @@ void QtResourceModel::setWatcherEnabled(bool enable)
 
     d_ptr->m_fileWatcherEnabled = enable;
 
-    if (!d_ptr->m_fileWatchedMap.isEmpty())
-        d_ptr->setWatcherEnabled(d_ptr->m_fileWatchedMap.firstKey(), d_ptr->m_fileWatcherEnabled);
+    QMapIterator<QString, bool> it(d_ptr->m_fileWatchedMap);
+    if (it.hasNext())
+        d_ptr->setWatcherEnabled(it.next().key(), d_ptr->m_fileWatcherEnabled);
 }
 
 bool QtResourceModel::isWatcherEnabled() const

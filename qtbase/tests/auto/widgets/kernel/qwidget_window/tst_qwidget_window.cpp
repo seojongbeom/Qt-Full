@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,9 +50,13 @@
 #include <qtoolbar.h>
 #include <private/qwindow_p.h>
 
-#include <QtTest/private/qtesthelpers_p.h>
-
-using namespace QTestPrivate;
+static inline void setFrameless(QWidget *w)
+{
+    Qt::WindowFlags flags = w->windowFlags();
+    flags |= Qt::FramelessWindowHint;
+    flags &= ~(Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+    w->setWindowFlags(flags);
+}
 
 class tst_QWidget_window : public QObject
 {
@@ -95,8 +104,6 @@ private slots:
     void tst_eventfilter_on_toplevel();
 
     void QTBUG_50561_QCocoaBackingStore_paintDevice_crash();
-
-    void QTBUG_56277_resize_on_showEvent();
 };
 
 void tst_QWidget_window::initTestCase()
@@ -329,10 +336,8 @@ void tst_QWidget_window::tst_showWithoutActivating()
         QSKIP("Cocoa: This fails. Figure out why.");
     else if (platformName != QStringLiteral("xcb")
             && platformName != QStringLiteral("windows")
-            && platformName != QStringLiteral("ios")
-            && platformName != QStringLiteral("tvos")
-            && platformName != QStringLiteral("watchos"))
-        QSKIP("Qt::WA_ShowWithoutActivating is currently supported only on xcb, windows, and ios/tvos/watchos platforms.");
+            && platformName != QStringLiteral("ios"))
+        QSKIP("Qt::WA_ShowWithoutActivating is currently supported only on xcb, windows, and ios platforms.");
 
     QWidget w1;
     w1.setAttribute(Qt::WA_ShowWithoutActivating);
@@ -857,35 +862,6 @@ void tst_QWidget_window::QTBUG_50561_QCocoaBackingStore_paintDevice_crash()
     // No crash, all good.
     // Wrap up and leave
     w.close();
-}
-
-class ResizedOnShowEventWidget : public QWidget
-{
-public:
-    void showEvent(QShowEvent *) override
-    {
-        const auto *primaryScreen = QApplication::primaryScreen();
-        auto newSize = primaryScreen->availableGeometry().size() / 4;
-        if (newSize == geometry().size())
-            newSize -= QSize(10, 10);
-        resize(newSize);
-    }
-};
-
-void tst_QWidget_window::QTBUG_56277_resize_on_showEvent()
-{
-    const auto platformName = QGuiApplication::platformName().toLower();
-    if (platformName != "cocoa" && platformName != "windows")
-        QSKIP("This can only be consistently tested on desktop platforms with well-known behavior.");
-
-    ResizedOnShowEventWidget w;
-    w.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&w));
-    const auto *screen = w.windowHandle()->screen();
-    const auto geometry = w.geometry();
-    const int frameHeight = geometry.top() - w.frameGeometry().top();
-    const int topmostY = screen->availableGeometry().top() + frameHeight;
-    QVERIFY(geometry.top() > topmostY || geometry.left() > screen->availableGeometry().left());
 }
 
 QTEST_MAIN(tst_QWidget_window)

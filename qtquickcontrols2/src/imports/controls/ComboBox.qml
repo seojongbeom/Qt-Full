@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,11 +34,9 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Window 2.3
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import QtQuick.Window 2.2
+import Qt.labs.templates 1.0 as T
 
 T.ComboBox {
     id: control
@@ -46,90 +44,79 @@ T.ComboBox {
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
                             contentItem.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
-                                      indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
+                             contentItem.implicitHeight + topPadding + bottomPadding)
     baselineOffset: contentItem.y + contentItem.baselineOffset
 
-    leftPadding: padding + (!control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width + spacing)
-    rightPadding: padding + (control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width + spacing)
+    spacing: 8
+    padding: 6
+    leftPadding: 8
+    rightPadding: 8
 
+    //! [delegate]
     delegate: ItemDelegate {
-        width: parent.width
+        width: control.width
         text: control.textRole ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole]) : modelData
-        font.weight: control.currentIndex === index ? Font.DemiBold : Font.Normal
+        checkable: true
+        autoExclusive: true
+        checked: control.currentIndex === index
         highlighted: control.highlightedIndex === index
-        hoverEnabled: control.hoverEnabled
+        pressed: highlighted && control.pressed
     }
+    //! [delegate]
 
-    indicator: Image {
-        x: control.mirrored ? control.padding : control.width - width - control.padding
-        y: control.topPadding + (control.availableHeight - height) / 2
-        source: "image://default/double-arrow/" + (!control.editable && control.visualFocus ? Default.focusColor : Default.textColor)
-        sourceSize.width: width
-        sourceSize.height: height
-        opacity: enabled ? 1 : 0.3
-    }
-
-    contentItem: T.TextField {
-        leftPadding: !control.mirrored ? 12 : control.editable && activeFocus ? 3 : 1
-        rightPadding: control.mirrored ? 12 : control.editable && activeFocus ? 3 : 1
-        topPadding: 6 - control.padding
-        bottomPadding: 6 - control.padding
-
-        text: control.editable ? control.editText : control.displayText
-
-        enabled: control.editable
-        autoScroll: control.editable
-        readOnly: control.down
-        inputMethodHints: control.inputMethodHints
-        validator: control.validator
-
+    //! [contentItem]
+    contentItem: Text {
+        text: control.displayText
         font: control.font
-        color: !control.editable && control.visualFocus ? Default.focusColor : Default.textColor
-        selectionColor: Default.focusColor
-        selectedTextColor: Default.textLightColor
+        color: "#ffffff"
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
-        opacity: control.enabled ? 1 : 0.3
-
-        background: Rectangle {
-            visible: control.editable && !control.flat
-            border.width: parent && parent.activeFocus ? 2 : 1
-            border.color: parent && parent.activeFocus ? Default.focusColor : Default.buttonColor
-        }
+        elide: Text.ElideRight
+        rightPadding: 18 + control.spacing
     }
+    //! [contentItem]
 
-    background: Rectangle {
+    //! [background]
+    background: Item {
         implicitWidth: 120
         implicitHeight: 40
 
-        color: !control.editable && control.visualFocus ? (control.pressed ? Default.focusPressedColor : Default.focusLightColor) :
-            (control.down ? Default.buttonPressedColor : Default.buttonColor)
-        border.color: Default.focusColor
-        border.width: !control.editable && control.visualFocus ? 2 : 0
-        visible: !control.flat || control.down
-    }
+        Rectangle {
+            width: parent.width
+            height: parent.height
+            opacity: control.enabled ? 1.0 : 0.2
+            color: control.pressed || popup.visible ? "#585A5C" : "#353637"
+        }
 
+        Image {
+            x: parent.width - width - control.rightPadding
+            y: (parent.height - height) / 2
+            source: "qrc:/qt-project.org/imports/Qt/labs/controls/images/drop-indicator.png"
+        }
+    }
+    //! [background]
+
+    //! [popup]
     popup: T.Popup {
-        y: control.height
-        width: control.width
-        height: Math.min(contentItem.implicitHeight, control.Window.height - topMargin - bottomMargin)
+        y: control.height - 1
+        implicitWidth: control.width
+        implicitHeight: listview.contentHeight
         topMargin: 6
         bottomMargin: 6
 
         contentItem: ListView {
+            id: listview
             clip: true
-            implicitHeight: contentHeight
-            model: control.delegateModel
+            model: control.popup.visible ? control.delegateModel : null
             currentIndex: control.highlightedIndex
-            highlightRangeMode: ListView.ApplyRange
-            highlightMoveDuration: 0
 
             Rectangle {
                 z: 10
-                width: parent.width
-                height: parent.height
+                parent: listview
+                width: listview.width
+                height: listview.height
+                border.color: "#353637"
                 color: "transparent"
-                border.color: Default.frameLightColor
             }
 
             T.ScrollIndicator.vertical: ScrollIndicator { }
@@ -137,4 +124,5 @@ T.ComboBox {
 
         background: Rectangle { }
     }
+    //! [popup]
 }

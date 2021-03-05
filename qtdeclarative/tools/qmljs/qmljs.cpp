@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the V4VM module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -32,34 +37,78 @@
 #include "private/qv4errorobject_p.h"
 #include "private/qv4globalobject_p.h"
 #include "private/qv4codegen_p.h"
-#if QT_CONFIG(qml_interpreter)
 #include "private/qv4isel_moth_p.h"
 #include "private/qv4vme_moth_p.h"
-#endif
 #include "private/qv4objectproto_p.h"
 #include "private/qv4isel_p.h"
 #include "private/qv4mm_p.h"
 #include "private/qv4context_p.h"
 #include "private/qv4script_p.h"
 #include "private/qv4string_p.h"
-#include "private/qqmlbuiltinfunctions_p.h"
 
 #ifdef V4_ENABLE_JIT
 #  include "private/qv4isel_masm_p.h"
-#else
-QT_REQUIRE_CONFIG(qml_interpreter);
 #endif // V4_ENABLE_JIT
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
-#include <QtCore/QFileInfo>
-#include <QtCore/QDateTime>
 #include <private/qqmljsengine_p.h>
 #include <private/qqmljslexer_p.h>
 #include <private/qqmljsparser_p.h>
 #include <private/qqmljsast_p.h>
 
 #include <iostream>
+
+namespace builtins {
+
+using namespace QV4;
+
+struct Print: FunctionObject
+{
+    struct Data : Heap::FunctionObject {
+        Data(ExecutionContext *scope)
+            : Heap::FunctionObject(scope, QStringLiteral("print"))
+        {
+        }
+    };
+    V4_OBJECT(FunctionObject)
+
+    static ReturnedValue call(const Managed *, CallData *callData)
+    {
+        for (int i = 0; i < callData->argc; ++i) {
+            QString s = callData->args[i].toQStringNoThrow();
+            if (i)
+                std::cout << ' ';
+            std::cout << qPrintable(s);
+        }
+        std::cout << std::endl;
+        return Encode::undefined();
+    }
+};
+
+DEFINE_OBJECT_VTABLE(Print);
+
+struct GC: public FunctionObject
+{
+    struct Data : Heap::FunctionObject {
+        Data(ExecutionContext *scope)
+            : Heap::FunctionObject(scope, QStringLiteral("gc"))
+        {
+        }
+
+    };
+    V4_OBJECT(FunctionObject)
+
+    static ReturnedValue call(const Managed *m, CallData *)
+    {
+        static_cast<const GC *>(m)->engine()->memoryManager->runGC();
+        return Encode::undefined();
+    }
+};
+
+DEFINE_OBJECT_VTABLE(GC);
+
+} // builtins
 
 static void showException(QV4::ExecutionContext *ctx, const QV4::Value &exception, const QV4::StackTrace &trace)
 {
@@ -74,7 +123,7 @@ static void showException(QV4::ExecutionContext *ctx, const QV4::Value &exceptio
         std::cerr << "Uncaught exception: " << qPrintable(message->toQStringNoThrow()) << std::endl;
     }
 
-    for (const QV4::StackFrame &frame : trace) {
+    foreach (const QV4::StackFrame &frame, trace) {
         std::cerr << "    at " << qPrintable(frame.function) << " (" << qPrintable(frame.source);
         if (frame.line >= 0)
             std::cerr << ':' << frame.line;
@@ -85,7 +134,6 @@ static void showException(QV4::ExecutionContext *ctx, const QV4::Value &exceptio
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    QCoreApplication::setApplicationVersion(QLatin1String(QT_VERSION_STR));
     QStringList args = app.arguments();
     args.removeFirst();
 
@@ -100,32 +148,24 @@ int main(int argc, char *argv[])
 #endif
 
     bool runAsQml = false;
-    bool cache = false;
 
     if (!args.isEmpty()) {
-        if (args.constFirst() == QLatin1String("--jit")) {
+        if (args.first() == QLatin1String("--jit")) {
             mode = use_masm;
             args.removeFirst();
         }
 
-#if QT_CONFIG(qml_interpreter)
-        if (args.constFirst() == QLatin1String("--interpret")) {
+        if (args.first() == QLatin1String("--interpret")) {
             mode = use_moth;
             args.removeFirst();
         }
-#endif
 
-        if (args.constFirst() == QLatin1String("--qml")) {
+        if (args.first() == QLatin1String("--qml")) {
             runAsQml = true;
             args.removeFirst();
         }
 
-        if (args.constFirst() == QLatin1String("--cache")) {
-            cache = true;
-            args.removeFirst();
-        }
-
-        if (args.constFirst() == QLatin1String("--help")) {
+        if (args.first() == QLatin1String("--help")) {
             std::cerr << "Usage: qmljs [|--jit|--interpret|--qml] file..." << std::endl;
             return EXIT_SUCCESS;
         }
@@ -136,12 +176,10 @@ int main(int argc, char *argv[])
     case use_moth: {
         QV4::EvalISelFactory* iSelFactory = 0;
         if (mode == use_moth) {
-#if QT_CONFIG(qml_interpreter)
             iSelFactory = new QV4::Moth::ISelFactory;
-#endif
 #ifdef V4_ENABLE_JIT
         } else {
-            iSelFactory = new QV4::JIT::ISelFactory<>;
+            iSelFactory = new QV4::JIT::ISelFactory;
 #endif // V4_ENABLE_JIT
         }
 
@@ -150,43 +188,23 @@ int main(int argc, char *argv[])
         QV4::Scope scope(&vm);
         QV4::ScopedContext ctx(scope, vm.rootContext());
 
-        QV4::GlobalExtensions::init(vm.globalObject, QJSEngine::ConsoleExtension | QJSEngine::GarbageCollectionExtension);
+        QV4::ScopedObject print(scope, vm.memoryManager->allocObject<builtins::Print>(vm.rootContext()));
+        vm.globalObject->put(QV4::ScopedString(scope, vm.newIdentifier(QStringLiteral("print"))).getPointer(), print);
+        QV4::ScopedObject gc(scope, vm.memoryManager->allocObject<builtins::GC>(ctx));
+        vm.globalObject->put(QV4::ScopedString(scope, vm.newIdentifier(QStringLiteral("gc"))).getPointer(), gc);
 
-        for (const QString &fn : qAsConst(args)) {
+        foreach (const QString &fn, args) {
             QFile file(fn);
             if (file.open(QFile::ReadOnly)) {
-                QScopedPointer<QV4::Script> script;
-                if (cache && QFile::exists(fn + QLatin1Char('c'))) {
-                    QQmlRefPointer<QV4::CompiledData::CompilationUnit> unit = iSelFactory->createUnitForLoading();
-                    QString error;
-                    if (unit->loadFromDisk(QUrl::fromLocalFile(fn), QFileInfo(fn).lastModified(), iSelFactory, &error)) {
-                        script.reset(new QV4::Script(&vm, nullptr, unit));
-                    } else {
-                        std::cout << "Error loading" << qPrintable(fn) << "from disk cache:" << qPrintable(error) << std::endl;
-                    }
-                }
-                if (!script) {
-                    const QString code = QString::fromUtf8(file.readAll());
-                    file.close();
+                const QString code = QString::fromUtf8(file.readAll());
+                file.close();
 
-                    script.reset(new QV4::Script(ctx, code, fn));
-                    script->parseAsBinding = runAsQml;
-                    script->parse();
-                }
                 QV4::ScopedValue result(scope);
-                if (!scope.engine->hasException) {
-                    const auto unit = script->compilationUnit;
-                    if (cache && unit && !(unit->data->flags & QV4::CompiledData::Unit::StaticData)) {
-                        if (unit->data->sourceTimeStamp == 0) {
-                            const_cast<QV4::CompiledData::Unit*>(unit->data)->sourceTimeStamp = QFileInfo(fn).lastModified().toMSecsSinceEpoch();
-                        }
-                        QString saveError;
-                        if (!unit->saveToDisk(QUrl::fromLocalFile(fn), &saveError)) {
-                            std::cout << "Error saving JS cache file: " << qPrintable(saveError) << std::endl;
-                        }
-                    }
-                    result = script->run();
-                }
+                QV4::Script script(ctx, code, fn);
+                script.parseAsBinding = runAsQml;
+                script.parse();
+                if (!scope.engine->hasException)
+                    result = script.run();
                 if (scope.engine->hasException) {
                     QV4::StackTrace trace;
                     QV4::ScopedValue ex(scope, scope.engine->catchException(&trace));
@@ -202,6 +220,8 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
             }
         }
+
+        vm.memoryManager->dumpStats();
     } return EXIT_SUCCESS;
     } // switch (mode)
 }

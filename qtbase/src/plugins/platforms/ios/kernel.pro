@@ -1,17 +1,7 @@
 TARGET = qios
 
-# QTBUG-42937: Work around linker errors caused by circular
-# dependencies between the iOS platform plugin and the user
-# application's main() when the plugin is a shared library.
-qtConfig(shared): CONFIG += static
-
-CONFIG += no_app_extension_api_only
-
-QT += \
-    core-private gui-private \
-    clipboard_support-private fontdatabase_support-private graphics_support-private
-
-LIBS += -framework Foundation -framework UIKit -framework QuartzCore -framework AudioToolbox
+QT += core-private gui-private platformsupport-private
+LIBS += -framework Foundation -framework UIKit -framework QuartzCore
 
 OBJECTIVE_SOURCES = \
     plugin.mm \
@@ -29,9 +19,12 @@ OBJECTIVE_SOURCES = \
     qiosglobal.mm \
     qiosservices.mm \
     quiview.mm \
+    qiosclipboard.mm \
     quiaccessibilityelement.mm \
     qiosplatformaccessibility.mm \
-    qiostextresponder.mm
+    qiostextresponder.mm \
+    qiosmenu.mm \
+    qiosfiledialog.mm
 
 HEADERS = \
     qiosintegration.h \
@@ -48,25 +41,12 @@ HEADERS = \
     qiosglobal.h \
     qiosservices.h \
     quiview.h \
+    qiosclipboard.h \
     quiaccessibilityelement.h \
     qiosplatformaccessibility.h \
-    qiostextresponder.h
-
-!tvos {
-    LIBS += -framework AssetsLibrary
-    OBJECTIVE_SOURCES += \
-        qiosclipboard.mm \
-        qiosmenu.mm \
-        qiosfiledialog.mm \
-        qiosmessagedialog.mm \
-        qiostextinputoverlay.mm
-    HEADERS += \
-        qiosclipboard.h \
-        qiosmenu.h \
-        qiosfiledialog.h \
-        qiosmessagedialog.h \
-        qiostextinputoverlay.h
-}
+    qiostextresponder.h \
+    qiosmenu.h \
+    qiosfiledialog.h
 
 OTHER_FILES = \
     quiview_textinput.mm \

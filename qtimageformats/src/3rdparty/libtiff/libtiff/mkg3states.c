@@ -1,3 +1,5 @@
+/* "$Id: mkg3states.c,v 1.12 2015-06-21 01:09:09 bfriesen Exp $ */
+
 /*
  * Copyright (c) 1991-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -40,7 +42,7 @@
 #include "tif_fax3.h"
 
 #ifndef HAVE_GETOPT
-extern int getopt(int argc, char * const argv[], const char *optstring);
+extern int getopt(int, char**, char*);
 #endif
 
 #define	streq(a,b)	(strcmp(a,b) == 0)

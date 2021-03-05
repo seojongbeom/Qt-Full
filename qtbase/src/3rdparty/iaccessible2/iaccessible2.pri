@@ -1,6 +1,10 @@
 
 ARCH_SUBDIR=x86
-contains(QT_ARCH, x86_64): ARCH_SUBDIR = amd64
+contains(QMAKE_TARGET.arch, x86_64): {
+    ARCH_SUBDIR=amd64
+} else {
+    !contains(QMAKE_TARGET.arch, x86): message("ERROR: Could not detect architecture from QMAKE_TARGET.arch")
+}
 
 MIDL_GENERATED = $$PWD/generated/$${ARCH_SUBDIR}
 

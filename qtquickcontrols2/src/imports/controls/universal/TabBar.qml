@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,27 +34,28 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.TabBar {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentWidth + leftPadding + rightPadding)
+                            contentItem.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentHeight + topPadding + bottomPadding)
+                             contentItem.implicitHeight + topPadding + bottomPadding)
 
-    contentHeight: 48
-
+    //! [contentItem]
     contentItem: PathView {
+        implicitWidth: 200
+        implicitHeight: 48
+
         model: control.contentModel
         currentIndex: control.currentIndex
 
         interactive: false
         snapMode: PathView.SnapToItem
-        movementDirection: PathView.Positive
         highlightMoveDuration: 100
 
         path: Path {
@@ -66,10 +67,13 @@ T.TabBar {
             }
         }
     }
+    //! [contentItem]
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 200
         implicitHeight: 48
-        color: control.Universal.background
+        color: control.Universal.altHighColor
     }
+    //! [background]
 }

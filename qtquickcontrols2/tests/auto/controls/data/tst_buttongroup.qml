@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,8 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
+import Qt.labs.templates 1.0 as T
 
 TestCase {
     id: testCase
@@ -65,17 +56,40 @@ TestCase {
         ButtonGroup { }
     }
 
-    Component {
-        id: signalSpy
-        SignalSpy { }
+    SignalSpy {
+        id: checkedButtonSpy
+        signalName: "checkedButtonChanged"
+    }
+
+    SignalSpy {
+        id: buttonsSpy
+        signalName: "buttonsChanged"
+    }
+
+    function init() {
+        verify(!checkedButtonSpy.target)
+        compare(checkedButtonSpy.count, 0)
+
+        verify(!buttonsSpy.target)
+        compare(buttonsSpy.count, 0)
+    }
+
+    function cleanup() {
+        checkedButtonSpy.target = null
+        checkedButtonSpy.clear()
+
+        buttonsSpy.target = null
+        buttonsSpy.clear()
     }
 
     function test_null() {
-        var group = createTemporaryObject(buttonGroup, testCase)
+        var group = buttonGroup.createObject(testCase)
         verify(group)
 
         group.addButton(null)
         group.removeButton(null)
+
+        group.destroy()
     }
 
     Component {
@@ -89,16 +103,16 @@ TestCase {
     }
 
     function test_current() {
-        var group = createTemporaryObject(buttonGroup, testCase)
+        var group = buttonGroup.createObject(testCase)
         verify(group)
 
-        var checkedButtonSpy = createTemporaryObject(signalSpy, testCase, {target: group, signalName: "checkedButtonChanged"})
+        checkedButtonSpy.target = group
         verify(checkedButtonSpy.valid)
         verify(!group.checkedButton)
 
-        var button1 = createTemporaryObject(button, testCase, {checked: true})
-        var button2 = createTemporaryObject(button, testCase, {checked: false})
-        var button3 = createTemporaryObject(button, testCase, {checked: true, objectName: "3"})
+        var button1 = button.createObject(testCase, {checked: true})
+        var button2 = button.createObject(testCase, {checked: false})
+        var button3 = button.createObject(testCase, {checked: true, objectName: "3"})
 
         // add checked
         group.addButton(button1)
@@ -155,20 +169,22 @@ TestCase {
         compare(button2.checked, false)
         compare(button3.checked, false)
         compare(checkedButtonSpy.count, 5)
+
+        group.destroy()
     }
 
     function test_buttons() {
-        var group = createTemporaryObject(buttonGroup, testCase)
+        var group = buttonGroup.createObject(testCase)
         verify(group)
 
-        var buttonsSpy = createTemporaryObject(signalSpy, testCase, {target: group, signalName: "buttonsChanged"})
+        buttonsSpy.target = group
         verify(buttonsSpy.valid)
 
         compare(group.buttons.length, 0)
         compare(group.checkedButton, null)
 
-        var button1 = createTemporaryObject(button, testCase, {checked: true})
-        var button2 = createTemporaryObject(button, testCase, {checked: false})
+        var button1 = button.createObject(testCase, {checked: true})
+        var button2 = button.createObject(testCase, {checked: false})
 
         group.buttons = [button1, button2]
         compare(group.buttons.length, 2)
@@ -177,7 +193,7 @@ TestCase {
         compare(group.checkedButton, button1)
         compare(buttonsSpy.count, 2)
 
-        var button3 = createTemporaryObject(button, testCase, {checked: true})
+        var button3 = button.createObject(testCase, {checked: true})
 
         group.addButton(button3)
         compare(group.buttons.length, 3)
@@ -196,30 +212,10 @@ TestCase {
 
         group.buttons = []
         compare(group.buttons.length, 0)
-        tryCompare(group, "checkedButton", null)
+        compare(group.checkedButton, null)
         compare(buttonsSpy.count, 5)
-    }
 
-    function test_clicked() {
-        var group = createTemporaryObject(buttonGroup, testCase)
-        verify(group)
-
-        var clickedSpy = createTemporaryObject(signalSpy, testCase, {target: group, signalName: "clicked"})
-        verify(clickedSpy.valid)
-
-        var button1 = createTemporaryObject(button, testCase)
-        var button2 = createTemporaryObject(button, testCase)
-
-        group.addButton(button1)
-        group.addButton(button2)
-
-        button1.clicked()
-        compare(clickedSpy.count, 1)
-        compare(clickedSpy.signalArguments[0][0], button1)
-
-        button2.clicked()
-        compare(clickedSpy.count, 2)
-        compare(clickedSpy.signalArguments[1][0], button2)
+        group.destroy()
     }
 
     Component {
@@ -276,7 +272,7 @@ TestCase {
     }
 
     function test_controls(data) {
-        var container = createTemporaryObject(data.component, testCase)
+        var container = data.component.createObject(testCase)
         verify(container)
 
         verify(!container.group.checkedButton)
@@ -298,16 +294,18 @@ TestCase {
         compare(container.control1.checked, false)
         compare(container.control2.checked, false)
         compare(container.control3.checked, true)
+
+        container.destroy()
     }
 
     function test_buttonDestroyed() {
-        var group = createTemporaryObject(buttonGroup, testCase)
+        var group = buttonGroup.createObject(testCase)
         verify(group)
 
-        var buttonsSpy = createTemporaryObject(signalSpy, testCase, {target: group, signalName: "buttonsChanged"})
+        buttonsSpy.target = group
         verify(buttonsSpy.valid)
 
-        var button1 = createTemporaryObject(button, testCase, {objectName: "button1", checked: true})
+        var button1 = button.createObject(testCase, {objectName: "button1", checked: true})
 
         group.addButton(button1)
         compare(group.buttons.length, 1)
@@ -320,62 +318,7 @@ TestCase {
         compare(group.buttons.length, 0)
         compare(group.checkedButton, null)
         compare(buttonsSpy.count, 2)
-    }
 
-    Component {
-        id: repeater
-        Column {
-            id: column
-            property ButtonGroup group: ButtonGroup { buttons: column.children }
-            property alias repeater: r
-            Repeater {
-                id: r
-                model: 3
-                delegate: RadioDelegate {
-                    checked: index == 0
-                    objectName: index
-                }
-            }
-        }
-    }
-
-    function test_repeater() {
-        var container = createTemporaryObject(repeater, testCase)
-        verify(container)
-
-        verify(container.group.checkedButton)
-        compare(container.group.checkedButton.objectName, "0")
-    }
-
-    Component {
-        id: checkedButtonColumn
-        Column {
-            id: column
-            ButtonGroup { buttons: column.children }
-            Repeater {
-                id: repeater
-                delegate: Button {
-                    checkable: true
-                    text: modelData
-                    onClicked: listModel.remove(index)
-                }
-                model: ListModel {
-                    id: listModel
-                    Component.onCompleted: {
-                        for (var i = 0; i < 10; ++i)
-                            append({text: i})
-                    }
-                }
-            }
-        }
-    }
-
-    function test_checkedButtonDestroyed() {
-        var column = createTemporaryObject(checkedButtonColumn, testCase)
-        verify(column)
-
-        waitForRendering(column)
-        mouseClick(column.children[0])
-        wait(0) // don't crash (QTBUG-62946, QTBUG-63470)
+        group.destroy()
     }
 }

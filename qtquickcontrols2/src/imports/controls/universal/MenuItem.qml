@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,62 +34,70 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.MenuItem {
     id: control
 
-    implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
-    implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             Math.max(contentItem.implicitHeight,
-                                      indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+    implicitWidth: background ? background.implicitWidth
+        : (label ? label.implicitWidth : 0) + (indicator ? indicator.implicitWidth : 0)
+            + (label && indicator ? spacing : 0) + leftPadding + rightPadding
+    implicitHeight: background ? background.implicitHeight
+        : (label ? label.implicitHeight : 0) + (indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
-    padding: 12
-    topPadding: padding - 1
-    bottomPadding: padding + 1
+    topPadding: 11
+    leftPadding: 12
+    rightPadding: 12
+    bottomPadding: 13
     spacing: 12
 
-    contentItem: Text {
-        leftPadding: !control.mirrored ? control.indicator.width + control.spacing : 0
-        rightPadding: control.mirrored ? control.indicator.width + control.spacing : 0
+    //! [label]
+    label: Text {
+        x: control.mirrored || !control.checkable ? control.leftPadding : (indicator.x + indicator.width + control.spacing)
+        y: control.topPadding
+        width: control.availableWidth - (control.checkable ? indicator.width + control.spacing : 0)
+        height: control.availableHeight
 
         text: control.text
         font: control.font
         color: !control.enabled ? control.Universal.baseLowColor : control.Universal.baseHighColor
         elide: Text.ElideRight
+        visible: control.text
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
     }
+    //! [label]
 
+    //! [indicator]
     indicator: Image {
         x: control.text ? (control.mirrored ? control.width - width - control.rightPadding : control.leftPadding) : control.leftPadding + (control.availableWidth - width) / 2
         y: control.topPadding + (control.availableHeight - height) / 2
 
         visible: control.checked
-        source: !control.checkable ? "" : "image://universal/checkmark/" + (!control.enabled ? control.Universal.baseLowColor : control.down ? control.Universal.baseHighColor : control.Universal.baseMediumHighColor)
-        sourceSize.width: width
-        sourceSize.height: height
+        source: !control.checkable ? "" : "image://universal/checkmark/" + (!control.enabled ? control.Universal.baseLowColor : control.pressed ? control.Universal.baseHighColor : control.Universal.baseMediumHighColor)
     }
+    //! [indicator]
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 200
         implicitHeight: 40
 
         color: !control.enabled ? control.Universal.baseLowColor :
-                control.down ? control.Universal.listMediumColor :
-                control.hovered ? control.Universal.listLowColor : control.Universal.altMediumLowColor
+                control.pressed ? control.Universal.listMediumColor : control.Universal.altMediumLowColor
 
         Rectangle {
             x: 1; y: 1
             width: parent.width - 2
             height: parent.height - 2
 
-            visible: control.visualFocus
+            visible: control.activeFocus
             color: control.Universal.accent
             opacity: control.Universal.theme === Universal.Light ? 0.4 : 0.6
         }
     }
+    //! [background]
 }

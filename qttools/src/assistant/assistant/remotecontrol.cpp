@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -64,22 +69,22 @@ RemoteControl::RemoteControl(MainWindow *mainWindow)
 
 {
     TRACE_OBJ
-    connect(m_mainWindow, &MainWindow::initDone,
-            this, &RemoteControl::applyCache);
+    connect(m_mainWindow, SIGNAL(initDone()), this, SLOT(applyCache()));
 
     StdInListener *l = new StdInListener(this);
-    connect(l, &StdInListener::receivedCommand,
-            this, &RemoteControl::handleCommandString);
+    connect(l, SIGNAL(receivedCommand(QString)),
+        this, SLOT(handleCommandString(QString)));
     l->start();
 }
 
 void RemoteControl::handleCommandString(const QString &cmdString)
 {
     TRACE_OBJ
-    const QStringList &commands = cmdString.split(QLatin1Char(';'));
-    for (const QString &command : commands) {
+    QStringList cmds = cmdString.split(QLatin1Char(';'));
+    QStringList::const_iterator it = cmds.constBegin();
+    while (it != cmds.constEnd()) {
         QString cmd, arg;
-        splitInputString(command, cmd, arg);
+        splitInputString(*it, cmd, arg);
 
         if (m_debug)
             QMessageBox::information(0, tr("Debugging Remote Control"),
@@ -109,6 +114,8 @@ void RemoteControl::handleCommandString(const QString &cmdString)
             handleUnregisterCommand(arg);
          else
             break;
+
+        ++it;
     }
     m_mainWindow->raise();
     m_mainWindow->activateWindow();
@@ -121,7 +128,7 @@ void RemoteControl::splitInputString(const QString &input, QString &cmd,
     QString cmdLine = input.trimmed();
     int i = cmdLine.indexOf(QLatin1Char(' '));
     cmd = cmdLine.left(i);
-    arg = cmdLine.mid(i + 1);
+    arg = cmdLine.mid(i+1);
     cmd = cmd.toLower();
 }
 
@@ -184,8 +191,11 @@ void RemoteControl::handleActivateKeywordCommand(const QString &arg)
                     m_mainWindow->setSearchVisible(true);
                     if (QHelpSearchQueryWidget *w = se->queryWidget()) {
                         w->collapseExtendedSearch();
-                        w->setSearchInput(arg);
-                        se->search(arg);
+                        QList<QHelpSearchQuery> queryList;
+                        queryList << QHelpSearchQuery(QHelpSearchQuery::DEFAULT,
+                            QStringList(arg));
+                        w->setQuery(queryList);
+                        se->search(queryList);
                     }
                 }
             } else {
@@ -203,9 +213,9 @@ void RemoteControl::handleActivateIdentifierCommand(const QString &arg)
         clearCache();
         m_activateIdentifier = arg;
     } else {
-        const QMap<QString, QUrl> links = helpEngine.linksForIdentifier(arg);
+        const QMap<QString, QUrl> &links = helpEngine.linksForIdentifier(arg);
         if (!links.isEmpty())
-            CentralWidget::instance()->setSource(links.first());
+            CentralWidget::instance()->setSource(links.constBegin().value());
     }
 }
 
@@ -270,10 +280,10 @@ void RemoteControl::applyCache()
         m_mainWindow->setIndexString(m_activateKeyword);
         helpEngine.indexWidget()->activateCurrentItem();
     } else if (!m_activateIdentifier.isEmpty()) {
-        const QMap<QString, QUrl> links =
+        QMap<QString, QUrl> links =
             helpEngine.linksForIdentifier(m_activateIdentifier);
         if (!links.isEmpty())
-            CentralWidget::instance()->setSource(links.first());
+            CentralWidget::instance()->setSource(links.constBegin().value());
     } else if (!m_currentFilter.isEmpty()) {
         helpEngine.setCurrentFilter(m_currentFilter);
     }

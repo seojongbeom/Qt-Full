@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,7 +36,6 @@
 #include <QtQml/qqml.h>
 #include <QtQuick/qquickitem.h>
 #include <QtQuick/qquickwindow.h>
-#include <qpa/qwindowsysteminterface.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -129,7 +122,7 @@ namespace QtQuickTest
 
     static void mouseEvent(MouseAction action, QWindow *window,
                            QObject *item, Qt::MouseButton button,
-                           Qt::KeyboardModifiers stateKey, const QPointF &_pos, int delay=-1)
+                           Qt::KeyboardModifiers stateKey, QPointF _pos, int delay=-1)
     {
         QTEST_ASSERT(window);
         QTEST_ASSERT(item);
@@ -198,7 +191,7 @@ namespace QtQuickTest
         }
     }
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
     static void mouseWheel(QWindow* window, QObject* item, Qt::MouseButtons buttons,
                                 Qt::KeyboardModifiers stateKey,
                                 QPointF _pos, int xDelta, int yDelta, int delay = -1)
@@ -242,7 +235,7 @@ bool QuickTestEvent::mousePress
     return true;
 }
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
 bool QuickTestEvent::mouseWheel(
     QObject *item, qreal x, qreal y, int buttons,
     int modifiers, int xDelta, int yDelta, int delay)
@@ -327,10 +320,6 @@ bool QuickTestEvent::mouseMove
 
 QWindow *QuickTestEvent::eventWindow(QObject *item)
 {
-    QWindow * window = qobject_cast<QWindow *>(item);
-    if (window)
-        return window;
-
     QQuickItem *quickItem = qobject_cast<QQuickItem *>(item);
     if (quickItem)
         return quickItem->window();
@@ -346,98 +335,6 @@ QWindow *QuickTestEvent::activeWindow()
     if (QWindow *window = QGuiApplication::focusWindow())
         return window;
     return eventWindow();
-}
-
-QQuickTouchEventSequence::QQuickTouchEventSequence(QuickTestEvent *testEvent, QObject *item)
-        : QObject(testEvent)
-        , m_sequence(QTest::touchEvent(testEvent->eventWindow(item), testEvent->touchDevice()))
-        , m_testEvent(testEvent)
-{
-}
-
-QObject *QQuickTouchEventSequence::press(int touchId, QObject *item, qreal x, qreal y)
-{
-    QWindow *view = m_testEvent->eventWindow(item);
-    if (view) {
-        QPointF pos(x, y);
-        QQuickItem *quickItem = qobject_cast<QQuickItem *>(item);
-        if (quickItem) {
-            pos = quickItem->mapToScene(pos);
-        }
-        m_sequence.press(touchId, pos.toPoint(), view);
-    }
-    return this;
-}
-
-QObject *QQuickTouchEventSequence::move(int touchId, QObject *item, qreal x, qreal y)
-{
-    QWindow *view = m_testEvent->eventWindow(item);
-    if (view) {
-        QPointF pos(x, y);
-        QQuickItem *quickItem = qobject_cast<QQuickItem *>(item);
-        if (quickItem) {
-            pos = quickItem->mapToScene(pos);
-        }
-        m_sequence.move(touchId, pos.toPoint(), view);
-    }
-    return this;
-}
-
-QObject *QQuickTouchEventSequence::release(int touchId, QObject *item, qreal x, qreal y)
-{
-    QWindow *view = m_testEvent->eventWindow(item);
-    if (view) {
-        QPointF pos(x, y);
-        QQuickItem *quickItem = qobject_cast<QQuickItem *>(item);
-        if (quickItem) {
-            pos = quickItem->mapToScene(pos);
-        }
-        m_sequence.release(touchId, pos.toPoint(), view);
-    }
-    return this;
-}
-
-QObject *QQuickTouchEventSequence::stationary(int touchId)
-{
-    m_sequence.stationary(touchId);
-    return this;
-}
-
-QObject *QQuickTouchEventSequence::commit()
-{
-    m_sequence.commit();
-    return this;
-}
-
-/*!
-    Return a simulated touchscreen, creating one if necessary
-
-    \internal
-*/
-
-QTouchDevice *QuickTestEvent::touchDevice()
-{
-    static QTouchDevice *device(nullptr);
-
-    if (!device) {
-        device = new QTouchDevice;
-        device->setType(QTouchDevice::TouchScreen);
-        QWindowSystemInterface::registerTouchDevice(device);
-    }
-    return device;
-}
-
-/*!
-    Creates a new QQuickTouchEventSequence.
-
-    If valid, \a item determines the QWindow that touch events are sent to.
-    Test code should use touchEvent() from the QML TestCase type.
-
-    \internal
-*/
-QQuickTouchEventSequence *QuickTestEvent::touchEvent(QObject *item)
-{
-    return new QQuickTouchEventSequence(this, item);
 }
 
 QT_END_NAMESPACE

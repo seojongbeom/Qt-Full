@@ -1,7 +1,7 @@
 CONFIG += testcase
 
 TARGET = tst_touchmouse
-QT += core-private qml-private quick-private  testlib
+QT += core-private gui-private qml-private quick-private  testlib
 
 macx:CONFIG -= app_bundle
 
@@ -14,3 +14,4 @@ TESTDATA = data/*
 
 # OTHER_FILES += data/foo.qml
 
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

@@ -36,7 +36,7 @@
 HB_BEGIN_DECLS
 
 
-HB_EXTERN void
+void
 hb_ot_font_set_funcs (hb_font_t *font);
 
 

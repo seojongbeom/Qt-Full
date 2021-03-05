@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -123,8 +128,6 @@ private slots:
     void about_to_be_signals();
     void modify_through_delegate();
     void bindingsOnGetResult();
-    void stringifyModelEntry();
-    void qobjectTrackerForDynamicModelObjects();
 };
 
 bool tst_qqmllistmodel::compareVariantList(const QVariantList &testList, QVariant object)
@@ -449,7 +452,6 @@ void tst_qqmllistmodel::dynamic_data()
         QTest::newRow("get2") << "{get(-1) === undefined}" << 1 << "" << dr;
         QTest::newRow("get3") << "{append({'foo':123});get(0) != undefined}" << 1 << "" << dr;
         QTest::newRow("get4") << "{append({'foo':123});get(0).foo}" << 123 << "" << dr;
-        QTest::newRow("get5") << "{append({'foo':123});get(0) == get(0)}" << 1 << "" << dr;
         QTest::newRow("get-modify1") << "{append({'foo':123,'bar':456});get(0).foo = 333;get(0).foo}" << 333 << "" << dr;
         QTest::newRow("get-modify2") << "{append({'z':1});append({'foo':123,'bar':456});get(1).bar = 999;get(1).bar}" << 999 << "" << dr;
 
@@ -1483,55 +1485,6 @@ void tst_qqmllistmodel::bindingsOnGetResult()
     QVERIFY(!obj.isNull());
 
     QVERIFY(obj->property("success").toBool());
-}
-
-void tst_qqmllistmodel::stringifyModelEntry()
-{
-    QQmlEngine engine;
-    QQmlComponent component(&engine);
-    component.setData(
-                      "import QtQuick 2.0\n"
-                      "Item {\n"
-                      "   ListModel {\n"
-                      "       id: testModel\n"
-                      "       objectName: \"testModel\"\n"
-                      "       ListElement { name: \"Joe\"; age: 22 }\n"
-                      "   }\n"
-                      "}\n", QUrl());
-    QScopedPointer<QObject> scene(component.create());
-    QQmlListModel *model = scene->findChild<QQmlListModel*>("testModel");
-    QQmlExpression expr(engine.rootContext(), model, "JSON.stringify(get(0));");
-    QVariant v = expr.evaluate();
-    QVERIFY2(!expr.hasError(), QTest::toString(expr.error().toString()));
-    const QString expectedString = QStringLiteral("{\"age\":22,\"name\":\"Joe\"}");
-    QCOMPARE(v.toString(), expectedString);
-}
-
-void tst_qqmllistmodel::qobjectTrackerForDynamicModelObjects()
-{
-    QQmlEngine engine;
-    QQmlComponent component(&engine);
-    component.setData(
-                      "import QtQuick 2.0\n"
-                      "Item {\n"
-                      "   ListModel {\n"
-                      "       id: testModel\n"
-                      "       objectName: \"testModel\"\n"
-                      "       ListElement { name: \"Joe\"; age: 22 }\n"
-                      "   }\n"
-                      "}\n", QUrl());
-    QScopedPointer<QObject> scene(component.create());
-    QQmlListModel *model = scene->findChild<QQmlListModel*>("testModel");
-    QQmlExpression expr(engine.rootContext(), model, "get(0);");
-    QVariant v = expr.evaluate();
-    QVERIFY2(!expr.hasError(), QTest::toString(expr.error().toString()));
-
-    QObject *obj = v.value<QObject*>();
-    QVERIFY(obj);
-
-    QQmlData *ddata = QQmlData::get(obj, /*create*/false);
-    QVERIFY(ddata);
-    QVERIFY(!ddata->jsWrapper.isNullOrUndefined());
 }
 
 QTEST_MAIN(tst_qqmllistmodel)

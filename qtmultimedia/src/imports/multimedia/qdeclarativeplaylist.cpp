@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -424,29 +418,6 @@ bool QDeclarativePlaylist::addItem(const QUrl &source)
 }
 
 /*!
-    \qmlmethod bool QtMultimedia::Playlist::addItems(sources)
-
-    Appends the list of URLs in \a sources to the playlist.
-
-    Returns true if the \a sources are added successfully.
-
-    \since 5.7
-*/
-bool QDeclarativePlaylist::addItems(const QList<QUrl> &sources)
-{
-    if (sources.isEmpty())
-        return false;
-
-    QList<QMediaContent> contents;
-    QList<QUrl>::const_iterator it = sources.constBegin();
-    while (it != sources.constEnd()) {
-        contents.push_back(QMediaContent(*it));
-        ++it;
-    }
-    return m_playlist->addMedia(contents);
-}
-
-/*!
     \qmlmethod bool QtMultimedia::Playlist::insertItem(index, source)
 
     Inserts the \a source URL to the playlist at the given \a index.
@@ -459,43 +430,6 @@ bool QDeclarativePlaylist::insertItem(int index, const QUrl &source)
 }
 
 /*!
-    \qmlmethod bool QtMultimedia::Playlist::insertItems(index, sources)
-
-    Inserts the list of URLs in \a sources to the playlist at the given \a index.
-
-    Returns true if the \a sources are added successfully.
-
-    \since 5.7
-*/
-bool QDeclarativePlaylist::insertItems(int index, const QList<QUrl> &sources)
-{
-    if (sources.empty())
-        return false;
-
-    QList<QMediaContent> contents;
-    QList<QUrl>::const_iterator it = sources.constBegin();
-    while (it != sources.constEnd()) {
-        contents.push_back(QMediaContent(*it));
-        ++it;
-    }
-    return m_playlist->insertMedia(index, contents);
-}
-
-/*!
-    \qmlmethod bool QtMultimedia::Playlist::moveItem(from, to)
-
-    Moves the item at index position \a from to index position \a to.
-
-    Returns true if the item is moved successfully.
-
-    \since 5.7
-*/
-bool QDeclarativePlaylist::moveItem(int from, int to)
-{
-    return m_playlist->moveMedia(from, to);
-}
-
-/*!
     \qmlmethod bool QtMultimedia::Playlist::removeItem(index)
 
     Removed the item at the given \a index from the playlist.
@@ -505,20 +439,6 @@ bool QDeclarativePlaylist::moveItem(int from, int to)
 bool QDeclarativePlaylist::removeItem(int index)
 {
     return m_playlist->removeMedia(index);
-}
-
-/*!
-    \qmlmethod bool QtMultimedia::Playlist::removeItems(int start, int end)
-
-    Removes items in the playlist from \a start to \a end inclusive.
-
-    Returns true if the items are removed successfully.
-
-    \since 5.7
-*/
-bool QDeclarativePlaylist::removeItems(int start, int end)
-{
-    return m_playlist->removeMedia(start, end);
 }
 
 /*!

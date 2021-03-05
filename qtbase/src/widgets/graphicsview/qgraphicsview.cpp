@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -271,6 +265,8 @@ static const int QGRAPHICSVIEW_PREALLOC_STYLE_OPTIONS = 503; // largest prime < 
 #include "qgraphicsview.h"
 #include "qgraphicsview_p.h"
 
+#ifndef QT_NO_GRAPHICSVIEW
+
 #include "qgraphicsitem.h"
 #include "qgraphicsitem_p.h"
 #include "qgraphicsscene.h"
@@ -351,7 +347,7 @@ QGraphicsViewPrivate::QGraphicsViewPrivate()
       viewportUpdateMode(QGraphicsView::MinimalViewportUpdate),
       optimizationFlags(0),
       scene(0),
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
       rubberBanding(false),
       rubberBandSelectionMode(Qt::IntersectsItemShape),
       rubberBandSelectionOperation(Qt::ReplaceSelection),
@@ -631,7 +627,7 @@ void QGraphicsViewPrivate::mouseMoveEventHandler(QMouseEvent *event)
 {
     Q_Q(QGraphicsView);
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     updateRubberBand(event);
 #endif
 
@@ -706,7 +702,7 @@ void QGraphicsViewPrivate::mouseMoveEventHandler(QMouseEvent *event)
 /*!
     \internal
 */
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
 QRegion QGraphicsViewPrivate::rubberBandRegion(const QWidget *widget, const QRect &rect) const
 {
     QStyleHintReturnMask mask;
@@ -803,8 +799,7 @@ void QGraphicsViewPrivate::_q_setViewportCursor(const QCursor &cursor)
 void QGraphicsViewPrivate::_q_unsetViewportCursor()
 {
     Q_Q(QGraphicsView);
-    const auto items = q->items(lastMouseEvent.pos());
-    for (QGraphicsItem *item : items) {
+    foreach (QGraphicsItem *item, q->items(lastMouseEvent.pos())) {
         if (item->hasCursor()) {
             _q_setViewportCursor(item->cursor());
             return;
@@ -1027,7 +1022,9 @@ bool QGraphicsViewPrivate::updateRegion(const QRectF &rect, const QTransform &xf
     if (!intersectsViewport(viewRect, viewport->width(), viewport->height()))
         return false; // Update region for sure outside viewport.
 
-    for (QRect viewRect : region) {
+    const QVector<QRect> &rects = region.rects();
+    for (int i = 0; i < rects.size(); ++i) {
+        viewRect = rects.at(i);
         if (dontAdjustForAntialiasing)
             viewRect.adjust(-1, -1, 1, 1);
         else
@@ -1142,7 +1139,7 @@ QList<QGraphicsItem *> QGraphicsViewPrivate::findItems(const QRegion &exposedReg
     // the expose region, convert it to a path, and then search for items
     // using QGraphicsScene::items(QPainterPath);
     QRegion adjustedRegion;
-    for (const QRect &r : exposedRegion)
+    foreach (const QRect &r, exposedRegion.rects())
         adjustedRegion += r.adjusted(-1, -1, 1, 1);
 
     const QPainterPath exposedScenePath(q->mapToScene(qt_regionToPath(adjustedRegion)));
@@ -1292,7 +1289,10 @@ void QGraphicsView::setRenderHint(QPainter::RenderHint hint, bool enabled)
 {
     Q_D(QGraphicsView);
     QPainter::RenderHints oldHints = d->renderHints;
-    d->renderHints.setFlag(hint, enabled);
+    if (enabled)
+        d->renderHints |= hint;
+    else
+        d->renderHints &= ~hint;
     if (oldHints != d->renderHints)
         d->updateAll();
 }
@@ -1455,7 +1455,10 @@ void QGraphicsView::setOptimizationFlags(OptimizationFlags flags)
 void QGraphicsView::setOptimizationFlag(OptimizationFlag flag, bool enabled)
 {
     Q_D(QGraphicsView);
-    d->optimizationFlags.setFlag(flag, enabled);
+    if (enabled)
+        d->optimizationFlags |= flag;
+    else
+        d->optimizationFlags &= ~flag;
 }
 
 /*!
@@ -1506,7 +1509,7 @@ void QGraphicsView::setDragMode(DragMode mode)
 #endif
 }
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
 /*!
     \property QGraphicsView::rubberBandSelectionMode
     \brief the behavior for selecting items with a rubber band selection rectangle.
@@ -2373,7 +2376,7 @@ QGraphicsItem *QGraphicsView::itemAt(const QPoint &pos) const
     Q_D(const QGraphicsView);
     if (!d->scene)
         return 0;
-    const QList<QGraphicsItem *> itemsAtPos = items(pos);
+    QList<QGraphicsItem *> itemsAtPos = items(pos);
     return itemsAtPos.isEmpty() ? 0 : itemsAtPos.first();
 }
 
@@ -2462,7 +2465,7 @@ QPolygonF QGraphicsView::mapToScene(const QPolygon &polygon) const
 {
     QPolygonF poly;
     poly.reserve(polygon.count());
-    for (const QPoint &point : polygon)
+    foreach (const QPoint &point, polygon)
         poly << mapToScene(point);
     return poly;
 }
@@ -2558,7 +2561,7 @@ QPolygon QGraphicsView::mapFromScene(const QPolygonF &polygon) const
 {
     QPolygon poly;
     poly.reserve(polygon.count());
-    for (const QPointF &point : polygon)
+    foreach (const QPointF &point, polygon)
         poly << mapFromScene(point);
     return poly;
 }
@@ -2671,9 +2674,11 @@ void QGraphicsView::updateScene(const QList<QRectF> &rects)
 
     // Extract and reset dirty scene rect info.
     QVector<QRect> dirtyViewportRects;
-    dirtyViewportRects.reserve(d->dirtyRegion.rectCount() + rects.count());
-    for (const QRect &dirtyRect : d->dirtyRegion)
-        dirtyViewportRects += dirtyRect;
+    const QVector<QRect> &dirtyRects = d->dirtyRegion.rects();
+    const int dirtyRectsCount = dirtyRects.size();
+    dirtyViewportRects.reserve(dirtyRectsCount + rects.count());
+    for (int i = 0; i < dirtyRectsCount; ++i)
+        dirtyViewportRects += dirtyRects.at(i);
     d->dirtyRegion = QRegion();
     d->dirtyBoundingRect = QRect();
 
@@ -2689,7 +2694,7 @@ void QGraphicsView::updateScene(const QList<QRectF> &rects)
     QTransform transform = viewportTransform();
 
     // Convert scene rects to viewport rects.
-    for (const QRectF &rect : rects) {
+    foreach (const QRectF &rect, rects) {
         QRect xrect = transform.mapRect(rect).toAlignedRect();
         if (!(d->optimizationFlags & DontAdjustForAntialiasing))
             xrect.adjust(-2, -2, 2, 2);
@@ -2786,8 +2791,7 @@ void QGraphicsView::setupViewport(QWidget *widget)
 
 #ifndef QT_NO_GESTURES
     if (d->scene) {
-        const auto gestures = d->scene->d_func()->grabbedGestures.keys();
-        for (Qt::GestureType gesture : gestures)
+        foreach (Qt::GestureType gesture, d->scene->d_func()->grabbedGestures.keys())
             widget->grabGesture(gesture);
     }
 #endif
@@ -2858,7 +2862,7 @@ bool QGraphicsView::viewportEvent(QEvent *event)
         // the mouse grab.
         // Remove all popups when the scene loses focus.
         if (!d->scene->d_func()->popupWidgets.isEmpty())
-            d->scene->d_func()->removePopup(d->scene->d_func()->popupWidgets.constFirst());
+            d->scene->d_func()->removePopup(d->scene->d_func()->popupWidgets.first());
         QApplication::sendEvent(d->scene, event);
         break;
     case QEvent::Show:
@@ -2882,7 +2886,7 @@ bool QGraphicsView::viewportEvent(QEvent *event)
             || (QApplication::activeModalWidget() && QApplication::activeModalWidget() != window())
             || (QApplication::activeWindow() != window())) {
             if (!d->scene->d_func()->popupWidgets.isEmpty())
-                d->scene->d_func()->removePopup(d->scene->d_func()->popupWidgets.constFirst());
+                d->scene->d_func()->removePopup(d->scene->d_func()->popupWidgets.first());
         }
         d->useLastMouseEvent = false;
         // a hack to pass a viewport pointer to the scene inside the leave event
@@ -2994,12 +2998,12 @@ void QGraphicsView::contextMenuEvent(QContextMenuEvent *event)
 }
 #endif // QT_NO_CONTEXTMENU
 
-#if QT_CONFIG(draganddrop)
 /*!
     \reimp
 */
 void QGraphicsView::dropEvent(QDropEvent *event)
 {
+#ifndef QT_NO_DRAGANDDROP
     Q_D(QGraphicsView);
     if (!d->scene || !d->sceneInteractionAllowed)
         return;
@@ -3018,6 +3022,10 @@ void QGraphicsView::dropEvent(QDropEvent *event)
 
     delete d->lastDragDropEvent;
     d->lastDragDropEvent = 0;
+
+#else
+    Q_UNUSED(event)
+#endif
 }
 
 /*!
@@ -3025,6 +3033,7 @@ void QGraphicsView::dropEvent(QDropEvent *event)
 */
 void QGraphicsView::dragEnterEvent(QDragEnterEvent *event)
 {
+#ifndef QT_NO_DRAGANDDROP
     Q_D(QGraphicsView);
     if (!d->scene || !d->sceneInteractionAllowed)
         return;
@@ -3047,6 +3056,9 @@ void QGraphicsView::dragEnterEvent(QDragEnterEvent *event)
         event->setAccepted(true);
         event->setDropAction(sceneEvent.dropAction());
     }
+#else
+    Q_UNUSED(event)
+#endif
 }
 
 /*!
@@ -3054,6 +3066,7 @@ void QGraphicsView::dragEnterEvent(QDragEnterEvent *event)
 */
 void QGraphicsView::dragLeaveEvent(QDragLeaveEvent *event)
 {
+#ifndef QT_NO_DRAGANDDROP
     Q_D(QGraphicsView);
     if (!d->scene || !d->sceneInteractionAllowed)
         return;
@@ -3083,6 +3096,9 @@ void QGraphicsView::dragLeaveEvent(QDragLeaveEvent *event)
     // Accept the originating event if the scene accepted the scene event.
     if (sceneEvent.isAccepted())
         event->setAccepted(true);
+#else
+    Q_UNUSED(event)
+#endif
 }
 
 /*!
@@ -3090,6 +3106,7 @@ void QGraphicsView::dragLeaveEvent(QDragLeaveEvent *event)
 */
 void QGraphicsView::dragMoveEvent(QDragMoveEvent *event)
 {
+#ifndef QT_NO_DRAGANDDROP
     Q_D(QGraphicsView);
     if (!d->scene || !d->sceneInteractionAllowed)
         return;
@@ -3108,8 +3125,10 @@ void QGraphicsView::dragMoveEvent(QDragMoveEvent *event)
     event->setAccepted(sceneEvent.isAccepted());
     if (sceneEvent.isAccepted())
         event->setDropAction(sceneEvent.dropAction());
+#else
+    Q_UNUSED(event)
+#endif
 }
-#endif // QT_CONFIG(draganddrop)
 
 /*!
     \reimp
@@ -3272,7 +3291,7 @@ void QGraphicsView::mousePressEvent(QMouseEvent *event)
         }
     }
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     if (d->dragMode == QGraphicsView::RubberBandDrag && !d->rubberBanding) {
         if (d->sceneInteractionAllowed) {
             // Rubberbanding is only allowed in interactive mode.
@@ -3334,7 +3353,7 @@ void QGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
     Q_D(QGraphicsView);
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     if (d->dragMode == QGraphicsView::RubberBandDrag && d->sceneInteractionAllowed && !event->buttons()) {
         if (d->rubberBanding) {
             if (d->viewportUpdateMode != QGraphicsView::NoViewportUpdate){
@@ -3407,7 +3426,7 @@ void QGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 #endif
 }
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
 /*!
     \reimp
 */
@@ -3435,7 +3454,7 @@ void QGraphicsView::wheelEvent(QWheelEvent *event)
     if (!event->isAccepted())
         QAbstractScrollArea::wheelEvent(event);
 }
-#endif // QT_CONFIG(wheelevent)
+#endif // QT_NO_WHEELEVENT
 
 /*!
     \reimp
@@ -3457,7 +3476,7 @@ void QGraphicsView::paintEvent(QPaintEvent *event)
 
     // Set up the painter
     QPainter painter(viewport());
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     if (d->rubberBanding && !d->rubberBandRect.isEmpty())
         painter.save();
 #endif
@@ -3473,7 +3492,7 @@ void QGraphicsView::paintEvent(QPaintEvent *event)
 
     // Draw background
     if ((d->cacheMode & CacheBackground)
-#if 0 // Used to be included in Qt4 for Q_WS_X11
+#ifdef Q_DEAD_CODE_FROM_QT4_X11
         && X11->use_xrender
 #endif
         ) {
@@ -3581,7 +3600,7 @@ void QGraphicsView::paintEvent(QPaintEvent *event)
     // Foreground
     drawForeground(&painter, exposedSceneRect);
 
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
     // Rubberband
     if (d->rubberBanding && !d->rubberBandRect.isEmpty()) {
         painter.restore();
@@ -3649,7 +3668,7 @@ void QGraphicsView::scrollContentsBy(int dx, int dy)
     if (d->viewportUpdateMode != QGraphicsView::NoViewportUpdate) {
         if (d->viewportUpdateMode != QGraphicsView::FullViewportUpdate) {
             if (d->accelerateScrolling) {
-#if QT_CONFIG(rubberband)
+#ifndef QT_NO_RUBBERBAND
                 // Update new and old rubberband regions
                 if (!d->rubberBandRect.isEmpty()) {
                     QRegion rubberBandRegion(d->rubberBandRegion(viewport(), d->rubberBandRect));
@@ -3672,7 +3691,7 @@ void QGraphicsView::scrollContentsBy(int dx, int dy)
     d->updateLastCenterPoint();
 
     if ((d->cacheMode & CacheBackground)
-#if 0 // Used to be included in Qt4 for Q_WS_X11
+#ifdef Q_DEAD_CODE_FROM_QT4_X11
         && X11->use_xrender
 #endif
         ) {
@@ -3933,3 +3952,5 @@ QRectF QGraphicsViewPrivate::mapToScene(const QRectF &rect) const
 QT_END_NAMESPACE
 
 #include "moc_qgraphicsview.cpp"
+
+#endif // QT_NO_GRAPHICSVIEW

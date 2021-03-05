@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,6 +41,7 @@
 #include <private/gstvideoconnector_p.h>
 #endif
 #include <private/qgstutils_p.h>
+#include <private/playlistfileparser_p.h>
 #include <private/qgstutils_p.h>
 
 #include <gst/gstvalue.h>
@@ -126,7 +121,7 @@ QGstreamerPlayerSession::QGstreamerPlayerSession(QObject *parent)
      m_bus(0),
      m_videoOutput(0),
      m_renderer(0),
-#if QT_CONFIG(gstreamer_app)
+#if defined(HAVE_GST_APPSRC)
      m_appSrc(0),
 #endif
      m_videoProbe(0),
@@ -143,12 +138,21 @@ QGstreamerPlayerSession::QGstreamerPlayerSession(QObject *parent)
      m_displayPrerolledFrame(true),
      m_sourceType(UnknownSrc),
      m_everPlayed(false),
-     m_isLiveSource(false)
+     m_isLiveSource(false),
+     m_isPlaylist(false)
 {
+    gboolean result = gst_type_find_register(0, "playlist", GST_RANK_MARGINAL, playlistTypeFindFunction, 0, 0, this, 0);
+    Q_ASSERT(result == TRUE);
+    Q_UNUSED(result);
+
     m_playbin = gst_element_factory_make(QT_GSTREAMER_PLAYBIN_ELEMENT_NAME, NULL);
     if (m_playbin) {
         //GST_PLAY_FLAG_NATIVE_VIDEO omits configuration of ffmpegcolorspace and videoscale,
         //since those elements are included in the video output bin when necessary.
+#ifdef Q_WS_MAEMO_6
+        int flags = GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO |
+                    GST_PLAY_FLAG_NATIVE_VIDEO | GST_PLAY_FLAG_NATIVE_AUDIO;
+#else
         int flags = GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO;
         QByteArray envFlags = qgetenv("QT_GSTREAMER_PLAYBIN_FLAGS");
         if (!envFlags.isEmpty()) {
@@ -158,10 +162,10 @@ QGstreamerPlayerSession::QGstreamerPlayerSession(QObject *parent)
             flags |= GST_PLAY_FLAG_NATIVE_VIDEO;
 #endif
         }
+#endif
         g_object_set(G_OBJECT(m_playbin), "flags", flags, NULL);
 
-        const QByteArray envAudioSink = qgetenv("QT_GSTREAMER_PLAYBIN_AUDIOSINK");
-        GstElement *audioSink = gst_element_factory_make(envAudioSink.isEmpty() ? "autoaudiosink" : envAudioSink, "audiosink");
+        GstElement *audioSink = gst_element_factory_make("autoaudiosink", "audiosink");
         if (audioSink) {
             if (usePlaybinVolume()) {
                 m_audioSink = audioSink;
@@ -238,7 +242,7 @@ QGstreamerPlayerSession::QGstreamerPlayerSession(QObject *parent)
         g_signal_connect(G_OBJECT(m_playbin), "audio-changed", G_CALLBACK(handleStreamsChange), this);
         g_signal_connect(G_OBJECT(m_playbin), "text-changed", G_CALLBACK(handleStreamsChange), this);
 
-#if QT_CONFIG(gstreamer_app)
+#if defined(HAVE_GST_APPSRC)
         g_signal_connect(G_OBJECT(m_playbin), "deep-notify::source", G_CALLBACK(configureAppSrcElement), this);
 #endif
     }
@@ -268,7 +272,7 @@ GstElement *QGstreamerPlayerSession::playbin() const
     return m_playbin;
 }
 
-#if QT_CONFIG(gstreamer_app)
+#if defined(HAVE_GST_APPSRC)
 void QGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *orig, GParamSpec *pspec, QGstreamerPlayerSession* self)
 {
     Q_UNUSED(object);
@@ -289,13 +293,14 @@ void QGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *o
 
 void QGstreamerPlayerSession::loadFromStream(const QNetworkRequest &request, QIODevice *appSrcStream)
 {
-#if QT_CONFIG(gstreamer_app)
+#if defined(HAVE_GST_APPSRC)
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
 #endif
     m_request = request;
     m_duration = -1;
     m_lastPosition = 0;
+    m_isPlaylist = false;
 
     if (!m_appSrc)
         m_appSrc = new QGstAppSrc(this);
@@ -325,8 +330,9 @@ void QGstreamerPlayerSession::loadFromUri(const QNetworkRequest &request)
     m_request = request;
     m_duration = -1;
     m_lastPosition = 0;
+    m_isPlaylist = false;
 
-#if QT_CONFIG(gstreamer_app)
+#if defined(HAVE_GST_APPSRC)
     if (m_appSrc) {
         m_appSrc->deleteLater();
         m_appSrc = 0;
@@ -892,9 +898,13 @@ bool QGstreamerPlayerSession::play()
     if (m_playbin) {
         m_pendingState = QMediaPlayer::PlayingState;
         if (gst_element_set_state(m_playbin, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
-            qWarning() << "GStreamer; Unable to play -" << m_request.url().toString();
-            m_pendingState = m_state = QMediaPlayer::StoppedState;
-            emit stateChanged(m_state);
+            if (!m_isPlaylist) {
+                qWarning() << "GStreamer; Unable to play -" << m_request.url().toString();
+                m_pendingState = m_state = QMediaPlayer::StoppedState;
+                emit stateChanged(m_state);
+            } else {
+                return true;
+            }
         } else {
             resumeVideoProbes();
             return true;
@@ -915,9 +925,13 @@ bool QGstreamerPlayerSession::pause()
             return true;
 
         if (gst_element_set_state(m_playbin, GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE) {
-            qWarning() << "GStreamer; Unable to pause -" << m_request.url().toString();
-            m_pendingState = m_state = QMediaPlayer::StoppedState;
-            emit stateChanged(m_state);
+            if (!m_isPlaylist) {
+                qWarning() << "GStreamer; Unable to pause -" << m_request.url().toString();
+                m_pendingState = m_state = QMediaPlayer::StoppedState;
+                emit stateChanged(m_state);
+            } else {
+                return true;
+            }
         } else {
             resumeVideoProbes();
             return true;
@@ -1286,7 +1300,7 @@ bool QGstreamerPlayerSession::processBusMessage(const QGstreamerMessage &message
                 if (err->domain == GST_STREAM_ERROR && err->code == GST_STREAM_ERROR_CODEC_NOT_FOUND)
                     emit error(int(QMediaPlayer::FormatError), tr("Cannot play stream of type: <unknown>"));
                 // GStreamer shows warning for HTTP playlists
-                if (err && err->message)
+                if (!m_isPlaylist)
                     qWarning() << "Warning:" << QString::fromUtf8(err->message);
                 g_error_free(err);
                 g_free(debug);
@@ -1294,6 +1308,10 @@ bool QGstreamerPlayerSession::processBusMessage(const QGstreamerMessage &message
                 GError *err;
                 gchar *debug;
                 gst_message_parse_error(gm, &err, &debug);
+
+                // remember playlist value,
+                // it could be set to false after call to processInvalidMedia
+                bool isPlaylist = m_isPlaylist;
 
                 // Nearly all errors map to ResourceError
                 QMediaPlayer::Error qerror = QMediaPlayer::ResourceError;
@@ -1303,7 +1321,7 @@ bool QGstreamerPlayerSession::processBusMessage(const QGstreamerMessage &message
                     qerror = QMediaPlayer::AccessDeniedError;
                 }
                 processInvalidMedia(qerror, QString::fromUtf8(err->message));
-                if (err && err->message)
+                if (!isPlaylist)
                     qWarning() << "Error:" << QString::fromUtf8(err->message);
 
                 g_error_free(err);
@@ -1515,8 +1533,7 @@ void QGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
     if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "extra-headers") != 0) {
         GstStructure *extras = qt_gst_structure_new_empty("extras");
 
-        const auto rawHeaderList = self->m_request.rawHeaderList();
-        for (const QByteArray &rawHeader : rawHeaderList) {
+        foreach (const QByteArray &rawHeader, self->m_request.rawHeaderList()) {
             if (rawHeader == userAgentString) // Filter User-Agent
                 continue;
             else {
@@ -1541,17 +1558,10 @@ void QGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
     //set timeout property to 30 seconds
     const int timeout = 30;
     if (qstrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstUDPSrc") == 0) {
-        quint64 convertedTimeout = timeout;
-#if GST_CHECK_VERSION(1,0,0)
-        // Gst 1.x -> nanosecond
-        convertedTimeout *= 1000000000;
-#else
-        // Gst 0.10 -> microsecond
-        convertedTimeout *= 1000000;
-#endif
-        g_object_set(G_OBJECT(source), "timeout", convertedTimeout, NULL);
-        self->m_sourceType = UDPSrc;
+        //udpsrc timeout unit = microsecond
         //The udpsrc is always a live source.
+        g_object_set(G_OBJECT(source), "timeout", G_GUINT64_CONSTANT(timeout*1000000), NULL);
+        self->m_sourceType = UDPSrc;
         self->m_isLiveSource = true;
     } else if (qstrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstSoupHTTPSrc") == 0) {
         //souphttpsrc timeout unit = second
@@ -1746,9 +1756,14 @@ void QGstreamerPlayerSession::processInvalidMedia(QMediaPlayer::Error errorCode,
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
 #endif
-    emit invalidMedia();
-    stop();
-    emit error(int(errorCode), errorString);
+    if (m_isPlaylist) {
+        stop();
+        emit error(int(QMediaPlayer::MediaIsPlaylist), tr("Media is loaded as a playlist"));
+    } else {
+        emit invalidMedia();
+        stop();
+        emit error(int(errorCode), errorString);
+    }
 }
 
 void QGstreamerPlayerSession::showPrerollFrames(bool enabled)
@@ -1871,6 +1886,34 @@ void QGstreamerPlayerSession::resumeVideoProbes()
 {
     if (m_videoProbe)
         m_videoProbe->stopFlushing();
+}
+
+void QGstreamerPlayerSession::playlistTypeFindFunction(GstTypeFind *find, gpointer userData)
+{
+    QGstreamerPlayerSession* session = (QGstreamerPlayerSession*)userData;
+
+    const gchar *uri = 0;
+#if GST_CHECK_VERSION(1,0,0)
+    g_object_get(G_OBJECT(session->m_playbin), "current-uri", &uri, NULL);
+#else
+    g_object_get(G_OBJECT(session->m_playbin), "uri", &uri, NULL);
+#endif
+
+    guint64 length = gst_type_find_get_length(find);
+    if (!length)
+        length = 1024;
+    else
+        length = qMin(length, guint64(1024));
+
+    while (length > 0) {
+        const guint8 *data = gst_type_find_peek(find, 0, length);
+        if (data) {
+            session->m_isPlaylist = (QPlaylistFileParser::findPlaylistType(QString::fromUtf8(uri), 0, data, length) != QPlaylistFileParser::UNKNOWN);
+            return;
+        }
+        length >>= 1; // for HTTP files length is not available,
+                      // so we have to try different buffer sizes
+    }
 }
 
 QT_END_NAMESPACE

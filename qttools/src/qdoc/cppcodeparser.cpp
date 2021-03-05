@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,8 +54,6 @@ static bool inMacroCommand_ = false;
 static bool parsingHeaderFile_ = false;
 QStringList CppCodeParser::exampleFiles;
 QStringList CppCodeParser::exampleDirs;
-QSet<QString> CppCodeParser::excludeDirs;
-QSet<QString> CppCodeParser::excludeFiles;
 CppCodeParser* CppCodeParser::cppParser_ = 0;
 
 /*!
@@ -75,7 +78,7 @@ CppCodeParser::~CppCodeParser()
 /*!
   The constructor initializes a map of special node types
   for identifying important nodes. And it initializes
-  some filters for identifying and excluding certain kinds of files.
+  some filters for identifying certain kinds of files.
  */
 void CppCodeParser::initializeParser(const Config &config)
 {
@@ -96,10 +99,6 @@ void CppCodeParser::initializeParser(const Config &config)
     exampleDirs = config.getCanonicalPathList(CONFIG_EXAMPLEDIRS);
     QStringList exampleFilePatterns = config.getStringList(
                 CONFIG_EXAMPLES + Config::dot + CONFIG_FILEEXTENSIONS);
-
-    // Used for excluding dirs and files from the list of example files
-    excludeDirs = QSet<QString>::fromList(config.getCanonicalPathList(CONFIG_EXCLUDEDIRS));
-    excludeFiles = QSet<QString>::fromList(config.getCanonicalPathList(CONFIG_EXCLUDEFILES));
 
     if (!exampleFilePatterns.isEmpty())
         exampleNameFilter = exampleFilePatterns.join(' ');
@@ -122,8 +121,6 @@ void CppCodeParser::initializeParser(const Config &config)
 void CppCodeParser::terminateParser()
 {
     nodeTypeMap.clear();
-    excludeDirs.clear();
-    excludeFiles.clear();
     CodeParser::terminateParser();
 }
 
@@ -436,7 +433,7 @@ Node* CppCodeParser::processTopicCommand(const Doc& doc,
             if ((type == Node::Class) || (type == Node::Namespace)) {
                 if (path.size() > 1) {
                     path.pop_back();
-                    QString ns = path.join(QLatin1String("::"));
+                    QString ns = path.join("::");
                     qdb_->insertOpenNamespace(ns);
                 }
             }
@@ -522,8 +519,6 @@ Node* CppCodeParser::processTopicCommand(const Doc& doc,
                 ptype = Node::FAQPage;
             else if (t == "ditamap")
                 ptype = Node::DitaMapPage;
-            else if (t == "attribution")
-                ptype = Node::AttributionPage;
         }
         DocumentNode* dn = 0;
         if (ptype == Node::DitaMapPage)
@@ -972,6 +967,7 @@ void CppCodeParser::processOtherMetaCommand(const Doc& doc,
         else if (node->isQmlType() || node->isJsType()) {
             QmlTypeNode* qmlType = static_cast<QmlTypeNode*>(node);
             qmlType->setQmlBaseName(arg);
+            QmlTypeNode::addInheritedBy(arg,node);
         }
     }
     else if (command == COMMAND_QMLINSTANTIATES) {
@@ -1314,8 +1310,8 @@ bool CppCodeParser::matchDataType(CodeChunk *dataType, QString *var, bool qProp)
                 if (varComment.exactMatch(previousLexeme()))
                     *var = varComment.cap(1);
             }
-            else if (qProp && (match(Tok_default) || match(Tok_final) || match(Tok_override))) {
-                // Hack to make 'default', 'final' and 'override'  work again in Q_PROPERTY
+            else if (qProp && (match(Tok_default) || match(Tok_final))) {
+                // Hack to make 'default' and 'final' work again in Q_PROPERTY
                 *var = previousLexeme();
             }
         }
@@ -1431,8 +1427,8 @@ bool CppCodeParser::matchFunctionDecl(Aggregate *parent,
             matched_static = true;
             break;
         case Tok_QT_DEPRECATED:
+            // no break here.
             matched_QT_DEPRECATED = true;
-            Q_FALLTHROUGH(); // no break here.
         case Tok_QT_COMPAT:
             matched_compat = true;
             break;
@@ -1587,7 +1583,6 @@ bool CppCodeParser::matchFunctionDecl(Aggregate *parent,
     // look for const
     bool matchedConst = match(Tok_const);
     bool matchFinal = match(Tok_final);
-    bool matchOverride = match(Tok_override);
 
     bool isDeleted = false;
     bool isDefaulted = false;
@@ -1707,7 +1702,6 @@ bool CppCodeParser::matchFunctionDecl(Aggregate *parent,
         func->setIsDeleted(isDeleted);
         func->setIsDefaulted(isDefaulted);
         func->setFinal(matchFinal);
-        func->setOverride(matchOverride);
         if (isQPrivateSignal)
             func->setPrivateSignal();
     }
@@ -2075,7 +2069,7 @@ bool CppCodeParser::matchProperty(Aggregate *parent)
     property->setDataType(dataType.toString());
 
     while (tok != Tok_RightParen && tok != Tok_Eoi) {
-        if (!match(Tok_Ident) && !match(Tok_default) && !match(Tok_final) && !match(Tok_override))
+        if (!match(Tok_Ident) && !match(Tok_default) && !match(Tok_final))
             return false;
         QString key = previousLexeme();
         QString value;
@@ -2650,9 +2644,9 @@ void CppCodeParser::createExampleFileNodes(DocumentNode *dn)
         sizeOfBoringPartOfName = sizeOfBoringPartOfName - 2;
     fullPath.truncate(fullPath.lastIndexOf('/'));
 
-    QStringList exampleFiles = Config::getFilesHere(fullPath, exampleNameFilter, Location(), excludeDirs, excludeFiles);
+    QStringList exampleFiles = Config::getFilesHere(fullPath,exampleNameFilter);
     QString imagesPath = fullPath + "/images";
-    QStringList imageFiles = Config::getFilesHere(imagesPath, exampleImageFilter, Location(), excludeDirs, excludeFiles);
+    QStringList imageFiles = Config::getFilesHere(imagesPath,exampleImageFilter);
     if (!exampleFiles.isEmpty()) {
         // move main.cpp and to the end, if it exists
         QString mainCpp;

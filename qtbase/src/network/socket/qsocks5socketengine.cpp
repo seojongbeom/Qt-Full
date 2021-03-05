@@ -1,43 +1,39 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include "qsocks5socketengine_p.h"
+
+#ifndef QT_NO_SOCKS5
 
 #include "qtcpsocket.h"
 #include "qudpsocket.h"
@@ -52,7 +48,6 @@
 #include "qurl.h"
 #include "qauthenticator.h"
 #include "private/qiodevice_p.h"
-#include "private/qringbuffer_p.h"
 #include <qendian.h>
 #include <qnetworkinterface.h>
 
@@ -63,7 +58,11 @@ static const int MaxWriteBufferSize = 128*1024;
 //#define QSOCKS5SOCKETLAYER_DEBUG
 
 #define MAX_DATA_DUMP 256
+#if !defined(Q_OS_WINCE)
 #define SOCKS5_BLOCKING_BIND_TIMEOUT 5000
+#else
+#define SOCKS5_BLOCKING_BIND_TIMEOUT 10000
+#endif
 
 #define Q_INIT_CHECK(returnValue) do { \
     if (!d->data) { \
@@ -279,7 +278,7 @@ struct QSocks5Data
 
 struct QSocks5ConnectData : public QSocks5Data
 {
-    QRingBuffer readBuffer;
+    QByteArray readBuffer;
 };
 
 struct QSocks5BindData : public QSocks5Data
@@ -347,7 +346,7 @@ void QSocks5BindStore::add(qintptr socketDescriptor, QSocks5BindData *bindData)
 {
     QMutexLocker lock(&mutex);
     if (store.contains(socketDescriptor)) {
-        // qDebug("delete it");
+        // qDebug() << "delete it";
     }
     bindData->timeStamp.start();
     store.insert(socketDescriptor, bindData);
@@ -365,11 +364,9 @@ bool QSocks5BindStore::contains(qintptr socketDescriptor)
 QSocks5BindData *QSocks5BindStore::retrieve(qintptr socketDescriptor)
 {
     QMutexLocker lock(&mutex);
-    const auto it = store.constFind(socketDescriptor);
-    if (it == store.cend())
+    if (!store.contains(socketDescriptor))
         return 0;
-    QSocks5BindData *bindData = it.value();
-    store.erase(it);
+    QSocks5BindData *bindData = store.take(socketDescriptor);
     if (bindData) {
         if (bindData->controlSocket->thread() != QThread::currentThread()) {
             qWarning("Can not access socks5 bind data from different thread");
@@ -391,12 +388,12 @@ void QSocks5BindStore::timerEvent(QTimerEvent * event)
     QMutexLocker lock(&mutex);
     if (event->timerId() == sweepTimerId) {
         QSOCKS5_DEBUG << "QSocks5BindStore performing sweep";
-        for (auto it = store.begin(), end = store.end(); it != end;) {
+        QMutableHashIterator<int, QSocks5BindData *> it(store);
+        while (it.hasNext()) {
+            it.next();
             if (it.value()->timeStamp.hasExpired(350000)) {
                 QSOCKS5_DEBUG << "QSocks5BindStore removing JJJJ";
-                it = store.erase(it);
-            } else {
-                ++it;
+                it.remove();
             }
         }
     }
@@ -617,7 +614,7 @@ void QSocks5SocketEnginePrivate::setErrorState(Socks5State state, const QString 
                                  QSocks5SocketEngine::tr("Connection to proxy timed out"));
                     break;
                 }
-                Q_FALLTHROUGH();
+                /* fall through */
             default:
                 q->setError(controlSocketError, data->controlSocket->errorString());
                 break;
@@ -884,7 +881,6 @@ void QSocks5SocketEnginePrivate::parseRequestMethodReply()
         localPort = port;
 
         if (mode == ConnectMode) {
-            inboundStreamCount = outboundStreamCount = 1;
             socks5State = Connected;
             // notify the upper layer that we're done
             q->setState(QAbstractSocket::ConnectedState);
@@ -1000,17 +996,13 @@ QSocks5SocketEngine::~QSocks5SocketEngine()
         delete d->bindData;
 }
 
-static int nextDescriptor()
-{
-    static QBasicAtomicInt counter;
-    return 1 + counter.fetchAndAddRelaxed(1);
-}
+static QBasicAtomicInt descriptorCounter = Q_BASIC_ATOMIC_INITIALIZER(1);
 
 bool QSocks5SocketEngine::initialize(QAbstractSocket::SocketType type, QAbstractSocket::NetworkLayerProtocol protocol)
 {
     Q_D(QSocks5SocketEngine);
 
-    d->socketDescriptor = nextDescriptor();
+    d->socketDescriptor = descriptorCounter.fetchAndAddRelaxed(1);
 
     d->socketType = type;
     d->socketProtocol = protocol;
@@ -1049,7 +1041,6 @@ bool QSocks5SocketEngine::initialize(qintptr socketDescriptor, QAbstractSocket::
         d->localAddress = bindData->localAddress;
         d->peerPort = bindData->peerPort;
         d->peerAddress = bindData->peerAddress;
-        d->inboundStreamCount = d->outboundStreamCount = 1;
         delete bindData;
 
         QObject::connect(d->data->controlSocket, SIGNAL(connected()), this, SLOT(_q_controlSocketConnected()),
@@ -1192,11 +1183,11 @@ void QSocks5SocketEnginePrivate::_q_controlSocketReadNotification()
         case Connected: {
             QByteArray buf;
             if (!data->authenticator->unSeal(data->controlSocket, &buf)) {
-                // qDebug("unseal error maybe need to wait for more data");
+                // qDebug() << "unseal error maybe need to wait for more data";
             }
             if (buf.size()) {
                 QSOCKS5_DEBUG << dump(buf);
-                connectData->readBuffer.append(buf);
+                connectData->readBuffer += buf;
                 emitReadNotification();
             }
             break;
@@ -1208,7 +1199,7 @@ void QSocks5SocketEnginePrivate::_q_controlSocketReadNotification()
                 break;
             }
 
-            Q_FALLTHROUGH();
+            // fall through
         default:
             qWarning("QSocks5SocketEnginePrivate::_q_controlSocketReadNotification: "
                      "Unexpectedly received data while in state=%d and mode=%d",
@@ -1273,6 +1264,13 @@ void QSocks5SocketEnginePrivate::_q_controlSocketStateChanged(QAbstractSocket::S
 }
 
 #ifndef QT_NO_UDPSOCKET
+void QSocks5SocketEnginePrivate::checkForDatagrams() const
+{
+    // udp should be unbuffered so we need to do some polling at certain points
+    if (udpData->udpSocket->hasPendingDatagrams())
+        const_cast<QSocks5SocketEnginePrivate *>(this)->_q_udpSocketReadNotification();
+}
+
 void QSocks5SocketEnginePrivate::_q_udpSocketReadNotification()
 {
     QSOCKS5_D_DEBUG << "_q_udpSocketReadNotification()";
@@ -1484,7 +1482,6 @@ void QSocks5SocketEngine::close()
         }
         d->data->controlSocket->close();
     }
-    d->inboundStreamCount = d->outboundStreamCount = 0;
 #ifndef QT_NO_UDPSOCKET
     if (d->udpData && d->udpData->udpSocket)
         d->udpData->udpSocket->close();
@@ -1509,7 +1506,7 @@ qint64 QSocks5SocketEngine::read(char *data, qint64 maxlen)
     Q_D(QSocks5SocketEngine);
     QSOCKS5_Q_DEBUG << "read( , maxlen = " << maxlen << ')';
     if (d->mode == QSocks5SocketEnginePrivate::ConnectMode) {
-        if (d->connectData->readBuffer.isEmpty()) {
+        if (d->connectData->readBuffer.size() == 0) {
             if (d->data->controlSocket->state() == QAbstractSocket::UnconnectedState) {
                 //imitate remote closed
                 close();
@@ -1521,7 +1518,9 @@ qint64 QSocks5SocketEngine::read(char *data, qint64 maxlen)
                 return 0;       // nothing to be read
             }
         }
-        const qint64 copy = d->connectData->readBuffer.read(data, maxlen);
+        qint64 copy = qMin<qint64>(d->connectData->readBuffer.size(), maxlen);
+        memcpy(data, d->connectData->readBuffer.constData(), copy);
+        d->connectData->readBuffer.remove(0, copy);
         QSOCKS5_DEBUG << "read" << dump(QByteArray(data, copy));
         return copy;
 #ifndef QT_NO_UDPSOCKET
@@ -1599,28 +1598,11 @@ bool QSocks5SocketEngine::setMulticastInterface(const QNetworkInterface &)
 }
 #endif // QT_NO_NETWORKINTERFACE
 
-bool QSocks5SocketEngine::hasPendingDatagrams() const
-{
-    Q_D(const QSocks5SocketEngine);
-    Q_INIT_CHECK(false);
-
-    return !d->udpData->pendingDatagrams.isEmpty();
-}
-
-qint64 QSocks5SocketEngine::pendingDatagramSize() const
-{
-    Q_D(const QSocks5SocketEngine);
-
-    if (!d->udpData->pendingDatagrams.isEmpty())
-        return d->udpData->pendingDatagrams.head().data.size();
-    return 0;
-}
-#endif // QT_NO_UDPSOCKET
-
 qint64 QSocks5SocketEngine::readDatagram(char *data, qint64 maxlen, QIpPacketHeader *header, PacketHeaderOptions)
 {
-#ifndef QT_NO_UDPSOCKET
     Q_D(QSocks5SocketEngine);
+
+    d->checkForDatagrams();
 
     if (d->udpData->pendingDatagrams.isEmpty())
         return 0;
@@ -1631,17 +1613,10 @@ qint64 QSocks5SocketEngine::readDatagram(char *data, qint64 maxlen, QIpPacketHea
     header->senderAddress = datagram.address;
     header->senderPort = datagram.port;
     return copyLen;
-#else
-    Q_UNUSED(data)
-    Q_UNUSED(maxlen)
-    Q_UNUSED(header)
-    return -1;
-#endif // QT_NO_UDPSOCKET
 }
 
 qint64 QSocks5SocketEngine::writeDatagram(const char *data, qint64 len, const QIpPacketHeader &header)
 {
-#ifndef QT_NO_UDPSOCKET
     Q_D(QSocks5SocketEngine);
 
     // it is possible to send with out first binding with udp, but socks5 requires a bind.
@@ -1678,13 +1653,29 @@ qint64 QSocks5SocketEngine::writeDatagram(const char *data, qint64 len, const QI
     }
 
     return len;
-#else
-    Q_UNUSED(data)
-    Q_UNUSED(len)
-    Q_UNUSED(header)
-    return -1;
-#endif // QT_NO_UDPSOCKET
 }
+
+bool QSocks5SocketEngine::hasPendingDatagrams() const
+{
+    Q_D(const QSocks5SocketEngine);
+    Q_INIT_CHECK(false);
+
+    d->checkForDatagrams();
+
+    return !d->udpData->pendingDatagrams.isEmpty();
+}
+
+qint64 QSocks5SocketEngine::pendingDatagramSize() const
+{
+    Q_D(const QSocks5SocketEngine);
+
+    d->checkForDatagrams();
+
+    if (!d->udpData->pendingDatagrams.isEmpty())
+        return d->udpData->pendingDatagrams.head().data.size();
+    return 0;
+}
+#endif // QT_NO_UDPSOCKET
 
 qint64 QSocks5SocketEngine::bytesToWrite() const
 {
@@ -1935,5 +1926,7 @@ QAbstractSocketEngine *QSocks5SocketEngineHandler::createSocketEngine(qintptr so
     }
     return 0;
 }
+
+#endif // QT_NO_SOCKS5
 
 QT_END_NAMESPACE

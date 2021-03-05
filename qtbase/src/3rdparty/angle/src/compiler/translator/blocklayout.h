@@ -26,8 +26,6 @@ struct InterfaceBlock;
 
 struct COMPILER_EXPORT BlockMemberInfo
 {
-    BlockMemberInfo() : offset(-1), arrayStride(-1), matrixStride(-1), isRowMajorMatrix(false) {}
-
     BlockMemberInfo(int offset, int arrayStride, int matrixStride, bool isRowMajorMatrix)
         : offset(offset),
           arrayStride(arrayStride),
@@ -50,11 +48,12 @@ class COMPILER_EXPORT BlockLayoutEncoder
 {
   public:
     BlockLayoutEncoder();
-    virtual ~BlockLayoutEncoder() {}
 
     BlockMemberInfo encodeType(GLenum type, unsigned int arraySize, bool isRowMajorMatrix);
 
     size_t getBlockSize() const { return mCurrentOffset * BytesPerComponent; }
+    size_t getCurrentRegister() const { return mCurrentOffset / ComponentsPerRegister; }
+    size_t getCurrentElement() const { return mCurrentOffset % ComponentsPerRegister; }
 
     virtual void enterAggregateType() = 0;
     virtual void exitAggregateType() = 0;
@@ -82,20 +81,12 @@ class COMPILER_EXPORT Std140BlockEncoder : public BlockLayoutEncoder
   public:
     Std140BlockEncoder();
 
-    void enterAggregateType() override;
-    void exitAggregateType() override;
+    virtual void enterAggregateType();
+    virtual void exitAggregateType();
 
   protected:
-    void getBlockLayoutInfo(GLenum type,
-                            unsigned int arraySize,
-                            bool isRowMajorMatrix,
-                            int *arrayStrideOut,
-                            int *matrixStrideOut) override;
-    void advanceOffset(GLenum type,
-                       unsigned int arraySize,
-                       bool isRowMajorMatrix,
-                       int arrayStride,
-                       int matrixStride) override;
+    virtual void getBlockLayoutInfo(GLenum type, unsigned int arraySize, bool isRowMajorMatrix, int *arrayStrideOut, int *matrixStrideOut);
+    virtual void advanceOffset(GLenum type, unsigned int arraySize, bool isRowMajorMatrix, int arrayStride, int matrixStride);
 };
 
 }

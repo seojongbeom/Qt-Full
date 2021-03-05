@@ -63,6 +63,7 @@ PRIVATE_QML_FILES += \
     $$PWD/TextInputWithHandles.qml \
     $$PWD/EditMenu.qml \
     $$PWD/EditMenu_base.qml \
+    $$PWD/EditMenu_ios.qml \
     $$PWD/ToolMenuButton.qml \
     $$PWD/BasicTableView.qml \
     $$PWD/TableViewItemDelegateLoader.qml \

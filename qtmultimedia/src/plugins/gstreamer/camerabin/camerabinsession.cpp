@@ -1,43 +1,35 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
-
-#include <QtMultimedia/private/qtmultimediaglobal_p.h>
 #include "camerabinsession.h"
 #include "camerabincontrol.h"
 #include "camerabinrecorder.h"
@@ -46,7 +38,7 @@
 #include "camerabinvideoencoder.h"
 #include "camerabinimageencoder.h"
 
-#if QT_CONFIG(gstreamer_photography)
+#ifdef HAVE_GST_PHOTOGRAPHY
 #include "camerabinexposure.h"
 #include "camerabinflash.h"
 #include "camerabinfocus.h"
@@ -65,7 +57,7 @@
 #include <qmediarecorder.h>
 #include <qvideosurfaceformat.h>
 
-#if QT_CONFIG(gstreamer_photography)
+#ifdef HAVE_GST_PHOTOGRAPHY
 #include <gst/interfaces/photography.h>
 #endif
 
@@ -129,7 +121,7 @@ CameraBinSession::CameraBinSession(GstElementFactory *sourceFactory, QObject *pa
      m_videoInputFactory(0),
      m_viewfinder(0),
      m_viewfinderInterface(0),
-#if QT_CONFIG(gstreamer_photography)
+#ifdef HAVE_GST_PHOTOGRAPHY
      m_cameraExposureControl(0),
      m_cameraFlashControl(0),
      m_cameraFocusControl(0),
@@ -212,15 +204,9 @@ CameraBinSession::~CameraBinSession()
 
     if (m_sourceFactory)
         gst_object_unref(GST_OBJECT(m_sourceFactory));
-
-    if (m_cameraSrc)
-        gst_object_unref(GST_OBJECT(m_cameraSrc));
-
-    if (m_videoSrc)
-        gst_object_unref(GST_OBJECT(m_videoSrc));
 }
 
-#if QT_CONFIG(gstreamer_photography)
+#ifdef HAVE_GST_PHOTOGRAPHY
 GstPhotography *CameraBinSession::photography()
 {
     if (GST_IS_PHOTOGRAPHY(m_camerabin)) {
@@ -510,8 +496,8 @@ GstElement *CameraBinSession::buildCameraSource()
                 const QByteArray envVideoSource = qgetenv("QT_GSTREAMER_CAMERABIN_VIDEOSRC");
 
                 if (!envVideoSource.isEmpty()) {
-                    const QList<QByteArray> sources = envVideoSource.split(',');
-                    for (const QByteArray &source : sources) {
+                    QList<QByteArray> sources = envVideoSource.split(',');
+                    foreach (const QByteArray &source, sources) {
                         QList<QByteArray> keyValue = source.split('=');
                         if (keyValue.count() == 1) {
                             m_videoSrc = gst_element_factory_make(keyValue.at(0), "camera_source");
@@ -544,12 +530,11 @@ GstElement *CameraBinSession::buildCameraSource()
         }
     }
 
-    if (m_cameraSrc != camSrc) {
+    if (m_cameraSrc != camSrc)
         g_object_set(G_OBJECT(m_camerabin), CAMERA_SOURCE_PROPERTY, m_cameraSrc, NULL);
-        // Unref only if camSrc is not m_cameraSrc to prevent double unrefing.
-        if (camSrc)
-            gst_object_unref(GST_OBJECT(camSrc));
-    }
+
+    if (camSrc)
+        gst_object_unref(GST_OBJECT(camSrc));
 
     return m_cameraSrc;
 }
@@ -683,8 +668,6 @@ QCameraViewfinderSettings CameraBinSession::viewfinderSettings() const
 
 void CameraBinSession::ViewfinderProbe::probeCaps(GstCaps *caps)
 {
-    QGstreamerVideoProbeControl::probeCaps(caps);
-
     // Update actual viewfinder settings on viewfinder caps change
     const GstStructure *s = gst_caps_get_structure(caps, 0);
     const QPair<qreal, qreal> frameRate = QGstUtils::structureFrameRateRange(s);
@@ -816,7 +799,7 @@ void CameraBinSession::start()
 
     m_recorderControl->applySettings();
 
-#if QT_CONFIG(gstreamer_encodingprofiles)
+#ifdef HAVE_GST_ENCODING_PROFILES
     GstEncodingContainerProfile *profile = m_recorderControl->videoProfile();
     g_object_set (G_OBJECT(m_camerabin),
                   "video-profile",
@@ -961,7 +944,7 @@ bool CameraBinSession::processSyncMessage(const QGstreamerMessage &message)
             }
             return true;
         }
-#if QT_CONFIG(gstreamer_photography)
+#ifdef HAVE_GST_PHOTOGRAPHY
         if (gst_structure_has_name(st, GST_PHOTOGRAPHY_AUTOFOCUS_DONE))
             m_cameraFocusControl->handleFocusMessage(gm);
 #endif
@@ -1085,11 +1068,6 @@ bool CameraBinSession::processBusMessage(const QGstreamerMessage &message)
     return false;
 }
 
-QGstreamerVideoProbeControl *CameraBinSession::videoProbe()
-{
-    return &m_viewfinderProbe;
-}
-
 QString CameraBinSession::currentContainerFormat() const
 {
     if (!m_muxer)
@@ -1121,7 +1099,7 @@ void CameraBinSession::recordVideo()
                                                                                                 : m_sink.toString(),
                                       QMediaStorageLocation::Movies,
                                       QLatin1String("clip_"),
-                                      QGstUtils::fileExtensionForMimeType(format));
+                                      m_mediaContainerControl->suggestedFileExtension(format));
 
     m_recordingActive = true;
     m_actualSink = QUrl::fromLocalFile(actualFileName);
@@ -1386,7 +1364,7 @@ QList<QSize> CameraBinSession::supportedResolutions(QPair<int,int> rate,
     //if the range is continuos, populate is with the common rates
     if (isContinuous && res.size() >= 2) {
         //fill the ragne with common value
-        static const QList<QSize> commonSizes =
+        static QList<QSize> commonSizes =
                 QList<QSize>() << QSize(128, 96)
                                << QSize(160,120)
                                << QSize(176, 144)
@@ -1408,7 +1386,7 @@ QList<QSize> CameraBinSession::supportedResolutions(QPair<int,int> rate,
         QSize maxSize = res.last();
         res.clear();
 
-        for (const QSize &candidate : commonSizes) {
+        foreach (const QSize &candidate, commonSizes) {
             int w = candidate.width();
             int h = candidate.height();
 

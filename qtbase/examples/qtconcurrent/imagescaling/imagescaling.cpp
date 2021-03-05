@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -48,10 +38,15 @@
 **
 ****************************************************************************/
 #include "imagescaling.h"
-
 #include <qmath.h>
 
-#include <functional>
+const int imageSize = 100;
+
+QImage scale(const QString &imageFileName)
+{
+    QImage image(imageFileName);
+    return image.scaled(QSize(imageSize, imageSize), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
 
 Images::Images(QWidget *parent)
     : QWidget(parent)
@@ -60,19 +55,19 @@ Images::Images(QWidget *parent)
     resize(800, 600);
 
     imageScaling = new QFutureWatcher<QImage>(this);
-    connect(imageScaling, &QFutureWatcher<QImage>::resultReadyAt, this, &Images::showImage);
-    connect(imageScaling, &QFutureWatcher<QImage>::finished, this, &Images::finished);
+    connect(imageScaling, SIGNAL(resultReadyAt(int)), SLOT(showImage(int)));
+    connect(imageScaling, SIGNAL(finished()), SLOT(finished()));
 
     openButton = new QPushButton(tr("Open Images"));
-    connect(openButton, &QPushButton::clicked, this, &Images::open);
+    connect(openButton, SIGNAL(clicked()), SLOT(open()));
 
     cancelButton = new QPushButton(tr("Cancel"));
     cancelButton->setEnabled(false);
-    connect(cancelButton, &QPushButton::clicked, imageScaling, &QFutureWatcher<QImage>::cancel);
+    connect(cancelButton, SIGNAL(clicked()), imageScaling, SLOT(cancel()));
 
     pauseButton = new QPushButton(tr("Pause/Resume"));
     pauseButton->setEnabled(false);
-    connect(pauseButton, &QPushButton::clicked, imageScaling, &QFutureWatcher<QImage>::togglePaused);
+    connect(pauseButton, SIGNAL(clicked()), imageScaling, SLOT(togglePaused()));
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(openButton);
@@ -108,10 +103,8 @@ void Images::open()
                             QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
                             "*.jpg *.png");
 
-    if (files.isEmpty())
+    if (files.count() == 0)
         return;
-
-    const int imageSize = 100;
 
     // Do a simple layout.
     qDeleteAll(labels);
@@ -126,11 +119,6 @@ void Images::open()
             labels.append(imageLabel);
         }
     }
-
-    std::function<QImage(const QString&)> scale = [imageSize](const QString &imageFileName) {
-        QImage image(imageFileName);
-        return image.scaled(QSize(imageSize, imageSize), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    };
 
     // Use mapped to run the thread safe scale function on the files.
     imageScaling->setFuture(QtConcurrent::mapped(files, scale));

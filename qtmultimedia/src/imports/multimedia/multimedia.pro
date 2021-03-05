@@ -1,7 +1,3 @@
-CXX_MODULE = multimedia
-TARGET  = declarative_multimedia
-TARGETPATH = QtMultimedia
-
 QT += qml quick network multimedia-private qtmultimediaquicktools-private
 
 HEADERS += \

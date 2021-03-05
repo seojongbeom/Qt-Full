@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Copyright (C) 2014 BlackBerry Limited. All rights reserved.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -58,7 +52,7 @@
 
 #ifdef Q_OS_WIN
 # include <private/qsystemlibrary_p.h>
-#elif QT_CONFIG(library)
+#else
 # include <QtCore/qlibrary.h>
 #endif
 #include <QtCore/qmutex.h>
@@ -125,7 +119,7 @@ void qsslSocketUnresolvedSymbolWarning(const char *functionName)
     qCWarning(lcSsl, "QSslSocket: cannot call unresolved function %s", functionName);
 }
 
-#if QT_CONFIG(library)
+#ifndef QT_NO_LIBRARY
 void qsslSocketCannotResolveSymbolWarning(const char *functionName)
 {
     qCWarning(lcSsl, "QSslSocket: cannot resolve %s", functionName);
@@ -151,10 +145,6 @@ DEFINEFUNC3(int, BIO_read, BIO *a, a, void *b, b, int c, c, return -1, return)
 DEFINEFUNC(BIO_METHOD *, BIO_s_mem, void, DUMMYARG, return 0, return)
 DEFINEFUNC3(int, BIO_write, BIO *a, a, const void *b, b, int c, c, return -1, return)
 DEFINEFUNC(int, BN_num_bits, const BIGNUM *a, a, return 0, return)
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-DEFINEFUNC2(int, BN_is_word, BIGNUM *a, a, BN_ULONG w, w, return 0, return)
-#endif
-DEFINEFUNC2(BN_ULONG, BN_mod_word, const BIGNUM *a, a, BN_ULONG w, w, return static_cast<BN_ULONG>(-1), return)
 #ifndef OPENSSL_NO_EC
 DEFINEFUNC(const EC_GROUP*, EC_KEY_get0_group, const EC_KEY* k, k, return 0, return)
 DEFINEFUNC(int, EC_GROUP_get_degree, const EC_GROUP* g, g, return 0, return)
@@ -206,20 +196,17 @@ DEFINEFUNC(int, OBJ_obj2nid, const ASN1_OBJECT *a, a, return NID_undef, return)
 DEFINEFUNC6(void *, PEM_ASN1_read_bio, d2i_of_void *a, a, const char *b, b, BIO *c, c, void **d, d, pem_password_cb *e, e, void *f, f, return 0, return)
 DEFINEFUNC6(void *, PEM_ASN1_write_bio, d2i_of_void *a, a, const char *b, b, BIO *c, c, void **d, d, pem_password_cb *e, e, void *f, f, return 0, return)
 #else
-DEFINEFUNC4(EVP_PKEY *, PEM_read_bio_PrivateKey, BIO *a, a, EVP_PKEY **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 DEFINEFUNC4(DSA *, PEM_read_bio_DSAPrivateKey, BIO *a, a, DSA **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 DEFINEFUNC4(RSA *, PEM_read_bio_RSAPrivateKey, BIO *a, a, RSA **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 #ifndef OPENSSL_NO_EC
 DEFINEFUNC4(EC_KEY *, PEM_read_bio_ECPrivateKey, BIO *a, a, EC_KEY **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 #endif
-DEFINEFUNC4(DH *, PEM_read_bio_DHparams, BIO *a, a, DH **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 DEFINEFUNC7(int, PEM_write_bio_DSAPrivateKey, BIO *a, a, DSA *b, b, const EVP_CIPHER *c, c, unsigned char *d, d, int e, e, pem_password_cb *f, f, void *g, g, return 0, return)
 DEFINEFUNC7(int, PEM_write_bio_RSAPrivateKey, BIO *a, a, RSA *b, b, const EVP_CIPHER *c, c, unsigned char *d, d, int e, e, pem_password_cb *f, f, void *g, g, return 0, return)
 #ifndef OPENSSL_NO_EC
 DEFINEFUNC7(int, PEM_write_bio_ECPrivateKey, BIO *a, a, EC_KEY *b, b, const EVP_CIPHER *c, c, unsigned char *d, d, int e, e, pem_password_cb *f, f, void *g, g, return 0, return)
 #endif
 #endif
-DEFINEFUNC4(EVP_PKEY *, PEM_read_bio_PUBKEY, BIO *a, a, EVP_PKEY **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 DEFINEFUNC4(DSA *, PEM_read_bio_DSA_PUBKEY, BIO *a, a, DSA **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 DEFINEFUNC4(RSA *, PEM_read_bio_RSA_PUBKEY, BIO *a, a, RSA **b, b, pem_password_cb *c, c, void *d, d, return 0, return)
 #ifndef OPENSSL_NO_EC
@@ -307,8 +294,6 @@ DEFINEFUNC2(void *, SSL_get_ex_data, const SSL *ssl, ssl, int idx, idx, return N
 #endif
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L && !defined(OPENSSL_NO_PSK)
 DEFINEFUNC2(void, SSL_set_psk_client_callback, SSL* ssl, ssl, q_psk_client_callback_t callback, callback, return, DUMMYARG)
-DEFINEFUNC2(void, SSL_set_psk_server_callback, SSL* ssl, ssl, q_psk_server_callback_t callback, callback, return, DUMMYARG)
-DEFINEFUNC2(int, SSL_CTX_use_psk_identity_hint, SSL_CTX* ctx, ctx, const char *hint, hint, return 0, return)
 #endif
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
 #ifndef OPENSSL_NO_SSL2
@@ -427,24 +412,10 @@ DEFINEFUNC3(void, SSL_CTX_set_next_proto_select_cb, SSL_CTX *s, s,
             void *arg, arg, return, DUMMYARG)
 DEFINEFUNC3(void, SSL_get0_next_proto_negotiated, const SSL *s, s,
             const unsigned char **data, data, unsigned *len, len, return, DUMMYARG)
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-DEFINEFUNC3(int, SSL_set_alpn_protos, SSL *s, s, const unsigned char *protos, protos,
-            unsigned protos_len, protos_len, return -1, return)
-DEFINEFUNC3(void, SSL_CTX_set_alpn_select_cb, SSL_CTX *s, s,
-            int (*cb) (SSL *ssl, const unsigned char **out,
-                       unsigned char *outlen,
-                       const unsigned char *in,
-                       unsigned int inlen, void *arg), cb,
-            void *arg, arg, return, DUMMYARG)
-DEFINEFUNC3(void, SSL_get0_alpn_selected, const SSL *s, s, const unsigned char **data, data,
-            unsigned *len, len, return, DUMMYARG)
-#endif // OPENSSL_VERSION_NUMBER >= 0x10002000L ...
 #endif // OPENSSL_VERSION_NUMBER >= 0x1000100fL ...
 DEFINEFUNC(DH *, DH_new, DUMMYARG, DUMMYARG, return 0, return)
 DEFINEFUNC(void, DH_free, DH *dh, dh, return, DUMMYARG)
 DEFINEFUNC3(DH *, d2i_DHparams, DH**a, a, const unsigned char **pp, pp, long length, length, return 0, return)
-DEFINEFUNC2(int, i2d_DHparams, DH *a, a, unsigned char **p, p, return -1, return)
-DEFINEFUNC2(int, DH_check, DH *dh, dh, int *codes, codes, return 0, return)
 DEFINEFUNC3(BIGNUM *, BN_bin2bn, const unsigned char *s, s, int len, len, BIGNUM *ret, ret, return 0, return)
 #ifndef OPENSSL_NO_EC
 DEFINEFUNC(EC_KEY *, EC_KEY_dup, const EC_KEY *ec, ec, return 0, return)
@@ -468,11 +439,12 @@ DEFINEFUNC(void, PKCS12_free, PKCS12 *pkcs12, pkcs12, return, DUMMYARG)
 
 #if !defined QT_LINKED_OPENSSL
 
-#if !QT_CONFIG(library)
+#ifdef QT_NO_LIBRARY
 bool q_resolveOpenSslSymbols()
 {
-    qCWarning(lcSsl, "QSslSocket: unable to resolve symbols. Qt is configured without the "
-                     "'library' feature, which means runtime resolving of libraries won't work.");
+    qCWarning(lcSsl, "QSslSocket: unable to resolve symbols. "
+                     "QT_NO_LIBRARY is defined which means runtime resolving of "
+                     "libraries won't work.");
     qCWarning(lcSsl, "Either compile Qt statically or with support for runtime resolving "
                      "of libraries.");
     return false;
@@ -571,16 +543,16 @@ static QStringList libraryPathList()
 Q_NEVER_INLINE
 static QStringList findAllLibs(QLatin1String filter)
 {
-    const QStringList paths = libraryPathList();
+    QStringList paths = libraryPathList();
     QStringList found;
     const QStringList filters((QString(filter)));
 
-    for (const QString &path : paths) {
+    foreach (const QString &path, paths) {
         QDir dir(path);
         QStringList entryList = dir.entryList(filters, QDir::Files);
 
         std::sort(entryList.begin(), entryList.end(), LibGreaterThan());
-        for (const QString &entry : qAsConst(entryList))
+        foreach (const QString &entry, entryList)
             found << path + QLatin1Char('/') + entry;
     }
 
@@ -669,17 +641,6 @@ static QPair<QLibrary*, QLibrary*> loadOpenSsl()
     // reason, we will search a few common paths (see findAllLibSsl() above) in hopes
     // we find one that works.
     //
-    // If that fails, for OpenSSL 1.0 we also try some fallbacks -- look up
-    // libssl.so with a hardcoded soname. The reason is QTBUG-68156: the binary
-    // builds of Qt happen (at the time of this writing) on RHEL machines,
-    // which change SHLIB_VERSION_NUMBER to a non-portable string. When running
-    // those binaries on the target systems, this code won't pick up
-    // libssl.so.MODIFIED_SHLIB_VERSION_NUMBER because it doesn't exist there.
-    // Given that the only 1.0 supported release (at the time of this writing)
-    // is 1.0.2, with soname "1.0.0", give that a try too. Note that we mandate
-    // OpenSSL >= 1.0.0 with a configure-time check, and OpenSSL has kept binary
-    // compatibility between 1.0.0 and 1.0.2.
-    //
     // It is important, however, to try the canonical name and the unversioned name
     // without going through the loop. By not specifying a path, we let the system
     // dlopen(3) function determine it for us. This will include any DT_RUNPATH or
@@ -699,25 +660,6 @@ static QPair<QLibrary*, QLibrary*> loadOpenSsl()
     } else {
         libssl->unload();
         libcrypto->unload();
-    }
-
-    // first-and-half attempts: for OpenSSL 1.0 try to load some hardcoded sonames:
-    // - "1.0.0" is the official upstream one
-    // - "1.0.2" is found on some distributions (e.g. Debian) that patch OpenSSL
-    static const QLatin1String fallbackSonames[] = {
-        QLatin1String("1.0.0"),
-        QLatin1String("1.0.2")
-    };
-
-    for (auto fallbackSoname : fallbackSonames) {
-        libssl->setFileNameAndVersion(QLatin1String("ssl"), fallbackSoname);
-        libcrypto->setFileNameAndVersion(QLatin1String("crypto"), fallbackSoname);
-        if (libcrypto->load() && libssl->load()) {
-            return pair;
-        } else {
-            libssl->unload();
-            libcrypto->unload();
-        }
     }
 #endif
 
@@ -740,16 +682,16 @@ static QPair<QLibrary*, QLibrary*> loadOpenSsl()
 #endif
 
     // third attempt: loop on the most common library paths and find libssl
-    const QStringList sslList = findAllLibSsl();
-    const QStringList cryptoList = findAllLibCrypto();
+    QStringList sslList = findAllLibSsl();
+    QStringList cryptoList = findAllLibCrypto();
 
-    for (const QString &crypto : cryptoList) {
+    foreach (const QString &crypto, cryptoList) {
         libcrypto->setFileNameAndVersion(crypto, -1);
         if (libcrypto->load()) {
             QFileInfo fi(crypto);
             QString version = fi.completeSuffix();
 
-            for (const QString &ssl : sslList) {
+            foreach (const QString &ssl, sslList) {
                 if (!ssl.endsWith(version))
                     continue;
 
@@ -820,10 +762,6 @@ bool q_resolveOpenSslSymbols()
     RESOLVEFUNC(EC_GROUP_get_degree)
 #endif
     RESOLVEFUNC(BN_num_bits)
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-    RESOLVEFUNC(BN_is_word)
-#endif
-    RESOLVEFUNC(BN_mod_word)
     RESOLVEFUNC(CRYPTO_free)
     RESOLVEFUNC(CRYPTO_num_locks)
     RESOLVEFUNC(CRYPTO_set_id_callback)
@@ -867,20 +805,17 @@ bool q_resolveOpenSslSymbols()
 #ifdef SSLEAY_MACROS // ### verify
     RESOLVEFUNC(PEM_ASN1_read_bio)
 #else
-    RESOLVEFUNC(PEM_read_bio_PrivateKey)
     RESOLVEFUNC(PEM_read_bio_DSAPrivateKey)
     RESOLVEFUNC(PEM_read_bio_RSAPrivateKey)
 #ifndef OPENSSL_NO_EC
     RESOLVEFUNC(PEM_read_bio_ECPrivateKey)
 #endif
-    RESOLVEFUNC(PEM_read_bio_DHparams)
     RESOLVEFUNC(PEM_write_bio_DSAPrivateKey)
     RESOLVEFUNC(PEM_write_bio_RSAPrivateKey)
 #ifndef OPENSSL_NO_EC
     RESOLVEFUNC(PEM_write_bio_ECPrivateKey)
 #endif
 #endif
-    RESOLVEFUNC(PEM_read_bio_PUBKEY)
     RESOLVEFUNC(PEM_read_bio_DSA_PUBKEY)
     RESOLVEFUNC(PEM_read_bio_RSA_PUBKEY)
 #ifndef OPENSSL_NO_EC
@@ -948,8 +883,6 @@ bool q_resolveOpenSslSymbols()
 #endif
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L && !defined(OPENSSL_NO_PSK)
     RESOLVEFUNC(SSL_set_psk_client_callback)
-    RESOLVEFUNC(SSL_set_psk_server_callback)
-    RESOLVEFUNC(SSL_CTX_use_psk_identity_hint)
 #endif
     RESOLVEFUNC(SSL_write)
 #ifndef OPENSSL_NO_SSL2
@@ -1033,16 +966,9 @@ bool q_resolveOpenSslSymbols()
     RESOLVEFUNC(SSL_CTX_set_next_proto_select_cb)
     RESOLVEFUNC(SSL_get0_next_proto_negotiated)
 #endif // OPENSSL_VERSION_NUMBER >= 0x1000100fL ...
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-    RESOLVEFUNC(SSL_set_alpn_protos)
-    RESOLVEFUNC(SSL_CTX_set_alpn_select_cb)
-    RESOLVEFUNC(SSL_get0_alpn_selected)
-#endif // OPENSSL_VERSION_NUMBER >= 0x10002000L ...
     RESOLVEFUNC(DH_new)
     RESOLVEFUNC(DH_free)
     RESOLVEFUNC(d2i_DHparams)
-    RESOLVEFUNC(i2d_DHparams)
-    RESOLVEFUNC(DH_check)
     RESOLVEFUNC(BN_bin2bn)
 #ifndef OPENSSL_NO_EC
     RESOLVEFUNC(EC_KEY_dup)
@@ -1058,21 +984,12 @@ bool q_resolveOpenSslSymbols()
     RESOLVEFUNC(d2i_PKCS12_bio)
     RESOLVEFUNC(PKCS12_free)
 
+    symbolsResolved = true;
     delete libs.first;
     delete libs.second;
-    if (!_q_SSLeay || q_SSLeay() >= 0x10100000L) {
-        // OpenSSL 1.1 deprecated and removed SSLeay. We consider a failure to
-        // resolve this symbol as a failure to resolve symbols.
-        // The right operand of '||' above ... a bit of paranoia.
-        qCWarning(lcSsl, "Incompatible version of OpenSSL");
-        return false;
-    }
-
-    symbolsResolved = true;
-
     return true;
 }
-#endif // QT_CONFIG(library)
+#endif // QT_NO_LIBRARY
 
 #else // !defined QT_LINKED_OPENSSL
 

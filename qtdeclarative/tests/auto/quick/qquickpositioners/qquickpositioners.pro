@@ -10,3 +10,4 @@ macx:CONFIG -= app_bundle
 TESTDATA = data/*
 
 QT += testlib
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

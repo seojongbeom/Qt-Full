@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,7 +41,7 @@
 #include <QCoreApplication>
 #include <QEasingCurve>
 #include <QTime>
-#include <QtCore/private/qnumeric_p.h>
+#include <QtNumeric>
 
 #include <algorithm>
 
@@ -154,7 +148,7 @@ void QQuickTimeLinePrivate::add(QQuickTimeLineObject &g, const Op &o)
     }
     if (!iter->ops.isEmpty() &&
        o.type == Op::Pause &&
-       iter->ops.constLast().type == Op::Pause) {
+       iter->ops.last().type == Op::Pause) {
         iter->ops.last().length += o.length;
         iter->length += o.length;
     } else {
@@ -387,7 +381,7 @@ void QQuickTimeLine::set(QQuickTimeLineValue &timeLineValue, qreal value)
 */
 int QQuickTimeLine::accel(QQuickTimeLineValue &timeLineValue, qreal velocity, qreal acceleration)
 {
-    if (qFuzzyIsNull(acceleration) || qt_is_nan(acceleration))
+    if (qFuzzyIsNull(acceleration) || qIsNaN(acceleration))
         return -1;
 
     if ((velocity > 0.0f) == (acceleration > 0.0f))
@@ -414,7 +408,7 @@ int QQuickTimeLine::accel(QQuickTimeLineValue &timeLineValue, qreal velocity, qr
 */
 int QQuickTimeLine::accel(QQuickTimeLineValue &timeLineValue, qreal velocity, qreal acceleration, qreal maxDistance)
 {
-    if (qFuzzyIsNull(maxDistance) || qt_is_nan(maxDistance) || qFuzzyIsNull(acceleration) || qt_is_nan(acceleration))
+    if (qFuzzyIsNull(maxDistance) || qIsNaN(maxDistance) || qFuzzyIsNull(acceleration) || qIsNaN(acceleration))
         return -1;
 
     Q_ASSERT(acceleration > 0.0f && maxDistance > 0.0f);
@@ -444,7 +438,7 @@ int QQuickTimeLine::accel(QQuickTimeLineValue &timeLineValue, qreal velocity, qr
 */
 int QQuickTimeLine::accelDistance(QQuickTimeLineValue &timeLineValue, qreal velocity, qreal distance)
 {
-    if (qFuzzyIsNull(distance) || qt_is_nan(distance) || qFuzzyIsNull(velocity) || qt_is_nan(velocity))
+    if (qFuzzyIsNull(distance) || qIsNaN(distance) || qFuzzyIsNull(velocity) || qIsNaN(velocity))
         return -1;
 
     Q_ASSERT((distance >= 0.0f) == (velocity >= 0.0f));

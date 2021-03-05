@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -55,7 +60,6 @@ QStringList librarySearchPath;
 QString codesignIdentiy;
 bool appstoreCompliant = false;
 int logLevel = 1;
-bool deployFramework = false;
 
 using std::cout;
 using std::endl;
@@ -297,15 +301,15 @@ FrameworkInfo parseOtoolLibraryLine(const QString &line, const QString &appBundl
                 foreach (QString path, librarySearchPath) {
                     if (!path.endsWith("/"))
                         path += '/';
-                    QString nameInPath = path + parts.join(QLatin1Char('/'));
+                    QString nameInPath = path + parts.join("/");
                     if (QFile::exists(nameInPath)) {
-                        info.frameworkDirectory = path + partsCopy.join(QLatin1Char('/'));
+                        info.frameworkDirectory = path + partsCopy.join("/");
                         break;
                     }
                 }
                 if (currentPart.contains(".framework")) {
                     if (info.frameworkDirectory.isEmpty())
-                        info.frameworkDirectory = "/Library/Frameworks/" + partsCopy.join(QLatin1Char('/'));
+                        info.frameworkDirectory = "/Library/Frameworks/" + partsCopy.join("/");
                     if (!info.frameworkDirectory.endsWith("/"))
                         info.frameworkDirectory += "/";
                     state = FrameworkName;
@@ -313,7 +317,7 @@ FrameworkInfo parseOtoolLibraryLine(const QString &line, const QString &appBundl
                     continue;
                 } else if (currentPart.contains(".dylib")) {
                     if (info.frameworkDirectory.isEmpty())
-                        info.frameworkDirectory = "/usr/lib/" + partsCopy.join(QLatin1Char('/'));
+                        info.frameworkDirectory = "/usr/lib/" + partsCopy.join("/");
                     if (!info.frameworkDirectory.endsWith("/"))
                         info.frameworkDirectory += "/";
                     state = DylibName;
@@ -824,11 +828,6 @@ void changeInstallName(const QString &bundlePath, const FrameworkInfo &framework
     }
 }
 
-void addRPath(const QString &rpath, const QString &binaryPath)
-{
-    runInstallNameTool(QStringList() << "-add_rpath" << rpath << binaryPath);
-}
-
 void deployRPaths(const QString &bundlePath, const QSet<QString> &rpaths, const QString &binaryPath, bool useLoaderPath)
 {
     const QString absFrameworksPath = QFileInfo(bundlePath).absoluteFilePath()
@@ -916,7 +915,6 @@ DeploymentInfo deployQtFrameworks(QList<FrameworkInfo> frameworks,
     QStringList copiedFrameworks;
     DeploymentInfo deploymentInfo;
     deploymentInfo.useLoaderPath = useLoaderPath;
-    deploymentInfo.isFramework = bundlePath.contains(".framework");
     QSet<QString> rpathsUsed;
 
     while (frameworks.isEmpty() == false) {
@@ -1052,13 +1050,6 @@ void deployPlugins(const ApplicationBundleInfo &appBundleInfo, const QString &pl
         }
     }
 
-    QStringList iconEngines = QDir(pluginSourcePath + QStringLiteral("/iconengines")).entryList(QStringList() << QStringLiteral("*.dylib"));
-    foreach (const QString &plugin, iconEngines) {
-        if (!plugin.endsWith(QStringLiteral("_debug.dylib"))) {
-            pluginList.append(QStringLiteral("iconengines/") + plugin);
-        }
-    }
-
     // Sql plugins if QtSql.framework is in use
     if (deploymentInfo.deployedFrameworks.contains(QStringLiteral("QtSql") + libInfixWithFramework)) {
         QStringList sqlPlugins = QDir(pluginSourcePath +  QStringLiteral("/sqldrivers")).entryList(QStringList() << QStringLiteral("*.dylib"));
@@ -1167,15 +1158,6 @@ void deployQmlImport(const QString &appBundlePath, const QSet<QString> &rpaths, 
     recursiveCopyAndDeploy(appBundlePath, rpaths, importSourcePath, importDestinationPath);
 }
 
-static bool importLessThan(const QVariant &v1, const QVariant &v2)
-{
-    QVariantMap import1 = v1.toMap();
-    QVariantMap import2 = v2.toMap();
-    QString path1 = import1["path"].toString();
-    QString path2 = import2["path"].toString();
-    return path1 < path2;
-}
-
 // Scan qml files in qmldirs for import statements, deploy used imports from Qml2ImportsPath to Contents/Resources/qml.
 bool deployQmlImports(const QString &appBundlePath, DeploymentInfo deploymentInfo, QStringList &qmlDirs)
 {
@@ -1237,15 +1219,12 @@ bool deployQmlImports(const QString &appBundlePath, DeploymentInfo deploymentInf
 
     bool qtQuickContolsInUse = false; // condition for QtQuick.PrivateWidgets below
 
-    // sort imports to deploy a module before its sub-modules (otherwise
-    // deployQmlImports can consider the module deployed if it has already
-    // deployed one of its sub-module)
-    QVariantList array = doc.array().toVariantList();
-    qSort(array.begin(), array.end(), importLessThan);
-
     // deploy each import
-    foreach (const QVariant &importValue, array) {
-        QVariantMap import = importValue.toMap();
+    foreach (const QJsonValue &importValue, doc.array()) {
+        if (!importValue.isObject())
+            continue;
+
+        QJsonObject import = importValue.toObject();
         QString name = import["name"].toString();
         QString path = import["path"].toString();
         QString type = import["type"].toString();
@@ -1399,6 +1378,13 @@ QSet<QString> codesignBundle(const QString &identity,
     QStringList frameworkPaths = findAppFrameworkPaths(appBundlePath);
     foreach (const QString &frameworkPath, frameworkPaths) {
 
+        // Add all files for a framework as a catch all.
+        QStringList bundleFiles = findAppBundleFiles(frameworkPath, getAbsoltuePath);
+        foreach (const QString &binary, bundleFiles) {
+            pendingBinaries.push(binary);
+            pendingBinariesSet.insert(binary);
+        }
+
         // Prioritise first to sign any additional inner bundles found in the Helpers folder (e.g
         // used by QtWebEngine).
         QDirIterator helpersIterator(frameworkPath, QStringList() << QString::fromLatin1("Helpers"), QDir::Dirs | QDir::NoSymLinks, QDirIterator::Subdirectories);
@@ -1418,7 +1404,7 @@ QSet<QString> codesignBundle(const QString &identity,
         while (librariesIterator.hasNext()) {
             librariesIterator.next();
             QString librariesPath = librariesIterator.filePath();
-            QStringList bundleFiles = findAppBundleFiles(librariesPath, getAbsoltuePath);
+            bundleFiles = findAppBundleFiles(librariesPath, getAbsoltuePath);
             foreach (const QString &binary, bundleFiles) {
                 pendingBinaries.push(binary);
                 pendingBinariesSet.insert(binary);
@@ -1493,7 +1479,7 @@ void codesign(const QString &identity, const QString &appBundlePath) {
     codesignBundle(identity, appBundlePath, QList<QString>());
 }
 
-void createDiskImage(const QString &appBundlePath, const QString &filesystemType)
+void createDiskImage(const QString &appBundlePath)
 {
     QString appBaseName = appBundlePath;
     appBaseName.chop(4); // remove ".app" from end
@@ -1511,42 +1497,14 @@ void createDiskImage(const QString &appBundlePath, const QString &filesystemType
         LogNormal() << "Creating disk image (.dmg) for" << appBundlePath;
     }
 
-    LogNormal() << "Image will use" << filesystemType;
-
     // More dmg options can be found in the hdiutil man page.
     QStringList options = QStringList()
             << "create" << dmgName
             << "-srcfolder" << appBundlePath
             << "-format" << "UDZO"
-            << "-fs" << filesystemType
             << "-volname" << appBaseName;
 
     QProcess hdutil;
     hdutil.start("hdiutil", options);
     hdutil.waitForFinished(-1);
-    if (hdutil.exitCode() != 0) {
-        LogError() << "Bundle creation error:" << hdutil.readAllStandardError();
-    }
-}
-
-void fixupFramework(const QString &frameworkName)
-{
-    // Expected framework name looks like "Foo.framework"
-    QStringList parts = frameworkName.split(".");
-    if (parts.count() < 2) {
-        LogError() << "fixupFramework: Unexpected framework name" << frameworkName;
-        return;
-    }
-
-    // Assume framework binary path is Foo.framework/Foo
-    QString frameworkBinary = frameworkName + QStringLiteral("/") + parts[0];
-
-    // Xcode expects to find Foo.framework/Versions/A when code
-    // signing, while qmake typically generates numeric versions.
-    // Create symlink to the actual version in the framework.
-    linkFilePrintStatus("Current", frameworkName + "/Versions/A");
-
-    // Set up @rpath structure.
-    changeIdentification("@rpath/" + frameworkBinary, frameworkBinary);
-    addRPath("@loader_path/../../Contents/Frameworks/", frameworkBinary);
 }

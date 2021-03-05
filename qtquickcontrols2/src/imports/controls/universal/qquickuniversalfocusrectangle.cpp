@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -55,11 +55,9 @@ void QQuickUniversalFocusRectangle::paint(QPainter *painter)
         return;
 
     QRect bounds = boundingRect().toAlignedRect();
-    const int boundsWidth = bounds.width();
-    const int boundsHeight = bounds.width();
-    const QString key = QStringLiteral("qquickuniversalfocusrectangle_%1_%2").arg(QString::number(boundsWidth), QString::number(boundsHeight));
+    const QString key = QStringLiteral("qquickuniversalfocusrectangle_%1_%2").arg(bounds.width()).arg(bounds.height());
 
-    QPixmap pixmap(boundsWidth, boundsHeight);
+    QPixmap pixmap(bounds.width(), bounds.height());
     if (!QPixmapCache::find(key, &pixmap)) {
         bounds.adjust(0, 0, -1, -1);
         pixmap.fill(Qt::transparent);
@@ -72,7 +70,7 @@ void QQuickUniversalFocusRectangle::paint(QPainter *painter)
         p.drawRect(bounds);
 
         pen.setColor(Qt::black);
-        pen.setDashPattern(QVector<qreal>(2, 1));
+        pen.setDashPattern(QVector<qreal>() << 1 << 1);
         p.setPen(pen);
         p.drawRect(bounds);
 

@@ -17,14 +17,13 @@ class RegenerateStructNames : public TIntermTraverser
   public:
     RegenerateStructNames(const TSymbolTable &symbolTable,
                           int shaderVersion)
-        : TIntermTraverser(true, false, false),
-          mSymbolTable(symbolTable),
+        : mSymbolTable(symbolTable),
           mShaderVersion(shaderVersion),
           mScopeDepth(0) {}
 
   protected:
-    void visitSymbol(TIntermSymbol *) override;
-    bool visitAggregate(Visit, TIntermAggregate *) override;
+    virtual void visitSymbol(TIntermSymbol *);
+    virtual bool visitAggregate(Visit, TIntermAggregate *);
 
   private:
     const TSymbolTable &mSymbolTable;

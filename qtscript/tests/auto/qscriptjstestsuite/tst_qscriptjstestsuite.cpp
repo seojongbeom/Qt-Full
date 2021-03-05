@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,6 +36,10 @@
 #include <QtTest/QtTest>
 
 #include <QtScript>
+
+#if defined(Q_OS_SYMBIAN)
+# define SRCDIR "."
+#endif
 
 struct TestRecord
 {
@@ -187,8 +185,8 @@ void tst_QScriptJSTestSuite::runTestFunction(int testIndex)
         QString suiteShellPath = testSuiteDir.absoluteFilePath("shell.js");
         QString suiteShellContents = readFile(suiteShellPath);
 
-        const QFileInfoList testFileInfos = subSuiteDir.entryInfoList(QStringList() << "*.js", QDir::Files);
-        for (const QFileInfo &tfi : testFileInfos) {
+        QFileInfoList testFileInfos = subSuiteDir.entryInfoList(QStringList() << "*.js", QDir::Files);
+        foreach (QFileInfo tfi, testFileInfos) {
             if ((tfi.fileName() == "shell.js") || (tfi.fileName() == "browser.js"))
                 continue;
 
@@ -277,7 +275,7 @@ void tst_QScriptJSTestSuite::runTestFunction(int testIndex)
                                actual.toString(), expect.toString(),
                                relpath, lineNumber);
 
-                QTest::newRow(description.toUtf8()) << rec;
+                QTest::newRow(description.toLatin1()) << rec;
             }
         }
         if (!hasData)
@@ -328,12 +326,12 @@ tst_QScriptJSTestSuite::tst_QScriptJSTestSuite()
 // don't execute any tests on slow machines
 #if !defined(Q_OS_IRIX)
     // do all the test suites
-    const QFileInfoList testSuiteDirInfos = testsDir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo &tsdi : testSuiteDirInfos) {
+    QFileInfoList testSuiteDirInfos = testsDir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
+    foreach (QFileInfo tsdi, testSuiteDirInfos) {
         QDir testSuiteDir(tsdi.absoluteFilePath());
         // do all the dirs in the test suite
-        const QFileInfoList subSuiteDirInfos = testSuiteDir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-        for (const QFileInfo &ssdi : subSuiteDirInfos) {
+        QFileInfoList subSuiteDirInfos = testSuiteDir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
+        foreach (QFileInfo ssdi, subSuiteDirInfos) {
             subSuitePaths.append(ssdi.absoluteFilePath());
             QString function = QString::fromLatin1("%0/%1")
                                .arg(testSuiteDir.dirName()).arg(ssdi.fileName());

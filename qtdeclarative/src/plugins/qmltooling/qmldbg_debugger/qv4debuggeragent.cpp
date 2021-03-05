@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -50,34 +44,38 @@ QV4DebuggerAgent::QV4DebuggerAgent(QV4DebugServiceImpl *debugService)
     : m_breakOnThrow(false), m_debugService(debugService)
 {}
 
-QV4Debugger *QV4DebuggerAgent::pausedDebugger() const
+QV4::Debugging::V4Debugger *QV4DebuggerAgent::firstDebugger() const
 {
-    for (QV4Debugger *debugger : m_debuggers) {
-        if (debugger->state() == QV4Debugger::Paused)
-            return debugger;
-    }
-    return 0;
+    // Currently only 1 single engine is supported, so:
+    if (m_debuggers.isEmpty())
+        return 0;
+    else
+        return m_debuggers.first();
 }
 
 bool QV4DebuggerAgent::isRunning() const
 {
-    // "running" means none of the engines are paused.
-    return pausedDebugger() == 0;
+    // Currently only 1 single engine is supported, so:
+    if (QV4::Debugging::V4Debugger *debugger = firstDebugger())
+        return debugger->state() == QV4::Debugging::V4Debugger::Running;
+    else
+        return false;
 }
 
-void QV4DebuggerAgent::debuggerPaused(QV4Debugger *debugger, QV4Debugger::PauseReason reason)
+void QV4DebuggerAgent::debuggerPaused(QV4::Debugging::V4Debugger *debugger,
+                                      QV4::Debugging::PauseReason reason)
 {
     Q_UNUSED(reason);
 
-    debugger->collector()->clear();
+    m_debugService->clearHandles(debugger->engine());
 
     QJsonObject event, body, script;
     event.insert(QStringLiteral("type"), QStringLiteral("event"));
 
     switch (reason) {
-    case QV4Debugger::Step:
-    case QV4Debugger::PauseRequest:
-    case QV4Debugger::BreakPointHit: {
+    case QV4::Debugging::Step:
+    case QV4::Debugging::PauseRequest:
+    case QV4::Debugging::BreakPoint: {
         event.insert(QStringLiteral("event"), QStringLiteral("break"));
         QVector<QV4::StackFrame> frames = debugger->stackTrace(1);
         if (frames.isEmpty())
@@ -94,7 +92,7 @@ void QV4DebuggerAgent::debuggerPaused(QV4Debugger *debugger, QV4Debugger::PauseR
         body.insert(QStringLiteral("breakpoints"), breakPoints);
         script.insert(QStringLiteral("name"), topFrame.source);
     } break;
-    case QV4Debugger::Throwing:
+    case QV4::Debugging::Throwing:
         // TODO: complete this!
         event.insert(QStringLiteral("event"), QStringLiteral("exception"));
         break;
@@ -107,61 +105,89 @@ void QV4DebuggerAgent::debuggerPaused(QV4Debugger *debugger, QV4Debugger::PauseR
     m_debugService->send(event);
 }
 
-void QV4DebuggerAgent::addDebugger(QV4Debugger *debugger)
+void QV4DebuggerAgent::sourcesCollected(QV4::Debugging::V4Debugger *debugger,
+                                        const QStringList &sources, int requestSequenceNr)
+{
+    QJsonArray body;
+    foreach (const QString &source, sources) {
+        QJsonObject src;
+        src[QLatin1String("name")] = source;
+        src[QLatin1String("scriptType")] = 4;
+        body.append(src);
+    }
+
+    QJsonObject response;
+    response[QLatin1String("success")] = true;
+    response[QLatin1String("running")] = debugger->state() == QV4::Debugging::V4Debugger::Running;
+    response[QLatin1String("body")] = body;
+    response[QLatin1String("command")] = QStringLiteral("scripts");
+    response[QLatin1String("request_seq")] = requestSequenceNr;
+    response[QLatin1String("type")] = QStringLiteral("response");
+    m_debugService->send(response);
+}
+
+void QV4DebuggerAgent::addDebugger(QV4::Debugging::V4Debugger *debugger)
 {
     Q_ASSERT(!m_debuggers.contains(debugger));
     m_debuggers << debugger;
 
     debugger->setBreakOnThrow(m_breakOnThrow);
 
-    for (const BreakPoint &breakPoint : qAsConst(m_breakPoints))
+    foreach (const BreakPoint &breakPoint, m_breakPoints.values())
         if (breakPoint.enabled)
             debugger->addBreakPoint(breakPoint.fileName, breakPoint.lineNr, breakPoint.condition);
 
-    connect(debugger, &QObject::destroyed, this, &QV4DebuggerAgent::handleDebuggerDeleted);
-    connect(debugger, &QV4Debugger::debuggerPaused, this, &QV4DebuggerAgent::debuggerPaused,
+    connect(debugger, SIGNAL(destroyed(QObject*)),
+            this, SLOT(handleDebuggerDeleted(QObject*)));
+    connect(debugger, SIGNAL(sourcesCollected(QV4::Debugging::V4Debugger*,QStringList,int)),
+            this, SLOT(sourcesCollected(QV4::Debugging::V4Debugger*,QStringList,int)),
+            Qt::QueuedConnection);
+    connect(debugger,
+            SIGNAL(debuggerPaused(QV4::Debugging::V4Debugger*,QV4::Debugging::PauseReason)),
+            this, SLOT(debuggerPaused(QV4::Debugging::V4Debugger*,QV4::Debugging::PauseReason)),
             Qt::QueuedConnection);
 }
 
-void QV4DebuggerAgent::removeDebugger(QV4Debugger *debugger)
+void QV4DebuggerAgent::removeDebugger(QV4::Debugging::V4Debugger *debugger)
 {
     m_debuggers.removeAll(debugger);
-    disconnect(debugger, &QObject::destroyed, this, &QV4DebuggerAgent::handleDebuggerDeleted);
-    disconnect(debugger, &QV4Debugger::debuggerPaused, this, &QV4DebuggerAgent::debuggerPaused);
-}
-
-const QList<QV4Debugger *> &QV4DebuggerAgent::debuggers()
-{
-    return m_debuggers;
+    disconnect(debugger, SIGNAL(destroyed(QObject*)),
+               this, SLOT(handleDebuggerDeleted(QObject*)));
+    disconnect(debugger, SIGNAL(sourcesCollected(QV4::Debugging::V4Debugger*,QStringList,int)),
+               this, SLOT(sourcesCollected(QV4::Debugging::V4Debugger*,QStringList,int)));
+    disconnect(debugger,
+               SIGNAL(debuggerPaused(QV4::Debugging::V4Debugger*,QV4::Debugging::PauseReason)),
+               this,
+               SLOT(debuggerPaused(QV4::Debugging::V4Debugger*,QV4::Debugging::PauseReason)));
 }
 
 void QV4DebuggerAgent::handleDebuggerDeleted(QObject *debugger)
 {
-    m_debuggers.removeAll(static_cast<QV4Debugger *>(debugger));
+    m_debuggers.removeAll(static_cast<QV4::Debugging::V4Debugger *>(debugger));
 }
 
-void QV4DebuggerAgent::pause(QV4Debugger *debugger) const
+void QV4DebuggerAgent::pause(QV4::Debugging::V4Debugger *debugger) const
 {
     debugger->pause();
 }
 
 void QV4DebuggerAgent::pauseAll() const
 {
-    for (QV4Debugger *debugger : m_debuggers)
+    foreach (QV4::Debugging::V4Debugger *debugger, m_debuggers)
         pause(debugger);
 }
 
 void QV4DebuggerAgent::resumeAll() const
 {
-    for (QV4Debugger *debugger : m_debuggers)
-        if (debugger->state() == QV4Debugger::Paused)
-            debugger->resume(QV4Debugger::FullThrottle);
+    foreach (QV4::Debugging::V4Debugger *debugger, m_debuggers)
+        if (debugger->state() == QV4::Debugging::V4Debugger::Paused)
+            debugger->resume(QV4::Debugging::V4Debugger::FullThrottle);
 }
 
 int QV4DebuggerAgent::addBreakPoint(const QString &fileName, int lineNumber, bool enabled, const QString &condition)
 {
     if (enabled)
-        for (QV4Debugger *debugger : qAsConst(m_debuggers))
+        foreach (QV4::Debugging::V4Debugger *debugger, m_debuggers)
             debugger->addBreakPoint(fileName, lineNumber, condition);
 
     int id = m_breakPoints.size();
@@ -178,14 +204,15 @@ void QV4DebuggerAgent::removeBreakPoint(int id)
     m_breakPoints.remove(id);
 
     if (breakPoint.enabled)
-        for (QV4Debugger *debugger : qAsConst(m_debuggers))
+        foreach (QV4::Debugging::V4Debugger *debugger, m_debuggers)
             debugger->removeBreakPoint(breakPoint.fileName, breakPoint.lineNr);
 }
 
 void QV4DebuggerAgent::removeAllBreakPoints()
 {
-    for (auto it = m_breakPoints.keyBegin(), end = m_breakPoints.keyEnd(); it != end; ++it)
-        removeBreakPoint(*it);
+    QList<int> ids = m_breakPoints.keys();
+    foreach (int id, ids)
+        removeBreakPoint(id);
 }
 
 void QV4DebuggerAgent::enableBreakPoint(int id, bool onoff)
@@ -195,7 +222,7 @@ void QV4DebuggerAgent::enableBreakPoint(int id, bool onoff)
         return;
     breakPoint.enabled = onoff;
 
-    for (QV4Debugger *debugger : qAsConst(m_debuggers)) {
+    foreach (QV4::Debugging::V4Debugger *debugger, m_debuggers) {
         if (onoff)
             debugger->addBreakPoint(breakPoint.fileName, breakPoint.lineNr, breakPoint.condition);
         else
@@ -218,17 +245,9 @@ void QV4DebuggerAgent::setBreakOnThrow(bool onoff)
 {
     if (onoff != m_breakOnThrow) {
         m_breakOnThrow = onoff;
-        for (QV4Debugger *debugger : qAsConst(m_debuggers))
+        foreach (QV4::Debugging::V4Debugger *debugger, m_debuggers)
             debugger->setBreakOnThrow(onoff);
     }
 }
 
-void QV4DebuggerAgent::clearAllPauseRequests()
-{
-    for (QV4Debugger *debugger : qAsConst(m_debuggers))
-        debugger->clearPauseRequest();
-}
-
 QT_END_NAMESPACE
-
-#include "moc_qv4debuggeragent.cpp"

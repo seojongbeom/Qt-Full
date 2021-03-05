@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,10 +34,8 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.TextArea {
     id: control
@@ -50,13 +48,14 @@ T.TextArea {
                              placeholder.implicitHeight + topPadding + bottomPadding)
 
     padding: 6
-    leftPadding: padding + 4
+    leftPadding: 10
 
-    color: enabled ? Default.textColor : Default.textDisabledLightColor
-    selectionColor: Default.textSelectionColor
+    opacity: enabled ? 1 : 0.2
+    color: "#353637"
+    selectionColor: "#fddd5c"
     selectedTextColor: color
 
-    PlaceholderText {
+    Text {
         id: placeholder
         x: control.leftPadding
         y: control.topPadding
@@ -65,9 +64,10 @@ T.TextArea {
 
         text: control.placeholderText
         font: control.font
-        color: enabled ? Default.textPlaceholderColor : Default.textDisabledColor
+        color: "#c2c2c2"
+        horizontalAlignment: control.horizontalAlignment
         verticalAlignment: control.verticalAlignment
-        visible: !control.length && !control.preeditText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
+        visible: !control.length && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
         elide: Text.ElideRight
     }
 }

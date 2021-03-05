@@ -20,6 +20,122 @@
     </message>
 </context>
 <context>
+    <name>BbCameraAudioEncoderSettingsControl</name>
+    <message>
+        <source>No compression</source>
+        <translation>Ei pakkausta</translation>
+    </message>
+    <message>
+        <source>AAC compression</source>
+        <translation>AAC-pakkaus</translation>
+    </message>
+    <message>
+        <source>PCM uncompressed</source>
+        <translation>PCM, pakkaamaton</translation>
+    </message>
+</context>
+<context>
+    <name>BbCameraMediaRecorderControl</name>
+    <message>
+        <source>Unable to retrieve mute status</source>
+        <translation>Ei voitu hakea vaimennuksen tilaa</translation>
+    </message>
+    <message>
+        <source>Unable to retrieve audio input volume</source>
+        <translation>Ei voitu hakea äänitulon voimakkuutta</translation>
+    </message>
+    <message>
+        <source>Unable to set mute status</source>
+        <translation>Ei voitu asettaa vaimennuksen tilaa</translation>
+    </message>
+    <message>
+        <source>Unable to set audio input volume</source>
+        <translation>Ei voitu asettaa äänitulon voimakkuutta</translation>
+    </message>
+</context>
+<context>
+    <name>BbCameraSession</name>
+    <message>
+        <source>Camera provides image in unsupported format</source>
+        <translation>Kameralta saatu kuva ei ole tuetussa muodossa</translation>
+    </message>
+    <message>
+        <source>Could not load JPEG data from frame</source>
+        <translation>JPEG-dataa ei saatu ladattua puskurista</translation>
+    </message>
+    <message>
+        <source>Camera not ready</source>
+        <translation>Kamera ei ole valmis</translation>
+    </message>
+    <message>
+        <source>Unable to apply video settings</source>
+        <translation>Videoasetusten asettaminen epäonnistui</translation>
+    </message>
+    <message>
+        <source>Could not open destination file:
+%1</source>
+        <translation>Virhe avattaessa kohdetiedostoa:
+%1</translation>
+    </message>
+    <message>
+        <source>Unable to open camera</source>
+        <translation>Ei voitu avata kameraa</translation>
+    </message>
+    <message>
+        <source>Unable to retrieve native camera orientation</source>
+        <translation>Ei voitu hakea kameran asennusasentoa</translation>
+    </message>
+    <message>
+        <source>Unable to close camera</source>
+        <translation>Ei voitu sulkea kameraa</translation>
+    </message>
+    <message>
+        <source>Unable to start video recording</source>
+        <translation>Ei voitu aloittaa videon tallennusta</translation>
+    </message>
+    <message>
+        <source>Unable to stop video recording</source>
+        <translation>Ei voitu lopettaa videon tallennusta</translation>
+    </message>
+</context>
+<context>
+    <name>BbCameraVideoEncoderSettingsControl</name>
+    <message>
+        <source>No compression</source>
+        <translation>Ei pakkausta</translation>
+    </message>
+    <message>
+        <source>AVC1 compression</source>
+        <translation>AVC1-pakkaus</translation>
+    </message>
+    <message>
+        <source>H264 compression</source>
+        <translation>H264-pakkaus</translation>
+    </message>
+</context>
+<context>
+    <name>BbImageEncoderControl</name>
+    <message>
+        <source>JPEG image</source>
+        <translation>JPEG-kuva</translation>
+    </message>
+</context>
+<context>
+    <name>BbVideoDeviceSelectorControl</name>
+    <message>
+        <source>Front Camera</source>
+        <translation>Etukamera</translation>
+    </message>
+    <message>
+        <source>Rear Camera</source>
+        <translation>Takakamera</translation>
+    </message>
+    <message>
+        <source>Desktop Camera</source>
+        <translation>Työpöytäkamera</translation>
+    </message>
+</context>
+<context>
     <name>CameraBinImageCapture</name>
     <message>
         <source>Camera not ready</source>
@@ -189,14 +305,6 @@
         <translation>Kuvaustilaa ei tueta</translation>
     </message>
     <message>
-        <source>Failed to capture image</source>
-        <translation>Kuvan ottaminen epäonnistui</translation>
-    </message>
-    <message>
-        <source>Camera preview failed to start.</source>
-        <translation>Kameran esikatselun käynnistys epäonnistui.</translation>
-    </message>
-    <message>
         <source>Could not open destination file: %1</source>
         <translation>Kohdetiedostoa ei voitu avata: %1</translation>
     </message>
@@ -279,6 +387,13 @@
     </message>
 </context>
 <context>
+    <name>QGstreamerAudioEncode</name>
+    <message>
+        <source>Raw PCM audio</source>
+        <translation>Raaka PCM-audio</translation>
+    </message>
+</context>
+<context>
     <name>QGstreamerAudioInputSelector</name>
     <message>
         <source>System default device</source>
@@ -333,6 +448,10 @@
     <message>
         <source>UDP source timeout</source>
         <translation>UDP-lähteen aikakatkaisu</translation>
+    </message>
+    <message>
+        <source>Media is loaded as a playlist</source>
+        <translation>Media on ladattu soittolistana</translation>
     </message>
 </context>
 <context>
@@ -427,10 +546,6 @@
     <message>
         <source>invalid line in playlist file</source>
         <translation>virheellinen rivi soittolistatiedostossa</translation>
-    </message>
-    <message>
-        <source>Invalid stream</source>
-        <translation>Virheellinen virta</translation>
     </message>
     <message>
         <source>Empty file provided</source>

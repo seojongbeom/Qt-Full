@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,7 +34,7 @@
 #ifndef QCOCOAWINDOW_H
 #define QCOCOAWINDOW_H
 
-#include <AppKit/AppKit.h>
+#include <Cocoa/Cocoa.h>
 
 #include <qpa/qplatformwindow.h>
 #include <QRect>
@@ -54,10 +48,33 @@
 
 QT_FORWARD_DECLARE_CLASS(QCocoaWindow)
 
-@class QT_MANGLE_NAMESPACE(QNSWindowHelper);
+QT_BEGIN_NAMESPACE
 
-// @compatibility_alias doesn't work with protocols
-#define QNSWindowProtocol QT_MANGLE_NAMESPACE(QNSWindowProtocol)
+class QCocoaWindowPointer
+{
+public:
+    void assign(QCocoaWindow *w);
+    void clear();
+
+    QCocoaWindow *data() const
+    { return watcher.isNull() ? Q_NULLPTR : window; }
+    bool isNull() const
+    { return watcher.isNull(); }
+    operator QCocoaWindow*() const
+    { return data(); }
+    QCocoaWindow *operator->() const
+    { return data(); }
+    QCocoaWindow &operator*() const
+    { return *data(); }
+
+private:
+    QPointer<QObject> watcher;
+    QCocoaWindow *window;
+};
+
+QT_END_NAMESPACE
+
+@class QT_MANGLE_NAMESPACE(QNSWindowHelper);
 
 @protocol QNSWindowProtocol
 
@@ -73,13 +90,13 @@ typedef NSWindow<QNSWindowProtocol> QCocoaNSWindow;
 @interface QT_MANGLE_NAMESPACE(QNSWindowHelper) : NSObject
 {
     QCocoaNSWindow *_window;
-    QPointer<QCocoaWindow> _platformWindow;
+    QCocoaWindowPointer _platformWindow;
     BOOL _grabbingMouse;
     BOOL _releaseOnMouseUp;
 }
 
 @property (nonatomic, readonly) QCocoaNSWindow *window;
-@property (nonatomic, readonly) QCocoaWindow *platformWindow;
+@property (nonatomic, readonly) QCocoaWindowPointer platformWindow;
 @property (nonatomic) BOOL grabbingMouse;
 @property (nonatomic) BOOL releaseOnMouseUp;
 
@@ -99,7 +116,6 @@ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSWindowHelper);
 @property (nonatomic, readonly) QNSWindowHelper *helper;
 
 - (id)initWithContentRect:(NSRect)contentRect
-      screen:(NSScreen*)screen
       styleMask:(NSUInteger)windowStyle
       qPlatformWindow:(QCocoaWindow *)qpw;
 
@@ -115,7 +131,6 @@ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSWindow);
 @property (nonatomic, readonly) QNSWindowHelper *helper;
 
 - (id)initWithContentRect:(NSRect)contentRect
-      screen:(NSScreen*)screen
       styleMask:(NSUInteger)windowStyle
       qPlatformWindow:(QCocoaWindow *)qpw;
 
@@ -146,20 +161,12 @@ QT_BEGIN_NAMESPACE
 // See the qt_on_cocoa manual tests for a working example, located
 // in tests/manual/cocoa at the time of writing.
 
-#ifdef Q_MOC_RUN
-#define Q_NOTIFICATION_HANDLER(notification) Q_INVOKABLE Q_COCOA_NOTIFICATION_##notification
-#else
-#define Q_NOTIFICATION_HANDLER(notification)
-#define Q_NOTIFICATION_PREFIX QT_STRINGIFY2(Q_COCOA_NOTIFICATION_)
-#endif
-
 class QCocoaMenuBar;
 
-class QCocoaWindow : public QObject, public QPlatformWindow
+class QCocoaWindow : public QPlatformWindow
 {
-    Q_OBJECT
 public:
-    QCocoaWindow(QWindow *tlw, WId nativeHandle = 0);
+    QCocoaWindow(QWindow *tlw);
     ~QCocoaWindow();
 
     void setGeometry(const QRect &rect) Q_DECL_OVERRIDE;
@@ -189,42 +196,26 @@ public:
     QMargins frameMargins() const Q_DECL_OVERRIDE;
     QSurfaceFormat format() const Q_DECL_OVERRIDE;
 
-    bool isForeignWindow() const Q_DECL_OVERRIDE;
-
     void requestActivateWindow() Q_DECL_OVERRIDE;
 
     WId winId() const Q_DECL_OVERRIDE;
     void setParent(const QPlatformWindow *window) Q_DECL_OVERRIDE;
 
-    NSView *view() const;
+    NSView *contentView() const;
+    void setContentView(NSView *contentView);
+    QNSView *qtView() const;
     NSWindow *nativeWindow() const;
 
     void setEmbeddedInForeignView(bool subwindow);
 
-    Q_NOTIFICATION_HANDLER(NSWindowWillMoveNotification) void windowWillMove();
-    Q_NOTIFICATION_HANDLER(NSWindowDidMoveNotification) void windowDidMove();
-    Q_NOTIFICATION_HANDLER(NSWindowDidResizeNotification) void windowDidResize();
-    Q_NOTIFICATION_HANDLER(NSViewFrameDidChangeNotification) void viewDidChangeFrame();
-    Q_NOTIFICATION_HANDLER(NSViewGlobalFrameDidChangeNotification) void viewDidChangeGlobalFrame();
-    Q_NOTIFICATION_HANDLER(NSWindowDidEndLiveResizeNotification) void windowDidEndLiveResize();
-    Q_NOTIFICATION_HANDLER(NSWindowDidBecomeKeyNotification) void windowDidBecomeKey();
-    Q_NOTIFICATION_HANDLER(NSWindowDidResignKeyNotification) void windowDidResignKey();
-    Q_NOTIFICATION_HANDLER(NSWindowDidMiniaturizeNotification) void windowDidMiniaturize();
-    Q_NOTIFICATION_HANDLER(NSWindowDidDeminiaturizeNotification) void windowDidDeminiaturize();
-    Q_NOTIFICATION_HANDLER(NSWindowWillEnterFullScreenNotification) void windowWillEnterFullScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowDidEnterFullScreenNotification) void windowDidEnterFullScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowWillExitFullScreenNotification) void windowWillExitFullScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowDidExitFullScreenNotification) void windowDidExitFullScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowDidOrderOffScreenNotification) void windowDidOrderOffScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowDidOrderOnScreenAndFinishAnimatingNotification) void windowDidOrderOnScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowDidChangeOcclusionStateNotification) void windowDidChangeOcclusionState();
-    Q_NOTIFICATION_HANDLER(NSWindowDidChangeScreenNotification) void windowDidChangeScreen();
-    Q_NOTIFICATION_HANDLER(NSWindowWillCloseNotification) void windowWillClose();
-
+    void windowWillMove();
+    void windowDidMove();
+    void windowDidResize();
+    void windowDidEndLiveResize();
     bool windowShouldClose();
     bool windowIsPopupType(Qt::WindowType type = Qt::Widget) const;
 
-    void reportCurrentWindowState(bool unconditionally = false);
+    void setSynchedWindowStateFromWindow();
 
     NSInteger windowLevel(Qt::WindowFlags flags);
     NSUInteger windowStyleMask(Qt::WindowFlags flags);
@@ -268,37 +259,18 @@ public:
 
     static QPoint bottomLeftClippedByNSWindowOffsetStatic(QWindow *window);
     QPoint bottomLeftClippedByNSWindowOffset() const;
-
-    enum RecreationReason {
-        RecreationNotNeeded = 0,
-        ParentChanged = 0x1,
-        MissingWindow = 0x2,
-        WindowModalityChanged = 0x4,
-        ChildNSWindowChanged = 0x8,
-        ContentViewChanged = 0x10,
-        PanelChanged = 0x20,
-    };
-    Q_DECLARE_FLAGS(RecreationReasons, RecreationReason)
-    Q_FLAG(RecreationReasons)
-
 protected:
-    bool isChildNSWindow() const;
-    bool isContentView() const;
+    void recreateWindow(const QPlatformWindow *parentWindow);
+    QCocoaNSWindow *createNSWindow();
+    void setNSWindow(QCocoaNSWindow *window);
 
-    void foreachChildNSWindow(void (^block)(QCocoaWindow *));
-
-    void recreateWindowIfNeeded();
-    QCocoaNSWindow *createNSWindow(bool shouldBeChildNSWindow, bool shouldBePanel);
+    bool shouldUseNSPanel();
 
     QRect nativeWindowGeometry() const;
+    QCocoaWindow *parentCocoaWindow() const;
+    void syncWindowState(Qt::WindowState newState);
     void reinsertChildWindow(QCocoaWindow *child);
     void removeChildWindow(QCocoaWindow *child);
-
-    Qt::WindowState windowState() const;
-    void applyWindowState(Qt::WindowState newState);
-    void toggleMaximized();
-    void toggleFullScreen();
-    bool isTransitioningToFullScreen() const;
 
 // private:
 public: // for QNSView
@@ -308,16 +280,22 @@ public: // for QNSView
     bool alwaysShowToolWindow() const;
     void removeMonitor();
 
-    NSView *m_view;
+    NSView *m_contentView;
+    QNSView *m_qtView;
     QCocoaNSWindow *m_nsWindow;
-    QPointer<QCocoaWindow> m_forwardWindow;
+    QCocoaWindowPointer m_forwardWindow;
 
     // TODO merge to one variable if possible
-    bool m_viewIsEmbedded; // true if the m_view is actually embedded in a "foreign" NSView hiearchy
-    bool m_viewIsToBeEmbedded; // true if the m_view is intended to be embedded in a "foreign" NSView hiearchy
+    bool m_contentViewIsEmbedded; // true if the m_contentView is actually embedded in a "foreign" NSView hiearchy
+    bool m_contentViewIsToBeEmbedded; // true if the m_contentView is intended to be embedded in a "foreign" NSView hiearchy
+
+    QCocoaWindow *m_parentCocoaWindow;
+    bool m_isNSWindowChild; // this window is a non-top level QWindow with a NSWindow.
+    QList<QCocoaWindow *> m_childWindows;
 
     Qt::WindowFlags m_windowFlags;
-    Qt::WindowState m_lastReportedWindowState;
+    bool m_effectivelyMaximized;
+    Qt::WindowState m_synchedWindowState;
     Qt::WindowModality m_windowModality;
     QPointer<QWindow> m_enterLeaveTargetWindow;
     bool m_windowUnderMouse;
@@ -351,6 +329,11 @@ public: // for QNSView
     int m_topContentBorderThickness;
     int m_bottomContentBorderThickness;
 
+    // used by showFullScreen in fake mode
+    QRect m_normalGeometry;
+    Qt::WindowFlags m_oldWindowFlags;
+    NSApplicationPresentationOptions m_presentationOptions;
+
     struct BorderRange {
         BorderRange(quintptr i, int u, int l) : identifier(i), upper(u), lower(l) { }
         quintptr identifier;
@@ -363,6 +346,9 @@ public: // for QNSView
     QHash<quintptr, BorderRange> m_contentBorderAreas; // identifer -> uppper/lower
     QHash<quintptr, bool> m_enabledContentBorderAreas; // identifer -> enabled state (true/false)
 
+    // This object is tracked by QCocoaWindowPointer,
+    // preventing the use of dangling pointers.
+    QObject sentinel;
     bool m_hasWindowFilePath;
 };
 

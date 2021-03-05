@@ -1,5 +1,4 @@
-HEADERS +=      kernel/qtsqlglobal.h \
-                kernel/qtsqlglobal_p.h \
+HEADERS +=      kernel/qsql.h \
                 kernel/qsqlquery.h \
                 kernel/qsqldatabase.h \
                 kernel/qsqlfield.h \

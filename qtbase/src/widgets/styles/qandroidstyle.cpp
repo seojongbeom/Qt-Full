@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2013 BogDan Vatra <bogdan@kde.org>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,7 +33,7 @@
 
 #include "qandroidstyle_p.h"
 
-#if QT_CONFIG(style_android) || defined(QT_PLUGIN)
+#if !defined(QT_NO_STYLE_ANDROID) || defined(QT_PLUGIN)
 
 #include <QFile>
 #include <QFont>
@@ -90,7 +84,7 @@ QAndroidStyle::QAndroidStyle()
          ++objectIterator) {
         QString key = objectIterator.key();
         QJsonValue value = objectIterator.value();
-        if (Q_UNLIKELY(!value.isObject())) {
+        if (!value.isObject()) {
             qWarning("Style.json structure is unrecognized.");
             continue;
         }
@@ -333,52 +327,41 @@ void QAndroidStyle::drawControl(QStyle::ControlElement element,
                                              : m_androidControlsHash.end();
     if (it != m_androidControlsHash.end()) {
         AndroidControl *androidControl = it.value();
+        androidControl->drawControl(opt, p, w);
 
-        if (element != QStyle::CE_CheckBoxLabel
-                && element != QStyle::CE_PushButtonLabel
-                && element != QStyle::CE_RadioButtonLabel
-                && element != QStyle::CE_TabBarTabLabel
-                && element != QStyle::CE_ProgressBarLabel) {
-            androidControl->drawControl(opt, p, w);
-        }
-
-        if (element != QStyle::CE_PushButtonBevel
-                && element != QStyle::CE_TabBarTabShape
-                && element != QStyle::CE_ProgressBarGroove) {
-            switch (itemType) {
-            case QC_Button:
-                if (const QStyleOptionButton *buttonOption =
-                    qstyleoption_cast<const QStyleOptionButton *>(opt)) {
-                    QMargins padding = androidControl->padding();
-                    QStyleOptionButton copy(*buttonOption);
-                    copy.rect.adjust(padding.left(), padding.top(), -padding.right(), -padding.bottom());
-                    QFusionStyle::drawControl(CE_PushButtonLabel, &copy, p, w);
-                }
-                break;
-            case QC_Checkbox:
-            case QC_RadioButton:
-                if (const QStyleOptionButton *btn =
-                    qstyleoption_cast<const QStyleOptionButton *>(opt)) {
-                    const bool isRadio = (element == CE_RadioButton);
-                    QStyleOptionButton subopt(*btn);
-                    subopt.rect = subElementRect(isRadio ? SE_RadioButtonContents
-                                                 : SE_CheckBoxContents, btn, w);
-                    QFusionStyle::drawControl(isRadio ? CE_RadioButtonLabel : CE_CheckBoxLabel, &subopt, p, w);
-                }
-                break;
-            case QC_Combobox:
-                if (const QStyleOptionComboBox *comboboxOption =
-                    qstyleoption_cast<const QStyleOptionComboBox *>(opt)) {
-                    QMargins padding = androidControl->padding();
-                    QStyleOptionComboBox copy (*comboboxOption);
-                    copy.rect.adjust(padding.left(), padding.top(), -padding.right(), -padding.bottom());
-                    QFusionStyle::drawControl(CE_ComboBoxLabel, comboboxOption, p, w);
-                }
-                break;
-            default:
-                QFusionStyle::drawControl(element, opt, p, w);
-                break;
+        switch (itemType) {
+        case QC_Button:
+            if (const QStyleOptionButton *buttonOption =
+                qstyleoption_cast<const QStyleOptionButton *>(opt)) {
+                QMargins padding = androidControl->padding();
+                QStyleOptionButton copy(*buttonOption);
+                copy.rect.adjust(padding.left(), padding.top(), -padding.right(), -padding.bottom());
+                QFusionStyle::drawControl(CE_PushButtonLabel, &copy, p, w);
             }
+            break;
+        case QC_Checkbox:
+        case QC_RadioButton:
+            if (const QStyleOptionButton *btn =
+                qstyleoption_cast<const QStyleOptionButton *>(opt)) {
+                const bool isRadio = (element == CE_RadioButton);
+                QStyleOptionButton subopt(*btn);
+                subopt.rect = subElementRect(isRadio ? SE_RadioButtonContents
+                                             : SE_CheckBoxContents, btn, w);
+                QFusionStyle::drawControl(isRadio ? CE_RadioButtonLabel : CE_CheckBoxLabel, &subopt, p, w);
+            }
+            break;
+        case QC_Combobox:
+            if (const QStyleOptionComboBox *comboboxOption =
+                qstyleoption_cast<const QStyleOptionComboBox *>(opt)) {
+                QMargins padding = androidControl->padding();
+                QStyleOptionComboBox copy (*comboboxOption);
+                copy.rect.adjust(padding.left(), padding.top(), -padding.right(), -padding.bottom());
+                QFusionStyle::drawControl(CE_ComboBoxLabel, comboboxOption, p, w);
+            }
+            break;
+        default:
+            QFusionStyle::drawControl(element, opt, p, w);
+            break;
         }
     } else {
         QFusionStyle::drawControl(element, opt, p, w);
@@ -849,7 +832,7 @@ int QAndroidStyle::Android9PatchDrawable::calculateStretch(int boundsLimit,
 void QAndroidStyle::Android9PatchDrawable::extractIntArray(const QVariantList &values,
                                                            QVector<int> & array)
 {
-    for (const QVariant &value : values)
+    foreach (QVariant value, values)
         array << value.toInt();
 }
 
@@ -1151,8 +1134,8 @@ QAndroidStyle::AndroidStateDrawable::AndroidStateDrawable(const QVariantMap &dra
                                                           QAndroidStyle::ItemType itemType)
     : AndroidDrawable(drawable, itemType)
 {
-    const QVariantList states = drawable.value(QLatin1String("stateslist")).toList();
-    for (const QVariant &stateVariant : states) {
+    QVariantList states = drawable.value(QLatin1String("stateslist")).toList();
+    foreach (QVariant stateVariant, states) {
         QVariantMap state = stateVariant.toMap();
         const int s = extractState(state.value(QLatin1String("states")).toMap());
         if (-1 == s)
@@ -1169,7 +1152,7 @@ QAndroidStyle::AndroidStateDrawable::AndroidStateDrawable(const QVariantMap &dra
 
 QAndroidStyle::AndroidStateDrawable::~AndroidStateDrawable()
 {
-    for (const StateType &type : qAsConst(m_states))
+    foreach (const StateType type, m_states)
         delete type.second;
 }
 
@@ -1203,7 +1186,7 @@ const QAndroidStyle::AndroidDrawable * QAndroidStyle::AndroidStateDrawable::best
     }
 
     uint bestCost = 0xffff;
-    for (const StateType & state : m_states) {
+    foreach (const StateType & state, m_states) {
         if (int(opt->state) == state.first)
             return state.second;
         uint cost = 1;
@@ -1244,22 +1227,30 @@ const QAndroidStyle::AndroidDrawable * QAndroidStyle::AndroidStateDrawable::best
 
 int QAndroidStyle::AndroidStateDrawable::extractState(const QVariantMap &value)
 {
-    QStyle::State state = QStyle::State_Enabled | QStyle::State_Active;;
-    for (auto it = value.cbegin(), end = value.cend(); it != end; ++it) {
-        const QString &key = it.key();
-        bool val = it.value().toString() == QLatin1String("true");
+    int state = QStyle::State_Enabled | QStyle::State_Active;;
+    foreach (const QString &key, value.keys()) {
+        bool val = value.value(key).toString() == QLatin1String("true");
         if (key == QLatin1String("enabled")) {
-            state.setFlag(QStyle::State_Enabled, val);
+            if (val)
+                state |= QStyle::State_Enabled;
+            else
+                state &= ~QStyle::State_Enabled;
             continue;
         }
 
         if (key == QLatin1String("window_focused")) {
-            state.setFlag(QStyle::State_Active, val);
+            if (val)
+                state |= QStyle::State_Active;
+            else
+                state &= ~QStyle::State_Active;
             continue;
         }
 
         if (key == QLatin1String("focused")) {
-            state.setFlag(QStyle::State_HasFocus, val);
+            if (val)
+                state |= QStyle::State_HasFocus;
+            else
+                state &= ~QStyle::State_HasFocus;
             continue;
         }
 
@@ -1274,12 +1265,18 @@ int QAndroidStyle::AndroidStateDrawable::extractState(const QVariantMap &value)
         }
 
         if (key == QLatin1String("selected")) {
-            state.setFlag(QStyle::State_Selected, val);
+            if (val)
+                state |= QStyle::State_Selected;
+            else
+                state &= ~QStyle::State_Selected;
             continue;
         }
 
         if (key == QLatin1String("active")) {
-            state.setFlag(QStyle::State_Active, val);
+            if (val)
+                state |= QStyle::State_Active;
+            else
+                state &= ~QStyle::State_Active;
             continue;
         }
 
@@ -1289,12 +1286,12 @@ int QAndroidStyle::AndroidStateDrawable::extractState(const QVariantMap &value)
         if (key == QLatin1String("background") && val)
             return -1;
     }
-    return static_cast<int>(state);
+    return state;
 }
 
 void QAndroidStyle::AndroidStateDrawable::setPaddingLeftToSizeWidth()
 {
-    for (const StateType &type : qAsConst(m_states))
+    foreach (const StateType type, m_states)
         const_cast<AndroidDrawable *>(type.second)->setPaddingLeftToSizeWidth();
 }
 
@@ -1305,8 +1302,8 @@ QAndroidStyle::AndroidLayerDrawable::AndroidLayerDrawable(const QVariantMap &dra
     m_id = 0;
     m_factor = 1;
     m_orientation = Qt::Horizontal;
-    const QVariantList layers = drawable.value(QLatin1String("layers")).toList();
-    for (const QVariant &layer : layers) {
+    QVariantList layers = drawable.value(QLatin1String("layers")).toList();
+    foreach (QVariant layer, layers) {
         QVariantMap layerMap = layer.toMap();
         AndroidDrawable *ad = fromMap(layerMap, itemType);
         if (ad) {
@@ -1320,7 +1317,7 @@ QAndroidStyle::AndroidLayerDrawable::AndroidLayerDrawable(const QVariantMap &dra
 
 QAndroidStyle::AndroidLayerDrawable::~AndroidLayerDrawable()
 {
-    for (const LayerType &layer : qAsConst(m_layers))
+    foreach (const LayerType &layer, m_layers)
         delete layer.second;
 }
 
@@ -1338,7 +1335,7 @@ void QAndroidStyle::AndroidLayerDrawable::setFactor(int id, double factor, Qt::O
 
 void QAndroidStyle::AndroidLayerDrawable::draw(QPainter *painter, const QStyleOption *opt) const
 {
-    for (const LayerType &layer : m_layers) {
+    foreach (const LayerType &layer, m_layers) {
         if (layer.first == m_id) {
             QStyleOption copy(*opt);
             if (m_orientation == Qt::Horizontal)
@@ -1354,7 +1351,7 @@ void QAndroidStyle::AndroidLayerDrawable::draw(QPainter *painter, const QStyleOp
 
 QAndroidStyle::AndroidDrawable *QAndroidStyle::AndroidLayerDrawable::layer(int id) const
 {
-    for (const LayerType &layer : m_layers)
+    foreach (const LayerType &layer, m_layers)
         if (layer.first == id)
             return layer.second;
     return 0;
@@ -1363,7 +1360,7 @@ QAndroidStyle::AndroidDrawable *QAndroidStyle::AndroidLayerDrawable::layer(int i
 QSize QAndroidStyle::AndroidLayerDrawable::size() const
 {
     QSize sz;
-    for (const LayerType &layer : m_layers)
+    foreach (const LayerType &layer, m_layers)
         sz = sz.expandedTo(layer.second->size());
     return sz;
 }
@@ -1817,4 +1814,4 @@ QRect QAndroidStyle::AndroidSpinnerControl::subControlRect(const QStyleOptionCom
 
 QT_END_NAMESPACE
 
-#endif // QT_CONFIG(style_android) || defined(QT_PLUGIN)
+#endif // !defined(QT_NO_STYLE_ANDROID) || defined(QT_PLUGIN)

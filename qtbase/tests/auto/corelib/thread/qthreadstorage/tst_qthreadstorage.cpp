@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,8 +45,10 @@
 #include <pthread.h>
 #endif
 #ifdef Q_OS_WIN
-#  include <process.h>
-#  include <qt_windows.h>
+#ifndef Q_OS_WINCE
+#include <process.h>
+#endif
+#include <windows.h>
 #endif
 
 class tst_QThreadStorage : public QObject
@@ -76,7 +83,7 @@ int Pointer::count = 0;
 
 void tst_QThreadStorage::initTestCase()
 {
-#if QT_CONFIG(process)
+#ifndef QT_NO_PROCESS
     const QString crashOnExitDir = QFINDTESTDATA("crashonexit");
     QVERIFY2(!crashOnExitDir.isEmpty(),
              qPrintable(QString::fromLatin1("Could not find 'crashonexit' starting from '%1'")
@@ -200,13 +207,6 @@ void testAdoptedThreadStorageWin(void *p)
     }
     QObject::connect(QThread::currentThread(), SIGNAL(finished()), &QTestEventLoop::instance(), SLOT(exitLoop()));
 }
-#ifdef Q_OS_WINRT
-unsigned __stdcall testAdoptedThreadStorageWinRT(void *p)
-{
-    testAdoptedThreadStorageWin(p);
-    return 0;
-}
-#endif
 void *testAdoptedThreadStorageUnix(void *pointers)
 {
     testAdoptedThreadStorageWin(pointers);
@@ -224,14 +224,13 @@ void tst_QThreadStorage::adoptedThreads()
         const int state = pthread_create(&thread, 0, testAdoptedThreadStorageUnix, &pointers);
         QCOMPARE(state, 0);
         pthread_join(thread, 0);
-#elif defined Q_OS_WINRT
+#elif defined Q_OS_WIN && !defined(Q_OS_WINRT)
         HANDLE thread;
-        thread = (HANDLE) _beginthreadex(NULL, 0, testAdoptedThreadStorageWinRT, &pointers, 0, 0);
-        QVERIFY(thread);
-        WaitForSingleObjectEx(thread, INFINITE, FALSE);
-#elif defined Q_OS_WIN
-        HANDLE thread;
+#if defined(Q_OS_WINCE)
+        thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)testAdoptedThreadStorageWin, &pointers, 0, NULL);
+#else
         thread = (HANDLE)_beginthread(testAdoptedThreadStorageWin, 0, &pointers);
+#endif
         QVERIFY(thread);
         WaitForSingleObject(thread, INFINITE);
 #endif
@@ -300,7 +299,7 @@ void tst_QThreadStorage::ensureCleanupOrder()
     QVERIFY(First::order < Second::order);
 }
 
-#if QT_CONFIG(process)
+#ifndef QT_NO_PROCESS
 static inline bool runCrashOnExit(const QString &binary, QString *errorMessage)
 {
     const int timeout = 60000;
@@ -325,7 +324,7 @@ static inline bool runCrashOnExit(const QString &binary, QString *errorMessage)
 
 void tst_QThreadStorage::crashOnExit()
 {
-#if !QT_CONFIG(process)
+#ifdef QT_NO_PROCESS
     QSKIP("No qprocess support", SkipAll);
 #else
     QString errorMessage;

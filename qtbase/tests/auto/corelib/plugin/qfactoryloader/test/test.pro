@@ -1,4 +1,5 @@
 CONFIG += testcase
+CONFIG += parallel_test
 TARGET  = ../tst_qfactoryloader
 QT = core-private testlib
 
@@ -17,6 +18,5 @@ win32 {
     }
 }
 
-!qtConfig(library) {
-    LIBS += -L ../bin/ -lplugin1 -lplugin2
-}
+mac: CONFIG -= app_bundle
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

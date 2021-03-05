@@ -90,13 +90,8 @@ gl::Error VertexBufferInterface::discard()
     return mVertexBuffer->discard();
 }
 
-gl::Error VertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute &attrib,
-                                                       GLenum currentValueType,
-                                                       GLint start,
-                                                       GLsizei count,
-                                                       GLsizei instances,
-                                                       unsigned int *outStreamOffset,
-                                                       const uint8_t *sourceData)
+gl::Error VertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute &attrib, const gl::VertexAttribCurrentValueData &currentValue,
+                                                       GLint start, GLsizei count, GLsizei instances, unsigned int *outStreamOffset)
 {
     gl::Error error(GL_NO_ERROR);
 
@@ -107,12 +102,7 @@ gl::Error VertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute
         return error;
     }
 
-    // Align to 16-byte boundary
-    unsigned int alignedSpaceRequired = roundUp(spaceRequired, 16u);
-
-    // Protect against integer overflow
-    if (!IsUnsignedAdditionSafe(mWritePosition, alignedSpaceRequired) ||
-        alignedSpaceRequired < spaceRequired)
+    if (mWritePosition + spaceRequired < mWritePosition)
     {
         return gl::Error(GL_OUT_OF_MEMORY, "Internal error, new vertex buffer write position would overflow.");
     }
@@ -124,7 +114,7 @@ gl::Error VertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute
     }
     mReservedSpace = 0;
 
-    error = mVertexBuffer->storeVertexAttributes(attrib, currentValueType, start, count, instances, mWritePosition, sourceData);
+    error = mVertexBuffer->storeVertexAttributes(attrib, currentValue, start, count, instances, mWritePosition);
     if (error.isError())
     {
         return error;
@@ -135,7 +125,10 @@ gl::Error VertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute
         *outStreamOffset = mWritePosition;
     }
 
-    mWritePosition += alignedSpaceRequired;
+    mWritePosition += spaceRequired;
+
+    // Align to 16-byte boundary
+    mWritePosition = roundUp(mWritePosition, 16u);
 
     return gl::Error(GL_NO_ERROR);
 }
@@ -151,18 +144,17 @@ gl::Error VertexBufferInterface::reserveVertexSpace(const gl::VertexAttribute &a
         return error;
     }
 
-    // Align to 16-byte boundary
-    unsigned int alignedRequiredSpace = roundUp(requiredSpace, 16u);
-
     // Protect against integer overflow
-    if (!IsUnsignedAdditionSafe(mReservedSpace, alignedRequiredSpace) ||
-        alignedRequiredSpace < requiredSpace)
+    if (mReservedSpace + requiredSpace < mReservedSpace)
     {
         return gl::Error(GL_OUT_OF_MEMORY, "Unable to reserve %u extra bytes in internal vertex buffer, "
                          "it would result in an overflow.", requiredSpace);
     }
 
-    mReservedSpace += alignedRequiredSpace;
+    mReservedSpace += requiredSpace;
+
+    // Align to 16-byte boundary
+    mReservedSpace = roundUp(mReservedSpace, 16u);
 
     return gl::Error(GL_NO_ERROR);
 }
@@ -173,7 +165,7 @@ VertexBuffer* VertexBufferInterface::getVertexBuffer() const
 }
 
 bool VertexBufferInterface::directStoragePossible(const gl::VertexAttribute &attrib,
-                                                  GLenum currentValueType) const
+                                                  const gl::VertexAttribCurrentValueData &currentValue) const
 {
     gl::Buffer *buffer = attrib.buffer.get();
     BufferD3D *storage = buffer ? GetImplAs<BufferD3D>(buffer) : NULL;
@@ -191,14 +183,14 @@ bool VertexBufferInterface::directStoragePossible(const gl::VertexAttribute &att
 
     if (attrib.type != GL_FLOAT)
     {
-        gl::VertexFormatType vertexFormatType = gl::GetVertexFormatType(attrib, currentValueType);
+        gl::VertexFormat vertexFormat(attrib, currentValue.Type);
 
         unsigned int outputElementSize;
         getVertexBuffer()->getSpaceRequired(attrib, 1, 0, &outputElementSize);
         alignment = std::min<size_t>(outputElementSize, 4);
 
         // TODO(jmadill): add VertexFormatCaps
-        requiresConversion = (mFactory->getVertexConversionType(vertexFormatType) & VERTEX_CONVERT_CPU) != 0;
+        requiresConversion = (mFactory->getVertexConversionType(vertexFormat) & VERTEX_CONVERT_CPU) != 0;
     }
 
     bool isAligned = (static_cast<size_t>(ComputeVertexAttributeStride(attrib)) % alignment == 0) &&
@@ -210,7 +202,7 @@ bool VertexBufferInterface::directStoragePossible(const gl::VertexAttribute &att
 StreamingVertexBufferInterface::StreamingVertexBufferInterface(BufferFactoryD3D *factory, std::size_t initialSize)
     : VertexBufferInterface(factory, true)
 {
-    setBufferSize(static_cast<unsigned int>(initialSize));
+    setBufferSize(initialSize);
 }
 
 StreamingVertexBufferInterface::~StreamingVertexBufferInterface()
@@ -243,7 +235,7 @@ gl::Error StreamingVertexBufferInterface::reserveSpace(unsigned int size)
 }
 
 StaticVertexBufferInterface::StaticVertexBufferInterface(BufferFactoryD3D *factory)
-    : VertexBufferInterface(factory, false), mIsCommitted(false)
+    : VertexBufferInterface(factory, false)
 {
 }
 
@@ -255,14 +247,13 @@ bool StaticVertexBufferInterface::lookupAttribute(const gl::VertexAttribute &att
 {
     for (unsigned int element = 0; element < mCache.size(); element++)
     {
-        size_t attribStride = ComputeVertexAttributeStride(attrib);
-
-        if (mCache[element].type == attrib.type && mCache[element].size == attrib.size &&
-            mCache[element].stride == attribStride &&
+        if (mCache[element].type == attrib.type &&
+            mCache[element].size == attrib.size &&
+            mCache[element].stride == ComputeVertexAttributeStride(attrib) &&
             mCache[element].normalized == attrib.normalized &&
             mCache[element].pureInteger == attrib.pureInteger)
         {
-            size_t offset = (static_cast<size_t>(attrib.offset) % attribStride);
+            size_t offset = (static_cast<size_t>(attrib.offset) % ComputeVertexAttributeStride(attrib));
             if (mCache[element].attributeOffset == offset)
             {
                 if (outStreamOffset)
@@ -295,16 +286,11 @@ gl::Error StaticVertexBufferInterface::reserveSpace(unsigned int size)
     }
 }
 
-gl::Error StaticVertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute &attrib,
-                                                             GLenum currentValueType,
-                                                             GLint start,
-                                                             GLsizei count,
-                                                             GLsizei instances,
-                                                             unsigned int *outStreamOffset,
-                                                             const uint8_t *sourceData)
+gl::Error StaticVertexBufferInterface::storeVertexAttributes(const gl::VertexAttribute &attrib, const gl::VertexAttribCurrentValueData &currentValue,
+                                                             GLint start, GLsizei count, GLsizei instances, unsigned int *outStreamOffset)
 {
     unsigned int streamOffset;
-    gl::Error error = VertexBufferInterface::storeVertexAttributes(attrib, currentValueType, start, count, instances, &streamOffset, sourceData);
+    gl::Error error = VertexBufferInterface::storeVertexAttributes(attrib, currentValue, start, count, instances, &streamOffset);
     if (error.isError())
     {
         return error;
@@ -322,11 +308,4 @@ gl::Error StaticVertexBufferInterface::storeVertexAttributes(const gl::VertexAtt
     return gl::Error(GL_NO_ERROR);
 }
 
-void StaticVertexBufferInterface::commit()
-{
-    if (getBufferSize() > 0)
-    {
-        mIsCommitted = true;
-    }
-}
 }

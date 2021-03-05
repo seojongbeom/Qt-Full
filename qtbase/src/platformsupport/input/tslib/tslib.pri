@@ -4,4 +4,4 @@ HEADERS += \
 SOURCES += \
     $$PWD/qtslib.cpp
 
-QMAKE_USE += tslib
+LIBS += -lts

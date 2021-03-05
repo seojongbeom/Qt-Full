@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,10 +34,9 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.Dial {
     id: control
@@ -45,18 +44,23 @@ T.Dial {
     implicitWidth: 100
     implicitHeight: 100
 
+    //! [background]
     background: Rectangle {
         x: control.width / 2 - width / 2
         y: control.height / 2 - height / 2
         width: Math.max(64, Math.min(control.width, control.height))
-        height: width
+        height: Math.max(64, Math.min(control.width, control.height))
         color: "transparent"
         radius: width / 2
 
         border.color: control.enabled ? control.Material.accentColor : control.Material.hintTextColor
     }
+    //! [background]
 
-    handle: SliderHandle {
+    //! [handle]
+    handle: Rectangle {
+        id: handleItem
+
         x: background.x + background.width / 2 - handle.width / 2
         y: background.y + background.height / 2 - handle.height / 2
         transform: [
@@ -71,10 +75,8 @@ T.Dial {
         ]
         implicitWidth: 14
         implicitHeight: 14
-
-        value: control.value
-        handleHasFocus: control.visualFocus
-        handlePressed: control.pressed
-        handleHovered: control.hovered
+        radius: width / 2
+        color: control.enabled ? control.Material.accentColor : control.Material.hintTextColor
     }
+    //! [handle]
 }

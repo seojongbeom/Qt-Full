@@ -1,6 +1,5 @@
 TEMPLATE = subdirs
 
-qtConfig(sharedmemory) {
-    !winrt: SUBDIRS = sharedmemoryhelper
-    SUBDIRS += test
-}
+!winrt: SUBDIRS = sharedmemoryhelper
+
+SUBDIRS += test

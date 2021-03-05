@@ -1,6 +1,4 @@
 # Qt graphicsview module
-
-qtConfig(graphicsview) {
 HEADERS += graphicsview/qgraphicsgridlayout.h \
     graphicsview/qgraphicsitem.h \
     graphicsview/qgraphicsitem_p.h \
@@ -55,4 +53,3 @@ SOURCES += graphicsview/qgraphicsgridlayout.cpp \
     graphicsview/qsimplex_p.cpp \
     graphicsview/qgraphicsanchorlayout_p.cpp \
     graphicsview/qgraphicsanchorlayout.cpp
-}

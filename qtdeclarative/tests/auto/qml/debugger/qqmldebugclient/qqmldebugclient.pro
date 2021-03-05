@@ -1,6 +1,6 @@
 CONFIG += testcase
 TARGET = tst_qqmldebugclient
-osx:CONFIG -= app_bundle
+macx:CONFIG -= app_bundle
 
 HEADERS += ../shared/qqmldebugtestservice.h
 
@@ -15,3 +15,4 @@ DEFINES += QT_QML_DEBUG_NO_WARNING
 CONFIG += qml_debug
 
 QT += qml-private testlib gui-private core-private
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

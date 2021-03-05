@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -380,14 +370,14 @@ void Widget::fillFunction()
 void Widget::fromRawDataFunction()
 {
     //! [22]
-    QRegularExpression pattern("\u00A4");
+    QRegExp pattern;
     static const QChar unicode[] = {
             0x005A, 0x007F, 0x00A4, 0x0060,
             0x1009, 0x0020, 0x0020};
     int size = sizeof(unicode) / sizeof(QChar);
 
     QString str = QString::fromRawData(unicode, size);
-    if (str.contains(pattern) {
+    if (str.contains(QRegExp(pattern))) {
         // ...
     //! [22] //! [23]
     }
@@ -635,7 +625,7 @@ void Widget::resizeFunction()
 
     //! [46]
     QString t = "Hello";
-    r.resize(t.size() + 10, 'X');
+    t += QString(10, 'X');
     // t == "HelloXXXXXXXXXX"
     //! [46]
 
@@ -733,6 +723,7 @@ void Widget::sizeFunction()
     int n = str.size();         // n == 5
     str.data()[0];              // returns 'W'
     str.data()[4];              // returns 'd'
+    str.data()[5];              // returns '\0'
     //! [58]
 }
 
@@ -792,18 +783,6 @@ void Widget::splitCaseSensitiveFunction()
     QStringList list2 = str.split(',', QString::SkipEmptyParts);
     // list2: [ "a", "b", "c" ]
     //! [62]
-
-    //! [62-empty]
-    QString str = "abc";
-    auto parts = str.split("");
-    // parts: {"", "a", "b", "c", ""}
-    //! [62-empty]
-
-    //! [62-slashes]
-    QString str = "/a/b/c/";
-    auto parts = str.split('/');
-    // parts: {"", "a", "b", "c", ""}
-    //! [62-slashes]
 }
 
 void Widget::sprintfFunction()

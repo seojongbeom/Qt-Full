@@ -2,7 +2,7 @@ TARGET = qevdevtouchplugin
 
 SOURCES = main.cpp
 
-QT += core-private gui-private input_support-private
+QT += core-private platformsupport-private gui-private
 
 OTHER_FILES += \
     evdevtouch.json

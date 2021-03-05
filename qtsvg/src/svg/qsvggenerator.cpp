@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt SVG module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,7 +46,6 @@
 #include "qtextstream.h"
 #include "qbuffer.h"
 #include "qmath.h"
-#include "qbitmap.h"
 
 #include "qdebug.h"
 
@@ -72,12 +65,12 @@ static void translate_color(const QColor &color, QString *color_string,
     *opacity_string = QString::number(color.alphaF());
 }
 
-static void translate_dashPattern(const QVector<qreal> &pattern, qreal width, QString *pattern_string)
+static void translate_dashPattern(QVector<qreal> pattern, const qreal& width, QString *pattern_string)
 {
     Q_ASSERT(pattern_string);
 
     // Note that SVG operates in absolute lengths, whereas Qt uses a length/width ratio.
-    for (qreal entry : pattern)
+    foreach (qreal entry, pattern)
         *pattern_string += QString::fromLatin1("%1,").arg(entry * width);
 
     pattern_string->chop(1);
@@ -129,9 +122,6 @@ public:
     QString currentGradientName;
     int numGradients;
 
-    QStringList savedPatternBrushes;
-    QStringList savedPatternMasks;
-
     struct _attributes {
         QString document_title;
         QString document_description;
@@ -149,12 +139,11 @@ static inline QPaintEngine::PaintEngineFeatures svgEngineFeatures()
 {
     return QPaintEngine::PaintEngineFeatures(
         QPaintEngine::AllFeatures
+        & ~QPaintEngine::PatternBrush
         & ~QPaintEngine::PerspectiveTransform
         & ~QPaintEngine::ConicalGradientFill
         & ~QPaintEngine::PorterDuff);
 }
-
-Q_GUI_EXPORT QImage qt_imageForBrush(int brushStyle, bool invert);
 
 class QSvgPaintEngine : public QPaintEngine
 {
@@ -167,22 +156,22 @@ public:
     {
     }
 
-    bool begin(QPaintDevice *device) override;
-    bool end() override;
+    bool begin(QPaintDevice *device) Q_DECL_OVERRIDE;
+    bool end() Q_DECL_OVERRIDE;
 
-    void updateState(const QPaintEngineState &state) override;
+    void updateState(const QPaintEngineState &state) Q_DECL_OVERRIDE;
     void popGroup();
 
-    void drawEllipse(const QRectF &r) override;
-    void drawPath(const QPainterPath &path) override;
-    void drawPixmap(const QRectF &r, const QPixmap &pm, const QRectF &sr) override;
-    void drawPolygon(const QPointF *points, int pointCount, PolygonDrawMode mode) override;
-    void drawRects(const QRectF *rects, int rectCount) override;
-    void drawTextItem(const QPointF &pt, const QTextItem &item) override;
+    void drawEllipse(const QRectF &r) Q_DECL_OVERRIDE;
+    void drawPath(const QPainterPath &path) Q_DECL_OVERRIDE;
+    void drawPixmap(const QRectF &r, const QPixmap &pm, const QRectF &sr) Q_DECL_OVERRIDE;
+    void drawPolygon(const QPointF *points, int pointCount, PolygonDrawMode mode) Q_DECL_OVERRIDE;
+    void drawRects(const QRectF *rects, int rectCount) Q_DECL_OVERRIDE;
+    void drawTextItem(const QPointF &pt, const QTextItem &item) Q_DECL_OVERRIDE;
     void drawImage(const QRectF &r, const QImage &pm, const QRectF &sr,
-                   Qt::ImageConversionFlags flags = Qt::AutoColor) override;
+                   Qt::ImageConversionFlags flags = Qt::AutoColor) Q_DECL_OVERRIDE;
 
-    QPaintEngine::Type type() const override { return QPaintEngine::SVG; }
+    QPaintEngine::Type type() const Q_DECL_OVERRIDE { return QPaintEngine::SVG; }
 
     QSize size() const { return d_func()->size; }
     void setSize(const QSize &size) {
@@ -217,41 +206,6 @@ public:
         Q_ASSERT(!isActive());
         d_func()->resolution = resolution;
     }
-
-    QString savePatternMask(Qt::BrushStyle style)
-    {
-        QString maskId = QString(QStringLiteral("patternmask%1")).arg(style);
-        if (!d_func()->savedPatternMasks.contains(maskId)) {
-            QImage img = qt_imageForBrush(style, true);
-            QRegion reg(QBitmap::fromData(img.size(), img.constBits()));
-            QString rct(QStringLiteral("<rect x=\"%1\" y=\"%2\" width=\"%3\" height=\"%4\" />"));
-            QTextStream str(&d_func()->defs, QIODevice::Append);
-            str << "<mask id=\"" << maskId << "\" x=\"0\" y=\"0\" width=\"8\" height=\"8\" "
-                << "stroke=\"none\" fill=\"#ffffff\" patternUnits=\"userSpaceOnUse\" >" << endl;
-            const auto &rects = reg.rects();
-            for (const QRect &r : rects)
-                str << rct.arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height()) << endl;
-            str << QStringLiteral("</mask>") << endl << endl;
-            d_func()->savedPatternMasks.append(maskId);
-        }
-        return maskId;
-    }
-
-    QString savePatternBrush(const QString &color, const QBrush &brush)
-    {
-        QString patternId = QString(QStringLiteral("fillpattern%1_")).arg(brush.style()) + color.midRef(1);
-        if (!d_func()->savedPatternBrushes.contains(patternId)) {
-            QString maskId = savePatternMask(brush.style());
-            QString geo(QStringLiteral("x=\"0\" y=\"0\" width=\"8\" height=\"8\""));
-            QTextStream str(&d_func()->defs, QIODevice::Append);
-            str << QString(QStringLiteral("<pattern id=\"%1\" %2 patternUnits=\"userSpaceOnUse\" >")).arg(patternId, geo) << endl;
-            str << QString(QStringLiteral("<rect %1 stroke=\"none\" fill=\"%2\" mask=\"url(#%3);\" />")).arg(geo, color, maskId) << endl;
-            str << QStringLiteral("</pattern>") << endl << endl;
-            d_func()->savedPatternBrushes.append(patternId);
-        }
-        return patternId;
-    }
-
     void saveLinearGradientBrush(const QGradient *g)
     {
         QTextStream str(&d_func()->defs, QIODevice::Append);
@@ -282,7 +236,7 @@ public:
                 << QLatin1String("fx=\"") <<grad->focalPoint().x() << QLatin1String("\" ")
                 << QLatin1String("fy=\"") <<grad->focalPoint().y() << QLatin1String("\" ");
         }
-        str << QLatin1String("id=\"") <<d_func()->generateGradientName()<< QLatin1String("\">\n");
+        str << QLatin1String("xml:id=\"") <<d_func()->generateGradientName()<< QLatin1String("\">\n");
         saveGradientStops(str, g);
         str << QLatin1String("</radialGradient>") << endl;
     }
@@ -324,8 +278,12 @@ public:
             }
         }
 
-        for (const QGradientStop &stop : qAsConst(stops)) {
-            const QString color = stop.second.name(QColor::HexRgb);
+        foreach(QGradientStop stop, stops) {
+            QString color =
+                QString::fromLatin1("#%1%2%3")
+                .arg(stop.second.red(), 2, 16, QLatin1Char('0'))
+                .arg(stop.second.green(), 2, 16, QLatin1Char('0'))
+                .arg(stop.second.blue(), 2, 16, QLatin1Char('0'));
             str << QLatin1String("    <stop offset=\"")<< stop.first << QLatin1String("\" ")
                 << QLatin1String("stop-color=\"") << color << QLatin1String("\" ")
                 << QLatin1String("stop-opacity=\"") << stop.second.alphaF() <<QLatin1String("\" />\n");
@@ -360,6 +318,8 @@ public:
 
     void qpenToSvg(const QPen &spen)
     {
+        QString width;
+
         d_func()->pen = spen;
 
         switch (spen.style()) {
@@ -461,28 +421,6 @@ public:
             d_func()->attributes.fillOpacity = colorOpacity;
         }
             break;
-        case Qt::Dense1Pattern:
-        case Qt::Dense2Pattern:
-        case Qt::Dense3Pattern:
-        case Qt::Dense4Pattern:
-        case Qt::Dense5Pattern:
-        case Qt::Dense6Pattern:
-        case Qt::Dense7Pattern:
-        case Qt::HorPattern:
-        case Qt::VerPattern:
-        case Qt::CrossPattern:
-        case Qt::BDiagPattern:
-        case Qt::FDiagPattern:
-        case Qt::DiagCrossPattern: {
-            QString color, colorOpacity;
-            translate_color(sbrush.color(), &color, &colorOpacity);
-            QString patternId = savePatternBrush(color, sbrush);
-            QString patternRef = QString(QStringLiteral("url(#%1)")).arg(patternId);
-            stream() << "fill=\"" << patternRef << "\" fill-opacity=\"" << colorOpacity << "\" ";
-            d_func()->attributes.fill = patternRef;
-            d_func()->attributes.fillOpacity = colorOpacity;
-            break;
-        }
         case Qt::LinearGradientPattern:
             saveLinearGradientBrush(sbrush.gradient());
             d_func()->attributes.fill = QString::fromLatin1("url(#%1)").arg(d_func()->currentGradientName);
@@ -856,9 +794,8 @@ int QSvgGenerator::metric(QPaintDevice::PaintDeviceMetric metric) const
     case QPaintDevice::PdmPhysicalDpiY:
         return d->engine->resolution();
     case QPaintDevice::PdmDevicePixelRatio:
-        return 1;
     case QPaintDevice::PdmDevicePixelRatioScaled:
-        return 1 * QPaintDevice::devicePixelRatioFScale();
+        return 1;
     default:
         qWarning("QSvgGenerator::metric(), unhandled metric %d\n", metric);
         break;

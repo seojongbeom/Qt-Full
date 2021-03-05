@@ -4,5 +4,5 @@ SUBDIRS = \
     qmimetype \
     qmimedatabase
 
-!qtConfig(private_tests): SUBDIRS -= \
+!contains(QT_CONFIG, private_tests): SUBDIRS -= \
     qmimetype

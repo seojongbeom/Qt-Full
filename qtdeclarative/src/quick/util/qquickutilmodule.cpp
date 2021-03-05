@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -54,9 +48,7 @@
 #include "qquicktextmetrics_p.h"
 #include "qquicktransition_p.h"
 #include "qquickanimator_p.h"
-#if QT_CONFIG(shortcut)
 #include "qquickshortcut_p.h"
-#endif
 #include "qquickvalidator_p.h"
 #include <qqmlinfo.h>
 #include <private/qqmltypenotavailable_p.h>
@@ -65,13 +57,11 @@
 #include <QtGui/QInputMethod>
 #include <QtGui/QKeySequence>
 
-#if QT_CONFIG(shortcut)
 Q_DECLARE_METATYPE(QKeySequence::StandardKey)
-#endif
 
 void QQuickUtilModule::defineModule()
 {
-#if QT_CONFIG(im)
+#ifndef QT_NO_IM
     qmlRegisterUncreatableType<QInputMethod>("QtQuick",2,0,"InputMethod",
                                              QInputMethod::tr("InputMethod is an abstract class"));
 #endif
@@ -98,7 +88,7 @@ void QQuickUtilModule::defineModule()
     qmlRegisterType<QQuickTransition>("QtQuick",2,0,"Transition");
     qmlRegisterType<QQuickVector3dAnimation>("QtQuick",2,0,"Vector3dAnimation");
 
-#if QT_CONFIG(validator)
+#ifndef QT_NO_VALIDATOR
     qmlRegisterType<QValidator>();
     qmlRegisterType<QQuickIntValidator>("QtQuick",2,0,"IntValidator");
     qmlRegisterType<QQuickDoubleValidator>("QtQuick",2,0,"DoubleValidator");
@@ -111,25 +101,19 @@ void QQuickUtilModule::defineModule()
     qmlRegisterType<QQuickScaleAnimator>("QtQuick", 2, 2, "ScaleAnimator");
     qmlRegisterType<QQuickRotationAnimator>("QtQuick", 2, 2, "RotationAnimator");
     qmlRegisterType<QQuickOpacityAnimator>("QtQuick", 2, 2, "OpacityAnimator");
-#if QT_CONFIG(quick_shadereffect) && QT_CONFIG(opengl)
     qmlRegisterType<QQuickUniformAnimator>("QtQuick", 2, 2, "UniformAnimator");
-#endif
+
     qmlRegisterType<QQuickStateOperation>();
 
     qmlRegisterCustomType<QQuickPropertyChanges>("QtQuick",2,0,"PropertyChanges", new QQuickPropertyChangesParser);
 
-#if QT_CONFIG(shortcut)
     qRegisterMetaType<QKeySequence::StandardKey>();
     qmlRegisterUncreatableType<QKeySequence, 2>("QtQuick", 2, 2, "StandardKey", QStringLiteral("Cannot create an instance of StandardKey."));
-#endif
 
     qmlRegisterType<QQuickFontMetrics>("QtQuick", 2, 4, "FontMetrics");
     qmlRegisterType<QQuickTextMetrics>("QtQuick", 2, 4, "TextMetrics");
 
-#if QT_CONFIG(shortcut)
     qmlRegisterType<QQuickShortcut>("QtQuick", 2, 5, "Shortcut");
-    qmlRegisterType<QQuickShortcut,1>("QtQuick", 2, 6, "Shortcut");
 
-    qmlRegisterType<QQuickShortcut,9>("QtQuick", 2, 9, "Shortcut");
-#endif
+    qmlRegisterType<QQuickShortcut,1>("QtQuick", 2, 6, "Shortcut");
 }

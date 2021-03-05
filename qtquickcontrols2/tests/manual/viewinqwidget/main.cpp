@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -39,7 +39,6 @@
 #include <QVBoxLayout>
 #include <QDebug>
 #include <QDesktopWidget>
-#include <QDir>
 #include <QGroupBox>
 #include <QQmlApplicationEngine>
 #include <QQmlError>
@@ -67,10 +66,9 @@ int main(int argc, char *argv[])
     }
     hLayout->addWidget(groupBox);
 
-    const QString gallerySource =
-        QDir::cleanPath(QLatin1String(SRCDIR"../../../examples/quickcontrols2/gallery/gallery.qml"));
-    QQmlApplicationEngine engine(QUrl::fromLocalFile(gallerySource));
-    QObject *root = engine.rootObjects().value(0, nullptr);
+    const QUrl gallerySource(QLatin1String("qrc:/gallery.qml"));
+    QQmlApplicationEngine engine(gallerySource);
+    QObject *root = engine.rootObjects().value(0, Q_NULLPTR);
     if (!root || !root->isWindowType()) {
         qWarning() << "Load error" << gallerySource;
         return 1;

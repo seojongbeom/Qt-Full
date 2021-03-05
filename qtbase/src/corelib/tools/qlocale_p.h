@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,7 +45,6 @@
 // We mean it.
 //
 
-#include <QtCore/private/qglobal_p.h>
 #include "QtCore/qstring.h"
 #include "QtCore/qvarlengtharray.h"
 #include "QtCore/qvariant.h"
@@ -134,7 +126,7 @@ Q_DECLARE_TYPEINFO(QSystemLocale::QueryType, Q_PRIMITIVE_TYPE);
 Q_DECLARE_TYPEINFO(QSystemLocale::CurrencyToStringArgument, Q_MOVABLE_TYPE);
 #endif
 
-#if QT_CONFIG(icu)
+#ifdef QT_USE_ICU
 namespace QIcu {
     QString toUpper(const QByteArray &localeId, const QString &str, bool *ok);
     QString toLower(const QByteArray &localeId, const QString &str, bool *ok);
@@ -173,17 +165,6 @@ public:
                                              QLocale::Country country);
     static const QLocaleData *c();
 
-    // Maximum number of significant digits needed to represent a double.
-    // We cannot use std::numeric_limits here without constexpr.
-    static const int DoubleMantissaBits = 53;
-    static const int Log10_2_100000 = 30103;    // log10(2) * 100000
-    // same as C++11 std::numeric_limits<T>::max_digits10
-    static const int DoubleMaxSignificant = (DoubleMantissaBits * Log10_2_100000) / 100000 + 2;
-
-    // Maximum number of digits before decimal point to represent a double
-    // Same as std::numeric_limits<double>::max_exponent10 + 1
-    static const int DoubleMaxDigitsBeforeDecimal = 309;
-
     enum DoubleForm {
         DFExponent = 0,
         DFDecimal,
@@ -193,7 +174,7 @@ public:
 
     enum Flags {
         NoFlags             = 0,
-        AddTrailingZeroes   = 0x01,
+        Alternate           = 0x01,
         ZeroPadded          = 0x02,
         LeftAdjusted        = 0x04,
         BlankBeforePositive = 0x08,
@@ -203,8 +184,12 @@ public:
 
         ShowBase            = 0x80,
         UppercaseBase       = 0x100,
-        ZeroPadExponent     = 0x200,
-        ForcePoint          = 0x400
+        ForcePoint          = Alternate
+    };
+
+    enum GroupSeparatorMode {
+        FailOnGroupSeparators,
+        ParseGroupSeparators
     };
 
     enum NumberMode { IntegerMode, DoubleStandardMode, DoubleScientificMode };
@@ -254,26 +239,24 @@ public:
         return float(d);
     }
 
-    double stringToDouble(const QChar *begin, int len, bool *ok,
-                          QLocale::NumberOptions number_options) const;
-    qint64 stringToLongLong(const QChar *begin, int len, int base, bool *ok,
-                            QLocale::NumberOptions number_options) const;
-    quint64 stringToUnsLongLong(const QChar *begin, int len, int base, bool *ok,
-                                QLocale::NumberOptions number_options) const;
+    double stringToDouble(const QChar *begin, int len, bool *ok, GroupSeparatorMode group_sep_mode) const;
+    qint64 stringToLongLong(const QChar *begin, int len, int base, bool *ok, GroupSeparatorMode group_sep_mode) const;
+    quint64 stringToUnsLongLong(const QChar *begin, int len, int base, bool *ok, GroupSeparatorMode group_sep_mode) const;
 
     // these functions are used in QIntValidator (QtGui)
     Q_CORE_EXPORT static double bytearrayToDouble(const char *num, bool *ok, bool *overflow = 0);
     Q_CORE_EXPORT static qint64 bytearrayToLongLong(const char *num, int base, bool *ok, bool *overflow = 0);
     Q_CORE_EXPORT static quint64 bytearrayToUnsLongLong(const char *num, int base, bool *ok);
 
-    bool numberToCLocale(const QChar *str, int len, QLocale::NumberOptions number_options,
-                         CharBuff *result) const;
+    bool numberToCLocale(const QChar *str, int len,
+                          GroupSeparatorMode group_sep_mode,
+                          CharBuff *result) const;
     inline char digitToCLocale(QChar c) const;
 
     // this function is used in QIntValidator (QtGui)
-    Q_CORE_EXPORT bool validateChars(
-            const QString &str, NumberMode numMode, QByteArray *buff, int decDigits = -1,
-            QLocale::NumberOptions number_options = QLocale::DefaultNumberOptions) const;
+    Q_CORE_EXPORT bool validateChars(const QString &str, NumberMode numMode,
+                                     QByteArray *buff, int decDigits = -1,
+                                     bool rejectGroupSeparators = false) const;
 
 public:
     quint16 m_language_id, m_script_id, m_country_id;
@@ -321,9 +304,7 @@ public:
 class Q_CORE_EXPORT QLocalePrivate
 {
 public:
-    static QLocalePrivate *create(
-            const QLocaleData *data,
-            QLocale::NumberOptions numberOptions = QLocale::DefaultNumberOptions)
+    static QLocalePrivate *create(const QLocaleData *data, int numberOptions = 0)
     {
         QLocalePrivate *retval = new QLocalePrivate;
         retval->m_data = data;
@@ -331,9 +312,6 @@ public:
         retval->m_numberOptions = numberOptions;
         return retval;
     }
-
-    static QLocalePrivate *get(QLocale &l) { return l.d; }
-    static const    QLocalePrivate *get(const QLocale &l) { return l.d; }
 
     QChar decimal() const { return QChar(m_data->m_decimal); }
     QChar group() const { return QChar(m_data->m_group); }
@@ -357,15 +335,9 @@ public:
     static QString languageToCode(QLocale::Language language);
     static QString scriptToCode(QLocale::Script script);
     static QString countryToCode(QLocale::Country country);
-    static QLocale::Language codeToLanguage(const QChar *code, int len) Q_DECL_NOTHROW;
-    static QLocale::Language codeToLanguage(const QString &code) Q_DECL_NOTHROW { return codeToLanguage(code.data(), code.size()); }
-    static QLocale::Language codeToLanguage(const QStringRef &code) Q_DECL_NOTHROW { return codeToLanguage(code.data(), code.size()); }
-    static QLocale::Script codeToScript(const QChar *code, int len) Q_DECL_NOTHROW;
-    static QLocale::Script codeToScript(const QString &code) Q_DECL_NOTHROW { return codeToScript(code.data(), code.size()); }
-    static QLocale::Script codeToScript(const QStringRef &code) Q_DECL_NOTHROW { return codeToScript(code.data(), code.size()); }
-    static QLocale::Country codeToCountry(const QChar *code, int len) Q_DECL_NOTHROW;
-    static QLocale::Country codeToCountry(const QString &code) Q_DECL_NOTHROW { return codeToCountry(code.data(), code.size()); }
-    static QLocale::Country codeToCountry(const QStringRef &code) Q_DECL_NOTHROW { return codeToCountry(code.data(), code.size()); }
+    static QLocale::Language codeToLanguage(const QString &code);
+    static QLocale::Script codeToScript(const QString &code);
+    static QLocale::Country codeToCountry(const QString &code);
     static void getLangAndCountry(const QString &name, QLocale::Language &lang,
                                   QLocale::Script &script, QLocale::Country &cntry);
 
@@ -379,7 +351,7 @@ public:
 
     const QLocaleData *m_data;
     QBasicAtomicInt ref;
-    QLocale::NumberOptions m_numberOptions;
+    quint16 m_numberOptions;
 };
 
 template <>
@@ -427,15 +399,15 @@ QString qt_readEscapedFormatString(const QString &format, int *idx);
 bool qt_splitLocaleName(const QString &name, QString &lang, QString &script, QString &cntry);
 int qt_repeatCount(const QString &s, int i);
 
-enum { AsciiSpaceMask = (1u << (' ' - 1)) |
-                        (1u << ('\t' - 1)) |   // 9: HT - horizontal tab
-                        (1u << ('\n' - 1)) |   // 10: LF - line feed
-                        (1u << ('\v' - 1)) |   // 11: VT - vertical tab
-                        (1u << ('\f' - 1)) |   // 12: FF - form feed
-                        (1u << ('\r' - 1)) };  // 13: CR - carriage return
+enum { AsciiSpaceMask = (1 << (' ' - 1)) |
+                        (1 << ('\t' - 1)) |   // 9: HT - horizontal tab
+                        (1 << ('\n' - 1)) |   // 10: LF - line feed
+                        (1 << ('\v' - 1)) |   // 11: VT - vertical tab
+                        (1 << ('\f' - 1)) |   // 12: FF - form feed
+                        (1 << ('\r' - 1)) };  // 13: CR - carriage return
 Q_DECL_CONSTEXPR inline bool ascii_isspace(uchar c)
 {
-    return c >= 1u && c <= 32u && (AsciiSpaceMask >> uint(c - 1)) & 1u;
+    return c >= 1U && c <= 32U && (uint(AsciiSpaceMask) >> uint(c - 1)) & 1U;
 }
 
 #if defined(Q_COMPILER_CONSTEXPR)

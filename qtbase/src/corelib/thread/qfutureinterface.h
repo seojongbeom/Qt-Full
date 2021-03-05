@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -159,7 +153,7 @@ public:
     ~QFutureInterface()
     {
         if (!derefT())
-            resultStoreBase().template clear<T>();
+            resultStore().clear();
     }
 
     static QFutureInterface canceledResult()
@@ -169,7 +163,7 @@ public:
     {
         other.refT();
         if (!derefT())
-            resultStoreBase().template clear<T>();
+            resultStore().clear();
         QFutureInterfaceBase::operator=(other);
         return *this;
     }
@@ -184,6 +178,11 @@ public:
     inline const T &resultReference(int index) const;
     inline const T *resultPointer(int index) const;
     inline QList<T> results();
+private:
+    QtPrivate::ResultStore<T> &resultStore()
+    { return static_cast<QtPrivate::ResultStore<T> &>(resultStoreBase()); }
+    const QtPrivate::ResultStore<T> &resultStore() const
+    { return static_cast<const QtPrivate::ResultStore<T> &>(resultStoreBase()); }
 };
 
 template <typename T>
@@ -194,14 +193,15 @@ inline void QFutureInterface<T>::reportResult(const T *result, int index)
         return;
     }
 
-    QtPrivate::ResultStoreBase &store = resultStoreBase();
+    QtPrivate::ResultStore<T> &store = resultStore();
+
 
     if (store.filterMode()) {
         const int resultCountBefore = store.count();
-        store.addResult<T>(index, result);
+        store.addResult(index, result);
         this->reportResultsReady(resultCountBefore, resultCountBefore + store.count());
     } else {
-        const int insertIndex = store.addResult<T>(index, result);
+        const int insertIndex = store.addResult(index, result);
         this->reportResultsReady(insertIndex, insertIndex + 1);
     }
 }
@@ -220,7 +220,7 @@ inline void QFutureInterface<T>::reportResults(const QVector<T> &_results, int b
         return;
     }
 
-    auto &store = resultStoreBase();
+    QtPrivate::ResultStore<T> &store = resultStore();
 
     if (store.filterMode()) {
         const int resultCountBefore = store.count();
@@ -244,14 +244,14 @@ template <typename T>
 inline const T &QFutureInterface<T>::resultReference(int index) const
 {
     QMutexLocker lock(mutex());
-    return resultStoreBase().resultAt(index).template value<T>();
+    return resultStore().resultAt(index).value();
 }
 
 template <typename T>
 inline const T *QFutureInterface<T>::resultPointer(int index) const
 {
     QMutexLocker lock(mutex());
-    return resultStoreBase().resultAt(index).template pointer<T>();
+    return resultStore().resultAt(index).pointer();
 }
 
 template <typename T>
@@ -266,9 +266,9 @@ inline QList<T> QFutureInterface<T>::results()
     QList<T> res;
     QMutexLocker lock(mutex());
 
-    QtPrivate::ResultIteratorBase it = resultStoreBase().begin();
-    while (it != resultStoreBase().end()) {
-        res.append(it.value<T>());
+    QtPrivate::ResultIterator<T> it = resultStore().begin();
+    while (it != resultStore().end()) {
+        res.append(it.value());
         ++it;
     }
 
@@ -279,13 +279,21 @@ template <>
 class QFutureInterface<void> : public QFutureInterfaceBase
 {
 public:
-    explicit QFutureInterface<void>(State initialState = NoState)
+    QFutureInterface<void>(State initialState = NoState)
         : QFutureInterfaceBase(initialState)
+    { }
+    QFutureInterface<void>(const QFutureInterface<void> &other)
+        : QFutureInterfaceBase(other)
     { }
 
     static QFutureInterface<void> canceledResult()
     { return QFutureInterface(State(Started | Finished | Canceled)); }
 
+    QFutureInterface<void> &operator=(const QFutureInterface<void> &other)
+    {
+        QFutureInterfaceBase::operator=(other);
+        return *this;
+    }
 
     inline QFuture<void> future(); // implemented in qfuture.h
 

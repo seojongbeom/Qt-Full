@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,12 +39,12 @@
 #include <private/qv8engine_p.h>
 
 #include <private/qmetaobject_p.h>
+#include <private/qqmlaccessors_p.h>
 #include <private/qmetaobjectbuilder_p.h>
 
 #include <private/qv4value_p.h>
 
 #include <QtCore/qdebug.h>
-#include <QtCore/QCryptographicHash>
 
 #include <ctype.h> // for toupper
 #include <limits.h>
@@ -76,8 +70,7 @@ public:
     int argumentsValid:1;
 
     QList<QByteArray> *names;
-
-    int arguments[1];
+    int arguments[0];
 };
 
 // Flags that do *NOT* depend on the property's QMetaProperty::userType() and thus are quick
@@ -86,43 +79,51 @@ static QQmlPropertyData::Flags fastFlagsForProperty(const QMetaProperty &p)
 {
     QQmlPropertyData::Flags flags;
 
-    flags.isConstant = p.isConstant();
-    flags.isWritable = p.isWritable();
-    flags.isResettable = p.isResettable();
-    flags.isFinal = p.isFinal();
-
+    if (p.isConstant())
+        flags |= QQmlPropertyData::IsConstant;
+    if (p.isWritable())
+        flags |= QQmlPropertyData::IsWritable;
+    if (p.isResettable())
+        flags |= QQmlPropertyData::IsResettable;
+    if (p.isFinal())
+        flags |= QQmlPropertyData::IsFinal;
     if (p.isEnumType())
-        flags.type = QQmlPropertyData::Flags::EnumType;
+        flags |= QQmlPropertyData::IsEnumType;
 
     return flags;
 }
 
 // Flags that do depend on the property's QMetaProperty::userType() and thus are slow to
 // load
-static void flagsForPropertyType(int propType, QQmlPropertyData::Flags &flags)
+static QQmlPropertyData::Flags flagsForPropertyType(int propType, QQmlEngine *engine)
 {
     Q_ASSERT(propType != -1);
 
+    QQmlPropertyData::Flags flags;
+
     if (propType == QMetaType::QObjectStar) {
-        flags.type = QQmlPropertyData::Flags::QObjectDerivedType;
+        flags |= QQmlPropertyData::IsQObjectDerived;
     } else if (propType == QMetaType::QVariant) {
-        flags.type = QQmlPropertyData::Flags::QVariantType;
-    } else if (propType < static_cast<int>(QVariant::UserType)) {
-        // nothing to do
+        flags |= QQmlPropertyData::IsQVariant;
+    } else if (propType < (int)QVariant::UserType) {
     } else if (propType == qMetaTypeId<QQmlBinding *>()) {
-        flags.type = QQmlPropertyData::Flags::QmlBindingType;
+        flags |= QQmlPropertyData::IsQmlBinding;
     } else if (propType == qMetaTypeId<QJSValue>()) {
-        flags.type = QQmlPropertyData::Flags::QJSValueType;
+        flags |= QQmlPropertyData::IsQJSValue;
     } else if (propType == qMetaTypeId<QQmlV4Handle>()) {
-        flags.type = QQmlPropertyData::Flags::V4HandleType;
+        flags |= QQmlPropertyData::IsV4Handle;
     } else {
-        QQmlMetaType::TypeCategory cat = QQmlMetaType::typeCategory(propType);
+        QQmlMetaType::TypeCategory cat =
+            engine ? QQmlEnginePrivate::get(engine)->typeCategory(propType)
+                   : QQmlMetaType::typeCategory(propType);
 
         if (cat == QQmlMetaType::Object || QMetaType::typeFlags(propType) & QMetaType::PointerToQObject)
-            flags.type = QQmlPropertyData::Flags::QObjectDerivedType;
+            flags |= QQmlPropertyData::IsQObjectDerived;
         else if (cat == QQmlMetaType::List)
-            flags.type = QQmlPropertyData::Flags::QListType;
+            flags |= QQmlPropertyData::IsQList;
     }
+
+    return flags;
 }
 
 static int metaObjectSignalCount(const QMetaObject *metaObject)
@@ -134,127 +135,119 @@ static int metaObjectSignalCount(const QMetaObject *metaObject)
 }
 
 QQmlPropertyData::Flags
-QQmlPropertyData::flagsForProperty(const QMetaProperty &p)
+QQmlPropertyData::flagsForProperty(const QMetaProperty &p, QQmlEngine *engine)
 {
-    auto flags = fastFlagsForProperty(p);
-    flagsForPropertyType(p.userType(), flags);
-    return flags;
+    return fastFlagsForProperty(p) | flagsForPropertyType(p.userType(), engine);
 }
 
 void QQmlPropertyData::lazyLoad(const QMetaProperty &p)
 {
-    setCoreIndex(p.propertyIndex());
-    setNotifyIndex(QMetaObjectPrivate::signalIndex(p.notifySignal()));
+    coreIndex = p.propertyIndex();
+    notifyIndex = QMetaObjectPrivate::signalIndex(p.notifySignal());
     Q_ASSERT(p.revision() <= Q_INT16_MAX);
-    setRevision(p.revision());
+    revision = p.revision();
 
-    setFlags(fastFlagsForProperty(p));
+    flags = fastFlagsForProperty(p);
 
-    int type = static_cast<int>(p.type());
+    int type = p.type();
     if (type == QMetaType::QObjectStar) {
-        setPropType(type);
-        _flags.type = Flags::QObjectDerivedType;
+        propType = type;
+        flags |= QQmlPropertyData::IsQObjectDerived;
     } else if (type == QMetaType::QVariant) {
-        setPropType(type);
-        _flags.type = Flags::QVariantType;
+        propType = type;
+        flags |= QQmlPropertyData::IsQVariant;
     } else if (type == QVariant::UserType || type == -1) {
-        _flags.notFullyResolved = true;
+        propTypeName = p.typeName();
+        flags |= QQmlPropertyData::NotFullyResolved;
     } else {
-        setPropType(type);
+        propType = type;
     }
 }
 
-void QQmlPropertyData::load(const QMetaProperty &p)
+void QQmlPropertyData::load(const QMetaProperty &p, QQmlEngine *engine)
 {
-    setPropType(p.userType());
-    setCoreIndex(p.propertyIndex());
-    setNotifyIndex(QMetaObjectPrivate::signalIndex(p.notifySignal()));
-    setFlags(fastFlagsForProperty(p));
-    flagsForPropertyType(propType(), _flags);
+    propType = p.userType();
+    coreIndex = p.propertyIndex();
+    notifyIndex = QMetaObjectPrivate::signalIndex(p.notifySignal());
+    flags = fastFlagsForProperty(p) | flagsForPropertyType(propType, engine);
     Q_ASSERT(p.revision() <= Q_INT16_MAX);
-    setRevision(p.revision());
+    revision = p.revision();
 }
 
 void QQmlPropertyData::load(const QMetaMethod &m)
 {
-    setCoreIndex(m.methodIndex());
-    setArguments(nullptr);
-
-    setPropType(m.returnType());
-
-    _flags.type = Flags::FunctionType;
+    coreIndex = m.methodIndex();
+    arguments = 0;
+    flags |= IsFunction;
     if (m.methodType() == QMetaMethod::Signal)
-        _flags.isSignal = true;
-    else if (m.methodType() == QMetaMethod::Constructor) {
-        _flags.isConstructor = true;
-        setPropType(QMetaType::QObjectStar);
-    }
+        flags |= IsSignal;
+    propType = m.returnType();
 
     if (m.parameterCount()) {
-        _flags.hasArguments = true;
-        if ((m.parameterCount() == 1) && (m.parameterTypes().constFirst() == "QQmlV4Function*")) {
-            _flags.isV4Function = true;
+        flags |= HasArguments;
+        if ((m.parameterCount() == 1) && (m.parameterTypes().first() == "QQmlV4Function*")) {
+            flags |= IsV4Function;
         }
     }
 
     if (m.attributes() & QMetaMethod::Cloned)
-        _flags.isCloned = true;
+        flags |= IsCloned;
 
     Q_ASSERT(m.revision() <= Q_INT16_MAX);
-    setRevision(m.revision());
+    revision = m.revision();
 }
 
 void QQmlPropertyData::lazyLoad(const QMetaMethod &m)
 {
-    setCoreIndex(m.methodIndex());
-    setPropType(QMetaType::Void);
-    setArguments(nullptr);
-    _flags.type = Flags::FunctionType;
+    coreIndex = m.methodIndex();
+    arguments = 0;
+    flags |= IsFunction;
     if (m.methodType() == QMetaMethod::Signal)
-        _flags.isSignal = true;
-    else if (m.methodType() == QMetaMethod::Constructor) {
-        _flags.isConstructor = true;
-        setPropType(QMetaType::QObjectStar);
-    }
+        flags |= IsSignal;
+    propType = QMetaType::Void;
 
     const char *returnType = m.typeName();
     if (!returnType)
         returnType = "\0";
     if ((*returnType != 'v') || (qstrcmp(returnType+1, "oid") != 0)) {
-        _flags.notFullyResolved = true;
+        propTypeName = returnType;
+        flags |= NotFullyResolved;
     }
 
-    const int paramCount = m.parameterCount();
-    if (paramCount) {
-        _flags.hasArguments = true;
-        if ((paramCount == 1) && (m.parameterTypes().constFirst() == "QQmlV4Function*")) {
-            _flags.isV4Function = true;
+    if (m.parameterCount()) {
+        flags |= HasArguments;
+        if ((m.parameterCount() == 1) && (m.parameterTypes().first() == "QQmlV4Function*")) {
+            flags |= IsV4Function;
         }
     }
 
     if (m.attributes() & QMetaMethod::Cloned)
-        _flags.isCloned = true;
+        flags |= IsCloned;
 
     Q_ASSERT(m.revision() <= Q_INT16_MAX);
-    setRevision(m.revision());
+    revision = m.revision();
 }
 
 /*!
 Creates a new empty QQmlPropertyCache.
 */
-QQmlPropertyCache::QQmlPropertyCache()
-    : _parent(0), propertyIndexCacheStart(0), methodIndexCacheStart(0),
+QQmlPropertyCache::QQmlPropertyCache(QV4::ExecutionEngine *e)
+    : engine(e), _parent(0), propertyIndexCacheStart(0), methodIndexCacheStart(0),
       signalHandlerIndexCacheStart(0), _hasPropertyOverrides(false), _ownMetaObject(false),
       _metaObject(0), argumentsCache(0), _jsFactoryMethodIndex(-1)
 {
+    Q_ASSERT(engine);
 }
 
 /*!
 Creates a new QQmlPropertyCache of \a metaObject.
 */
-QQmlPropertyCache::QQmlPropertyCache(const QMetaObject *metaObject)
-    : QQmlPropertyCache()
+QQmlPropertyCache::QQmlPropertyCache(QV4::ExecutionEngine *e, const QMetaObject *metaObject)
+    : engine(e), _parent(0), propertyIndexCacheStart(0), methodIndexCacheStart(0),
+      signalHandlerIndexCacheStart(0), _hasPropertyOverrides(false), _ownMetaObject(false),
+      _metaObject(0), argumentsCache(0), _jsFactoryMethodIndex(-1)
 {
+    Q_ASSERT(engine);
     Q_ASSERT(metaObject);
 
     update(metaObject);
@@ -262,11 +255,13 @@ QQmlPropertyCache::QQmlPropertyCache(const QMetaObject *metaObject)
 
 QQmlPropertyCache::~QQmlPropertyCache()
 {
+    clear();
+
     QQmlPropertyCacheMethodArguments *args = argumentsCache;
     while (args) {
         QQmlPropertyCacheMethodArguments *next = args->next;
-        delete args->signalParameterStringForJS;
-        delete args->names;
+        if (args->signalParameterStringForJS) delete args->signalParameterStringForJS;
+        if (args->names) delete args->names;
         free(args);
         args = next;
     }
@@ -279,11 +274,24 @@ QQmlPropertyCache::~QQmlPropertyCache()
     if (_ownMetaObject) free(const_cast<QMetaObject *>(_metaObject));
     _metaObject = 0;
     _parent = 0;
+    engine = 0;
+}
+
+void QQmlPropertyCache::destroy()
+{
+    delete this;
+}
+
+// This is inherited from QQmlCleanup, so it should only clear the things
+// that are tied to the specific QQmlEngine.
+void QQmlPropertyCache::clear()
+{
+    engine = 0;
 }
 
 QQmlPropertyCache *QQmlPropertyCache::copy(int reserve)
 {
-    QQmlPropertyCache *cache = new QQmlPropertyCache();
+    QQmlPropertyCache *cache = new QQmlPropertyCache(engine);
     cache->_parent = this;
     cache->_parent->addref();
     cache->propertyIndexCacheStart = propertyIndexCache.count() + propertyIndexCacheStart;
@@ -319,14 +327,14 @@ QQmlPropertyCache *QQmlPropertyCache::copyAndReserve(int propertyCount, int meth
     \a notifyIndex MUST be in the signal index range (see QObjectPrivate::signalIndex()).
     This is different from QMetaMethod::methodIndex().
 */
-void QQmlPropertyCache::appendProperty(const QString &name, QQmlPropertyData::Flags flags,
-                                       int coreIndex, int propType, int notifyIndex)
+void QQmlPropertyCache::appendProperty(const QString &name,
+                                       quint32 flags, int coreIndex, int propType, int notifyIndex)
 {
     QQmlPropertyData data;
-    data.setPropType(propType);
-    data.setCoreIndex(coreIndex);
-    data.setNotifyIndex(notifyIndex);
-    data.setFlags(flags);
+    data.propType = propType;
+    data.coreIndex = coreIndex;
+    data.notifyIndex = notifyIndex;
+    data.flags = flags;
 
     QQmlPropertyData *old = findNamedProperty(name);
     if (old)
@@ -338,25 +346,24 @@ void QQmlPropertyCache::appendProperty(const QString &name, QQmlPropertyData::Fl
     setNamedProperty(name, index + propertyOffset(), propertyIndexCache.data() + index, (old != 0));
 }
 
-void QQmlPropertyCache::appendSignal(const QString &name, QQmlPropertyData::Flags flags,
-                                     int coreIndex, const int *types,
-                                     const QList<QByteArray> &names)
+void QQmlPropertyCache::appendSignal(const QString &name, quint32 flags, int coreIndex,
+                                     const int *types, const QList<QByteArray> &names)
 {
     QQmlPropertyData data;
-    data.setPropType(QVariant::Invalid);
-    data.setCoreIndex(coreIndex);
-    data.setFlags(flags);
-    data.setArguments(nullptr);
+    data.propType = QVariant::Invalid;
+    data.coreIndex = coreIndex;
+    data.flags = flags;
+    data.arguments = 0;
 
     QQmlPropertyData handler = data;
-    handler._flags.isSignalHandler = true;
+    handler.flags |= QQmlPropertyData::IsSignalHandler;
 
     if (types) {
         int argumentCount = *types;
         QQmlPropertyCacheMethodArguments *args = createArgumentsObject(argumentCount, names);
         ::memcpy(args->arguments, types, (argumentCount + 1) * sizeof(int));
         args->argumentsValid = true;
-        data.setArguments(args);
+        data.arguments = args;
     }
 
     QQmlPropertyData *old = findNamedProperty(name);
@@ -370,28 +377,28 @@ void QQmlPropertyCache::appendSignal(const QString &name, QQmlPropertyData::Flag
     signalHandlerIndexCache.append(handler);
 
     QString handlerName = QLatin1String("on") + name;
-    handlerName[2] = handlerName.at(2).toUpper();
+    handlerName[2] = handlerName[2].toUpper();
 
     setNamedProperty(name, methodIndex + methodOffset(), methodIndexCache.data() + methodIndex, (old != 0));
     setNamedProperty(handlerName, signalHandlerIndex + signalOffset(), signalHandlerIndexCache.data() + signalHandlerIndex, (old != 0));
 }
 
-void QQmlPropertyCache::appendMethod(const QString &name, QQmlPropertyData::Flags flags,
-                                     int coreIndex, const QList<QByteArray> &names)
+void QQmlPropertyCache::appendMethod(const QString &name, quint32 flags, int coreIndex,
+                                     const QList<QByteArray> &names)
 {
     int argumentCount = names.count();
 
     QQmlPropertyData data;
-    data.setPropType(QMetaType::QVariant);
-    data.setCoreIndex(coreIndex);
+    data.propType = QMetaType::QVariant;
+    data.coreIndex = coreIndex;
 
     QQmlPropertyCacheMethodArguments *args = createArgumentsObject(argumentCount, names);
     for (int ii = 0; ii < argumentCount; ++ii)
         args->arguments[ii + 1] = QMetaType::QVariant;
     args->argumentsValid = true;
-    data.setArguments(args);
+    data.arguments = args;
 
-    data.setFlags(flags);
+    data.flags = flags;
 
     QQmlPropertyData *old = findNamedProperty(name);
     if (old)
@@ -401,6 +408,12 @@ void QQmlPropertyCache::appendMethod(const QString &name, QQmlPropertyData::Flag
     methodIndexCache.append(data);
 
     setNamedProperty(name, methodIndex + methodOffset(), methodIndexCache.data() + methodIndex, (old != 0));
+}
+
+// Returns this property cache's metaObject.  May be null if it hasn't been created yet.
+const QMetaObject *QQmlPropertyCache::metaObject() const
+{
+    return _metaObject;
 }
 
 // Returns this property cache's metaObject, creating it if necessary.
@@ -418,9 +431,20 @@ const QMetaObject *QQmlPropertyCache::createMetaObject()
     return _metaObject;
 }
 
+// Returns the name of the default property for this cache
+QString QQmlPropertyCache::defaultPropertyName() const
+{
+    return _defaultPropertyName;
+}
+
 QQmlPropertyData *QQmlPropertyCache::defaultProperty() const
 {
     return property(defaultPropertyName(), 0, 0);
+}
+
+QQmlPropertyCache *QQmlPropertyCache::parent() const
+{
+    return _parent;
 }
 
 void QQmlPropertyCache::setParent(QQmlPropertyCache *newParent)
@@ -433,21 +457,30 @@ void QQmlPropertyCache::setParent(QQmlPropertyCache *newParent)
     _parent->addref();
 }
 
+// Returns the first C++ type's QMetaObject - that is, the first QMetaObject not created by
+// QML
+const QMetaObject *QQmlPropertyCache::firstCppMetaObject() const
+{
+    while (_parent && (_metaObject == 0 || _ownMetaObject))
+        return _parent->firstCppMetaObject();
+    return _metaObject;
+}
+
 QQmlPropertyCache *
 QQmlPropertyCache::copyAndAppend(const QMetaObject *metaObject,
-                                 QQmlPropertyData::Flags propertyFlags,
-                                 QQmlPropertyData::Flags methodFlags,
-                                 QQmlPropertyData::Flags signalFlags)
+                                         QQmlPropertyData::Flag propertyFlags,
+                                         QQmlPropertyData::Flag methodFlags,
+                                         QQmlPropertyData::Flag signalFlags)
 {
     return copyAndAppend(metaObject, -1, propertyFlags, methodFlags, signalFlags);
 }
 
 QQmlPropertyCache *
 QQmlPropertyCache::copyAndAppend(const QMetaObject *metaObject,
-                                 int revision,
-                                 QQmlPropertyData::Flags propertyFlags,
-                                 QQmlPropertyData::Flags methodFlags,
-                                 QQmlPropertyData::Flags signalFlags)
+                                         int revision,
+                                         QQmlPropertyData::Flag propertyFlags,
+                                         QQmlPropertyData::Flag methodFlags,
+                                         QQmlPropertyData::Flag signalFlags)
 {
     Q_ASSERT(QMetaObjectPrivate::get(metaObject)->revision >= 4);
 
@@ -464,10 +497,10 @@ QQmlPropertyCache::copyAndAppend(const QMetaObject *metaObject,
 }
 
 void QQmlPropertyCache::append(const QMetaObject *metaObject,
-                               int revision,
-                               QQmlPropertyData::Flags propertyFlags,
-                               QQmlPropertyData::Flags methodFlags,
-                               QQmlPropertyData::Flags signalFlags)
+                                       int revision,
+                                       QQmlPropertyData::Flag propertyFlags,
+                                       QQmlPropertyData::Flag methodFlags,
+                                       QQmlPropertyData::Flag signalFlags)
 {
     Q_UNUSED(revision);
 
@@ -482,20 +515,39 @@ void QQmlPropertyCache::append(const QMetaObject *metaObject,
     int signalCount = metaObjectSignalCount(metaObject);
     int classInfoCount = QMetaObjectPrivate::get(metaObject)->classInfoCount;
 
+    QQmlAccessorProperties::Properties accessorProperties;
+
     if (classInfoCount) {
         int classInfoOffset = metaObject->classInfoOffset();
+        bool hasFastProperty = false;
         for (int ii = 0; ii < classInfoCount; ++ii) {
             int idx = ii + classInfoOffset;
-            QMetaClassInfo mci = metaObject->classInfo(idx);
-            const char *name = mci.name();
-            if (0 == qstrcmp(name, "DefaultProperty")) {
-                _defaultPropertyName = QString::fromUtf8(mci.value());
-            } else if (0 == qstrcmp(name, "qt_QmlJSWrapperFactoryMethod")) {
-                const char * const factoryMethod = mci.value();
+
+            const char * const classInfoName = metaObject->classInfo(idx).name();
+            if (0 == qstrcmp(classInfoName, "qt_HasQmlAccessors")) {
+                hasFastProperty = true;
+            } else if (0 == qstrcmp(classInfoName, "DefaultProperty")) {
+                _defaultPropertyName = QString::fromUtf8(metaObject->classInfo(idx).value());
+            } else if (0 == qstrcmp(classInfoName, "qt_QmlJSWrapperFactoryMethod")) {
+                const char * const factoryMethod = metaObject->classInfo(idx).value();
                 _jsFactoryMethodIndex = metaObject->indexOfSlot(factoryMethod);
                 if (_jsFactoryMethodIndex != -1)
                     _jsFactoryMethodIndex -= metaObject->methodOffset();
             }
+        }
+
+        if (hasFastProperty) {
+            accessorProperties = QQmlAccessorProperties::properties(metaObject);
+            if (accessorProperties.count == 0)
+                qFatal("QQmlPropertyCache: %s has FastProperty class info, but has not "
+                       "installed property accessors", metaObject->className());
+        } else {
+#ifndef QT_NO_DEBUG
+            accessorProperties = QQmlAccessorProperties::properties(metaObject);
+            if (accessorProperties.count != 0)
+                qFatal("QQmlPropertyCache: %s has fast property accessors, but is missing "
+                       "FastProperty class info", metaObject->className());
+#endif
         }
     }
 
@@ -535,21 +587,23 @@ void QQmlPropertyCache::append(const QMetaObject *metaObject,
         QQmlPropertyData *data = &methodIndexCache[ii - methodIndexCacheStart];
         QQmlPropertyData *sigdata = 0;
 
-        if (m.methodType() == QMetaMethod::Signal)
-            data->setFlags(signalFlags);
-        else
-            data->setFlags(methodFlags);
-
         data->lazyLoad(m);
-        data->_flags.isDirect = !dynamicMetaObject;
+
+        if (data->isSignal())
+            data->flags |= signalFlags;
+        else
+            data->flags |= methodFlags;
+
+        if (!dynamicMetaObject)
+            data->flags |= QQmlPropertyData::IsDirect;
 
         Q_ASSERT((allowedRevisionCache.count() - 1) < Q_INT16_MAX);
-        data->setMetaObjectOffset(allowedRevisionCache.count() - 1);
+        data->metaObjectOffset = allowedRevisionCache.count() - 1;
 
         if (data->isSignal()) {
             sigdata = &signalHandlerIndexCache[signalHandlerIndex - signalHandlerIndexCacheStart];
             *sigdata = *data;
-            sigdata->_flags.isSignalHandler = true;
+            sigdata->flags |= QQmlPropertyData::IsSignalHandler;
         }
 
         QQmlPropertyData *old = 0;
@@ -561,7 +615,7 @@ void QQmlPropertyCache::append(const QMetaObject *metaObject,
             setNamedProperty(methodName, ii, data, (old != 0));
 
             if (data->isSignal()) {
-                QHashedString on(QLatin1String("on") % methodName.at(0).toUpper() % methodName.midRef(1));
+                QHashedString on(QStringLiteral("on") % methodName.at(0).toUpper() % methodName.midRef(1));
                 setNamedProperty(on, ii, sigdata, (old != 0));
                 ++signalHandlerIndex;
             }
@@ -590,8 +644,8 @@ void QQmlPropertyCache::append(const QMetaObject *metaObject,
 
         if (old) {
             // We only overload methods in the same class, exactly like C++
-            if (old->isFunction() && old->coreIndex() >= methodOffset)
-                data->_flags.isOverload = true;
+            if (old->isFunction() && old->coreIndex >= methodOffset)
+                data->flags |= QQmlPropertyData::IsOverload;
 
             data->markAsOverrideOf(old);
         }
@@ -618,13 +672,14 @@ void QQmlPropertyCache::append(const QMetaObject *metaObject,
 
         QQmlPropertyData *data = &propertyIndexCache[ii - propertyIndexCacheStart];
 
-        data->setFlags(propertyFlags);
         data->lazyLoad(p);
+        data->flags |= propertyFlags;
 
-        data->_flags.isDirect = !dynamicMetaObject;
+        if (!dynamicMetaObject)
+            data->flags |= QQmlPropertyData::IsDirect;
 
         Q_ASSERT((allowedRevisionCache.count() - 1) < Q_INT16_MAX);
-        data->setMetaObjectOffset(allowedRevisionCache.count() - 1);
+        data->metaObjectOffset = allowedRevisionCache.count() - 1;
 
         QQmlPropertyData *old = 0;
 
@@ -640,40 +695,38 @@ void QQmlPropertyCache::append(const QMetaObject *metaObject,
             setNamedProperty(propName, ii, data, (old != 0));
         }
 
-        bool isGadget = true;
-        for (const QMetaObject *it = metaObject; it != nullptr; it = it->superClass()) {
-            if (it == &QObject::staticMetaObject)
-                isGadget = false;
-        }
+        QQmlAccessorProperties::Property *accessorProperty = accessorProperties.property(str);
 
-        if (isGadget) // always dispatch over a 'normal' meta-call so the QQmlValueType can intercept
-            data->_flags.isDirect = false;
-        else
-            data->trySetStaticMetaCallFunction(metaObject->d.static_metacall, ii - propOffset);
-        if (old)
+        // Fast properties may not be overrides or revisioned
+        Q_ASSERT(accessorProperty == 0 || (old == 0 && data->revision == 0));
+
+        if (accessorProperty) {
+            data->flags |= QQmlPropertyData::HasAccessors;
+            data->accessors = accessorProperty->accessors;
+            data->accessorData = accessorProperty->data;
+        } else if (old) {
             data->markAsOverrideOf(old);
+        }
     }
+}
+
+QQmlPropertyData *QQmlPropertyCache::ensureResolved(QQmlPropertyData *p) const
+{
+    if (p && p->notFullyResolved())
+        resolve(p);
+
+    return p;
 }
 
 void QQmlPropertyCache::resolve(QQmlPropertyData *data) const
 {
     Q_ASSERT(data->notFullyResolved());
-    data->_flags.notFullyResolved = false;
 
-    const QMetaObject *mo = firstCppMetaObject();
-    if (data->isFunction()) {
-        auto metaMethod = mo->method(data->coreIndex());
-        const char *retTy = metaMethod.typeName();
-        if (!retTy)
-            retTy = "\0";
-        data->setPropType(QMetaType::type(retTy));
-    } else {
-        auto metaProperty = mo->property(data->coreIndex());
-        data->setPropType(QMetaType::type(metaProperty.typeName()));
-    }
+    data->propType = QMetaType::type(data->propTypeName);
 
     if (!data->isFunction()) {
-        if (data->propType() == QMetaType::UnknownType) {
+        if (data->propType == QMetaType::UnknownType) {
+            const QMetaObject *mo = _metaObject;
             QQmlPropertyCache *p = _parent;
             while (p && (!mo || _ownMetaObject)) {
                 mo = p->_metaObject;
@@ -681,20 +734,22 @@ void QQmlPropertyCache::resolve(QQmlPropertyData *data) const
             }
 
             int propOffset = mo->propertyOffset();
-            if (mo && data->coreIndex() < propOffset + mo->propertyCount()) {
-                while (data->coreIndex() < propOffset) {
+            if (mo && data->coreIndex < propOffset + mo->propertyCount()) {
+                while (data->coreIndex < propOffset) {
                     mo = mo->superClass();
                     propOffset = mo->propertyOffset();
                 }
 
                 int registerResult = -1;
                 void *argv[] = { &registerResult };
-                mo->static_metacall(QMetaObject::RegisterPropertyMetaType, data->coreIndex() - propOffset, argv);
-                data->setPropType(registerResult == -1 ? QMetaType::UnknownType : registerResult);
+                mo->static_metacall(QMetaObject::RegisterPropertyMetaType, data->coreIndex - propOffset, argv);
+                data->propType = registerResult == -1 ? QMetaType::UnknownType : registerResult;
             }
         }
-        flagsForPropertyType(data->propType(), data->_flags);
+        data->flags |= flagsForPropertyType(data->propType, engine->qmlEngine());
     }
+
+    data->flags &= ~QQmlPropertyData::NotFullyResolved;
 }
 
 void QQmlPropertyCache::updateRecur(const QMetaObject *metaObject)
@@ -761,14 +816,65 @@ void QQmlPropertyCache::invalidate(const QMetaObject *metaObject)
     }
 }
 
+/*! \internal
+    \a index MUST be in the signal index range (see QObjectPrivate::signalIndex()).
+    This is different from QMetaMethod::methodIndex().
+*/
+QQmlPropertyData *
+QQmlPropertyCache::signal(int index) const
+{
+    if (index < 0 || index >= (signalHandlerIndexCacheStart + signalHandlerIndexCache.count()))
+        return 0;
+
+    if (index < signalHandlerIndexCacheStart)
+        return _parent->signal(index);
+
+    QQmlPropertyData *rv = const_cast<QQmlPropertyData *>(&methodIndexCache.at(index - signalHandlerIndexCacheStart));
+    Q_ASSERT(rv->isSignal() || rv->coreIndex == -1);
+    return ensureResolved(rv);
+}
+
+int QQmlPropertyCache::methodIndexToSignalIndex(int index) const
+{
+    if (index < 0 || index >= (methodIndexCacheStart + methodIndexCache.count()))
+        return index;
+
+    if (index < methodIndexCacheStart)
+        return _parent->methodIndexToSignalIndex(index);
+
+    return index - methodIndexCacheStart + signalHandlerIndexCacheStart;
+}
+
+QQmlPropertyData *
+QQmlPropertyCache::property(int index) const
+{
+    if (index < 0 || index >= (propertyIndexCacheStart + propertyIndexCache.count()))
+        return 0;
+
+    if (index < propertyIndexCacheStart)
+        return _parent->property(index);
+
+    QQmlPropertyData *rv = const_cast<QQmlPropertyData *>(&propertyIndexCache.at(index - propertyIndexCacheStart));
+    return ensureResolved(rv);
+}
+
+QQmlPropertyData *
+QQmlPropertyCache::method(int index) const
+{
+    if (index < 0 || index >= (methodIndexCacheStart + methodIndexCache.count()))
+        return 0;
+
+    if (index < methodIndexCacheStart)
+        return _parent->method(index);
+
+    QQmlPropertyData *rv = const_cast<QQmlPropertyData *>(&methodIndexCache.at(index - methodIndexCacheStart));
+    return ensureResolved(rv);
+}
+
 QQmlPropertyData *QQmlPropertyCache::findProperty(StringCache::ConstIterator it, QObject *object, QQmlContextData *context) const
 {
     QQmlData *data = (object ? QQmlData::get(object) : 0);
-    const QQmlVMEMetaObject *vmemo = 0;
-    if (data && data->hasVMEMetaObject) {
-        QObjectPrivate *op = QObjectPrivate::get(object);
-        vmemo = static_cast<const QQmlVMEMetaObject *>(op->metaObject);
-    }
+    const QQmlVMEMetaObject *vmemo = (data && data->hasVMEMetaObject ? static_cast<const QQmlVMEMetaObject *>(object->metaObject()) : 0);
     return findProperty(it, vmemo, context);
 }
 
@@ -781,11 +887,11 @@ inline bool contextHasNoExtensions(QQmlContextData *context)
     return (!context->parent || !context->parent->imports);
 }
 
-inline int maximumIndexForProperty(QQmlPropertyData *prop, const int methodCount, const int signalCount, const int propertyCount)
+inline int maximumIndexForProperty(QQmlPropertyData *prop, const QQmlVMEMetaObject *vmemo)
 {
-    return prop->isFunction() ? methodCount
-                              : prop->isSignalHandler() ? signalCount
-                                                        : propertyCount;
+    return (prop->isFunction() ? vmemo->methodCount()
+                               : prop->isSignalHandler() ? vmemo->signalCount()
+                                                         : vmemo->propertyCount());
 }
 
 }
@@ -812,15 +918,11 @@ QQmlPropertyData *QQmlPropertyCache::findProperty(StringCache::ConstIterator it,
         }
 
         if (vmemo) {
-            const int methodCount = vmemo->cache->methodCount();
-            const int signalCount = vmemo->cache->signalCount();
-            const int propertyCount = vmemo->cache->propertyCount();
-
             // Ensure that the property we resolve to is accessible from this meta-object
             do {
                 const StringCache::mapped_type &property(it.value());
 
-                if (property.first < maximumIndexForProperty(property.second, methodCount, signalCount, propertyCount)) {
+                if (property.first < maximumIndexForProperty(property.second, vmemo)) {
                     // This property is available in the specified context
                     if (property.second->isFunction() || property.second->isSignalHandler()) {
                         // Prefer the earlier resolution
@@ -852,25 +954,33 @@ QString QQmlPropertyData::name(QObject *object) const
 
 QString QQmlPropertyData::name(const QMetaObject *metaObject) const
 {
-    if (!metaObject || coreIndex() == -1)
+    if (!metaObject || coreIndex == -1)
         return QString();
 
-    if (isFunction()) {
-        QMetaMethod m = metaObject->method(coreIndex());
+    if (flags & IsFunction) {
+        QMetaMethod m = metaObject->method(coreIndex);
 
         return QString::fromUtf8(m.name().constData());
     } else {
-        QMetaProperty p = metaObject->property(coreIndex());
+        QMetaProperty p = metaObject->property(coreIndex);
         return QString::fromUtf8(p.name());
     }
 }
 
 void QQmlPropertyData::markAsOverrideOf(QQmlPropertyData *predecessor)
 {
-    setOverrideIndexIsProperty(!predecessor->isFunction());
-    setOverrideIndex(predecessor->coreIndex());
+    overrideIndexIsProperty = !predecessor->isFunction();
+    overrideIndex = predecessor->coreIndex;
 
-    predecessor->_flags.isOverridden = true;
+    predecessor->flags |= QQmlPropertyData::IsOverridden;
+}
+
+QStringList QQmlPropertyCache::propertyNames() const
+{
+    QStringList keys;
+    for (StringCache::ConstIterator iter = stringCache.begin(), cend = stringCache.end(); iter != cend; ++iter)
+        keys.append(iter.key());
+    return keys;
 }
 
 struct StaticQtMetaObject : public QObject
@@ -906,7 +1016,7 @@ static int EnumType(const QMetaObject *metaobj, const QByteArray &str, int type)
 QQmlPropertyCacheMethodArguments *QQmlPropertyCache::createArgumentsObject(int argc, const QList<QByteArray> &names)
 {
     typedef QQmlPropertyCacheMethodArguments A;
-    A *args = static_cast<A *>(malloc(sizeof(A) + (argc) * sizeof(int)));
+    A *args = static_cast<A *>(malloc(sizeof(A) + (argc + 1) * sizeof(int)));
     args->arguments[0] = argc;
     args->argumentsValid = false;
     args->signalParameterStringForJS = 0;
@@ -921,6 +1031,7 @@ QString QQmlPropertyCache::signalParameterStringForJS(QV4::ExecutionEngine *engi
 {
     bool unnamedParameter = false;
     const QSet<QString> &illegalNames = engine->v8Engine->illegalNames();
+    QString error;
     QString parameters;
 
     for (int i = 0; i < parameterNameList.count(); ++i) {
@@ -968,8 +1079,7 @@ int QQmlPropertyCache::originalClone(QObject *object, int index)
     return index;
 }
 
-template<typename T>
-static QQmlPropertyData qQmlPropertyCacheCreate(const QMetaObject *metaObject, const T& propertyName)
+QQmlPropertyData qQmlPropertyCacheCreate(const QMetaObject *metaObject, const QString &property)
 {
     Q_ASSERT(metaObject);
 
@@ -985,6 +1095,8 @@ static QQmlPropertyData qQmlPropertyCacheCreate(const QMetaObject *metaObject, c
     static const int deleteLaterIdx = QObject::staticMetaObject.indexOfSlot("deleteLater()");
     // These indices don't apply to gadgets, so don't block them.
     const bool preventDestruction = metaObject->superClass() || metaObject == &QObject::staticMetaObject;
+
+    const QByteArray propertyName = property.toUtf8();
 
     int methodCount = metaObject->methodCount();
     for (int ii = methodCount - 1; ii >= 0; --ii) {
@@ -1027,19 +1139,14 @@ static QQmlPropertyData qQmlPropertyCacheCreate(const QMetaObject *metaObject, c
     return rv;
 }
 
-static inline const char *qQmlPropertyCacheToString(QLatin1String string)
+inline const QString &qQmlPropertyCacheToString(const QString &string)
 {
-    return string.data();
+    return string;
 }
 
-static inline QByteArray qQmlPropertyCacheToString(const QStringRef &string)
+inline QString qQmlPropertyCacheToString(const QV4::String *string)
 {
-    return string.toUtf8();
-}
-
-static inline QByteArray qQmlPropertyCacheToString(const QV4::String *string)
-{
-    return string->toQString().toUtf8();
+    return string->toQString();
 }
 
 template<typename T>
@@ -1084,33 +1191,14 @@ QQmlPropertyCache::property(QJSEngine *engine, QObject *obj, const QV4::String *
 }
 
 QQmlPropertyData *
-QQmlPropertyCache::property(QJSEngine *engine, QObject *obj, const QStringRef &name,
-                            QQmlContextData *context, QQmlPropertyData &local)
+QQmlPropertyCache::property(QJSEngine *engine, QObject *obj,
+                                    const QString &name, QQmlContextData *context, QQmlPropertyData &local)
 {
-    return qQmlPropertyCacheProperty<const QStringRef &>(engine, obj, name, context, local);
+    return qQmlPropertyCacheProperty<const QString &>(engine, obj, name, context, local);
 }
 
-QQmlPropertyData *
-QQmlPropertyCache::property(QJSEngine *engine, QObject *obj, const QLatin1String &name,
-                            QQmlContextData *context, QQmlPropertyData &local)
-{
-    return qQmlPropertyCacheProperty<const QLatin1String &>(engine, obj, name, context, local);
-}
-
-// these two functions are copied from qmetaobject.cpp
 static inline const QMetaObjectPrivate *priv(const uint* data)
 { return reinterpret_cast<const QMetaObjectPrivate*>(data); }
-
-static inline const QByteArray stringData(const QMetaObject *mo, int index)
-{
-    Q_ASSERT(priv(mo->d.data)->revision >= 7);
-    const QByteArrayDataPtr data = { const_cast<QByteArrayData*>(&mo->d.stringdata[index]) };
-    Q_ASSERT(data.ptr->ref.isStatic());
-    Q_ASSERT(data.ptr->alloc == 0);
-    Q_ASSERT(data.ptr->capacityReserved == 0);
-    Q_ASSERT(data.ptr->size >= 0);
-    return data;
-}
 
 bool QQmlPropertyCache::isDynamicMetaObject(const QMetaObject *mo)
 {
@@ -1129,7 +1217,7 @@ void QQmlPropertyCache::toMetaObjectBuilder(QMetaObjectBuilder &builder)
 {
     struct Sort { static bool lt(const QPair<QString, QQmlPropertyData *> &lhs,
                                  const QPair<QString, QQmlPropertyData *> &rhs) {
-        return lhs.second->coreIndex() < rhs.second->coreIndex();
+        return lhs.second->coreIndex < rhs.second->coreIndex;
     } };
 
     struct Insert { static void in(QQmlPropertyCache *This,
@@ -1140,7 +1228,7 @@ void QQmlPropertyCache::toMetaObjectBuilder(QMetaObjectBuilder &builder)
             return;
 
         if (data->isFunction()) {
-            if (data->coreIndex() < This->methodIndexCacheStart)
+            if (data->coreIndex < This->methodIndexCacheStart)
                 return;
 
             QPair<QString, QQmlPropertyData *> entry = qMakePair((QString)iter.key(), data);
@@ -1150,7 +1238,7 @@ void QQmlPropertyCache::toMetaObjectBuilder(QMetaObjectBuilder &builder)
             data = This->overrideData(data);
             if (data && !data->isFunction()) Insert::in(This, properties, methods, iter, data);
         } else {
-            if (data->coreIndex() < This->propertyIndexCacheStart)
+            if (data->coreIndex < This->propertyIndexCacheStart)
                 return;
 
             QPair<QString, QQmlPropertyData *> entry = qMakePair((QString)iter.key(), data);
@@ -1181,11 +1269,11 @@ void QQmlPropertyCache::toMetaObjectBuilder(QMetaObjectBuilder &builder)
         QQmlPropertyData *data = properties.at(ii).second;
 
         int notifierId = -1;
-        if (data->notifyIndex() != -1)
-            notifierId = data->notifyIndex() - signalHandlerIndexCacheStart;
+        if (data->notifyIndex != -1)
+            notifierId = data->notifyIndex - signalHandlerIndexCacheStart;
 
         QMetaPropertyBuilder property = builder.addProperty(properties.at(ii).first.toUtf8(),
-                                                            QMetaType::typeName(data->propType()),
+                                                            QMetaType::typeName(data->propType),
                                                             notifierId);
 
         property.setReadable(true);
@@ -1197,16 +1285,14 @@ void QQmlPropertyCache::toMetaObjectBuilder(QMetaObjectBuilder &builder)
         QQmlPropertyData *data = methods.at(ii).second;
 
         QByteArray returnType;
-        if (data->propType() != 0)
-            returnType = QMetaType::typeName(data->propType());
+        if (data->propType != 0)
+            returnType = QMetaType::typeName(data->propType);
 
-        QByteArray signature;
-        // '+=' reserves extra capacity. Follow-up appending will be probably free.
-        signature += methods.at(ii).first.toUtf8() + '(';
+        QByteArray signature = methods.at(ii).first.toUtf8() + '(';
 
         QQmlPropertyCacheMethodArguments *arguments = 0;
         if (data->hasArguments()) {
-            arguments = (QQmlPropertyCacheMethodArguments *)data->arguments();
+            arguments = (QQmlPropertyCacheMethodArguments *)data->arguments;
             Q_ASSERT(arguments->argumentsValid);
             for (int ii = 0; ii < arguments->arguments[0]; ++ii) {
                 if (ii != 0) signature.append(',');
@@ -1233,225 +1319,11 @@ void QQmlPropertyCache::toMetaObjectBuilder(QMetaObjectBuilder &builder)
 
     if (!_defaultPropertyName.isEmpty()) {
         QQmlPropertyData *dp = property(_defaultPropertyName, 0, 0);
-        if (dp && dp->coreIndex() >= propertyIndexCacheStart) {
+        if (dp && dp->coreIndex >= propertyIndexCacheStart) {
             Q_ASSERT(!dp->isFunction());
             builder.addClassInfo("DefaultProperty", _defaultPropertyName.toUtf8());
         }
     }
-}
-
-namespace {
-template <typename StringVisitor, typename TypeInfoVisitor>
-int visitMethods(const QMetaObject &mo, int methodOffset, int methodCount,
-                 StringVisitor visitString, TypeInfoVisitor visitTypeInfo)
-{
-    const int intsPerMethod = 5;
-
-    int fieldsForParameterData = 0;
-
-    bool hasRevisionedMethods = false;
-
-    for (int i = 0; i < methodCount; ++i) {
-        const int handle = methodOffset + i * intsPerMethod;
-
-        const uint flags = mo.d.data[handle + 4];
-        if (flags & MethodRevisioned)
-            hasRevisionedMethods = true;
-
-        visitString(mo.d.data[handle + 0]); // name
-        visitString(mo.d.data[handle + 3]); // tag
-
-        const int argc = mo.d.data[handle + 1];
-        const int paramIndex = mo.d.data[handle + 2];
-
-        fieldsForParameterData += argc * 2; // type and name
-        fieldsForParameterData += 1; // + return type
-
-        // return type + args
-        for (int i = 0; i < 1 + argc; ++i) {
-            // type name (maybe)
-            visitTypeInfo(mo.d.data[paramIndex + i]);
-
-            // parameter name
-            if (i > 0)
-                visitString(mo.d.data[paramIndex + argc + i]);
-        }
-    }
-
-    int fieldsForRevisions = 0;
-    if (hasRevisionedMethods)
-        fieldsForRevisions = methodCount;
-
-    return methodCount * intsPerMethod + fieldsForRevisions + fieldsForParameterData;
-}
-
-template <typename StringVisitor, typename TypeInfoVisitor>
-int visitProperties(const QMetaObject &mo, StringVisitor visitString, TypeInfoVisitor visitTypeInfo)
-{
-    const QMetaObjectPrivate *const priv = reinterpret_cast<const QMetaObjectPrivate*>(mo.d.data);
-    const int intsPerProperty = 3;
-
-    bool hasRevisionedProperties = false;
-    bool hasNotifySignals = false;
-
-    for (int i = 0; i < priv->propertyCount; ++i) {
-        const int handle = priv->propertyData + i * intsPerProperty;
-
-        const auto flags = mo.d.data[handle + 2];
-        if (flags & Revisioned) {
-            hasRevisionedProperties = true;
-        }
-        if (flags & Notify)
-            hasNotifySignals = true;
-
-        visitString(mo.d.data[handle]); // name
-        visitTypeInfo(mo.d.data[handle + 1]);
-    }
-
-    int fieldsForPropertyRevisions = 0;
-    if (hasRevisionedProperties)
-        fieldsForPropertyRevisions = priv->propertyCount;
-
-    int fieldsForNotifySignals = 0;
-    if (hasNotifySignals)
-        fieldsForNotifySignals = priv->propertyCount;
-
-    return priv->propertyCount * intsPerProperty + fieldsForPropertyRevisions
-            + fieldsForNotifySignals;
-}
-
-template <typename StringVisitor>
-int visitClassInfo(const QMetaObject &mo, StringVisitor visitString)
-{
-    const QMetaObjectPrivate *const priv = reinterpret_cast<const QMetaObjectPrivate*>(mo.d.data);
-    const int intsPerClassInfo = 2;
-
-    for (int i = 0; i < priv->classInfoCount; ++i) {
-        const int handle = priv->classInfoData + i * intsPerClassInfo;
-
-        visitString(mo.d.data[handle]); // key
-        visitString(mo.d.data[handle + 1]); // value
-    }
-
-    return priv->classInfoCount * intsPerClassInfo;
-}
-
-template <typename StringVisitor>
-int visitEnumerations(const QMetaObject &mo, StringVisitor visitString)
-{
-    const QMetaObjectPrivate *const priv = reinterpret_cast<const QMetaObjectPrivate*>(mo.d.data);
-    const int intsPerEnumerator = 4;
-
-    int fieldCount = priv->enumeratorCount * intsPerEnumerator;
-
-    for (int i = 0; i < priv->enumeratorCount; ++i) {
-        const uint *enumeratorData = mo.d.data + priv->enumeratorData + i * intsPerEnumerator;
-
-        const uint keyCount = enumeratorData[2];
-        fieldCount += keyCount * 2;
-
-        visitString(enumeratorData[0]); // name
-
-        const uint keyOffset = enumeratorData[3];
-
-        for (uint j = 0; j < keyCount; ++j) {
-            visitString(mo.d.data[keyOffset + 2 * j]);
-        }
-    }
-
-    return fieldCount;
-}
-
-template <typename StringVisitor>
-int countMetaObjectFields(const QMetaObject &mo, StringVisitor stringVisitor)
-{
-    const QMetaObjectPrivate *const priv = reinterpret_cast<const QMetaObjectPrivate*>(mo.d.data);
-
-    const auto typeInfoVisitor = [&stringVisitor](uint typeInfo) {
-        if (typeInfo & IsUnresolvedType)
-            stringVisitor(typeInfo & TypeNameIndexMask);
-    };
-
-    int fieldCount = MetaObjectPrivateFieldCount;
-
-    fieldCount += visitMethods(mo, priv->methodData, priv->methodCount, stringVisitor,
-                               typeInfoVisitor);
-    fieldCount += visitMethods(mo, priv->constructorData, priv->constructorCount, stringVisitor,
-                               typeInfoVisitor);
-
-    fieldCount += visitProperties(mo, stringVisitor, typeInfoVisitor);
-    fieldCount += visitClassInfo(mo, stringVisitor);
-    fieldCount += visitEnumerations(mo, stringVisitor);
-
-    return fieldCount;
-}
-
-} // anonymous namespace
-
-bool QQmlPropertyCache::determineMetaObjectSizes(const QMetaObject &mo, int *fieldCount,
-                                                 int *stringCount)
-{
-    const QMetaObjectPrivate *priv = reinterpret_cast<const QMetaObjectPrivate*>(mo.d.data);
-    if (priv->revision != 7) {
-        return false;
-    }
-
-    uint highestStringIndex = 0;
-    const auto stringIndexVisitor = [&highestStringIndex](uint index) {
-        highestStringIndex = qMax(highestStringIndex, index);
-    };
-
-    *fieldCount = countMetaObjectFields(mo, stringIndexVisitor);
-    *stringCount = highestStringIndex + 1;
-
-    return true;
-}
-
-bool QQmlPropertyCache::addToHash(QCryptographicHash &hash, const QMetaObject &mo)
-{
-    int fieldCount = 0;
-    int stringCount = 0;
-    if (!determineMetaObjectSizes(mo, &fieldCount, &stringCount)) {
-        return false;
-    }
-
-    hash.addData(reinterpret_cast<const char *>(mo.d.data), fieldCount * sizeof(uint));
-    for (int i = 0; i < stringCount; ++i) {
-        hash.addData(stringData(&mo, i));
-    }
-
-    return true;
-}
-
-QByteArray QQmlPropertyCache::checksum(bool *ok)
-{
-    if (!_checksum.isEmpty()) {
-        *ok = true;
-        return _checksum;
-    }
-
-    // Generate a checksum on the meta-object data only on C++ types.
-    if (!_metaObject || _ownMetaObject) {
-        *ok = false;
-        return _checksum;
-    }
-
-    QCryptographicHash hash(QCryptographicHash::Md5);
-
-    if (_parent) {
-        hash.addData(_parent->checksum(ok));
-        if (!*ok)
-            return QByteArray();
-    }
-
-    if (!addToHash(hash, *createMetaObject())) {
-        *ok = false;
-        return QByteArray();
-    }
-
-    _checksum = hash.result();
-    *ok = !_checksum.isEmpty();
-    return _checksum;
 }
 
 /*! \internal
@@ -1462,7 +1334,7 @@ QList<QByteArray> QQmlPropertyCache::signalParameterNames(int index) const
 {
     QQmlPropertyData *signalData = signal(index);
     if (signalData && signalData->hasArguments()) {
-        QQmlPropertyCacheMethodArguments *args = (QQmlPropertyCacheMethodArguments *)signalData->arguments();
+        QQmlPropertyCacheMethodArguments *args = (QQmlPropertyCacheMethodArguments *)signalData->arguments;
         if (args && args->names)
             return *args->names;
         const QMetaMethod &method = QMetaObjectPrivate::signal(firstCppMetaObject(), index);
@@ -1564,9 +1436,9 @@ QQmlPropertyCache *QQmlMetaObject::propertyCache(QQmlEnginePrivate *e) const
 
 int QQmlMetaObject::methodReturnType(const QQmlPropertyData &data, QByteArray *unknownTypeError) const
 {
-    Q_ASSERT(!_m.isNull() && data.coreIndex() >= 0);
+    Q_ASSERT(!_m.isNull() && data.coreIndex >= 0);
 
-    int type = data.propType();
+    int type = data.propType;
 
     const char *propTypeName = 0;
 
@@ -1576,16 +1448,16 @@ int QQmlMetaObject::methodReturnType(const QQmlPropertyData &data, QByteArray *u
 
         if (_m.isT1()) {
             QQmlPropertyCache *c = _m.asT1();
-            Q_ASSERT(data.coreIndex() < c->methodIndexCacheStart + c->methodIndexCache.count());
+            Q_ASSERT(data.coreIndex < c->methodIndexCacheStart + c->methodIndexCache.count());
 
-            while (data.coreIndex() < c->methodIndexCacheStart)
+            while (data.coreIndex < c->methodIndexCacheStart)
                 c = c->_parent;
 
             const QMetaObject *metaObject = c->createMetaObject();
             Q_ASSERT(metaObject);
-            m = metaObject->method(data.coreIndex());
+            m = metaObject->method(data.coreIndex);
         } else {
-            m = _m.asT2()->method(data.coreIndex());
+            m = _m.asT2()->method(data.coreIndex);
         }
 
         type = m.returnType();
@@ -1609,8 +1481,7 @@ int QQmlMetaObject::methodReturnType(const QQmlPropertyData &data, QByteArray *u
     return type;
 }
 
-int *QQmlMetaObject::methodParameterTypes(int index, ArgTypeStorage *argStorage,
-                                          QByteArray *unknownTypeError) const
+int *QQmlMetaObject::methodParameterTypes(int index, QVarLengthArray<int, 9> &dummy, QByteArray *unknownTypeError) const
 {
     Q_ASSERT(!_m.isNull() && index >= 0);
 
@@ -1625,19 +1496,19 @@ int *QQmlMetaObject::methodParameterTypes(int index, ArgTypeStorage *argStorage,
 
         QQmlPropertyData *rv = const_cast<QQmlPropertyData *>(&c->methodIndexCache.at(index - c->methodIndexCacheStart));
 
-        if (rv->arguments() && static_cast<A *>(rv->arguments())->argumentsValid)
-            return static_cast<A *>(rv->arguments())->arguments;
+        if (rv->arguments && static_cast<A *>(rv->arguments)->argumentsValid)
+            return static_cast<A *>(rv->arguments)->arguments;
 
         const QMetaObject *metaObject = c->createMetaObject();
         Q_ASSERT(metaObject);
         QMetaMethod m = metaObject->method(index);
 
         int argc = m.parameterCount();
-        if (!rv->arguments()) {
+        if (!rv->arguments) {
             A *args = c->createArgumentsObject(argc, m.parameterNames());
-            rv->setArguments(args);
+            rv->arguments = args;
         }
-        A *args = static_cast<A *>(rv->arguments());
+        A *args = static_cast<A *>(rv->arguments);
 
         QList<QByteArray> argTypeNames; // Only loaded if needed
 
@@ -1661,69 +1532,48 @@ int *QQmlMetaObject::methodParameterTypes(int index, ArgTypeStorage *argStorage,
             args->arguments[ii + 1] = type;
         }
         args->argumentsValid = true;
-        return static_cast<A *>(rv->arguments())->arguments;
+        return static_cast<A *>(rv->arguments)->arguments;
 
     } else {
         QMetaMethod m = _m.asT2()->method(index);
-        return methodParameterTypes(m, argStorage, unknownTypeError);
+        int argc = m.parameterCount();
+        dummy.resize(argc + 1);
+        dummy[0] = argc;
+        QList<QByteArray> argTypeNames; // Only loaded if needed
 
-    }
-}
-
-int *QQmlMetaObject::methodParameterTypes(const QMetaMethod &m, ArgTypeStorage *argStorage,
-                                          QByteArray *unknownTypeError) const
-{
-    Q_ASSERT(argStorage);
-
-    int argc = m.parameterCount();
-    argStorage->resize(argc + 1);
-    argStorage->operator[](0) = argc;
-    QList<QByteArray> argTypeNames; // Only loaded if needed
-
-    for (int ii = 0; ii < argc; ++ii) {
-        int type = m.parameterType(ii);
-        QMetaType::TypeFlags flags = QMetaType::typeFlags(type);
-        if (flags & QMetaType::IsEnumeration)
-            type = QVariant::Int;
-        else if (type == QMetaType::UnknownType ||
-                 (type >= (int)QVariant::UserType && !(flags & QMetaType::PointerToQObject) &&
-                  type != qMetaTypeId<QJSValue>())) {
-            //the UserType clause is to catch registered QFlags)
-            if (argTypeNames.isEmpty())
-                argTypeNames = m.parameterTypes();
-            type = EnumType(_m.asT2(), argTypeNames.at(ii), type);
+        for (int ii = 0; ii < argc; ++ii) {
+            int type = m.parameterType(ii);
+            QMetaType::TypeFlags flags = QMetaType::typeFlags(type);
+            if (flags & QMetaType::IsEnumeration)
+                type = QVariant::Int;
+            else if (type == QMetaType::UnknownType ||
+                     (type >= (int)QVariant::UserType && !(flags & QMetaType::PointerToQObject) &&
+                      type != qMetaTypeId<QJSValue>())) {
+                //the UserType clause is to catch registered QFlags)
+                if (argTypeNames.isEmpty())
+                    argTypeNames = m.parameterTypes();
+                type = EnumType(_m.asT2(), argTypeNames.at(ii), type);
+            }
+            if (type == QMetaType::UnknownType) {
+                if (unknownTypeError) *unknownTypeError = argTypeNames.at(ii);
+                return 0;
+            }
+            dummy[ii + 1] = type;
         }
-        if (type == QMetaType::UnknownType) {
-            if (unknownTypeError) *unknownTypeError = argTypeNames.at(ii);
-            return 0;
-        }
-        argStorage->operator[](ii + 1) = type;
-    }
 
-    return argStorage->data();
+        return dummy.data();
+    }
 }
 
 void QQmlObjectOrGadget::metacall(QMetaObject::Call type, int index, void **argv) const
 {
-    if (ptr.isNull()) {
-        const QMetaObject *metaObject = _m.asT2();
-        metaObject->d.static_metacall(0, type, index, argv);
-    }
-    else if (ptr.isT1()) {
+    if (ptr.isT1())
         QMetaObject::metacall(ptr.asT1(), type, index, argv);
-    }
     else {
         const QMetaObject *metaObject = _m.asT1()->metaObject();
         QQmlMetaObject::resolveGadgetMethodOrPropertyIndex(type, &metaObject, &index);
         metaObject->d.static_metacall(reinterpret_cast<QObject*>(ptr.asT2()), type, index, argv);
     }
-}
-
-int *QQmlStaticMetaObject::constructorParameterTypes(int index, ArgTypeStorage *dummy,
-                                                     QByteArray *unknownTypeError) const
-{
-    QMetaMethod m = _m.asT2()->constructor(index);
-    return methodParameterTypes(m, dummy, unknownTypeError);
 }
 
 QT_END_NAMESPACE

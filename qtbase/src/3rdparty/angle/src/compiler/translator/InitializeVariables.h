@@ -26,20 +26,19 @@ class InitializeVariables : public TIntermTraverser
     typedef TVector<InitVariableInfo> InitVariableInfoList;
 
     InitializeVariables(const InitVariableInfoList &vars)
-        : TIntermTraverser(true, false, false),
-          mVariables(vars),
-          mCodeInserted(false)
+        : mCodeInserted(false),
+          mVariables(vars)
     {
     }
 
   protected:
-    bool visitBinary(Visit, TIntermBinary *node) override { return false; }
-    bool visitUnary(Visit, TIntermUnary *node) override { return false; }
-    bool visitSelection(Visit, TIntermSelection *node) override { return false; }
-    bool visitLoop(Visit, TIntermLoop *node) override { return false; }
-    bool visitBranch(Visit, TIntermBranch *node) override { return false; }
+    virtual bool visitBinary(Visit, TIntermBinary *node) { return false; }
+    virtual bool visitUnary(Visit, TIntermUnary *node) { return false; }
+    virtual bool visitSelection(Visit, TIntermSelection *node) { return false; }
+    virtual bool visitLoop(Visit, TIntermLoop *node) { return false; }
+    virtual bool visitBranch(Visit, TIntermBranch *node) { return false; }
 
-    bool visitAggregate(Visit visit, TIntermAggregate *node) override;
+    virtual bool visitAggregate(Visit visit, TIntermAggregate* node);
 
   private:
     void insertInitCode(TIntermSequence *sequence);

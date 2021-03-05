@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -59,7 +64,6 @@ public:
     tst_qquicktext();
 
 private slots:
-    void cleanup();
     void text();
     void width();
     void wrap();
@@ -147,14 +151,8 @@ private slots:
 
     void padding();
 
-    void hintingPreference();
-
-    void zeroWidthAndElidedDoesntRender();
-
     void hAlignWidthDependsOnImplicitWidth_data();
     void hAlignWidthDependsOnImplicitWidth();
-
-    void fontInfo();
 
 private:
     QStringList standard;
@@ -176,11 +174,6 @@ private:
     QQuickView *createView(const QString &filename);
     int numberOfNonWhitePixels(int fromX, int toX, const QImage &image);
 };
-
-void tst_qquicktext::cleanup()
-{
-    QVERIFY(QGuiApplication::topLevelWindows().isEmpty());
-}
 
 tst_qquicktext::tst_qquicktext()
 {
@@ -336,7 +329,7 @@ void tst_qquicktext::width()
             metricWidth = layout.boundingRect().width();
         } else {
             QFontMetricsF fm(f);
-            metricWidth = fm.size(Qt::TextExpandTabs | Qt::TextShowMnemonic, standard.at(i)).width();
+            metricWidth = fm.size(Qt::TextExpandTabs && Qt::TextShowMnemonic, standard.at(i)).width();
         }
 
         QString componentStr = "import QtQuick 2.0\nText { text: \"" + standard.at(i) + "\" }";
@@ -564,7 +557,7 @@ void tst_qquicktext::multilineElide_data()
 void tst_qquicktext::multilineElide()
 {
     QFETCH(QQuickText::TextFormat, format);
-    QScopedPointer<QQuickView> window(createView(testFile("multilineelide.qml")));
+    QQuickView *window = createView(testFile("multilineelide.qml"));
 
     QQuickText *myText = qobject_cast<QQuickText*>(window->rootObject());
     QVERIFY(myText != 0);
@@ -608,6 +601,8 @@ void tst_qquicktext::multilineElide()
     // change line height
     myText->setLineHeight(1.1);
     QCOMPARE(myText->lineCount(), 1);
+
+    delete window;
 }
 
 void tst_qquicktext::implicitElide_data()
@@ -764,7 +759,12 @@ void tst_qquicktext::horizontalAlignment()
 
 void tst_qquicktext::horizontalAlignment_RightToLeft()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("horizontalAlignment_RightToLeft.qml")));
+#if defined(Q_OS_BLACKBERRY)
+    QQuickWindow dummy;      // On BlackBerry first window is always full screen,
+    dummy.showFullScreen();  // so make test window a second window.
+#endif
+
+    QQuickView *window = createView(testFile("horizontalAlignment_RightToLeft.qml"));
     QQuickText *text = window->rootObject()->findChild<QQuickText*>("text");
     QVERIFY(text != 0);
     window->showNormal();
@@ -867,7 +867,7 @@ void tst_qquicktext::horizontalAlignment_RightToLeft()
     text->setHAlign(QQuickText::AlignRight);
     QCOMPARE(text->hAlign(), QQuickText::AlignRight);
 
-    window.reset();
+    delete window;
 
     // alignment of Text with no text set to it
     QString componentStr = "import QtQuick 2.0\nText {}";
@@ -917,10 +917,8 @@ void tst_qquicktext::hAlignImplicitWidth()
 
     // Try to check whether alignment works by checking the number of black
     // pixels in the thirds of the grabbed image.
-    // QQuickWindow::grabWindow() scales the returned image by the devicePixelRatio of the screen.
-    const qreal devicePixelRatio = view.screen()->devicePixelRatio();
-    const int windowWidth = 220 * devicePixelRatio;
-    const int textWidth = qCeil(text->implicitWidth()) * devicePixelRatio;
+    const int windowWidth = 220;
+    const int textWidth = qCeil(text->implicitWidth());
     QVERIFY2(textWidth < windowWidth, "System font too large.");
     const int sectionWidth = textWidth / 3;
     const int centeredSection1 = (windowWidth - textWidth) / 2;
@@ -2108,7 +2106,7 @@ void tst_qquicktext::embeddedImages()
 
 void tst_qquicktext::lineCount()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("lineCount.qml")));
+    QQuickView *window = createView(testFile("lineCount.qml"));
 
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
@@ -2131,11 +2129,13 @@ void tst_qquicktext::lineCount()
     QCOMPARE(myText->lineCount(), 2);
     QCOMPARE(myText->truncated(), true);
     QCOMPARE(myText->maximumLineCount(), 2);
+
+    delete window;
 }
 
 void tst_qquicktext::lineHeight()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("lineHeight.qml")));
+    QQuickView *window = createView(testFile("lineHeight.qml"));
 
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
@@ -2162,6 +2162,8 @@ void tst_qquicktext::lineHeight()
     myText->setLineHeightMode(QQuickText::FixedHeight);
     myText->setLineHeight(10);
     QCOMPARE(myText->height(), myText->lineCount() * 10.0);
+
+    delete window;
 }
 
 void tst_qquicktext::implicitSize_data()
@@ -2733,7 +2735,7 @@ void tst_qquicktext::clipRect()
 
 void tst_qquicktext::lineLaidOut()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("lineLayout.qml")));
+    QQuickView *window = createView(testFile("lineLayout.qml"));
 
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
@@ -2753,15 +2755,17 @@ void tst_qquicktext::lineLaidOut()
             QCOMPARE(r.height(), qreal(20));
         }
     }
+
+    delete window;
 }
 
 void tst_qquicktext::lineLaidOutRelayout()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("lineLayoutRelayout.qml")));
+    QQuickView *window = createView(testFile("lineLayoutRelayout.qml"));
 
     window->show();
     window->requestActivate();
-    QVERIFY(QTest::qWaitForWindowActive(window.data()));
+    QVERIFY(QTest::qWaitForWindowActive(window));
 
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
@@ -2785,11 +2789,13 @@ void tst_qquicktext::lineLaidOutRelayout()
         }
         y += line.height();
     }
+
+    delete window;
 }
 
 void tst_qquicktext::lineLaidOutHAlign()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("lineLayoutHAlign.qml")));
+    QQuickView *window = createView(testFile("lineLayoutHAlign.qml"));
 
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
@@ -2800,6 +2806,8 @@ void tst_qquicktext::lineLaidOutHAlign()
     QCOMPARE(textPrivate->layout.lineCount(), 1);
 
     QVERIFY(textPrivate->layout.lineAt(0).naturalTextRect().x() < 0.0);
+
+    delete window;
 }
 
 void tst_qquicktext::imgTagsBaseUrl_data()
@@ -2959,7 +2967,7 @@ void tst_qquicktext::imgTagsMultipleImages()
 
 void tst_qquicktext::imgTagsElide()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("imgTagsElide.qml")));
+    QQuickView *window = createView(testFile("imgTagsElide.qml"));
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
 
@@ -2970,11 +2978,12 @@ void tst_qquicktext::imgTagsElide()
     QTRY_COMPARE(textPrivate->extra->visibleImgTags.count(), 1);
 
     delete myText;
+    delete window;
 }
 
 void tst_qquicktext::imgTagsUpdates()
 {
-    QScopedPointer<QQuickView> window(createView(testFile("imgTagsUpdates.qml")));
+    QQuickView *window = createView(testFile("imgTagsUpdates.qml"));
     QQuickText *myText = window->rootObject()->findChild<QQuickText*>("myText");
     QVERIFY(myText != 0);
 
@@ -2996,6 +3005,7 @@ void tst_qquicktext::imgTagsUpdates()
     QCOMPARE(spy.count(), 3);
 
     delete myText;
+    delete window;
 }
 
 void tst_qquicktext::imgTagsError()
@@ -4163,53 +4173,6 @@ void tst_qquicktext::padding()
     delete root;
 }
 
-void tst_qquicktext::hintingPreference()
-{
-    {
-        QString componentStr = "import QtQuick 2.0\nText { text: \"Hello world!\" }";
-        QQmlComponent textComponent(&engine);
-        textComponent.setData(componentStr.toLatin1(), QUrl::fromLocalFile(""));
-        QQuickText *textObject = qobject_cast<QQuickText*>(textComponent.create());
-
-        QVERIFY(textObject != 0);
-        QCOMPARE((int)textObject->font().hintingPreference(), (int)QFont::PreferDefaultHinting);
-
-        delete textObject;
-    }
-    {
-        QString componentStr = "import QtQuick 2.0\nText { text: \"Hello world!\"; font.hintingPreference: Font.PreferNoHinting }";
-        QQmlComponent textComponent(&engine);
-        textComponent.setData(componentStr.toLatin1(), QUrl::fromLocalFile(""));
-        QQuickText *textObject = qobject_cast<QQuickText*>(textComponent.create());
-
-        QVERIFY(textObject != 0);
-        QCOMPARE((int)textObject->font().hintingPreference(), (int)QFont::PreferNoHinting);
-
-        delete textObject;
-    }
-}
-
-
-void tst_qquicktext::zeroWidthAndElidedDoesntRender()
-{
-    // Tests QTBUG-34990
-
-    QQmlComponent component(&engine, testFile("ellipsisText.qml"));
-
-    QScopedPointer<QObject> object(component.create());
-
-    QQuickText *text = qobject_cast<QQuickText *>(object.data());
-    QVERIFY(text);
-
-    QCOMPARE(text->contentWidth(), 0.0);
-
-    QQuickText *reference = text->findChild<QQuickText *>("elidedRef");
-    QVERIFY(reference);
-
-    text->setWidth(10);
-    QCOMPARE(text->contentWidth(), reference->contentWidth());
-}
-
 void tst_qquicktext::hAlignWidthDependsOnImplicitWidth_data()
 {
     QTest::addColumn<QQuickText::HAlignment>("horizontalAlignment");
@@ -4253,23 +4216,6 @@ void tst_qquicktext::hAlignWidthDependsOnImplicitWidth()
     QVERIFY(rect->setProperty("text", "this is mis-aligned"));
     image = window->grabWindow();
     QCOMPARE(numberOfNonWhitePixels(0, rectX - 1, image), 0);
-}
-
-void tst_qquicktext::fontInfo()
-{
-    QQmlComponent component(&engine, testFile("fontInfo.qml"));
-
-    QScopedPointer<QObject> object(component.create());
-    QObject *root = object.data();
-
-    QQuickText *main = root->findChild<QQuickText *>("main");
-    QVERIFY(main);
-    QCOMPARE(main->font().pixelSize(), 1000);
-
-    QQuickText *copy = root->findChild<QQuickText *>("copy");
-    QVERIFY(copy);
-    QCOMPARE(copy->font().family(), QFontInfo(QFont()).family());
-    QVERIFY(copy->font().pixelSize() < 1000);
 }
 
 QTEST_MAIN(tst_qquicktext)

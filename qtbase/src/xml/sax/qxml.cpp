@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtXml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -80,14 +74,6 @@
 #define XMLERR_ERRORINTEXTDECL            QT_TRANSLATE_NOOP("QXml", "error in the text declaration of an external entity")
 
 QT_BEGIN_NAMESPACE
-
-namespace {
-
-// work around missing std::stack::clear()
-template <typename Container>
-void clear(Container &c) { c = Container(); }
-
-}
 
 // the constants for the lookup table
 static const signed char cltWS      =  0; // white space
@@ -1265,8 +1251,18 @@ void QXmlInputSource::fetchData()
         } else if (device->isOpen() || device->open(QIODevice::ReadOnly)) {
             rawData.resize(BufferSize);
             qint64 size = device->read(rawData.data(), BufferSize);
-            if (size == 0 && device->waitForReadyRead(-1))
-                size = device->read(rawData.data(), BufferSize);
+
+            if (size != -1) {
+                // We don't want to give fromRawData() less than four bytes if we can avoid it.
+                while (size < 4) {
+                    if (!device->waitForReadyRead(-1))
+                        break;
+                    int ret = device->read(rawData.data() + size, BufferSize - size);
+                    if (ret <= 0)
+                        break;
+                    size += ret;
+                }
+            }
 
             rawData.resize(qMax(qint64(0), size));
         }
@@ -1285,7 +1281,7 @@ static QString extractEncodingDecl(const QString &text, bool *needMoreText)
     *needMoreText = false;
 
     int l = text.length();
-    const QLatin1String snip("<?xml", std::min(l, 5));
+    QString snip = QString::fromLatin1("<?xml").left(l);
     if (l > 0 && !text.startsWith(snip))
         return QString();
 
@@ -1397,7 +1393,7 @@ QString QXmlInputSource::fromRawData(const QByteArray &data, bool beginning)
         QString encoding = extractEncodingDecl(d->encodingDeclChars, &needMoreText);
 
         if (!encoding.isEmpty()) {
-            if (QTextCodec *codec = QTextCodec::codecForName(std::move(encoding).toLatin1())) {
+            if (QTextCodec *codec = QTextCodec::codecForName(encoding.toLatin1())) {
                 /* If the encoding is the same, we don't have to do toUnicode() all over again. */
                 if(codec->mibEnum() != mib) {
                     delete d->encMapper;
@@ -3201,7 +3197,7 @@ bool QXmlSimpleReader::parse(const QXmlInputSource *input, bool incremental)
         d->contentHnd->setDocumentLocator(d->locator.data());
         if (!d->contentHnd->startDocument()) {
             d->reportParseError(d->contentHnd->errorString());
-            clear(d->tags);
+            d->tags.clear();
             return false;
         }
     }
@@ -3257,7 +3253,7 @@ bool QXmlSimpleReaderPrivate::parseBeginOrContinue(int state, bool incremental)
                 pushParseState(0, 0);
                 return true;
             } else {
-                clear(tags);
+                tags.clear();
                 return false;
             }
         }
@@ -3269,7 +3265,7 @@ bool QXmlSimpleReaderPrivate::parseBeginOrContinue(int state, bool incremental)
                 pushParseState(0, 1);
                 return true;
             } else {
-                clear(tags);
+                tags.clear();
                 return false;
             }
         }
@@ -3282,7 +3278,7 @@ bool QXmlSimpleReaderPrivate::parseBeginOrContinue(int state, bool incremental)
                 pushParseState(0, 2);
                 return true;
             } else {
-                clear(tags);
+                tags.clear();
                 return false;
             }
         }
@@ -3293,9 +3289,9 @@ bool QXmlSimpleReaderPrivate::parseBeginOrContinue(int state, bool incremental)
         return true;
     }
     // is stack empty?
-    if (!tags.empty() && !error.isNull()) {
+    if (!tags.isEmpty() && !error.isNull()) {
         reportParseError(QLatin1String(XMLERR_UNEXPECTEDEOF));
-        clear(tags);
+        tags.clear();
         return false;
     }
     // call the handler
@@ -3701,15 +3697,16 @@ bool QXmlSimpleReaderPrivate::parseElement()
             case STagEnd:
                 // call the handler
                 if (contentHnd) {
+                    const QString &tagsTop = tags.top();
                     if (useNamespaces) {
                         QString uri, lname;
-                        namespaceSupport.processName(tags.top(), false, uri, lname);
-                        if (!contentHnd->startElement(uri, lname, tags.top(), attList)) {
+                        namespaceSupport.processName(tagsTop, false, uri, lname);
+                        if (!contentHnd->startElement(uri, lname, tagsTop, attList)) {
                             reportParseError(contentHnd->errorString());
                             return false;
                         }
                     } else {
-                        if (!contentHnd->startElement(QString(), QString(), tags.top(), attList)) {
+                        if (!contentHnd->startElement(QString(), QString(), tagsTop, attList)) {
                             reportParseError(contentHnd->errorString());
                             return false;
                         }
@@ -3735,7 +3732,7 @@ bool QXmlSimpleReaderPrivate::parseElement()
                 }
                 break;
             case EmptyTag:
-                if (tags.empty()) {
+                if  (tags.isEmpty()) {
                     reportParseError(QLatin1String(XMLERR_TAGMISMATCH));
                     return false;
                 }
@@ -3776,9 +3773,7 @@ bool QXmlSimpleReaderPrivate::processElementEmptyTag()
                 return false;
             }
             // ... followed by endElement...
-            const bool endElementReturnedFalse = !contentHnd->endElement(uri, lname, tags.top());
-            tags.pop();
-            if (endElementReturnedFalse) {
+            if (!contentHnd->endElement(uri, lname, tags.pop())) {
                 reportParseError(contentHnd->errorString());
                 return false;
             }
@@ -3805,15 +3800,13 @@ bool QXmlSimpleReaderPrivate::processElementEmptyTag()
                 return false;
             }
             // ... followed by endElement
-            const bool endElementReturnedFalse = !contentHnd->endElement(QString(), QString(), tags.top());
-            tags.pop();
-            if (endElementReturnedFalse) {
+            if (!contentHnd->endElement(QString(), QString(), tags.pop())) {
                 reportParseError(contentHnd->errorString());
                 return false;
             }
         }
     } else {
-        tags.pop();
+        tags.pop_back();
         namespaceSupport.popContext();
     }
     return true;
@@ -3827,9 +3820,7 @@ bool QXmlSimpleReaderPrivate::processElementETagBegin2()
     const QString &name = QXmlSimpleReaderPrivate::name();
 
     // pop the stack and compare it with the name
-    const bool nameIsTagsTop = tags.top() == name;
-    tags.pop();
-    if (!nameIsTagsTop) {
+    if (tags.pop() != name) {
         reportParseError(QLatin1String(XMLERR_TAGMISMATCH));
         return false;
     }
@@ -7848,7 +7839,7 @@ void QXmlSimpleReaderPrivate::init(const QXmlInputSource *i)
     externEntities.clear();
     entities.clear();
 
-    clear(tags);
+    tags.clear();
 
     doctype.clear();
     xmlVersion.clear();

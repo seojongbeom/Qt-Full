@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -64,17 +64,14 @@
     See \l{Supported Platforms} for the list of \macos versions supported by Qt.
 
     Qt can be built for either x86 or x86_64. 64-bit is used by default.
-    To select a 32-bit build, use the \c QMAKE_APPLE_DEVICE_ARCHS \c qmake variable.
+    To select a 32-bit build, use the \c macx-clang-32 or \c macx-g++32 mkspec.
     This is selectable at configure time:
     \code
-    ./configure -platform macx-clang QMAKE_APPLE_DEVICE_ARCHS=i386
+    ./configure -platform macx-clang-32
     \endcode
 
-    \c QMAKE_APPLE_DEVICE_ARCHS can also be specified as a space-delimited list
-    in order to build for multiple architectures simultaneously:
-    \code
-    ./configure -platform macx-clang QMAKE_APPLE_DEVICE_ARCHS="i386 x86_64 x86_64h"
-    \endcode
+    The Qt build system does not support building unversal binaries directly.
+    Instead, use the \c lipo tool to glue two Qt builds together.
 
     \note Qt 5 does not support OS X on PowerPC.
     \note Static builds are not tested.
@@ -196,20 +193,11 @@
     You can download the Qt 5 sources from the \l{Downloads} page. For
     more information, visit the \l{Getting Started with Qt} page.
 
-    \section1 Step 1: Install the License File (Commercially Licensed Qt Only)
+    \section1 Step 1: Install the License File (Commercial Editions Only)
+        If you have the commercial edition of Qt, install your license
+        file as \c{$HOME/.qt-license}.
 
-    If you use Qt with a commercial license, the Qt tools look for a local license file.
-    If you are using a binary installer or the commercial Qt Creator, your licenses
-    are automatically fetched and stored in your local user profile
-    (\c{$HOME/Library/Application Support/Qt/qtlicenses.ini} file).
-
-    If you do not use any binary installer or Qt Creator, you can download
-    the respective license file from your \l {Qt Account} Web portal and save
-    it to your user profile as \c{$HOME/.qt-license}. If you prefer a
-    different location or file name, you need to set the \c{QT_LICENSE_FILE}
-    environment variable to the respective file path.
-
-    \section1 Step 2: Unpack the Archive
+        For the open source version you do not need a license file.
 
         Unpack the archive if you have not done so already. For example,
         if you have the \c{qt-everywhere-opensource-src-%VERSION%.tar.gz}
@@ -220,7 +208,7 @@
         This creates the directory \c{/tmp/qt-everywhere-opensource-src-%VERSION%}
         containing the files from the archive.
 
-    \section1 Step 3: Build the Qt Library
+    \section1 Step 2: Build the Qt Library
 
         To configure the Qt library for your machine type, run the
         \c{./configure} script in the package directory.
@@ -258,7 +246,7 @@
         \note There is a potential race condition when running make install with multiple
         jobs. It is best to only run one make job (-j1) for the install.
 
-    \section1 Step 4: Set the Environment Variables
+    \section1 Step 3: Set the Environment Variables
 
         In order to use Qt, some environment variables need to be
         extended.
@@ -301,8 +289,8 @@
      \l{http://developer.apple.com/library/mac/#documentation/UserExperience/Conceptual/AppleHIGuidelines/Intro/Intro.html#//apple_ref/doc/uid/20000957}
      {\macos Human Interface Guidelines}.
 
-    The \l{Qt Widget Gallery} page contains sample images of applications using
-    the \macos platform theme.
+    The \l{Macintosh Style Widget Gallery} page
+    contains sample images of widgets using the \macos platform theme.
 
     \section2 Qt Attributes for \macos
 
@@ -397,9 +385,9 @@
     \section2 Special Keys
 
     To provide the expected behavior for Qt applications on \macos,
-    the Qt::Key_Meta, Qt::MetaModifier, and Qt::META enum values
+    the Qt::Meta, Qt::MetaModifier, and Qt::META enum values
     correspond to the Control keys on the standard Apple keyboard,
-    and the Qt::Key_Control, Qt::ControlModifier, and Qt::CTRL enum values
+    and the Qt::Control, Qt::ControlModifier, and Qt::CTRL enum values
     correspond to the Command keys.
 
     \section2 Dock
@@ -1005,7 +993,7 @@
     When you are done linking your application to Qt, either
     statically or as frameworks, the application is ready to be
     distributed. For more information, refer to the
-    \l {https://developer.apple.com/}{Apple Developer} website.
+    \l {https://developer.apple.com/library/mac/#documentation/ToolsLanguages/Conceptual/OSXWorkflowGuide/Introduction/Introduction.html}{Tools Workflow Guide}.
 
     Although the process of deploying an application do have some
     pitfalls, once you know the various issues you can easily create
@@ -1091,10 +1079,6 @@
     For more information about C++ runtime environment, see \l
     {https://developer.apple.com/library/mac/#documentation/DeveloperTools/Conceptual/CppRuntimeEnv/CPPRuntimeEnv.html}{Apple's Developer Website}
 
-    \section3 Expressing Supported \macos Versions
-
-    \include expressing-apple-os-versions.qdocinc expressing os versions
-
     \section1 The Mac Deployment Tool
     \target macdeploy
     The Mac deployment tool can be found in QTDIR/bin/macdeployqt. It is
@@ -1146,28 +1130,7 @@
     \row
         \li \c{-qmldir=<path>}
         \li Deploy imports used by .qml files in the given path
-    \row
-        \li \c{-always-overwrite}
-        \li Copy files even if the target file exists
-    \row
-        \li \c{-codesign=<ident>}
-        \li Run \c codesign with the given identity on all executables
-    \row
-        \li \c{-appstore-compliant}
-        \li Skip deployment of components that use private API
-    \row
-        \li \c{-libpath=<path>}
-        \li Add the given path to the library search path
-    \row
-        \li \c{-fs=<filesystem>}
-        \li Set the filesystem used for the .dmg disk image (defaults to HFS+)
     \endtable
-
-    \note macOS High Sierra introduced the new Apple File System (APFS). Older
-    versions of macOS cannot read .dmg files that are formatted with APFS. By
-    default, \c macdeployqt uses the older HFS+ file system for compatibility
-    with all versions of macOS currently supported by Qt. Use the \c{-fs} option
-    to specify a different file system.
 */
 
 /*!

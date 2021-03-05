@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,123 +34,135 @@
 #ifndef VIDEOSURFACEFILTER_H
 #define VIDEOSURFACEFILTER_H
 
-#include "directshowbasefilter.h"
+#include "directshowglobal.h"
+#include "directshowmediatypelist.h"
+#include "directshowsamplescheduler.h"
+#include "directshowmediatype.h"
 
+#include <QtCore/qbasictimer.h>
 #include <QtCore/qcoreevent.h>
 #include <QtCore/qmutex.h>
-#include <qreadwritelock.h>
-#include <qsemaphore.h>
-#include <qwaitcondition.h>
+#include <QtCore/qsemaphore.h>
+#include <QtCore/qstring.h>
+#include <QtCore/qwaitcondition.h>
+
+#include <dshow.h>
 
 QT_BEGIN_NAMESPACE
-
 class QAbstractVideoSurface;
+QT_END_NAMESPACE
 
 class DirectShowEventLoop;
-class VideoSurfaceInputPin;
 
-class VideoSurfaceFilter : public QObject
-                         , public DirectShowBaseFilter
-                         , public IAMFilterMiscFlags
+class VideoSurfaceFilter
+    : public QObject
+    , public DirectShowMediaTypeList
+    , public IBaseFilter
+    , public IAMFilterMiscFlags
+    , public IPin
 {
     Q_OBJECT
-    DIRECTSHOW_OBJECT
 public:
-    VideoSurfaceFilter(QAbstractVideoSurface *surface, DirectShowEventLoop *loop, QObject *parent = 0);
+    VideoSurfaceFilter(
+            QAbstractVideoSurface *surface, DirectShowEventLoop *loop, QObject *parent = 0);
     ~VideoSurfaceFilter();
 
-    // DirectShowObject
-    HRESULT getInterface(REFIID riid, void **ppvObject);
-
-    // DirectShowBaseFilter
-    QList<DirectShowPin *> pins();
+    // IUnknown
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
+    ULONG STDMETHODCALLTYPE AddRef();
+    ULONG STDMETHODCALLTYPE Release();
 
     // IPersist
-    STDMETHODIMP GetClassID(CLSID *pClassID);
+    HRESULT STDMETHODCALLTYPE GetClassID(CLSID *pClassID);
 
     // IMediaFilter
-    STDMETHODIMP Run(REFERENCE_TIME tStart);
-    STDMETHODIMP Pause();
-    STDMETHODIMP Stop();
+    HRESULT STDMETHODCALLTYPE Run(REFERENCE_TIME tStart);
+    HRESULT STDMETHODCALLTYPE Pause();
+    HRESULT STDMETHODCALLTYPE Stop();
+
+    HRESULT STDMETHODCALLTYPE GetState(DWORD dwMilliSecsTimeout, FILTER_STATE *pState);
+
+    HRESULT STDMETHODCALLTYPE SetSyncSource(IReferenceClock *pClock);
+    HRESULT STDMETHODCALLTYPE GetSyncSource(IReferenceClock **ppClock);
+
+    // IBaseFilter
+    HRESULT STDMETHODCALLTYPE EnumPins(IEnumPins **ppEnum);
+    HRESULT STDMETHODCALLTYPE FindPin(LPCWSTR Id, IPin **ppPin);
+
+    HRESULT STDMETHODCALLTYPE JoinFilterGraph(IFilterGraph *pGraph, LPCWSTR pName);
+
+    HRESULT STDMETHODCALLTYPE QueryFilterInfo(FILTER_INFO *pInfo);
+    HRESULT STDMETHODCALLTYPE QueryVendorInfo(LPWSTR *pVendorInfo);
 
     // IAMFilterMiscFlags
-    STDMETHODIMP_(ULONG) GetMiscFlags();
+    ULONG STDMETHODCALLTYPE GetMiscFlags();
 
-    // DirectShowPin (delegate)
-    bool isMediaTypeSupported(const AM_MEDIA_TYPE *type);
-    bool setMediaType(const AM_MEDIA_TYPE *type);
-    HRESULT completeConnection(IPin *pin);
-    HRESULT connectionEnded();
+    // IPin
+    HRESULT STDMETHODCALLTYPE Connect(IPin *pReceivePin, const AM_MEDIA_TYPE *pmt);
+    HRESULT STDMETHODCALLTYPE ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt);
+    HRESULT STDMETHODCALLTYPE Disconnect();
+    HRESULT STDMETHODCALLTYPE ConnectedTo(IPin **ppPin);
 
-    // IPin (delegate)
-    HRESULT EndOfStream();
-    HRESULT BeginFlush();
-    HRESULT EndFlush();
+    HRESULT STDMETHODCALLTYPE ConnectionMediaType(AM_MEDIA_TYPE *pmt);
 
-    // IMemInputPin (delegate)
-    HRESULT Receive(IMediaSample *pMediaSample);
+    HRESULT STDMETHODCALLTYPE QueryPinInfo(PIN_INFO *pInfo);
+    HRESULT STDMETHODCALLTYPE QueryId(LPWSTR *Id);
+
+    HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE *pmt);
+
+    HRESULT STDMETHODCALLTYPE EnumMediaTypes(IEnumMediaTypes **ppEnum);
+
+    HRESULT STDMETHODCALLTYPE QueryInternalConnections(IPin **apPin, ULONG *nPin);
+
+    HRESULT STDMETHODCALLTYPE EndOfStream();
+
+    HRESULT STDMETHODCALLTYPE BeginFlush();
+    HRESULT STDMETHODCALLTYPE EndFlush();
+
+    HRESULT STDMETHODCALLTYPE NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
+
+    HRESULT STDMETHODCALLTYPE QueryDirection(PIN_DIRECTION *pPinDir);
+
+    int currentMediaTypeToken();
+    HRESULT nextMediaType(
+            int token, int *index, ULONG count, AM_MEDIA_TYPE **types, ULONG *fetchedCount);
+    HRESULT skipMediaType(int token, int *index, ULONG count);
+    HRESULT cloneMediaType(int token, int index, IEnumMediaTypes **enumeration);
+
+protected:
+    void customEvent(QEvent *event);
 
 private Q_SLOTS:
     void supportedFormatsChanged();
-    void checkEOS();
+    void sampleReady();
 
 private:
-    enum Events {
+    HRESULT start();
+    void stop();
+    void flush();
+
+    enum
+    {
         StartSurface = QEvent::User,
-        StopSurface = QEvent::User + 1,
-        RestartSurface = QEvent::User + 2,
-        FlushSurface = QEvent::User + 3,
-        RenderSample = QEvent::User + 4
+        StopSurface,
+        FlushSurface
     };
 
-    bool event(QEvent *);
-
-    bool startSurface();
-    void stopSurface();
-    bool restartSurface();
-    void flushSurface();
-
-    bool scheduleSample(IMediaSample *sample);
-    void unscheduleSample();
-    void renderPendingSample();
-    void clearPendingSample();
-
-    void notifyEOS();
-    void resetEOS();
-    void resetEOSTimer();
-    void onEOSTimerTimeout();
-
-    friend void QT_WIN_CALLBACK EOSTimerCallback(UINT, UINT, DWORD_PTR dwUser, DWORD_PTR, DWORD_PTR);
-
-    QMutex m_mutex;
-
-    DirectShowEventLoop *m_loop;
-    VideoSurfaceInputPin *m_pin;
-
-    QWaitCondition m_waitSurface;
+    LONG m_ref;
+    FILTER_STATE m_state;
     QAbstractVideoSurface *m_surface;
-    QVideoSurfaceFormat m_surfaceFormat;
+    DirectShowEventLoop *m_loop;
+    IFilterGraph *m_graph;
+    IPin *m_peerPin;
     int m_bytesPerLine;
-    bool m_surfaceStarted;
-
-    QList<GUID> m_supportedTypes;
-    QReadWriteLock m_typesLock;
-
-    QMutex m_renderMutex;
-    bool m_running;
-    IMediaSample *m_pendingSample;
-    REFERENCE_TIME m_pendingSampleEndTime;
-    HANDLE m_renderEvent;
-    HANDLE m_flushEvent;
-    DWORD_PTR m_adviseCookie;
-
-    bool m_EOS;
-    bool m_EOSDelivered;
-    UINT m_EOSTimer;
-
-    friend class VideoSurfaceInputPin;
+    HRESULT m_startResult;
+    QString m_name;
+    QString m_pinId;
+    DirectShowMediaType m_mediaType;
+    QVideoSurfaceFormat m_surfaceFormat;
+    QMutex m_mutex;
+    QWaitCondition m_wait;
+    DirectShowSampleScheduler m_sampleScheduler;
 };
-
-QT_END_NAMESPACE
 
 #endif

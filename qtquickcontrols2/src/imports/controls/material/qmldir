@@ -1,4 +1,5 @@
-module QtQuick.Controls.Material
-plugin qtquickcontrols2materialstyleplugin
-classname QtQuickControls2MaterialStylePlugin
-depends QtQuick.Controls 2.2
+module Qt.labs.controls.material
+plugin qtlabsmaterialstyleplugin
+classname QtLabsMaterialStylePlugin
+depends Qt.labs.controls 1.0
+depends QtGraphicalEffects 1.0

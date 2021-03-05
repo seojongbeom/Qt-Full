@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -47,12 +41,147 @@
 
 #include "dscamerasession.h"
 #include "dsvideorenderer.h"
-#include "directshowsamplegrabber.h"
-#include "directshowcameraglobal.h"
-#include "directshowmediatype.h"
-#include "directshowutils.h"
+#include "directshowglobal.h"
 
 QT_BEGIN_NAMESPACE
+
+
+namespace {
+// DirectShow helper implementation
+void _CopyMediaType(AM_MEDIA_TYPE *pmtTarget, const AM_MEDIA_TYPE *pmtSource)
+{
+    *pmtTarget = *pmtSource;
+    if (pmtTarget->cbFormat != 0) {
+        pmtTarget->pbFormat = reinterpret_cast<BYTE *>(CoTaskMemAlloc(pmtTarget->cbFormat));
+        if (pmtTarget->pbFormat)
+            memcpy(pmtTarget->pbFormat, pmtSource->pbFormat, pmtTarget->cbFormat);
+    }
+    if (pmtTarget->pUnk != NULL) {
+        // pUnk should not be used.
+        pmtTarget->pUnk->AddRef();
+    }
+}
+
+void _FreeMediaType(AM_MEDIA_TYPE& mt)
+{
+    if (mt.cbFormat != 0) {
+        CoTaskMemFree((PVOID)mt.pbFormat);
+        mt.cbFormat = 0;
+        mt.pbFormat = NULL;
+    }
+    if (mt.pUnk != NULL) {
+        // pUnk should not be used.
+        mt.pUnk->Release();
+        mt.pUnk = NULL;
+    }
+}
+} // end namespace
+
+static HRESULT getPin(IBaseFilter *filter, PIN_DIRECTION pinDir, IPin **pin);
+
+
+class SampleGrabberCallbackPrivate : public ISampleGrabberCB
+{
+public:
+    explicit SampleGrabberCallbackPrivate(DSCameraSession *session)
+        : m_ref(1)
+        , m_session(session)
+    { }
+
+    virtual ~SampleGrabberCallbackPrivate() { }
+
+    STDMETHODIMP_(ULONG) AddRef()
+    {
+        return InterlockedIncrement(&m_ref);
+    }
+
+    STDMETHODIMP_(ULONG) Release()
+    {
+        ULONG ref = InterlockedDecrement(&m_ref);
+        if (ref == 0)
+            delete this;
+        return ref;
+    }
+
+    STDMETHODIMP QueryInterface(REFIID riid, void **ppvObject)
+    {
+        if (NULL == ppvObject)
+            return E_POINTER;
+        if (riid == IID_IUnknown /*__uuidof(IUnknown) */ ) {
+            *ppvObject = static_cast<IUnknown*>(this);
+            return S_OK;
+        }
+        if (riid == IID_ISampleGrabberCB /*__uuidof(ISampleGrabberCB)*/ ) {
+            *ppvObject = static_cast<ISampleGrabberCB*>(this);
+            return S_OK;
+        }
+        return E_NOTIMPL;
+    }
+
+    STDMETHODIMP SampleCB(double Time, IMediaSample *pSample)
+    {
+        Q_UNUSED(Time)
+        Q_UNUSED(pSample)
+        return E_NOTIMPL;
+    }
+
+    STDMETHODIMP BufferCB(double time, BYTE *pBuffer, long bufferLen)
+    {
+        // We display frames as they arrive, the presentation time is
+        // irrelevant
+        Q_UNUSED(time);
+
+        if (m_session) {
+           m_session->onFrameAvailable(reinterpret_cast<const char *>(pBuffer),
+                                       bufferLen);
+        }
+
+        return S_OK;
+    }
+
+private:
+    ULONG m_ref;
+    DSCameraSession *m_session;
+};
+
+QVideoFrame::PixelFormat pixelFormatFromMediaSubtype(GUID uid)
+{
+    if (uid == MEDIASUBTYPE_ARGB32)
+        return QVideoFrame::Format_ARGB32;
+    else if (uid == MEDIASUBTYPE_RGB32)
+        return QVideoFrame::Format_RGB32;
+    else if (uid == MEDIASUBTYPE_RGB24)
+        return QVideoFrame::Format_RGB24;
+    else if (uid == MEDIASUBTYPE_RGB565)
+        return QVideoFrame::Format_RGB565;
+    else if (uid == MEDIASUBTYPE_RGB555)
+        return QVideoFrame::Format_RGB555;
+    else if (uid == MEDIASUBTYPE_AYUV)
+        return QVideoFrame::Format_AYUV444;
+    else if (uid == MEDIASUBTYPE_I420 || uid == MEDIASUBTYPE_IYUV)
+        return QVideoFrame::Format_YUV420P;
+    else if (uid == MEDIASUBTYPE_YV12)
+        return QVideoFrame::Format_YV12;
+    else if (uid == MEDIASUBTYPE_UYVY)
+        return QVideoFrame::Format_UYVY;
+    else if (uid == MEDIASUBTYPE_YUYV || uid == MEDIASUBTYPE_YUY2)
+        return QVideoFrame::Format_YUYV;
+    else if (uid == MEDIASUBTYPE_NV12)
+        return QVideoFrame::Format_NV12;
+    else if (uid == MEDIASUBTYPE_MJPG)
+        return QVideoFrame::Format_Jpeg;
+    else if (uid == MEDIASUBTYPE_IMC1)
+        return QVideoFrame::Format_IMC1;
+    else if (uid == MEDIASUBTYPE_IMC2)
+        return QVideoFrame::Format_IMC2;
+    else if (uid == MEDIASUBTYPE_IMC3)
+        return QVideoFrame::Format_IMC3;
+    else if (uid == MEDIASUBTYPE_IMC4)
+        return QVideoFrame::Format_IMC4;
+    else
+        return QVideoFrame::Format_Invalid;
+}
+
 
 DSCameraSession::DSCameraSession(QObject *parent)
     : QObject(parent)
@@ -61,6 +190,7 @@ DSCameraSession::DSCameraSession(QObject *parent)
     , m_sourceDeviceName(QLatin1String("default"))
     , m_sourceFilter(Q_NULLPTR)
     , m_needsHorizontalMirroring(false)
+    , m_previewFilter(Q_NULLPTR)
     , m_previewSampleGrabber(Q_NULLPTR)
     , m_nullRendererFilter(Q_NULLPTR)
     , m_previewStarted(false)
@@ -71,6 +201,8 @@ DSCameraSession::DSCameraSession(QObject *parent)
     , m_currentImageId(-1)
     , m_status(QCamera::UnloadedStatus)
 {
+    ZeroMemory(&m_sourceFormat, sizeof(m_sourceFormat));
+
     connect(this, SIGNAL(statusChanged(QCamera::Status)),
             this, SLOT(updateReadyForCapture()));
 }
@@ -334,26 +466,6 @@ void DSCameraSession::setImageProcessingParameter(
     }
 }
 
-bool DSCameraSession::getCameraControlInterface(IAMCameraControl **cameraControl) const
-{
-    if (!m_sourceFilter) {
-        qCDebug(qtDirectShowPlugin, "getCameraControlInterface failed: No capture filter!");
-        return false;
-    }
-
-    if (!cameraControl) {
-        qCDebug(qtDirectShowPlugin, "getCameraControlInterface failed: Invalid out argument!");
-        return false;
-    }
-
-    if (FAILED(m_sourceFilter->QueryInterface(IID_IAMCameraControl, reinterpret_cast<void **>(cameraControl)))) {
-        qCDebug(qtDirectShowPlugin, "getCameraControlInterface failed: Querying camera control failed!");
-        return false;
-    }
-
-    return true;
-}
-
 bool DSCameraSession::load()
 {
     unload();
@@ -379,13 +491,14 @@ bool DSCameraSession::unload()
 
     setStatus(QCamera::UnloadingStatus);
 
-    m_previewSampleGrabber->deleteLater();
-    m_previewSampleGrabber = nullptr;
-
     m_needsHorizontalMirroring = false;
     m_supportedViewfinderSettings.clear();
+    Q_FOREACH (AM_MEDIA_TYPE f, m_supportedFormats)
+        _FreeMediaType(f);
     m_supportedFormats.clear();
     SAFE_RELEASE(m_sourceFilter);
+    SAFE_RELEASE(m_previewSampleGrabber);
+    SAFE_RELEASE(m_previewFilter);
     SAFE_RELEASE(m_nullRendererFilter);
     SAFE_RELEASE(m_filterGraph);
     SAFE_RELEASE(m_graphBuilder);
@@ -452,9 +565,6 @@ bool DSCameraSession::stopPreview()
 
     setStatus(QCamera::StoppingStatus);
 
-    if (m_previewSampleGrabber)
-        m_previewSampleGrabber->stop();
-
     IMediaControl* pControl = 0;
     HRESULT hr = m_filterGraph->QueryInterface(IID_IMediaControl, (void**)&pControl);
     if (FAILED(hr)) {
@@ -471,7 +581,8 @@ bool DSCameraSession::stopPreview()
 
     disconnectGraph();
 
-    m_sourceFormat.clear();
+    _FreeMediaType(m_sourceFormat);
+    ZeroMemory(&m_sourceFormat, sizeof(m_sourceFormat));
 
     m_previewStarted = false;
     setStatus(QCamera::LoadedStatus);
@@ -529,10 +640,12 @@ int DSCameraSession::captureImage(const QString &fileName)
     return m_imageIdCounter;
 }
 
-void DSCameraSession::onFrameAvailable(double time, const QByteArray &data)
+void DSCameraSession::onFrameAvailable(const char *frameData, long len)
 {
     // !!! Not called on the main thread
-    Q_UNUSED(time);
+
+    // Deep copy, the data might be modified or freed after the callback returns
+    QByteArray data(frameData, len);
 
     m_presentMutex.lock();
 
@@ -569,7 +682,7 @@ void DSCameraSession::presentFrame()
     m_presentMutex.unlock();
 
     QImage captureImage;
-    const int captureId = m_currentImageId;
+    int captureId;
 
     m_captureMutex.lock();
 
@@ -585,6 +698,8 @@ void DSCameraSession::presentFrame()
         captureImage = captureImage.mirrored(m_needsHorizontalMirroring); // also causes a deep copy of the data
 
         m_capturedFrame.unmap();
+
+        captureId = m_currentImageId;
 
         QtConcurrent::run(this, &DSCameraSession::saveCapturedImage,
                           m_currentImageId, captureImage, m_imageCaptureFileName);
@@ -616,6 +731,8 @@ void DSCameraSession::saveCapturedImage(int id, const QImage &image, const QStri
 bool DSCameraSession::createFilterGraph()
 {
     // Previously containered in <qedit.h>.
+    static const IID iID_ISampleGrabber = { 0x6B652FFF, 0x11FE, 0x4fce, { 0x92, 0xAD, 0x02, 0x66, 0xB5, 0xD7, 0xC7, 0x8F } };
+    static const CLSID cLSID_SampleGrabber = { 0xC1F400A0, 0x3F08, 0x11d3, { 0x9F, 0x0B, 0x00, 0x60, 0x08, 0x03, 0x9E, 0x37 } };
     static const CLSID cLSID_NullRenderer = { 0xC1F400A4, 0x3F08, 0x11d3, { 0x9F, 0x0B, 0x00, 0x60, 0x08, 0x03, 0x9E, 0x37 } };
 
     HRESULT hr;
@@ -717,12 +834,26 @@ bool DSCameraSession::createFilterGraph()
     }
 
     // Sample grabber filter
-    if (!m_previewSampleGrabber) {
-        m_previewSampleGrabber = new DirectShowSampleGrabber;
-        connect(m_previewSampleGrabber, &DirectShowSampleGrabber::bufferAvailable,
-                this, &DSCameraSession::onFrameAvailable);
+    hr = CoCreateInstance(cLSID_SampleGrabber, NULL,CLSCTX_INPROC,
+                          IID_IBaseFilter, (void**)&m_previewFilter);
+    if (FAILED(hr)) {
+        qWarning() << "failed to create sample grabber";
+        goto failed;
     }
 
+    hr = m_previewFilter->QueryInterface(iID_ISampleGrabber, (void**)&m_previewSampleGrabber);
+    if (FAILED(hr)) {
+        qWarning() << "failed to get sample grabber";
+        goto failed;
+    }
+
+    {
+        SampleGrabberCallbackPrivate *callback = new SampleGrabberCallbackPrivate(this);
+        m_previewSampleGrabber->SetCallback(callback, 1);
+        m_previewSampleGrabber->SetOneShot(FALSE);
+        m_previewSampleGrabber->SetBufferSamples(FALSE);
+        callback->Release();
+    }
 
     // Null renderer. Input connected to the sample grabber's output. Simply
     // discard the samples it receives.
@@ -740,6 +871,8 @@ bool DSCameraSession::createFilterGraph()
 failed:
     m_needsHorizontalMirroring = false;
     SAFE_RELEASE(m_sourceFilter);
+    SAFE_RELEASE(m_previewSampleGrabber);
+    SAFE_RELEASE(m_previewFilter);
     SAFE_RELEASE(m_nullRendererFilter);
     SAFE_RELEASE(m_filterGraph);
     SAFE_RELEASE(m_graphBuilder);
@@ -752,7 +885,7 @@ bool DSCameraSession::configurePreviewFormat()
     // Resolve viewfinder settings
     int settingsIndex = 0;
     QCameraViewfinderSettings resolvedViewfinderSettings;
-    for (const QCameraViewfinderSettings &s : qAsConst(m_supportedViewfinderSettings)) {
+    Q_FOREACH (const QCameraViewfinderSettings &s, m_supportedViewfinderSettings) {
         if ((m_viewfinderSettings.resolution().isEmpty() || m_viewfinderSettings.resolution() == s.resolution())
                 && (qFuzzyIsNull(m_viewfinderSettings.minimumFrameRate()) || qFuzzyCompare((float)m_viewfinderSettings.minimumFrameRate(), (float)s.minimumFrameRate()))
                 && (qFuzzyIsNull(m_viewfinderSettings.maximumFrameRate()) || qFuzzyCompare((float)m_viewfinderSettings.maximumFrameRate(), (float)s.maximumFrameRate()))
@@ -771,11 +904,11 @@ bool DSCameraSession::configurePreviewFormat()
 
     m_actualViewfinderSettings = resolvedViewfinderSettings;
 
-    m_sourceFormat = m_supportedFormats[settingsIndex];
+    _CopyMediaType(&m_sourceFormat, &m_supportedFormats[settingsIndex]);
     // Set frame rate.
     // We don't care about the minimumFrameRate, DirectShow only allows to set an
     // average frame rate, so set that to the maximumFrameRate.
-    VIDEOINFOHEADER *videoInfo = reinterpret_cast<VIDEOINFOHEADER*>(m_sourceFormat->pbFormat);
+    VIDEOINFOHEADER *videoInfo = reinterpret_cast<VIDEOINFOHEADER*>(m_sourceFormat.pbFormat);
     videoInfo->AvgTimePerFrame = 10000000 / resolvedViewfinderSettings.maximumFrameRate();
 
     // We only support RGB32, if the capture source doesn't support
@@ -815,12 +948,17 @@ bool DSCameraSession::configurePreviewFormat()
         return false;
     }
 
-    // Set sample grabber format
-    static const AM_MEDIA_TYPE grabberFormat { MEDIATYPE_Video, MEDIASUBTYPE_ARGB32, 0, 0, 0, FORMAT_VideoInfo, nullptr, 0, nullptr};
-    if (!m_previewSampleGrabber->setMediaType(&grabberFormat))
+    // Set sample grabber format (always RGB32)
+    AM_MEDIA_TYPE grabberFormat;
+    ZeroMemory(&grabberFormat, sizeof(grabberFormat));
+    grabberFormat.majortype = MEDIATYPE_Video;
+    grabberFormat.subtype = MEDIASUBTYPE_RGB32;
+    grabberFormat.formattype = FORMAT_VideoInfo;
+    hr = m_previewSampleGrabber->SetMediaType(&grabberFormat);
+    if (FAILED(hr)) {
+        qWarning() << "Failed to set video format on grabber";
         return false;
-
-    m_previewSampleGrabber->start(DirectShowSampleGrabber::CallbackMethod::BufferCB);
+    }
 
     return true;
 }
@@ -908,7 +1046,8 @@ bool DSCameraSession::connectGraph()
         return false;
     }
 
-    if (FAILED(m_filterGraph->AddFilter(m_previewSampleGrabber->filter(), L"Sample Grabber"))) {
+    hr = m_filterGraph->AddFilter(m_previewFilter, L"Sample Grabber");
+    if (FAILED(hr)) {
         qWarning() << "failed to add sample grabber to graph";
         return false;
     }
@@ -921,7 +1060,7 @@ bool DSCameraSession::connectGraph()
 
     hr = m_graphBuilder->RenderStream(&PIN_CATEGORY_CAPTURE, &MEDIATYPE_Video,
                                       m_sourceFilter,
-                                      m_previewSampleGrabber->filter(),
+                                      m_previewFilter,
                                       m_nullRendererFilter);
     if (FAILED(hr)) {
         qWarning() << "Graph failed to connect filters" << hr;
@@ -933,10 +1072,40 @@ bool DSCameraSession::connectGraph()
 
 void DSCameraSession::disconnectGraph()
 {
+    IPin *pPin = 0;
+    HRESULT hr = getPin(m_sourceFilter, PINDIR_OUTPUT, &pPin);
+    if (SUCCEEDED(hr)) {
+        m_filterGraph->Disconnect(pPin);
+        pPin->Release();
+        pPin = NULL;
+    }
+
+    hr = getPin(m_previewFilter, PINDIR_INPUT, &pPin);
+    if (SUCCEEDED(hr)) {
+        m_filterGraph->Disconnect(pPin);
+        pPin->Release();
+        pPin = NULL;
+    }
+
+    hr = getPin(m_previewFilter, PINDIR_OUTPUT, &pPin);
+    if (SUCCEEDED(hr)) {
+        m_filterGraph->Disconnect(pPin);
+        pPin->Release();
+        pPin = NULL;
+    }
+
+    hr = getPin(m_nullRendererFilter, PINDIR_INPUT, &pPin);
+    if (SUCCEEDED(hr)) {
+        m_filterGraph->Disconnect(pPin);
+        pPin->Release();
+        pPin = NULL;
+    }
+
     // To avoid increasing the memory usage every time the graph is re-connected it's
     // important that all filters are released; also the ones added by the "Intelligent Connect".
     IEnumFilters *enumFilters = NULL;
-    if (SUCCEEDED(m_filterGraph->EnumFilters(&enumFilters)))  {
+    hr = m_filterGraph->EnumFilters(&enumFilters);
+    if (SUCCEEDED(hr))  {
         IBaseFilter *filter = NULL;
         while (enumFilters->Next(1, &filter, NULL) == S_OK) {
                 m_filterGraph->RemoveFilter(filter);
@@ -962,6 +1131,8 @@ void DSCameraSession::updateSourceCapabilities()
 
     m_supportedViewfinderSettings.clear();
     m_needsHorizontalMirroring = false;
+    Q_FOREACH (AM_MEDIA_TYPE f, m_supportedFormats)
+        _FreeMediaType(f);
     m_supportedFormats.clear();
     m_imageProcessingParametersInfos.clear();
 
@@ -973,7 +1144,8 @@ void DSCameraSession::updateSourceCapabilities()
         qWarning() << "Failed to get the video control";
     } else {
         IPin *pPin = 0;
-        if (!DirectShowUtils::getPin(m_sourceFilter, PINDIR_OUTPUT, &pPin, &hr)) {
+        hr = getPin(m_sourceFilter, PINDIR_OUTPUT, &pPin);
+        if (FAILED(hr)) {
             qWarning() << "Failed to get the pin for the video control";
         } else {
             long supportedModes;
@@ -1012,7 +1184,7 @@ void DSCameraSession::updateSourceCapabilities()
     for (int iIndex = 0; iIndex < iCount; ++iIndex) {
         hr = pConfig->GetStreamCaps(iIndex, &pmt, reinterpret_cast<BYTE*>(&scc));
         if (hr == S_OK) {
-            QVideoFrame::PixelFormat pixelFormat = DirectShowMediaType::pixelFormatFromType(pmt);
+            QVideoFrame::PixelFormat pixelFormat = pixelFormatFromMediaSubtype(pmt->subtype);
 
             if (pmt->majortype == MEDIATYPE_Video
                     && pmt->formattype == FORMAT_VideoInfo
@@ -1025,7 +1197,8 @@ void DSCameraSession::updateSourceCapabilities()
 
                 if (pVideoControl) {
                     IPin *pPin = 0;
-                    if (!DirectShowUtils::getPin(m_sourceFilter, PINDIR_OUTPUT, &pPin, &hr)) {
+                    hr = getPin(m_sourceFilter, PINDIR_OUTPUT, &pPin);
+                    if (FAILED(hr)) {
                         qWarning() << "Failed to get the pin for the video control";
                     } else {
                         long listSize = 0;
@@ -1050,7 +1223,7 @@ void DSCameraSession::updateSourceCapabilities()
                                                                    qreal(10000000) / scc.MinFrameInterval));
                 }
 
-                for (const QCamera::FrameRateRange &frameRateRange : qAsConst(frameRateRanges)) {
+                Q_FOREACH (const QCamera::FrameRateRange &frameRateRange, frameRateRanges) {
                     QCameraViewfinderSettings settings;
                     settings.setResolution(resolution);
                     settings.setMinimumFrameRate(frameRateRange.minimumFrameRate);
@@ -1058,18 +1231,47 @@ void DSCameraSession::updateSourceCapabilities()
                     settings.setPixelFormat(pixelFormat);
                     settings.setPixelAspectRatio(1, 1);
                     m_supportedViewfinderSettings.append(settings);
-                    m_supportedFormats.append(DirectShowMediaType(*pmt));
+
+                    AM_MEDIA_TYPE format;
+                    _CopyMediaType(&format, pmt);
+                    m_supportedFormats.append(format);
                 }
 
 
             }
-            DirectShowMediaType::deleteType(pmt);
+            _FreeMediaType(*pmt);
         }
     }
 
     pConfig->Release();
 
     updateImageProcessingParametersInfos();
+}
+
+HRESULT getPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir, IPin **ppPin)
+{
+    *ppPin = 0;
+    IEnumPins *pEnum = 0;
+    IPin *pPin = 0;
+
+    HRESULT hr = pFilter->EnumPins(&pEnum);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    pEnum->Reset();
+    while (pEnum->Next(1, &pPin, NULL) == S_OK) {
+        PIN_DIRECTION ThisPinDir;
+        pPin->QueryDirection(&ThisPinDir);
+        if (ThisPinDir == PinDir) {
+            pEnum->Release();
+            *ppPin = pPin;
+            return S_OK;
+        }
+        pPin->Release();
+    }
+    pEnum->Release();
+    return E_FAIL;
 }
 
 QT_END_NAMESPACE

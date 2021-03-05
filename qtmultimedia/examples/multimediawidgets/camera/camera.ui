@@ -144,10 +144,6 @@
           <property name="text">
            <string>Capture Photo</string>
           </property>
-          <property name="icon">
-           <iconset resource="camera.qrc">
-            <normaloff>:/images/shutter.svg</normaloff>:/images/shutter.svg</iconset>
-          </property>
          </widget>
         </item>
         <item row="1" column="0">
@@ -252,7 +248,7 @@
      <x>0</x>
      <y>0</y>
      <width>668</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -304,9 +300,7 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="camera.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>recordButton</sender>

@@ -1,6 +1,6 @@
 CONFIG += testcase
 TARGET = tst_qqmlprofilerservice
-osx:CONFIG -= app_bundle
+macx:CONFIG -= app_bundle
 
 SOURCES += tst_qqmlprofilerservice.cpp
 
@@ -10,7 +10,8 @@ include(../shared/debugutil.pri)
 
 TESTDATA = data/*
 
-QT += core qml testlib testlib-private gui-private core-private
+QT += core qml testlib gui-private core-private
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 
 OTHER_FILES += \
     data/pixmapCacheTest.qml \
@@ -21,5 +22,4 @@ OTHER_FILES += \
     data/TestImage_2x2.png \
     data/signalSourceLocation.qml \
     data/javascript.qml \
-    data/timer.qml \
-    data/memory.qml
+    data/timer.qml

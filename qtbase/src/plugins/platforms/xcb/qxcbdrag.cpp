@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -130,9 +124,9 @@ public:
     ~QXcbDropData();
 
 protected:
-    bool hasFormat_sys(const QString &mimeType) const override;
-    QStringList formats_sys() const override;
-    QVariant retrieveData_sys(const QString &mimeType, QVariant::Type type) const override;
+    bool hasFormat_sys(const QString &mimeType) const Q_DECL_OVERRIDE;
+    QStringList formats_sys() const Q_DECL_OVERRIDE;
+    QVariant retrieveData_sys(const QString &mimeType, QVariant::Type type) const Q_DECL_OVERRIDE;
 
     QVariant xdndObtainData(const QByteArray &format, QVariant::Type requestedType) const;
 
@@ -170,9 +164,6 @@ void QXcbDrag::init()
 
     QXcbCursor::queryPointer(connection(), &current_virtual_desktop, 0);
     drag_types.clear();
-
-    dropped = false;
-    canceled = false;
 }
 
 QMimeData *QXcbDrag::platformDropData()
@@ -197,10 +188,8 @@ void QXcbDrag::startDrag()
 
     init();
 
-#ifndef QT_NO_CLIPBOARD
     xcb_set_selection_owner(xcb_connection(), connection()->clipboard()->owner(),
                             atom(QXcbAtom::XdndSelection), connection()->time());
-#endif
 
     QStringList fmts = QXcbMime::formatsHelper(drag()->mimeData());
     for (int i = 0; i < fmts.size(); ++i) {
@@ -210,12 +199,10 @@ void QXcbDrag::startDrag()
                 drag_types.append(atoms.at(j));
         }
     }
-#ifndef QT_NO_CLIPBOARD
     if (drag_types.size() > 3)
         xcb_change_property(xcb_connection(), XCB_PROP_MODE_REPLACE, connection()->clipboard()->owner(),
                             atom(QXcbAtom::XdndTypelist),
                             XCB_ATOM_ATOM, 32, drag_types.size(), (const void *)drag_types.constData());
-#endif
 
     setUseCompositing(current_virtual_desktop->compositingActive());
     setScreen(current_virtual_desktop->screens().constFirst()->screen());
@@ -228,10 +215,6 @@ void QXcbDrag::startDrag()
 void QXcbDrag::endDrag()
 {
     QBasicDrag::endDrag();
-    if (!dropped && !canceled && canDrop()) {
-        // Set executed drop action when dropping outside application.
-        setExecutedDropAction(accepted_drop_action);
-    }
     initiatorWindow.clear();
 }
 
@@ -458,11 +441,7 @@ void QXcbDrag::move(const QPoint &globalPos)
             enter.window = target;
             enter.format = 32;
             enter.type = atom(QXcbAtom::XdndEnter);
-#ifndef QT_NO_CLIPBOARD
             enter.data.data32[0] = connection()->clipboard()->owner();
-#else
-            enter.data.data32[0] = 0;
-#endif
             enter.data.data32[1] = flags;
             enter.data.data32[2] = drag_types.size()>0 ? drag_types.at(0) : 0;
             enter.data.data32[3] = drag_types.size()>1 ? drag_types.at(1) : 0;
@@ -491,11 +470,7 @@ void QXcbDrag::move(const QPoint &globalPos)
         move.window = target;
         move.format = 32;
         move.type = atom(QXcbAtom::XdndPosition);
-#ifndef QT_NO_CLIPBOARD
         move.data.data32[0] = connection()->clipboard()->owner();
-#else
-        move.data.data32[0] = 0;
-#endif
         move.data.data32[1] = 0; // flags
         move.data.data32[2] = (globalPos.x() << 16) + globalPos.y();
         move.data.data32[3] = connection()->time();
@@ -524,11 +499,7 @@ void QXcbDrag::drop(const QPoint &globalPos)
     drop.window = current_target;
     drop.format = 32;
     drop.type = atom(QXcbAtom::XdndDrop);
-#ifndef QT_NO_CLIPBOARD
     drop.data.data32[0] = connection()->clipboard()->owner();
-#else
-    drop.data.data32[0] = 0;
-#endif
     drop.data.data32[1] = 0; // flags
     drop.data.data32[2] = connection()->time();
 
@@ -814,11 +785,9 @@ void QXcbDrag::handle_xdnd_position(QPlatformWindow *w, const xcb_client_message
     // reset
     target_time = XCB_CURRENT_TIME;
 
-#ifndef QT_NO_CLIPBOARD
     if (xdnd_dragsource == connection()->clipboard()->owner())
         handle_xdnd_status(&response);
     else
-#endif
         Q_XCB_CALL(xcb_send_event(xcb_connection(), false, current_proxy_target,
                                   XCB_EVENT_MASK_NO_EVENT, (const char *)&response));
 }
@@ -884,11 +853,7 @@ void QXcbDrag::handle_xdnd_status(const xcb_client_message_event_t *event)
 
 void QXcbDrag::handleStatus(const xcb_client_message_event_t *event)
 {
-    if (
-#ifndef QT_NO_CLIPBOARD
-            event->window != connection()->clipboard()->owner() ||
-#endif
-            !drag())
+    if (event->window != connection()->clipboard()->owner() || !drag())
         return;
 
     xcb_client_message_event_t *lastEvent = const_cast<xcb_client_message_event_t *>(event);
@@ -943,11 +908,7 @@ void QXcbDrag::send_leave()
     leave.window = current_target;
     leave.format = 32;
     leave.type = atom(QXcbAtom::XdndLeave);
-#ifndef QT_NO_CLIPBOARD
     leave.data.data32[0] = connection()->clipboard()->owner();
-#else
-    leave.data.data32[0] = 0;
-#endif
     leave.data.data32[1] = 0; // flags
     leave.data.data32[2] = 0; // x, y
     leave.data.data32[3] = 0; // w, h
@@ -1033,18 +994,14 @@ void QXcbDrag::handleDrop(QPlatformWindow *, const xcb_client_message_event_t *e
 
     // reset
     target_time = XCB_CURRENT_TIME;
-
-    dropped = true;
 }
 
 
 void QXcbDrag::handleFinished(const xcb_client_message_event_t *event)
 {
     DEBUG("xdndHandleFinished");
-#ifndef QT_NO_CLIPBOARD
     if (event->window != connection()->clipboard()->owner())
         return;
-#endif
 
     const unsigned long *l = (const unsigned long *)event->data.data32;
 
@@ -1130,11 +1087,6 @@ void QXcbDrag::cancel()
     QBasicDrag::cancel();
     if (current_target)
         send_leave();
-
-    // remove canceled object
-    currentDrag()->deleteLater();
-
-    canceled = true;
 }
 
 // find an ancestor with XdndAware on it
@@ -1329,13 +1281,11 @@ QVariant QXcbDropData::xdndObtainData(const QByteArray &format, QVariant::Type r
     if (a == XCB_NONE)
         return result;
 
-#ifndef QT_NO_CLIPBOARD
     if (c->clipboard()->getSelectionOwner(drag->atom(QXcbAtom::XdndSelection)) == XCB_NONE)
         return result; // should never happen?
 
     xcb_atom_t xdnd_selection = c->atom(QXcbAtom::XdndSelection);
     result = c->clipboard()->getSelection(xdnd_selection, a, xdnd_selection, drag->targetTime());
-#endif
 
     return mimeConvertToFormat(c, a, result, QLatin1String(format), requestedType, encoding);
 }

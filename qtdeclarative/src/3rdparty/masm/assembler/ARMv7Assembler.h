@@ -27,11 +27,10 @@
 #ifndef ARMAssembler_h
 #define ARMAssembler_h
 
-#if ENABLE(ASSEMBLER) && (CPU(ARM_THUMB2) || defined(V4_BOOTSTRAP))
+#if ENABLE(ASSEMBLER) && CPU(ARM_THUMB2)
 
 #include "AssemblerBuffer.h"
 #include "MacroAssemblerCodeRef.h"
-#include "AbstractMacroAssembler.h"
 #include <wtf/Assertions.h>
 #include <wtf/Vector.h>
 #include <stdint.h>
@@ -424,7 +423,6 @@ public:
     typedef ARMRegisters::FPSingleRegisterID FPSingleRegisterID;
     typedef ARMRegisters::FPDoubleRegisterID FPDoubleRegisterID;
     typedef ARMRegisters::FPQuadRegisterID FPQuadRegisterID;
-    typedef ARMRegisters::FPDoubleRegisterID FPRegisterID;
 
     // (HS, LO, HI, LS) -> (AE, B, A, BE)
     // (VS, VC) -> (O, NO)
@@ -492,8 +490,8 @@ public:
     private:
         union {
             struct RealTypes {
-                int32_t m_from : 31;
-                int32_t m_to : 31;
+                intptr_t m_from : 31;
+                intptr_t m_to : 31;
                 JumpType m_type : 8;
                 JumpLinkType m_linkType : 8;
                 Condition m_condition : 16;
@@ -510,56 +508,6 @@ public:
         , m_indexOfTailOfLastWatchpoint(INT_MIN)
     {
     }
-
-
-    // Jump:
-    //
-    // A jump object is a reference to a jump instruction that has been planted
-    // into the code buffer - it is typically used to link the jump, setting the
-    // relative offset such that when executed it will jump to the desired
-    // destination.
-    template <typename LabelType>
-    class Jump {
-        template<class TemplateAssemblerType> friend class AbstractMacroAssembler;
-        friend class Call;
-        template <typename, template <typename> class> friend class LinkBufferBase;;
-    public:
-        Jump()
-        {
-        }
-
-        // Fixme: this information should be stored in the instruction stream, not in the Jump object.
-        Jump(AssemblerLabel jmp, ARMv7Assembler::JumpType type = ARMv7Assembler::JumpNoCondition, ARMv7Assembler::Condition condition = ARMv7Assembler::ConditionInvalid)
-            : m_label(jmp)
-            , m_type(type)
-            , m_condition(condition)
-        {
-        }
-
-        LabelType label() const
-        {
-            LabelType result;
-            result.m_label = m_label;
-            return result;
-        }
-
-        void link(AbstractMacroAssembler<ARMv7Assembler>* masm) const
-        {
-            masm->m_assembler.linkJump(m_label, masm->m_assembler.label(), m_type, m_condition);
-        }
-
-        void linkTo(LabelType label, AbstractMacroAssembler<ARMv7Assembler>* masm) const
-        {
-            masm->m_assembler.linkJump(m_label, label.label(), m_type, m_condition);
-        }
-
-        bool isSet() const { return m_label.isSet(); }
-
-    private:
-        AssemblerLabel m_label;
-        ARMv7Assembler::JumpType m_type;
-        ARMv7Assembler::Condition m_condition;
-    };
 
 private:
 
@@ -2166,7 +2114,6 @@ public:
         linkJumpAbsolute(location, to);
     }
 
-#if !defined(V4_BOOTSTRAP)
     static void linkCall(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(code) & 1));
@@ -2175,14 +2122,12 @@ public:
 
         setPointer(reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.m_offset) - 1, to, false);
     }
-#endif
 
     static void linkPointer(void* code, AssemblerLabel where, void* value)
     {
         setPointer(reinterpret_cast<char*>(code) + where.m_offset, value, false);
     }
 
-#if !defined(V4_BOOTSTRAP)
     static void relinkJump(void* from, void* to)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 1));
@@ -2200,12 +2145,11 @@ public:
 
         setPointer(reinterpret_cast<uint16_t*>(from) - 1, to, true);
     }
-
+    
     static void* readCallTarget(void* from)
     {
         return readPointer(reinterpret_cast<uint16_t*>(from) - 1);
     }
-#endif
 
     static void repatchInt32(void* where, int32_t value)
     {
@@ -2234,7 +2178,6 @@ public:
         cacheFlush(location, sizeof(uint16_t) * 2);
     }
 
-#if !defined(V4_BOOTSTRAP)
     static void repatchPointer(void* where, void* value)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(where) & 1));
@@ -2246,8 +2189,7 @@ public:
     {
         return reinterpret_cast<void*>(readInt32(where));
     }
-#endif
-
+    
     static void replaceWithJump(void* instructionStart, void* to)
     {
         ASSERT(!(bitwise_cast<uintptr_t>(instructionStart) & 1));
@@ -2321,7 +2263,7 @@ public:
 
     unsigned debugOffset() { return m_formatter.debugOffset(); }
 
-#if OS(LINUX) && !defined(V4_BOOTSTRAP)
+#if OS(LINUX)
     static inline void linuxPageFlush(uintptr_t begin, uintptr_t end)
     {
         asm volatile(
@@ -2341,10 +2283,7 @@ public:
 
     static void cacheFlush(void* code, size_t size)
     {
-#if defined(V4_BOOTSTRAP)
-        UNUSED_PARAM(code)
-        UNUSED_PARAM(size)
-#elif OS(IOS)
+#if OS(IOS)
         sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
 #elif OS(LINUX)
         size_t page = pageSize();
@@ -2490,9 +2429,7 @@ private:
 
     static void setPointer(void* code, void* value, bool flush)
     {
-        // ### Deliberate "loss" of precision here. On 64-bit hosts void* is wider
-        // than uint32_t, but the target is 32-bit ARM anyway.
-        setInt32(code, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(value)), flush);
+        setInt32(code, reinterpret_cast<uint32_t>(value), flush);
     }
 
     static bool isB(void* address)
@@ -2531,18 +2468,12 @@ private:
         return (instruction[0] == OP_NOP_T2a) && (instruction[1] == OP_NOP_T2b);
     }
 
-    static int32_t makeRelative(const void *target, const void *source)
-    {
-        intptr_t difference = reinterpret_cast<intptr_t>(target) - reinterpret_cast<intptr_t>(source);
-        return static_cast<int32_t>(difference);
-    }
-
     static bool canBeJumpT1(const uint16_t* instruction, const void* target)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         // It does not appear to be documented in the ARM ARM (big surprise), but
         // for OP_B_T1 the branch displacement encoded in the instruction is 2 
         // less than the actual displacement.
@@ -2555,7 +2486,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         // It does not appear to be documented in the ARM ARM (big surprise), but
         // for OP_B_T2 the branch displacement encoded in the instruction is 2 
         // less than the actual displacement.
@@ -2568,7 +2499,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         return ((relative << 11) >> 11) == relative;
     }
     
@@ -2577,7 +2508,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         return ((relative << 7) >> 7) == relative;
     }
     
@@ -2588,7 +2519,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         ASSERT(canBeJumpT1(instruction, target));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         // It does not appear to be documented in the ARM ARM (big surprise), but
         // for OP_B_T1 the branch displacement encoded in the instruction is 2 
         // less than the actual displacement.
@@ -2606,7 +2537,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         ASSERT(canBeJumpT2(instruction, target));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         // It does not appear to be documented in the ARM ARM (big surprise), but
         // for OP_B_T2 the branch displacement encoded in the instruction is 2 
         // less than the actual displacement.
@@ -2624,7 +2555,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         ASSERT(canBeJumpT3(instruction, target));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         
         // All branch offsets should be an even distance.
         ASSERT(!(relative & 1));
@@ -2639,7 +2570,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
         ASSERT(canBeJumpT4(instruction, target));
         
-        auto relative = makeRelative(target, instruction);
+        intptr_t relative = reinterpret_cast<intptr_t>(target) - (reinterpret_cast<intptr_t>(instruction));
         // ARM encoding for the top two bits below the sign bit is 'peculiar'.
         if (relative >= 0)
             relative ^= 0xC00000;
@@ -2662,11 +2593,6 @@ private:
     
     static void linkBX(uint16_t* instruction, void* target)
     {
-#if defined(V4_BOOTSTRAP)
-        UNUSED_PARAM(instruction);
-        UNUSED_PARAM(target);
-        RELEASE_ASSERT_NOT_REACHED();
-#else
         // FIMXE: this should be up in the MacroAssembler layer. :-(
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
@@ -2679,7 +2605,6 @@ private:
         instruction[-3] = twoWordOp5i6Imm4Reg4EncodedImmFirst(OP_MOVT, hi16);
         instruction[-2] = twoWordOp5i6Imm4Reg4EncodedImmSecond(JUMP_TEMPORARY_REGISTER, hi16);
         instruction[-1] = OP_BX | (JUMP_TEMPORARY_REGISTER << 3);
-#endif
     }
     
     void linkConditionalBX(Condition cond, uint16_t* instruction, void* target)
@@ -2712,9 +2637,6 @@ private:
             instruction[-3] = OP_NOP_T2b;
             linkJumpT4(instruction, target);
         } else {
-#if defined(V4_BOOTSTRAP)
-            RELEASE_ASSERT_NOT_REACHED();
-#else
             const uint16_t JUMP_TEMPORARY_REGISTER = ARMRegisters::ip;
             ARMThumbImmediate lo16 = ARMThumbImmediate::makeUInt16(static_cast<uint16_t>(reinterpret_cast<uint32_t>(target) + 1));
             ARMThumbImmediate hi16 = ARMThumbImmediate::makeUInt16(static_cast<uint16_t>(reinterpret_cast<uint32_t>(target) >> 16));
@@ -2723,7 +2645,6 @@ private:
             instruction[-3] = twoWordOp5i6Imm4Reg4EncodedImmFirst(OP_MOVT, hi16);
             instruction[-2] = twoWordOp5i6Imm4Reg4EncodedImmSecond(JUMP_TEMPORARY_REGISTER, hi16);
             instruction[-1] = OP_BX | (JUMP_TEMPORARY_REGISTER << 3);
-#endif
         }
     }
     
@@ -2872,9 +2793,6 @@ private:
     int m_indexOfLastWatchpoint;
     int m_indexOfTailOfLastWatchpoint;
 };
-
-#undef JUMP_ENUM_WITH_SIZE
-#undef JUMP_ENUM_SIZE
 
 } // namespace JSC
 

@@ -1,33 +1,37 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include <qtest.h>
-#include <qtesttouch.h>
 #include <QtTest/QSignalSpy>
 #include <QtQml/qqmlcomponent.h>
 #include <QtQml/qqmlcontext.h>
@@ -35,79 +39,10 @@
 #include <QtQuick/qquickitem.h>
 #include "../../shared/util.h"
 #include <QtGui/QWindow>
-#include <QtGui/QImage>
 #include <QtCore/QDebug>
 #include <QtQml/qqmlengine.h>
-#include <QtCore/QLoggingCategory>
+
 #include <QtQuickWidgets/QQuickWidget>
-
-Q_LOGGING_CATEGORY(lcTests, "qt.quick.tests")
-
-class MouseRecordingQQWidget : public QQuickWidget
-{
-public:
-    explicit MouseRecordingQQWidget(QWidget *parent = nullptr) : QQuickWidget(parent) {
-        setAttribute(Qt::WA_AcceptTouchEvents);
-    }
-
-protected:
-    void mousePressEvent(QMouseEvent *event) override {
-        qCDebug(lcTests) << event;
-        m_mouseEvents << *event;
-        QQuickWidget::mousePressEvent(event);
-    }
-    void mouseMoveEvent(QMouseEvent *event) override {
-        qCDebug(lcTests) << event;
-        m_mouseEvents << *event;
-        QQuickWidget::mouseMoveEvent(event);
-    }
-    void mouseReleaseEvent(QMouseEvent *event) override {
-        qCDebug(lcTests) << event;
-        m_mouseEvents << *event;
-        QQuickWidget::mouseReleaseEvent(event);
-    }
-
-public:
-    QList<QMouseEvent> m_mouseEvents;
-};
-
-class MouseRecordingItem : public QQuickItem
-{
-public:
-    MouseRecordingItem(bool acceptTouch, QQuickItem *parent = nullptr)
-        : QQuickItem(parent)
-        , m_acceptTouch(acceptTouch)
-    {
-        setSize(QSizeF(300, 300));
-        setAcceptedMouseButtons(Qt::LeftButton);
-    }
-
-protected:
-    void touchEvent(QTouchEvent* event) override {
-        event->setAccepted(m_acceptTouch);
-        m_touchEvents << *event;
-        qCDebug(lcTests) << "accepted?" << event->isAccepted() << event;
-    }
-    void mousePressEvent(QMouseEvent *event) override {
-        qCDebug(lcTests) << event;
-        m_mouseEvents << *event;
-    }
-    void mouseMoveEvent(QMouseEvent *event) override {
-        qCDebug(lcTests) << event;
-        m_mouseEvents << *event;
-    }
-    void mouseReleaseEvent(QMouseEvent *event) override {
-        qCDebug(lcTests) << event;
-        m_mouseEvents << *event;
-    }
-
-public:
-    QList<QMouseEvent> m_mouseEvents;
-    QList<QTouchEvent> m_touchEvents;
-
-private:
-    bool m_acceptTouch;
-};
 
 class tst_qquickwidget : public QQmlDataTest
 {
@@ -124,20 +59,9 @@ private slots:
     void engine();
     void readback();
     void renderingSignals();
-    void grab();
     void grabBeforeShow();
-    void reparentToNewWindow();
-    void nullEngine();
-    void keyEvents();
-    void shortcuts();
-    void enterLeave();
-    void mouseEventWindowPos();
-    void synthMouseFromTouch_data();
-    void synthMouseFromTouch();
-
-private:
-    QTouchDevice *device = QTest::createTouchDevice();
 };
+
 
 tst_qquickwidget::tst_qquickwidget()
 {
@@ -151,7 +75,7 @@ void tst_qquickwidget::showHide()
     childView->setSource(testFileUrl("rectangle.qml"));
 
     window.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QVERIFY(QTest::qWaitForWindowExposed(&window, 5000));
     QVERIFY(childView->quickWindow()->isVisible());
     QVERIFY(childView->quickWindow()->visibility() != QWindow::Hidden);
 
@@ -167,13 +91,13 @@ void tst_qquickwidget::reparentAfterShow()
     QQuickWidget *childView = new QQuickWidget(&window);
     childView->setSource(testFileUrl("rectangle.qml"));
     window.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QVERIFY(QTest::qWaitForWindowExposed(&window, 5000));
 
     QScopedPointer<QQuickWidget> toplevelView(new QQuickWidget);
     toplevelView->setParent(&window);
     toplevelView->setSource(testFileUrl("rectangle.qml"));
     toplevelView->show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QVERIFY(QTest::qWaitForWindowExposed(&window, 5000));
 }
 
 void tst_qquickwidget::changeGeometry()
@@ -184,7 +108,7 @@ void tst_qquickwidget::changeGeometry()
     childView->setSource(testFileUrl("rectangle.qml"));
 
     window.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QVERIFY(QTest::qWaitForWindowExposed(&window, 5000));
 
     childView->setGeometry(100,100,100,100);
 }
@@ -331,7 +255,7 @@ void tst_qquickwidget::readback()
     view->setSource(testFileUrl("rectangle.qml"));
 
     view->show();
-    QVERIFY(QTest::qWaitForWindowExposed(view.data()));
+    QVERIFY(QTest::qWaitForWindowExposed(view.data(), 5000));
 
     QImage img = view->grabFramebuffer();
     QVERIFY(!img.isNull());
@@ -367,20 +291,11 @@ void tst_qquickwidget::renderingSignals()
     QCOMPARE(afterRenderingSpy.size(), 0);
 
     widget.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&widget));
+    QVERIFY(QTest::qWaitForWindowExposed(&widget, 5000));
 
     QTRY_VERIFY(beforeRenderingSpy.size() > 0);
     QTRY_VERIFY(beforeSyncSpy.size() > 0);
     QTRY_VERIFY(afterRenderingSpy.size() > 0);
-}
-
-void tst_qquickwidget::grab()
-{
-    QQuickWidget view;
-    view.setSource(testFileUrl("rectangle.qml"));
-    QPixmap pixmap = view.grab();
-    QRgb pixel = pixmap.toImage().pixel(5, 5);
-    QCOMPARE(pixel, qRgb(255, 0, 0));
 }
 
 // QTBUG-49929, verify that Qt Designer grabbing the contents before drag
@@ -389,192 +304,6 @@ void tst_qquickwidget::grabBeforeShow()
 {
     QQuickWidget widget;
     QVERIFY(!widget.grab().isNull());
-}
-
-void tst_qquickwidget::reparentToNewWindow()
-{
-    QWidget window1;
-    QWidget window2;
-
-    QQuickWidget *qqw = new QQuickWidget(&window1);
-    qqw->setSource(testFileUrl("rectangle.qml"));
-    window1.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window1));
-    window2.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window2));
-
-    QSignalSpy afterRenderingSpy(qqw->quickWindow(), &QQuickWindow::afterRendering);
-    qqw->setParent(&window2);
-    qqw->show();
-    QTRY_VERIFY(afterRenderingSpy.size() > 0);
-
-    QImage img = qqw->grabFramebuffer();
-    QCOMPARE(img.pixel(5, 5), qRgb(255, 0, 0));
-}
-
-void tst_qquickwidget::nullEngine()
-{
-    QQuickWidget widget;
-    // Default should have no errors, even with a null qml engine
-    QVERIFY(widget.errors().isEmpty());
-    QCOMPARE(widget.status(), QQuickWidget::Null);
-
-    // A QML engine should be created lazily.
-    QVERIFY(widget.rootContext());
-    QVERIFY(widget.engine());
-}
-
-class KeyHandlingWidget : public QQuickWidget
-{
-public:
-    void keyPressEvent(QKeyEvent *e) override {
-        if (e->key() == Qt::Key_A)
-            ok = true;
-    }
-
-    bool ok = false;
-};
-
-void tst_qquickwidget::keyEvents()
-{
-    // A QQuickWidget should behave like a normal widget when it comes to event handling.
-    // Verify that key events actually reach the widget. (QTBUG-45757)
-    KeyHandlingWidget widget;
-    widget.setSource(testFileUrl("rectangle.qml"));
-    widget.show();
-    QVERIFY(QTest::qWaitForWindowExposed(widget.window()));
-
-    // Note: send the event to the QWindow, not the QWidget, in order
-    // to simulate the full event processing chain.
-    QTest::keyClick(widget.window()->windowHandle(), Qt::Key_A);
-
-    QTRY_VERIFY(widget.ok);
-}
-
-class ShortcutEventFilter : public QObject
-{
-public:
-    bool eventFilter(QObject *obj, QEvent *e) override {
-        if (e->type() == QEvent::ShortcutOverride)
-            shortcutOk = true;
-
-        return QObject::eventFilter(obj, e);
-    }
-
-    bool shortcutOk = false;
-};
-
-void tst_qquickwidget::shortcuts()
-{
-    // Verify that ShortcutOverride events do not get lost. (QTBUG-60988)
-    KeyHandlingWidget widget;
-    widget.setSource(testFileUrl("rectangle.qml"));
-    widget.show();
-    QVERIFY(QTest::qWaitForWindowExposed(widget.window()));
-
-    // Send to the widget, verify that the QQuickWindow sees it.
-
-    ShortcutEventFilter filter;
-    widget.quickWindow()->installEventFilter(&filter);
-
-    QKeyEvent e(QEvent::ShortcutOverride, Qt::Key_A, Qt::ControlModifier);
-    QCoreApplication::sendEvent(&widget, &e);
-
-    QTRY_VERIFY(filter.shortcutOk);
-}
-
-void tst_qquickwidget::enterLeave()
-{
-    QQuickWidget view;
-    view.setSource(testFileUrl("enterleave.qml"));
-    view.move(100, 100);
-
-    // Ensure the cursor is away from the window first
-    QPoint outside = view.geometry().topRight() + QPoint(100, 100);
-    QCursor::setPos(outside);
-
-    view.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&view));
-    QQuickItem *rootItem = view.rootObject();
-    QVERIFY(rootItem);
-
-    QTRY_VERIFY(!rootItem->property("hasMouse").toBool());
-    // Check the enter
-    QCursor::setPos(view.pos() + QPoint(50, 50));
-    QTRY_VERIFY(rootItem->property("hasMouse").toBool());
-    // Now check the leave
-    QCursor::setPos(outside);
-    QTRY_VERIFY(!rootItem->property("hasMouse").toBool());
-}
-
-void tst_qquickwidget::mouseEventWindowPos()
-{
-    QWidget widget;
-    widget.resize(100, 100);
-    QQuickWidget *quick = new QQuickWidget(&widget);
-    quick->setSource(testFileUrl("mouse.qml"));
-    quick->move(50, 50);
-    widget.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&widget));
-    QQuickItem *rootItem = quick->rootObject();
-    QVERIFY(rootItem);
-
-    QVERIFY(!rootItem->property("wasClicked").toBool());
-    QVERIFY(!rootItem->property("wasDoubleClicked").toBool());
-    QVERIFY(!rootItem->property("wasMoved").toBool());
-
-    QWindow *window = widget.windowHandle();
-    QVERIFY(window);
-
-    QTest::mouseMove(window, QPoint(60, 60));
-    QTest::mouseClick(window, Qt::LeftButton, Qt::KeyboardModifiers(), QPoint(60, 60));
-    QTRY_VERIFY(rootItem->property("wasClicked").toBool());
-    QTest::mouseDClick(window, Qt::LeftButton, Qt::KeyboardModifiers(), QPoint(60, 60));
-    QTRY_VERIFY(rootItem->property("wasDoubleClicked").toBool());
-    QTest::mouseMove(window, QPoint(70, 70));
-    QTRY_VERIFY(rootItem->property("wasMoved").toBool());
-}
-
-void tst_qquickwidget::synthMouseFromTouch_data()
-{
-    QTest::addColumn<bool>("synthMouse"); // AA_SynthesizeMouseForUnhandledTouchEvents
-    QTest::addColumn<bool>("acceptTouch"); // QQuickItem::touchEvent: setAccepted()
-
-    QTest::newRow("no synth, accept") << false << true; // suitable for touch-capable UIs
-    QTest::newRow("no synth, don't accept") << false << false;
-    QTest::newRow("synth and accept") << true << true;
-    QTest::newRow("synth, don't accept") << true << false; // the default
-}
-
-void tst_qquickwidget::synthMouseFromTouch()
-{
-    QFETCH(bool, synthMouse);
-    QFETCH(bool, acceptTouch);
-
-    QCoreApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents, synthMouse);
-    QWidget window;
-    window.setAttribute(Qt::WA_AcceptTouchEvents);
-    QScopedPointer<MouseRecordingQQWidget> childView(new MouseRecordingQQWidget(&window));
-    MouseRecordingItem *item = new MouseRecordingItem(acceptTouch, nullptr);
-    childView->setContent(QUrl(), nullptr, item);
-    window.resize(300, 300);
-    childView->resize(300, 300);
-    window.show();
-    QVERIFY(QTest::qWaitForWindowActive(&window));
-    QVERIFY(childView->quickWindow()->isVisible());
-    QVERIFY(item->isVisible());
-
-    QPoint p1 = QPoint(20, 20);
-    QPoint p2 = QPoint(30, 30);
-    QTest::touchEvent(&window, device).press(0, p1, &window);
-    QTest::touchEvent(&window, device).move(0, p2, &window);
-    QTest::touchEvent(&window, device).release(0, p2, &window);
-
-    QCOMPARE(item->m_touchEvents.count(), 3);
-    QCOMPARE(item->m_mouseEvents.count(), acceptTouch ? 0 : 3);
-    QCOMPARE(childView->m_mouseEvents.count(), 0);
-    for (const QMouseEvent &ev : item->m_mouseEvents)
-        QCOMPARE(ev.source(), Qt::MouseEventSynthesizedByQt);
 }
 
 QTEST_MAIN(tst_qquickwidget)

@@ -97,7 +97,6 @@ if (NOT WIN32 OR (WIN32 AND NOT CMAKE_VERSION VERSION_LESS 2.8.11))
     expect_pass(test_add_binary_resources_delayed_file BINARY test_add_binary_resources_delayed_file)
 endif()
 expect_pass(test_private_includes)
-expect_pass(test_private_targets)
 expect_pass(test_testlib_definitions)
 expect_pass(test_json_plugin_includes)
 
@@ -157,13 +156,7 @@ if (NOT CMAKE_VERSION VERSION_LESS 2.8.11 AND NOT NO_WIDGETS)
     expect_pass(test_interface)
 endif()
 
-expect_pass(test_interface_link_libraries)
-expect_pass(test_moc_macro_target)
-
-if (NOT CMAKE_VERSION VERSION_LESS 3.8)
-    # With earlier CMake versions, this test would simply run moc multiple times and lead to:
-    # /usr/bin/ld: error: CMakeFiles/mywidget.dir/mywidget_automoc.cpp.o: multiple definition of 'MyWidget::qt_static_metacall(QObject*, QMetaObject::Call, int, void**)'
-    # /usr/bin/ld: CMakeFiles/mywidget.dir/moc_mywidget.cpp.o: previous definition here
-    # Reason: SKIP_* properties were added in CMake 3.8 only
-    expect_pass(test_QTBUG-63422)
+if (NOT CMAKE_VERSION VERSION_LESS 2.8.12)
+    expect_pass(test_interface_link_libraries)
+    expect_pass(test_moc_macro_target)
 endif()

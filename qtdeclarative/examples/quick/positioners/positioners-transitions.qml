@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -65,7 +55,7 @@ Item {
         interval: 2000
         running: true
         repeat: true
-        onTriggered: page.effectiveOpacity = (page.effectiveOpacity == 1.0 ? 0.0 : 1.0);
+        onTriggered: effectiveOpacity = (effectiveOpacity == 1.0 ? 0.0 : 1.0);
     }
 
     Column {
@@ -75,7 +65,7 @@ Item {
             top: parent.top
             topMargin: page.height / 48
         }
-        spacing: page.elementSpacing
+        spacing: elementSpacing
 
         populate: Transition {
             NumberAnimation { properties: "x,y"; from: 200; duration: 100; easing.type: Easing.OutBounce }
@@ -87,32 +77,32 @@ Item {
             NumberAnimation { properties: "y"; easing.type: Easing.OutBounce }
         }
 
-        Rectangle { color: "#80c342"; width: page.bigSize; height: page.smallSize }
+        Rectangle { color: "#80c342"; width: bigSize; height: smallSize }
 
         Rectangle {
             id: greenV1
             visible: opacity != 0
-            width: page.bigSize; height: page.smallSize
+            width: bigSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#14aaff"; width: page.bigSize; height: page.smallSize }
+        Rectangle { color: "#14aaff"; width: bigSize; height: smallSize }
 
         Rectangle {
             id: greenV2
             visible: opacity != 0
-            width: page.bigSize; height: page.smallSize
+            width: bigSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#6400aa"; width: page.bigSize; height: page.smallSize }
-        Rectangle { color: "#80c342"; width: page.bigSize; height: page.smallSize }
+        Rectangle { color: "#6400aa"; width: bigSize; height: smallSize }
+        Rectangle { color: "#80c342"; width: bigSize; height: smallSize }
     }
 
     Row {
@@ -122,7 +112,7 @@ Item {
             bottom: page.bottom
             bottomMargin: page.height / 48
         }
-        spacing: page.elementSpacing
+        spacing: elementSpacing
 
         populate: Transition {
             NumberAnimation { properties: "x,y"; from: 200; duration: 100; easing.type: Easing.OutBounce }
@@ -134,40 +124,40 @@ Item {
             NumberAnimation { properties: "x"; easing.type: Easing.OutBounce }
         }
 
-        Rectangle { color: "#80c342"; width: page.smallSize; height: page.bigSize }
+        Rectangle { color: "#80c342"; width: smallSize; height: bigSize }
 
         Rectangle {
             id: blueH1
             visible: opacity != 0
-            width: page.smallSize; height: page.bigSize
+            width: smallSize; height: bigSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#14aaff"; width: page.smallSize; height: page.bigSize }
+        Rectangle { color: "#14aaff"; width: smallSize; height: bigSize }
 
         Rectangle {
             id: greenH2
             visible: opacity != 0
-            width: page.smallSize; height: page.bigSize
+            width: smallSize; height: bigSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#6400aa"; width: page.smallSize; height: page.bigSize }
-        Rectangle { color: "#80c342"; width: page.smallSize; height: page.bigSize }
+        Rectangle { color: "#6400aa"; width: smallSize; height: bigSize }
+        Rectangle { color: "#80c342"; width: smallSize; height: bigSize }
     }
 
     Grid {
         anchors.top: parent.top
         anchors.topMargin: page.height / 48
-        anchors.left: flowItem.left
+        anchors.left: flow.left
         columns: 3
-        spacing: page.elementSpacing
+        spacing: elementSpacing
 
         populate: Transition {
             NumberAnimation { properties: "x,y"; from: 200; duration: 100; easing.type: Easing.OutBounce }
@@ -179,55 +169,55 @@ Item {
             NumberAnimation { properties: "x,y"; easing.type: Easing.OutBounce }
         }
 
-        Rectangle { color: "#80c342"; width: page.smallSize; height: page.smallSize }
+        Rectangle { color: "#80c342"; width: smallSize; height: smallSize }
 
         Rectangle {
             id: greenG1
             visible: opacity != 0
-            width: page.smallSize; height: page.smallSize
+            width: smallSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#14aaff"; width: page.smallSize; height: page.smallSize }
+        Rectangle { color: "#14aaff"; width: smallSize; height: smallSize }
 
         Rectangle {
             id: greenG2
             visible: opacity != 0
-            width: page.smallSize; height:page. smallSize
+            width: smallSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#6400aa"; width: page.smallSize; height: page.smallSize }
+        Rectangle { color: "#6400aa"; width: smallSize; height: smallSize }
 
         Rectangle {
             id: greenG3
             visible: opacity != 0
-            width: page.smallSize; height: page.smallSize
+            width: smallSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#80c342"; width:page. smallSize; height: page.smallSize }
-        Rectangle { color: "#14aaff"; width: smallSize; height: page.smallSize }
-        Rectangle { color: "#6400aa"; width: page.page.smallSize; height: page.smallSize }
+        Rectangle { color: "#80c342"; width: smallSize; height: smallSize }
+        Rectangle { color: "#14aaff"; width: smallSize; height: smallSize }
+        Rectangle { color: "#6400aa"; width: smallSize; height: smallSize }
     }
 
     Flow {
-        id: flowItem
+        id: flow
 
         anchors.right: page.right
         anchors.rightMargin: page.width / 32
-        y: 2 * page.bigSize
-        width: 1.8 * page.bigSize
-        spacing: page.elementSpacing
+        y: 2 * bigSize
+        width: 1.8 * bigSize
+        spacing: elementSpacing
 
         //! [move]
         move: Transition {
@@ -247,42 +237,42 @@ Item {
         }
         //! [populate]
 
-        Rectangle { color: "#80c342"; width: page.smallSize; height: page.smallSize }
+        Rectangle { color: "#80c342"; width: smallSize; height: smallSize }
 
         Rectangle {
             id: greenF1
             visible: opacity != 0
-            width: 0.6 * page.bigSize; height: page.smallSize
+            width: 0.6 * bigSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#14aaff"; width: 0.3 * page.bigSize; height: page.smallSize }
+        Rectangle { color: "#14aaff"; width: 0.3 * bigSize; height: smallSize }
 
         Rectangle {
             id: greenF2
             visible: opacity != 0
-            width: 0.6 * page.bigSize; height: page.smallSize
+            width: 0.6 * bigSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#6400aa"; width: page.smallSize; height: page.smallSize }
+        Rectangle { color: "#6400aa"; width: smallSize; height: smallSize }
 
         Rectangle {
             id: greenF3
             visible: opacity != 0
-            width: 0.4 * page.bigSize; height: page.smallSize
+            width: 0.4 * bigSize; height: smallSize
             color: "#006325"
             border.color: "transparent"
             Behavior on opacity { NumberAnimation {} }
-            opacity: page.effectiveOpacity
+            opacity: effectiveOpacity
         }
 
-        Rectangle { color: "#80c342"; width: 0.8 * page.bigSize; height: page.smallSize }
+        Rectangle { color: "#80c342"; width: 0.8 * bigSize; height: smallSize }
     }
 }

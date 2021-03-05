@@ -1,7 +1,6 @@
 TEMPLATE=subdirs
 SUBDIRS=\
     linguist \
-    qtattributionsscanner \
     qhelpcontentmodel \
     qhelpenginecore \
     qhelpgenerator \
@@ -25,5 +24,5 @@ cross_compile:SUBDIRS -= linguist
     qhelpindexmodel \
     qhelpprojectdata \
 
-android|ios|qnx|winrt: SUBDIRS -= qtdiag
-!win32|winrt: SUBDIRS -= windeployqt
+android|ios|qnx|wince*|winrt*:SUBDIRS -= qtdiag
+!win32|wince*|winrt*:SUBDIRS -= windeployqt

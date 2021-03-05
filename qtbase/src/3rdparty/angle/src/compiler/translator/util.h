@@ -14,15 +14,15 @@
 
 #include "compiler/translator/Types.h"
 
-// strtof_clamp is like strtof but
+// atof_clamp is like atof but
 //   1. it forces C locale, i.e. forcing '.' as decimal point.
 //   2. it clamps the value to -FLT_MAX or FLT_MAX if overflow happens.
 // Return false if overflow happens.
-bool strtof_clamp(const std::string &str, float *value);
+extern bool atof_clamp(const char *str, float *value);
 
-// If overflow happens, clamp the value to UINT_MIN or UINT_MAX.
+// If overflow happens, clamp the value to INT_MIN or INT_MAX.
 // Return false if overflow happens.
-bool atoi_clamp(const char *str, unsigned int *value);
+extern bool atoi_clamp(const char *str, int *value);
 
 class TSymbolTable;
 
@@ -41,7 +41,6 @@ class GetVariableTraverser : angle::NonCopyable
 {
   public:
     GetVariableTraverser(const TSymbolTable &symbolTable);
-    virtual ~GetVariableTraverser() {}
 
     template <typename VarT>
     void traverse(const TType &type, const TString &name, std::vector<VarT> *output);

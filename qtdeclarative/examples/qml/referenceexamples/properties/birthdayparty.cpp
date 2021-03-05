@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -67,17 +57,8 @@ void BirthdayParty::setHost(Person *c)
 
 QQmlListProperty<Person> BirthdayParty::guests()
 {
-    return QQmlListProperty<Person>(this, this,
-             &BirthdayParty::appendGuest,
-             &BirthdayParty::guestCount,
-             &BirthdayParty::guest,
-             &BirthdayParty::clearGuests);
+    return QQmlListProperty<Person>(this, m_guests);
 }
-
-void BirthdayParty::appendGuest(Person* p) {
-    m_guests.append(p);
-}
-
 
 int BirthdayParty::guestCount() const
 {
@@ -88,25 +69,5 @@ Person *BirthdayParty::guest(int index) const
 {
     return m_guests.at(index);
 }
-
-void BirthdayParty::clearGuests() {
-    return m_guests.clear();
-}
-
 // ![0]
 
-void BirthdayParty::appendGuest(QQmlListProperty<Person>* list, Person* p) {
-    reinterpret_cast< BirthdayParty* >(list->data)->appendGuest(p);
-}
-
-void BirthdayParty::clearGuests(QQmlListProperty<Person>* list) {
-    reinterpret_cast< BirthdayParty* >(list->data)->clearGuests();
-}
-
-Person* BirthdayParty::guest(QQmlListProperty<Person>* list, int i) {
-    return reinterpret_cast< BirthdayParty* >(list->data)->guest(i);
-}
-
-int BirthdayParty::guestCount(QQmlListProperty<Person>* list) {
-    return reinterpret_cast< BirthdayParty* >(list->data)->guestCount();
-}

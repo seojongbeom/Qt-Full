@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -99,9 +104,6 @@
 #include <QtCore/QMetaProperty>
 #include <QtCore/qdebug.h>
 #include <QtCore/QXmlStreamWriter>
-
-#include <algorithm>
-#include <iterator>
 
 Q_DECLARE_METATYPE(QWidgetList)
 
@@ -273,8 +275,9 @@ DomProperty *QDesignerResourceBuilder::saveResource(const QDir &workingDirectory
             DomResourceIcon *ri = new DomResourceIcon;
             if (!theme.isEmpty())
                 ri->setAttributeTheme(theme);
-            for (auto itPix = pixmaps.cbegin(), end = pixmaps.cend(); itPix != end; ++itPix) {
-                const QIcon::Mode mode = itPix.key().first;
+            QMapIterator<QPair<QIcon::Mode, QIcon::State>, PropertySheetPixmapValue> itPix(pixmaps);
+            while (itPix.hasNext()) {
+                const QIcon::Mode mode = itPix.next().key().first;
                 const QIcon::State state = itPix.key().second;
                 DomResourcePixmap *rp = new DomResourcePixmap;
                 const PropertySheetPixmapValue pix = itPix.value();
@@ -521,8 +524,7 @@ void QDesignerResource::saveDom(DomUI *ui, QWidget *widget)
         const QString local = QStringLiteral("local");
         const QString global = QStringLiteral("global");
         QList<DomInclude*> ui_includes;
-        const QStringList &includeHints = m_formWindow->includeHints();
-        for (QString includeHint : includeHints) {
+        foreach (QString includeHint, m_formWindow->includeHints()) {
             if (includeHint.isEmpty())
                 continue;
             DomInclude *incl = new DomInclude;
@@ -656,8 +658,7 @@ QWidget *QDesignerResource::create(DomUI *ui, QWidget *parentWidget)
         if (DomIncludes *includes = ui->elementIncludes()) {
             const QString global = QStringLiteral("global");
             QStringList includeHints;
-            const QList<DomInclude *> &elementInclude = includes->elementInclude();
-            for (DomInclude *incl : elementInclude) {
+            foreach (DomInclude *incl, includes->elementInclude()) {
                 QString text = incl->text();
 
                 if (text.isEmpty())
@@ -712,12 +713,11 @@ QWidget *QDesignerResource::create(DomUI *ui, QWidget *parentWidget)
         const QList<DomProperty *> properties = ui->elementWidget()->elementProperty();
         if (!properties.empty()) {
             const QString geometry = QStringLiteral("geometry");
-            for (const DomProperty *p : properties) {
+            foreach (const DomProperty *p, properties)
                 if (p->attributeName() == geometry) {
                     hasExplicitGeometry = true;
                     break;
                 }
-            }
         }
         if (hasExplicitGeometry) {
             // Geometry was specified explicitly: Verify that smartMinSize is respected
@@ -790,7 +790,7 @@ QWidget *QDesignerResource::create(DomWidget *ui_widget, QWidget *parentWidget)
         menuBar->interactive(false);
     }
 
-    for (DomActionRef *ui_action_ref : actionRefs) {
+    foreach (DomActionRef *ui_action_ref, actionRefs) {
         const QString name = ui_action_ref->attributeName();
         if (name == QStringLiteral("separator")) {
             QAction *sep = new QAction(w);
@@ -1131,8 +1131,8 @@ DomWidget *QDesignerResource::createDom(QWidget *widget, DomWidget *ui_parentWid
         w->setAttributeName(widget->objectName());
         w->setAttributeClass(widgetInfo->name());
 
-        const QList<DomProperty*> &prop_list = w->elementProperty();
-        for (DomProperty *prop : prop_list) {
+        QList<DomProperty*> prop_list = w->elementProperty();
+        foreach (DomProperty *prop, prop_list) {
             if (prop->attributeName() == QStringLiteral("geometry")) {
                 if (DomRect *rect = prop->elementRect()) {
                     rect->setElementX(widget->x());
@@ -1225,8 +1225,7 @@ DomTabStops *QDesignerResource::saveTabStops()
     Q_ASSERT(item);
 
     QStringList tabStops;
-    const QWidgetList &tabOrder = item->tabOrder();
-    for (QWidget *widget : tabOrder) {
+    foreach (QWidget *widget, item->tabOrder()) {
         if (m_formWindow->mainContainer()->isAncestorOf(widget))
             tabStops.append(widget->objectName());
     }
@@ -1246,8 +1245,7 @@ void QDesignerResource::applyTabStops(QWidget *widget, DomTabStops *tabStops)
         return;
 
     QList<QWidget*> tabOrder;
-    const QStringList &elementTabStop = tabStops->elementTabStop();
-    for (const QString &widgetName : elementTabStop) {
+    foreach (const QString &widgetName, tabStops->elementTabStop()) {
         if (QWidget *w = widget->findChild<QWidget*>(widgetName)) {
             tabOrder.append(w);
         }
@@ -1691,10 +1689,9 @@ DomUI *QDesignerResource::copy(const FormBuilderClipboard &selection)
     // actions
     if (!selection.m_actions.empty()) {
         QList<DomAction*> domActions;
-        for (QAction* action : qAsConst(selection.m_actions)) {
+        foreach(QAction* action, selection.m_actions)
             if (DomAction *domAction = createDom(action))
                 domActions += domAction;
-        }
         if (!domActions.empty()) {
             ui_widget-> setElementAction(domActions);
             hasItems = true;
@@ -1732,7 +1729,7 @@ FormBuilderClipboard QDesignerResource::paste(DomUI *ui, QWidget *widgetParent, 
     const QList<DomWidget*> domWidgets = topLevel->elementWidget();
     if (!domWidgets.empty()) {
         const QPoint offset = m_formWindow->grid();
-        for (DomWidget* domWidget : domWidgets) {
+        foreach (DomWidget* domWidget, domWidgets) {
             if (QWidget *w = create(domWidget, widgetParent)) {
                 w->move(w->pos() + offset);
                 // ### change the init properties of w
@@ -1741,10 +1738,10 @@ FormBuilderClipboard QDesignerResource::paste(DomUI *ui, QWidget *widgetParent, 
         }
     }
     const QList<DomAction*> domActions = topLevel->elementAction();
-    for (DomAction *domAction : domActions) {
-        if (QAction *a = create(domAction, actionParent))
-            rc.m_actions .append(a);
-    }
+    if (!domActions.empty())
+        foreach (DomAction *domAction, domActions)
+            if (QAction *a = create(domAction, actionParent))
+                rc.m_actions .append(a);
 
     m_isMainWidget = saved;
 
@@ -1812,9 +1809,7 @@ DomCustomWidgets *QDesignerResource::saveCustomWidgets()
     OrderedDBIndexDomCustomWidgetMap orderedMap;
 
     const QString global = QStringLiteral("global");
-
-    for (auto it = m_usedCustomWidgets.cbegin(), end = m_usedCustomWidgets.cend(); it != end; ++it) {
-        QDesignerWidgetDataBaseItemInterface *item = it.key();
+    foreach (QDesignerWidgetDataBaseItemInterface *item, m_usedCustomWidgets.keys()) {
         const QString name = item->name();
         DomCustomWidget *custom_widget = new DomCustomWidget;
 
@@ -2011,10 +2006,13 @@ QStringList QDesignerResource::mergeWithLoadedPaths(const QStringList &paths) co
 {
     QStringList newPaths = paths;
 #ifdef OLD_RESOURCE_FORMAT
-    const QStringList loadedPaths = m_resourceBuilder->loadedQrcFiles();
-    std::remove_copy_if(loadedPaths.cbegin(), loadedPaths.cend(),
-                        std::back_inserter(newPaths),
-                        [&newPaths] (const QString &path) { return newPaths.contains(path); });
+    QStringList loadedPaths = m_resourceBuilder->loadedQrcFiles();
+    QStringListIterator it(loadedPaths);
+    while (it.hasNext()) {
+        const QString path = it.next();
+        if (!newPaths.contains(path))
+            newPaths << path;
+    }
 #endif
     return newPaths;
 }
@@ -2025,7 +2023,7 @@ void QDesignerResource::createResources(DomResources *resources)
     QStringList paths;
     if (resources != 0) {
         const QList<DomResource*> dom_include = resources->elementInclude();
-        for (DomResource *res : dom_include) {
+        foreach (DomResource *res, dom_include) {
             QString path = QDir::cleanPath(m_formWindow->absoluteDir().absoluteFilePath(res->attributeLocation()));
             while (!QFile::exists(path)) {
                 QWidget *dialogParent = m_formWindow->core()->topLevel();
@@ -2059,10 +2057,14 @@ void QDesignerResource::createResources(DomResources *resources)
 
     QtResourceSet *resourceSet = m_formWindow->resourceSet();
     if (resourceSet) {
-        QStringList newPaths = resourceSet->activeResourceFilePaths();
-        std::remove_copy_if(paths.cbegin(), paths.cend(),
-                            std::back_inserter(newPaths),
-                            [&newPaths] (const QString &path) { return newPaths.contains(path); });
+        QStringList oldPaths = resourceSet->activeResourceFilePaths();
+        QStringList newPaths = oldPaths;
+        QStringListIterator it(paths);
+        while (it.hasNext()) {
+            const QString path = it.next();
+            if (!newPaths.contains(path))
+                newPaths << path;
+        }
         resourceSet->activateResourceFilePaths(newPaths);
     } else {
         resourceSet = m_formWindow->core()->resourceModel()->addResourceSet(paths);
@@ -2094,7 +2096,7 @@ DomResources *QDesignerResource::saveResources(const QStringList &qrcPaths)
     QList<DomResource*> dom_include;
     if (resourceSet) {
         const QStringList activePaths = resourceSet->activeResourceFilePaths();
-        for (const QString &path : activePaths) {
+        foreach (const QString &path, activePaths) {
             if (qrcPaths.contains(path)) {
                 DomResource *dom_res = new DomResource;
                 QString conv_path = path;

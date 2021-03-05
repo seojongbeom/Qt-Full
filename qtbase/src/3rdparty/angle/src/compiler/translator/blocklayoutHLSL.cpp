@@ -113,14 +113,9 @@ HLSLBlockEncoder::HLSLBlockEncoderStrategy HLSLBlockEncoder::GetStrategyFor(ShSh
 {
     switch (outputType)
     {
-        case SH_HLSL_3_0_OUTPUT:
-            return ENCODE_LOOSE;
-        case SH_HLSL_4_1_OUTPUT:
-        case SH_HLSL_4_0_FL9_3_OUTPUT:
-            return ENCODE_PACKED;
-        default:
-            UNREACHABLE();
-            return ENCODE_PACKED;
+      case SH_HLSL9_OUTPUT: return ENCODE_LOOSE;
+      case SH_HLSL11_OUTPUT: return ENCODE_PACKED;
+      default: UNREACHABLE(); return ENCODE_PACKED;
     }
 }
 
@@ -161,7 +156,6 @@ unsigned int HLSLVariableRegisterCount(const Varying &variable, bool transposeMa
 unsigned int HLSLVariableRegisterCount(const Uniform &variable, ShShaderOutput outputType)
 {
     HLSLBlockEncoder encoder(HLSLBlockEncoder::GetStrategyFor(outputType));
-    encoder.setTransposeMatrices(true);
     HLSLVariableRegisterCount(variable, &encoder);
 
     const size_t registerBytes = (encoder.BytesPerComponent * encoder.ComponentsPerRegister);

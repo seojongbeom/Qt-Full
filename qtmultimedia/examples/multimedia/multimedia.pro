@@ -1,5 +1,4 @@
 TEMPLATE = subdirs
-QT_FOR_CONFIG += multimedia-private
 
 SUBDIRS += audiodecoder
 
@@ -21,5 +20,5 @@ qtHaveModule(quick) {
         video
 }
 
-qtConfig(openal): SUBDIRS += audioengine
+config_openal: SUBDIRS += audioengine
 

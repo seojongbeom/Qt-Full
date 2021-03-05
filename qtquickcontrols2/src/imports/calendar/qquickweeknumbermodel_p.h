@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Labs Calendar module of the Qt Toolkit.
@@ -65,7 +65,7 @@ class QQuickWeekNumberModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount CONSTANT FINAL)
 
 public:
-    explicit QQuickWeekNumberModel(QObject *parent = nullptr);
+    explicit QQuickWeekNumberModel(QObject *parent = Q_NULLPTR);
 
     int month() const;
     void setMonth(int month);
@@ -83,9 +83,9 @@ public:
         WeekNumberRole = Qt::UserRole + 1
     };
 
-    QHash<int, QByteArray> roleNames() const override;
-    QVariant data(const QModelIndex &index, int role) const override;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
 
 Q_SIGNALS:
     void monthChanged();

@@ -1,35 +1,57 @@
 INCLUDEPATH += $$PWD
 
-QMAKE_USE += directshow
-LIBS += -lgdi32
+LIBS += -lstrmiids -ldmoguids -luuid -lole32 -loleaut32
+!wince: LIBS += -lmsdmo -lgdi32
 
-mingw: LIBS_PRIVATE += -lksuser
 
 qtHaveModule(widgets): QT += widgets
 
+DEFINES += QMEDIA_DIRECTSHOW_PLAYER
+
 HEADERS += \
+        $$PWD/directshoweventloop.h \
+        $$PWD/directshowglobal.h \
         $$PWD/directshowioreader.h \
         $$PWD/directshowiosource.h \
+        $$PWD/directshowmediatype.h \
+        $$PWD/directshowmediatypelist.h \
+        $$PWD/directshowpinenum.h \
         $$PWD/directshowplayercontrol.h \
         $$PWD/directshowplayerservice.h \
+        $$PWD/directshowsamplescheduler.h \
         $$PWD/directshowvideorenderercontrol.h \
-        $$PWD/videosurfacefilter.h \
+        $$PWD/mediasamplevideobuffer.h \
+        $$PWD/videosurfacefilter.h
+
+SOURCES += \
+        $$PWD/directshoweventloop.cpp \
+        $$PWD/directshowioreader.cpp \
+        $$PWD/directshowiosource.cpp \
+        $$PWD/directshowmediatype.cpp \
+        $$PWD/directshowmediatypelist.cpp \
+        $$PWD/directshowpinenum.cpp \
+        $$PWD/directshowplayercontrol.cpp \
+        $$PWD/directshowplayerservice.cpp \
+        $$PWD/directshowsamplescheduler.cpp \
+        $$PWD/directshowvideorenderercontrol.cpp \
+        $$PWD/mediasamplevideobuffer.cpp \
+        $$PWD/videosurfacefilter.cpp
+
+!wince {
+HEADERS += \
         $$PWD/directshowaudioendpointcontrol.h \
         $$PWD/directshowmetadatacontrol.h \
         $$PWD/vmr9videowindowcontrol.h
 
 SOURCES += \
-        $$PWD/directshowioreader.cpp \
-        $$PWD/directshowiosource.cpp \
-        $$PWD/directshowplayercontrol.cpp \
-        $$PWD/directshowplayerservice.cpp \
-        $$PWD/directshowvideorenderercontrol.cpp \
-        $$PWD/videosurfacefilter.cpp \
         $$PWD/directshowaudioendpointcontrol.cpp \
         $$PWD/directshowmetadatacontrol.cpp \
         $$PWD/vmr9videowindowcontrol.cpp
+}
 
-qtConfig(evr) {
+config_evr {
+    DEFINES += HAVE_EVR
+
     include($$PWD/../../common/evr.pri)
 
     HEADERS += \
@@ -39,5 +61,8 @@ qtConfig(evr) {
         $$PWD/directshowevrvideowindowcontrol.cpp
 }
 
-qtConfig(wshellitem): \
+config_wshellitem {
     QT += core-private
+} else {
+    DEFINES += QT_NO_SHELLITEM
+}

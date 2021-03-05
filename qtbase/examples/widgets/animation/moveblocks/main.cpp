@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -80,7 +70,7 @@ class QGraphicsRectWidget : public QGraphicsWidget
 {
 public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *,
-               QWidget *) override
+               QWidget *) Q_DECL_OVERRIDE
     {
         painter->fillRect(rect(), Qt::blue);
     }
@@ -98,14 +88,14 @@ public:
 
 protected:
 //![14]
-    bool eventTest(QEvent *event) override
+    virtual bool eventTest(QEvent *event) Q_DECL_OVERRIDE
     {
         return (event->type() == QEvent::Type(StateSwitchEvent::StateSwitchType))
             && (static_cast<StateSwitchEvent *>(event)->rand() == m_rand);
     }
 //![14]
 
-    void onTransition(QEvent *) override {}
+    virtual void onTransition(QEvent *) Q_DECL_OVERRIDE {}
 
 private:
     int m_rand;
@@ -122,7 +112,7 @@ public:
 //![10]
 
 //![11]
-    void onEntry(QEvent *) override
+    virtual void onEntry(QEvent *) Q_DECL_OVERRIDE
     {
         int n;
         while ((n = (qrand() % m_stateCount + 1)) == m_lastIndex)
@@ -130,7 +120,7 @@ public:
         m_lastIndex = n;
         machine()->postEvent(new StateSwitchEvent(n));
     }
-    void onExit(QEvent *) override {}
+    virtual void onExit(QEvent *) Q_DECL_OVERRIDE {}
 //![11]
 
 //![12]
@@ -174,7 +164,7 @@ public:
     }
 
 protected:
-    void resizeEvent(QResizeEvent *event) override
+    virtual void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE
     {
         fitInView(scene()->sceneRect());
         QGraphicsView::resizeEvent(event);

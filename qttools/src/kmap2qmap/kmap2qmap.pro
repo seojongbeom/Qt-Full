@@ -1,4 +1,4 @@
-QT = core input_support-private
+QT = core platformsupport-private
 CONFIG += console
 
 SOURCES += main.cpp

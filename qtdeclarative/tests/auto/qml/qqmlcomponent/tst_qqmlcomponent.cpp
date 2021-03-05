@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -36,10 +41,6 @@
 #include <QtQuick/private/qquickrectangle_p.h>
 #include <QtQuick/private/qquickmousearea_p.h>
 #include <private/qv8engine_p.h>
-#include <private/qqmlcontext_p.h>
-#include <private/qv4qmlcontext_p.h>
-#include <private/qv4scopedvalue_p.h>
-#include <private/qv4qmlcontext_p.h>
 #include <qcolor.h>
 #include "../../shared/util.h"
 #include "testhttpserver.h"
@@ -117,8 +118,6 @@ private slots:
     void recursion();
     void recursionContinuation();
     void callingContextForInitialProperties();
-    void relativeUrl_data();
-    void relativeUrl();
 
 private:
     QQmlEngine engine;
@@ -581,28 +580,6 @@ void tst_qqmlcomponent::callingContextForInitialProperties()
 
     QVERIFY(!checker->scopeObject.isNull());
     QVERIFY(checker->scopeObject->metaObject()->indexOfProperty("incubatedObject") != -1);
-}
-
-void tst_qqmlcomponent::relativeUrl_data()
-{
-    QTest::addColumn<QUrl>("url");
-
-    QTest::addRow("fromLocalFile") << QUrl::fromLocalFile("data/QtObjectComponent.qml");
-    QTest::addRow("fromLocalFileHash") << QUrl::fromLocalFile("data/QtObjectComponent#2.qml");
-    QTest::addRow("constructor") << QUrl("data/QtObjectComponent.qml");
-    QTest::addRow("absolute") << QUrl::fromLocalFile(QFINDTESTDATA("data/QtObjectComponent.qml"));
-    QTest::addRow("qrc") << QUrl("qrc:/data/QtObjectComponent.qml");
-}
-
-void tst_qqmlcomponent::relativeUrl()
-{
-    QFETCH(QUrl, url);
-
-    QQmlComponent component(&engine);
-    // Shouldn't assert in QQmlTypeLoader; we want QQmlComponent to assume that
-    // data/QtObjectComponent.qml refers to the data/QtObjectComponent.qml in the current working directory.
-    component.loadUrl(url);
-    QVERIFY2(!component.isError(), qPrintable(component.errorString()));
 }
 
 QTEST_MAIN(tst_qqmlcomponent)

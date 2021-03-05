@@ -180,75 +180,6 @@
     </message>
 </context>
 <context>
-    <name>QQmlDebugServerImpl</name>
-    <message>
-        <source>QML Debugger: Invalid argument &quot;%1&quot; detected. Ignoring the same.</source>
-        <translation>Отладчик QML: Обнаружен неверный параметр «%1». Пропускается.</translation>
-    </message>
-    <message>
-        <source>QML Debugger: Ignoring &quot;-qmljsdebugger=%1&quot;.</source>
-        <translation>Отладчик QML: Пропускается «-qmljsdebugger=%1».</translation>
-    </message>
-    <message>
-        <source>The format is &quot;-qmljsdebugger=[file:&lt;file&gt;|port:&lt;port_from&gt;][,&lt;port_to&gt;][,host:&lt;ip address&gt;][,block][,services:&lt;service&gt;][,&lt;service&gt;]*&quot;</source>
-        <translation>Формат: -qmljsdebugger=[file:&lt;файл&gt;|port:&lt;начальный_порт&gt;][,&lt;конечный_порт&gt;][,host:&lt;ip адрес&gt;][,блок][,services:&lt;сервис&gt;][,&lt;сервис&gt;]*</translation>
-    </message>
-    <message>
-        <source>&quot;file:&quot; can be used to specify the name of a file the debugger will try to connect to using a QLocalSocket. If &quot;file:&quot; is given any &quot;host:&quot; and&quot;port:&quot; arguments will be ignored.</source>
-        <translation>«file:» может использоваться для указания имени файла, к которому отладчик попытается подключиться с помощью QLocalSocket. Если передан параметр «file:», то «host:» и «port:» будут проигнорированы.</translation>
-    </message>
-    <message>
-        <source>&quot;host:&quot; and &quot;port:&quot; can be used to specify an address and a single port or a range of ports the debugger will try to bind to with a QTcpServer.</source>
-        <translation>«host:» и «port:» могут использоваться для задания адреса и одного или диапазона портов, к которым отладчик попытается подключиться через QTcpServer.</translation>
-    </message>
-    <message>
-        <source>&quot;block&quot; makes the debugger and some services wait for clients to be connected and ready before the first QML engine starts.</source>
-        <translation>«block» заставляет отладчик и некоторые сервисы ждать подключения и готовности клиентов перед первым запуском движка QML.</translation>
-    </message>
-    <message>
-        <source>&quot;services:&quot; can be used to specify which debug services the debugger should load. Some debug services interact badly with others. The V4 debugger should not be loaded when using the QML profiler as it will force any V4 engines to use the JavaScript interpreter rather than the JIT. The following debug services are available by default:</source>
-        <translation>«services:» используется для задания списка отладочных сервисов, загружаемых отладчиком. Некоторые из них могут конфликтовать с другими. Отладчик V4 не должен загружаться при использовании профайлера QML, так как последний отключает JIT в пользу интерпретатора JavaScript. Следующие сервисы доступны по умолчанию:</translation>
-    </message>
-    <message>
-        <source>The QML debugger</source>
-        <translation>Отладчик QML</translation>
-    </message>
-    <message>
-        <source>The V4 debugger</source>
-        <translation>Отладчик V4</translation>
-    </message>
-    <message>
-        <source>The QML inspector</source>
-        <translation>Инспектор QML</translation>
-    </message>
-    <message>
-        <source>The QML profiler</source>
-        <translation>Профайлер QML</translation>
-    </message>
-    <message>
-        <source>Allows the client to delay the starting and stopping of
-		  QML engines until other services are ready. QtCreator
-		  uses this service with the QML profiler in order to
-		  profile multiple QML engines at the same time.</source>
-        <translation>Позволяет клиентам задерживать запуск и остановку
-		  движков QML, пока остальные сервисы не будут готовы. QtCreator
-		  использует этот сервис совместно с профайлером QML для
-		  одновременного профилирования нескольких движков QML.</translation>
-    </message>
-    <message>
-        <source>Sends qDebug() and similar messages over the QML debug
-		  connection. QtCreator uses this for showing debug
-		  messages in the debugger console.</source>
-        <translation>Отправляет qDebug() и прочие сообщения через отладочное соединение
-		  QML. QtCreator использует его для отображения
-		  отладочных сообщений в консоли отладчика.</translation>
-    </message>
-    <message>
-        <source>Other services offered by qmltooling plugins that implement QQmlDebugServiceFactory and which can be found in the standard plugin paths will also be available and can be specified. If no &quot;services&quot; argument is given, all services found this way, including the default ones, are loaded.</source>
-        <translation>Другие сервисы, предоставляемые модулями qmltooling, реализующими QQmlDebugServiceFactory и находящимися в стандартных каталогах модулей, также будут доступны и могут быть указаны. Если параметр «services» не указан, то будут загружены все найденные сервисы.</translation>
-    </message>
-</context>
-<context>
     <name>QQmlDelegateModel</name>
     <message>
         <source>The delegate of a DelegateModel cannot be changed within onUpdated.</source>
@@ -469,10 +400,6 @@
     <message>
         <source>module &quot;%1&quot; plugin &quot;%2&quot; not found</source>
         <translation>модуль «%1» плагина «%2» не найден</translation>
-    </message>
-    <message>
-        <source>library loading is disabled</source>
-        <translation>загрузка библиотек отключена</translation>
     </message>
     <message>
         <source>&quot;%1&quot; version %2.%3 is defined more than once in module &quot;%4&quot;</source>
@@ -1248,13 +1175,6 @@
     <message>
         <source>setSource: value is not an object</source>
         <translation>setSource: значение не является объектом</translation>
-    </message>
-</context>
-<context>
-    <name>QQuickMouseEvent</name>
-    <message>
-        <source>MouseEvent is only available within handlers in MouseArea</source>
-        <translation>MouseEvent доступен только внутри обработчиков в MouseArea</translation>
     </message>
 </context>
 <context>

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -49,7 +43,6 @@
 #include <private/qquicksprite_p.h>
 #include <private/qquickspriteengine_p.h>
 #include <QOpenGLFunctions>
-#include <QSGRendererInterface>
 #include <QtQuick/private/qsgshadersourcebuilder_p.h>
 #include <QtQuick/private/qsgtexture_p.h>
 #include <private/qqmlglobal_p.h>
@@ -57,6 +50,12 @@
 #include <cmath>
 
 QT_BEGIN_NAMESPACE
+
+#if defined(Q_OS_BLACKBERRY)
+#define SHADER_PLATFORM_DEFINES "Q_OS_BLACKBERRY\n"
+#else
+#define SHADER_PLATFORM_DEFINES
+#endif
 
 //TODO: Make it larger on desktop? Requires fixing up shader code with the same define
 #define UNIFORM_ARRAY_SIZE 64
@@ -96,6 +95,7 @@ public:
         const bool isES = QOpenGLContext::currentContext()->isOpenGLES();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.vert"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("TABLE"));
         builder.addDefinition(QByteArrayLiteral("DEFORM"));
         builder.addDefinition(QByteArrayLiteral("COLOR"));
@@ -106,6 +106,7 @@ public:
         builder.clear();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.frag"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("TABLE"));
         builder.addDefinition(QByteArrayLiteral("DEFORM"));
         builder.addDefinition(QByteArrayLiteral("COLOR"));
@@ -172,6 +173,7 @@ public:
         const bool isES = QOpenGLContext::currentContext()->isOpenGLES();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.vert"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("DEFORM"));
         builder.addDefinition(QByteArrayLiteral("COLOR"));
         if (isES)
@@ -181,6 +183,7 @@ public:
         builder.clear();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.frag"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("DEFORM"));
         builder.addDefinition(QByteArrayLiteral("COLOR"));
         if (isES)
@@ -235,6 +238,7 @@ public:
         const bool isES = QOpenGLContext::currentContext()->isOpenGLES();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.vert"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("SPRITE"));
         builder.addDefinition(QByteArrayLiteral("TABLE"));
         builder.addDefinition(QByteArrayLiteral("DEFORM"));
@@ -246,6 +250,7 @@ public:
         builder.clear();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.frag"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("SPRITE"));
         builder.addDefinition(QByteArrayLiteral("TABLE"));
         builder.addDefinition(QByteArrayLiteral("DEFORM"));
@@ -315,6 +320,7 @@ public:
         const bool isES = QOpenGLContext::currentContext()->isOpenGLES();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.vert"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("COLOR"));
         if (isES)
             builder.removeVersion();
@@ -323,6 +329,7 @@ public:
         builder.clear();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.frag"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         builder.addDefinition(QByteArrayLiteral("COLOR"));
         if (isES)
             builder.removeVersion();
@@ -391,6 +398,7 @@ public:
         const bool isES = QOpenGLContext::currentContext()->isOpenGLES();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.vert"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         if (isES)
             builder.removeVersion();
 
@@ -398,6 +406,7 @@ public:
         builder.clear();
 
         builder.appendSourceFile(QStringLiteral(":/particles/shaders/imageparticle.frag"));
+        builder.addDefinition(QByteArray(SHADER_PLATFORM_DEFINES));
         if (isES)
             builder.removeVersion();
 
@@ -494,8 +503,6 @@ void fillUniformArrayFromImage(float* array, const QImage& img, int size)
     So if you explicitly set an attribute affecting color, such as redVariation, and then reset it (by setting redVariation
     to undefined), all color data will be reset and it will begin to have an implicit value of any shared color from
     other ImageParticles.
-
-    \note The maximum number of image particles is limited to 16383.
 */
 /*!
     \qmlproperty url QtQuick.Particles::ImageParticle::source
@@ -1007,13 +1014,10 @@ void QQuickImageParticle::setEntryEffect(EntryEffect arg)
 void QQuickImageParticle::resetColor()
 {
     m_explicitColor = false;
-    for (auto groupId : groupIds()) {
-        for (QQuickParticleData* d : qAsConst(m_system->groupData[groupId]->data)) {
-            if (d->colorOwner == this) {
+    foreach (const QString &str, m_groups)
+        foreach (QQuickParticleData* d, m_system->groupData[m_system->groupIds[str]]->data)
+            if (d->colorOwner == this)
                 d->colorOwner = 0;
-            }
-        }
-    }
     m_color = QColor();
     m_color_variation = 0.0f;
     m_redVariation = 0.0f;
@@ -1026,13 +1030,10 @@ void QQuickImageParticle::resetColor()
 void QQuickImageParticle::resetRotation()
 {
     m_explicitRotation = false;
-    for (auto groupId : groupIds()) {
-        for (QQuickParticleData* d : qAsConst(m_system->groupData[groupId]->data)) {
-            if (d->rotationOwner == this) {
+    foreach (const QString &str, m_groups)
+        foreach (QQuickParticleData* d, m_system->groupData[m_system->groupIds[str]]->data)
+            if (d->rotationOwner == this)
                 d->rotationOwner = 0;
-            }
-        }
-    }
     m_rotation = 0;
     m_rotationVariation = 0;
     m_rotationVelocity = 0;
@@ -1043,13 +1044,10 @@ void QQuickImageParticle::resetRotation()
 void QQuickImageParticle::resetDeformation()
 {
     m_explicitDeformation = false;
-    for (auto groupId : groupIds()) {
-        for (QQuickParticleData* d : qAsConst(m_system->groupData[groupId]->data)) {
-            if (d->deformationOwner == this) {
+    foreach (const QString &str, m_groups)
+        foreach (QQuickParticleData* d, m_system->groupData[m_system->groupIds[str]]->data)
+            if (d->deformationOwner == this)
                 d->deformationOwner = 0;
-            }
-        }
-    }
     if (m_xVector)
         delete m_xVector;
     if (m_yVector)
@@ -1155,21 +1153,21 @@ QQuickParticleData* QQuickImageParticle::getShadowDatum(QQuickParticleData* datu
     //Will return datum if the datum is a sentinel or uninitialized, to centralize that one check
     if (datum->systemIndex == -1)
         return datum;
-    QQuickParticleGroupData* gd = m_system->groupData[datum->groupId];
-    if (!m_shadowData.contains(datum->groupId)) {
+    QQuickParticleGroupData* gd = m_system->groupData[datum->group];
+    if (!m_shadowData.contains(datum->group)) {
         QVector<QQuickParticleData*> data;
         const int gdSize = gd->size();
         data.reserve(gdSize);
         for (int i = 0; i < gdSize; i++) {
-            QQuickParticleData* datum = new QQuickParticleData;
+            QQuickParticleData* datum = new QQuickParticleData(m_system);
             *datum = *(gd->data[i]);
             data << datum;
         }
-        m_shadowData.insert(datum->groupId, data);
+        m_shadowData.insert(datum->group, data);
     }
     //### If dynamic resize is added, remember to potentially resize the shadow data on out-of-bounds access request
 
-    return m_shadowData[datum->groupId][datum->index];
+    return m_shadowData[datum->group][datum->index];
 }
 
 bool QQuickImageParticle::loadingSomething()
@@ -1226,9 +1224,8 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
     if (!QOpenGLContext::currentContext())
         return;
 
-    if (m_count * 4 > 0xffff) {
-        // Index data is ushort.
-        qmlInfo(this) << "ImageParticle: Too many particles - maximum 16383 per ImageParticle";
+    if (QOpenGLContext::currentContext()->isOpenGLES() && m_count * 4 > 0xffff) {
+        printf("ImageParticle: Too many particles - maximum 16,000 per ImageParticle.\n");//ES 2 vertex count limit is ushort
         return;
     }
 
@@ -1252,9 +1249,9 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
         perfLevel = Simple;
     }
 
-    for (auto groupId : groupIds()) {
-        //For sharing higher levels, need to have highest used so it renders
-        for (QQuickParticlePainter* p : qAsConst(m_system->groupData[groupId]->painters)) {
+    foreach (const QString &str, m_groups){//For sharing higher levels, need to have highest used so it renders
+        int gIdx = m_system->groupIds[str];
+        foreach (QQuickParticlePainter* p, m_system->groupData[gIdx]->painters){
             QQuickImageParticle* other = qobject_cast<QQuickImageParticle*>(p);
             if (other){
                 if (other->perfLevel > perfLevel) {
@@ -1323,7 +1320,6 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
         getState<ImageMaterialData>(m_material)->animSheetSize = QSizeF(image.size());
         if (m_spriteEngine)
             m_spriteEngine->setCount(m_count);
-        Q_FALLTHROUGH();
     case Tabled:
         if (!m_material)
             m_material = TabledMaterial::createMaterial();
@@ -1332,21 +1328,21 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
             if (m_colorTable->pix.isReady())
                 colortable = m_colorTable->pix.image();
             else
-                qmlWarning(this) << "Error loading color table: " << m_colorTable->pix.error();
+                qmlInfo(this) << "Error loading color table: " << m_colorTable->pix.error();
         }
 
         if (m_sizeTable) {
             if (m_sizeTable->pix.isReady())
                 sizetable = m_sizeTable->pix.image();
             else
-                qmlWarning(this) << "Error loading size table: " << m_sizeTable->pix.error();
+                qmlInfo(this) << "Error loading size table: " << m_sizeTable->pix.error();
         }
 
         if (m_opacityTable) {
             if (m_opacityTable->pix.isReady())
                 opacitytable = m_opacityTable->pix.image();
             else
-                qmlWarning(this) << "Error loading opacity table: " << m_opacityTable->pix.error();
+                qmlInfo(this) << "Error loading opacity table: " << m_opacityTable->pix.error();
         }
 
         if (colortable.isNull()){//###Goes through image just for this
@@ -1356,22 +1352,19 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
         getState<ImageMaterialData>(m_material)->colorTable = QSGPlainTexture::fromImage(colortable);
         fillUniformArrayFromImage(getState<ImageMaterialData>(m_material)->sizeTable, sizetable, UNIFORM_ARRAY_SIZE);
         fillUniformArrayFromImage(getState<ImageMaterialData>(m_material)->opacityTable, opacitytable, UNIFORM_ARRAY_SIZE);
-        Q_FALLTHROUGH();
     case Deformable:
         if (!m_material)
             m_material = DeformableMaterial::createMaterial();
-        Q_FALLTHROUGH();
     case Colored:
         if (!m_material)
             m_material = ColoredMaterial::createMaterial();
-        Q_FALLTHROUGH();
     default://Also Simple
         if (!m_material)
             m_material = SimpleMaterial::createMaterial();
         if (!imageLoaded) {
             if (!m_image || !m_image->pix.isReady()) {
                 if (m_image)
-                    qmlWarning(this) << m_image->pix.error();
+                    qmlInfo(this) << m_image->pix.error();
                 delete m_material;
                 return;
             }
@@ -1385,15 +1378,16 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
     }
 
     m_nodes.clear();
-    for (auto groupId : groupIds()) {
-        int count = m_system->groupData[groupId]->size();
+    foreach (const QString &str, m_groups){
+        int gIdx = m_system->groupIds[str];
+        int count = m_system->groupData[gIdx]->size();
         QSGGeometryNode* node = new QSGGeometryNode();
         node->setMaterial(m_material);
         node->markDirty(QSGNode::DirtyMaterial);
 
-        m_nodes.insert(groupId, node);
-        m_idxStarts.insert(groupId, m_lastIdxStart);
-        m_startsIdx.append(qMakePair<int,int>(m_lastIdxStart, groupId));
+        m_nodes.insert(gIdx, node);
+        m_idxStarts.insert(gIdx, m_lastIdxStart);
+        m_startsIdx.append(qMakePair<int,int>(m_lastIdxStart, gIdx));
         m_lastIdxStart += count;
 
         //Create Particle Geometry
@@ -1425,7 +1419,7 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
             g->setDrawingMode(GL_TRIANGLES);
 
         for (int p=0; p < count; ++p)
-            commit(groupId, p);//commit sets geometry for the node, has its own perfLevel switch
+            commit(gIdx, p);//commit sets geometry for the node, has its own perfLevel switch
 
         if (perfLevel == Sprites)
             initTexCoords<SpriteVertex>((SpriteVertex*)g->vertexData(), vCount);
@@ -1463,17 +1457,8 @@ void QQuickImageParticle::finishBuildParticleNodes(QSGNode** node)
     update();
 }
 
-static inline bool isOpenGL(QSGRenderContext *rc)
-{
-    QSGRendererInterface *rif = rc->sceneGraphContext()->rendererInterface(rc);
-    return !rif || rif->graphicsApi() == QSGRendererInterface::OpenGL;
-}
-
 QSGNode *QQuickImageParticle::updatePaintNode(QSGNode *node, UpdatePaintNodeData *)
 {
-    if (!node && !isOpenGL(QQuickItemPrivate::get(this)->sceneGraphRenderContext()))
-        return 0;
-
     if (m_pleaseReset){
         if (node)
             delete node;
@@ -1514,10 +1499,9 @@ void QQuickImageParticle::prepareNextFrame(QSGNode **node)
             qDebug() << "QQuickImageParticle Feature level: " << perfLevel;
             qDebug() << "QQuickImageParticle Nodes: ";
             int count = 0;
-            for (auto it = m_nodes.keyBegin(), end = m_nodes.keyEnd(); it != end; ++it) {
-                qDebug() << "Group " << *it << " (" << m_system->groupData[*it]->size()
-                         << " particles)";
-                count += m_system->groupData[*it]->size();
+            foreach (int i, m_nodes.keys()) {
+                qDebug() << "Group " << i << " (" << m_system->groupData[i]->size() << " particles)";
+                count += m_system->groupData[i]->size();
             }
             qDebug() << "Total count: " << count;
         }
@@ -1534,7 +1518,6 @@ void QQuickImageParticle::prepareNextFrame(QSGNode **node)
         if (m_spriteEngine)
             m_spriteEngine->updateSprites(timeStamp);//fires signals if anim changed
         spritesUpdate(time);
-        Q_FALLTHROUGH();
     case Tabled:
     case Deformable:
     case Colored:
@@ -1550,9 +1533,10 @@ void QQuickImageParticle::prepareNextFrame(QSGNode **node)
 void QQuickImageParticle::spritesUpdate(qreal time)
 {
     // Sprite progression handled CPU side, so as to have per-frame control.
-    for (auto groupId : groupIds()) {
-        for (QQuickParticleData* mainDatum : qAsConst(m_system->groupData[groupId]->data)) {
-            QSGGeometryNode *node = m_nodes[groupId];
+    foreach (const QString &str, m_groups) {
+        int gIdx = m_system->groupIds[str];
+        foreach (QQuickParticleData* mainDatum, m_system->groupData[gIdx]->data) {
+            QSGGeometryNode *node = m_nodes[gIdx];
             if (!node)
                 continue;
             //TODO: Interpolate between two different animations if it's going to transition next frame
@@ -1560,7 +1544,7 @@ void QQuickImageParticle::spritesUpdate(qreal time)
             QQuickParticleData* datum = (mainDatum->animationOwner == this ? mainDatum : getShadowDatum(mainDatum));
             int spriteIdx = 0;
             for (int i = 0; i<m_startsIdx.count(); i++) {
-                if (m_startsIdx[i].second == groupId){
+                if (m_startsIdx[i].second == gIdx){
                     spriteIdx = m_startsIdx[i].first + datum->index;
                     break;
                 }
@@ -1696,7 +1680,6 @@ void QQuickImageParticle::initialize(int gIdx, int pIdx)
                 writeTo->animWidth = getState<ImageMaterialData>(m_material)->animSheetSize.width();
                 writeTo->animHeight = getState<ImageMaterialData>(m_material)->animSheetSize.height();
             }
-            Q_FALLTHROUGH();
         case Tabled:
         case Deformable:
             //Initial Rotation
@@ -1743,7 +1726,6 @@ void QQuickImageParticle::initialize(int gIdx, int pIdx)
                     getShadowDatum(datum)->autoRotate = autoRotate;
                 }
             }
-            Q_FALLTHROUGH();
         case Colored:
             //Color initialization
             // Particle color
@@ -1927,5 +1909,3 @@ void QQuickImageParticle::commit(int gIdx, int pIdx)
 
 
 QT_END_NAMESPACE
-
-#include "moc_qquickimageparticle_p.cpp"

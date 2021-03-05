@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -41,15 +41,14 @@
     \li \l {abstract-command} {\\abstract}
     \li \l {annotatedlist-command} {\\annotatedlist}
     \li \l {b-command} {\\b}
-    \li \l {badcode-command} {\\badcode}
-    \li \l {b-command} {\\bold} (deprecated, use \\b)
+    \li \l {b-command} {\\bold} \span {class="newStuff"} {(deprecated, use \\b)}
     \li \l {brief-command} {\\brief}
     \li \l {c-command} {\\c}
     \li \l {caption-command} {\\caption}
     \li \l {chapter-command} {\\chapter}
     \li \l {class-command} {\\class}
     \li \l {code-command} {\\code}
-    \li \l {codeline-command} {\\codeline}
+    \li \l {codeline-command} {\\codeline},
     \li \l {compat-command} {\\compat}
     \li \l {contentspage-command} {\\contentspage}
     \li \l {default-command} {\\default}
@@ -67,7 +66,7 @@
     \li \l {group-command} {\\group}
     \li \l {header-command} {\\header}
     \li \l {headerfile-command} {\\headerfile}
-    \li \l {e-command} {\\i} (deprecated, use \\e)
+    \li \l {e-command} {\\i} \span {class="newStuff"} {(deprecated, use \\e)}
     \li \l {if-command} {\\if}
     \li \l {image-command} {\\image}
     \li \l {include-command} {\\include}
@@ -93,7 +92,7 @@
     \li \l {noautolist-command} {\\noautolist}
     \li \l {nonreentrant-command} {\\nonreentrant}
     \li \l {note-command} {\\note}
-    \li \l {li-command} {\\o} (deprecated, use \\li)
+    \li \l {li-command} {\\o} \span {class="newStuff"} {(deprecated, use \\li)}
 
     \li \l {obsolete-command} {\\obsolete}
     \li \l {oldcode-command} {\\oldcode}
@@ -108,12 +107,11 @@
     \li \l {printto-command} {\\printto}
     \li \l {printuntil-command} {\\printuntil}
     \li \l {property-command} {\\property}
-    \li \l {qml-command} {\\qml}
     \li \l {qmlabstract-command} {\\qmlabstract}
     \li \l {qmlattachedproperty-command} {\\qmlattachedproperty}
     \li \l {qmlattachedsignal-command} {\\qmlattachedsignal}
     \li \l {qmlbasictype-command} {\\qmlbasictype}
-    \li \l {qmlclass-command} {\\qmlclass} (deprecated, use \\qmltype)
+    \li \l {qmlclass-command} {\\qmlclass} \span {class="newStuff"} {(deprecated, use \\qmltype)}
     \li \l {qmltype-command} {\\qmltype}
     \li \l {qmlmethod-command} {\\qmlmethod}
     \li \l {qmlproperty-command} {\\qmlproperty}
@@ -136,7 +134,7 @@
     \li \l {skipline-command} {\\skipline}
     \li \l {skipto-command} {\\skipto}
     \li \l {skipuntil-command} {\\skipuntil}
-    \li \l {snippet-command} {\\snippet}
+    \li \l {snippet-command} {\\snippet},
     \li \l {span-command} {\\span}
     \li \l {startpage-command} {\\startpage}
     \li \l {sub-command} {\\sub}

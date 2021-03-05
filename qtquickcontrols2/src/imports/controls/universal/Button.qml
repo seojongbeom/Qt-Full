@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,52 +34,51 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.Button {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            label ? label.implicitWidth + leftPadding + rightPadding : 0)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+                             label ? label.implicitHeight + topPadding + bottomPadding : 0)
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
-    padding: 8
-    topPadding: padding - 4
-    bottomPadding: padding - 4
+    topPadding: 4
+    leftPadding: 8
+    rightPadding: 8
+    bottomPadding: 4
 
     property bool useSystemFocusVisuals: true
 
-    contentItem: Text {
+    //! [label]
+    label: Text {
+        x: control.leftPadding
+        y: control.topPadding
+        width: control.availableWidth
+        height: control.availableHeight
+
         text: control.text
         font: control.font
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
 
-        opacity: enabled ? 1.0 : 0.2
-        color: control.Universal.foreground
+        color: !control.enabled ? control.Universal.baseLowColor : control.Universal.baseHighColor
     }
+    //! [label]
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 32
         implicitHeight: 32
 
-        visible: !control.flat || control.down || control.checked || control.highlighted
-        color: control.down ? control.Universal.baseMediumLowColor :
+        color: control.pressed ? control.Universal.baseMediumLowColor :
                control.enabled && (control.highlighted || control.checked) ? control.Universal.accent :
                                                                              control.Universal.baseLowColor
-
-        Rectangle {
-            width: parent.width
-            height: parent.height
-            color: "transparent"
-            visible: control.hovered
-            border.width: 2 // ButtonBorderThemeThickness
-            border.color: control.Universal.baseMediumLowColor
-        }
     }
+    //! [background]
 }

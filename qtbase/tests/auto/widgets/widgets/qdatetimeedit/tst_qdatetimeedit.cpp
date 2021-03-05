@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -84,6 +89,30 @@ Q_DECLARE_METATYPE(Qt::Key);
 Q_DECLARE_METATYPE(Qt::KeyboardModifiers);
 Q_DECLARE_METATYPE(Qt::KeyboardModifier);
 
+#if defined(Q_OS_WINCE)
+#ifndef SPI_GETPLATFORMTYPE
+#define SPI_GETPLATFORMTYPE 257
+#endif
+
+bool qt_wince_is_platform(const QString &platformString) {
+    wchar_t tszPlatform[64];
+    if (SystemParametersInfo(SPI_GETPLATFORMTYPE,
+                             sizeof(tszPlatform)/sizeof(*tszPlatform),tszPlatform,0))
+      if (0 == _tcsicmp(reinterpret_cast<const wchar_t *> (platformString.utf16()), tszPlatform))
+            return true;
+    return false;
+}
+bool qt_wince_is_pocket_pc() {
+    return qt_wince_is_platform(QString::fromLatin1("PocketPC"));
+}
+bool qt_wince_is_smartphone() {
+       return qt_wince_is_platform(QString::fromLatin1("Smartphone"));
+}
+bool qt_wince_is_mobile() {
+     return (qt_wince_is_smartphone() || qt_wince_is_pocket_pc());
+}
+#endif
+
 class EditorDateEdit : public QDateTimeEdit
 {
     Q_OBJECT
@@ -96,13 +125,15 @@ public:
 class tst_QDateTimeEdit : public QObject
 {
     Q_OBJECT
-
-private slots:
+public:
+    tst_QDateTimeEdit();
+    virtual ~tst_QDateTimeEdit();
+public slots:
     void initTestCase();
     void init();
     void cleanup();
     void cleanupTestCase();
-
+private slots:
     void cachedDayTest();
     void getSetCheck();
     void constructor_qwidget();
@@ -205,7 +236,7 @@ private slots:
     void reverseTest();
 
     void ddMMMMyyyy();
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
     void wheelEvent();
 #endif
 
@@ -284,6 +315,14 @@ void tst_QDateTimeEdit::getSetCheck()
     QCOMPARE(timeEdit.inputMethodQuery(Qt::ImHints), QVariant(int(Qt::ImhPreferNumbers)));
 }
 
+tst_QDateTimeEdit::tst_QDateTimeEdit()
+{
+}
+
+tst_QDateTimeEdit::~tst_QDateTimeEdit()
+{
+}
+
 void tst_QDateTimeEdit::initTestCase()
 {
     QLocale system = QLocale::system();
@@ -308,7 +347,7 @@ void tst_QDateTimeEdit::cleanupTestCase()
 void tst_QDateTimeEdit::init()
 {
     QLocale::setDefault(QLocale(QLocale::C));
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     SetThreadLocale(MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT));
 #endif
     testWidget->setDisplayFormat("dd/MM/yyyy"); // Nice default to have
@@ -2998,7 +3037,7 @@ void tst_QDateTimeEdit::ddMMMMyyyy()
     QCOMPARE(testWidget->lineEdit()->text(), "01." + QDate::longMonthName(1) + ".200");
 }
 
-#if QT_CONFIG(wheelevent)
+#ifndef QT_NO_WHEELEVENT
 void tst_QDateTimeEdit::wheelEvent()
 {
     testWidget->setDisplayFormat("dddd/MM");
@@ -3011,7 +3050,7 @@ void tst_QDateTimeEdit::wheelEvent()
     qApp->sendEvent(testWidget, &w);
     QCOMPARE(testWidget->date(), QDate(2000, 3, 22));
 }
-#endif // QT_CONFIG(wheelevent)
+#endif // !QT_NO_WHEELEVENT
 
 void tst_QDateTimeEdit::specialValueCornerCase()
 {
@@ -3084,7 +3123,7 @@ void tst_QDateTimeEdit::nextPrevSection_data()
 
     // 1. mac doesn't do these,
     // 2. some WinCE devices do not have modifiers
-#if !defined(Q_OS_DARWIN)
+#if !defined(Q_OS_MAC) && !defined(WINCE_NO_MODIFIER_KEYS)
     QTest::newRow("ctrl-right") << Qt::Key_Right << (Qt::KeyboardModifiers)Qt::ControlModifier << QString("56");
     QTest::newRow("ctrl-left") << Qt::Key_Left << (Qt::KeyboardModifiers)Qt::ControlModifier << QString("12");
 #endif
@@ -3405,7 +3444,7 @@ void tst_QDateTimeEdit::deleteCalendarWidget()
 
         // it should create a new widget
         QVERIFY(edit.calendarWidget());
-        QVERIFY(edit.calendarWidget()->objectName() != QLatin1String("cw1"));
+        QVERIFY(edit.calendarWidget()->objectName() != "cw1");
     }
 }
 
@@ -3538,7 +3577,7 @@ void tst_QDateTimeEdit::dateEditCorrectSectionSize_data()
         << threeDigitDayIssueKeypresses_DayName << QString::fromLatin1("00/2/Tuesday");
 
     QTest::newRow("no fixday, leap, yy/M/ddd") << defaultLocale << defaultDate << QString::fromLatin1("yy/M/ddd")
-        << threeDigitDayIssueKeypresses_DayName << QString::fromLatin1("00/2/Tue.");
+        << threeDigitDayIssueKeypresses_DayName << QString::fromLatin1("00/2/Tue");
 
     QTest::newRow("no fixday, leap, yy/MM/dddd") << defaultLocale << defaultDate << QString::fromLatin1("yy/MM/dddd")
         << threeDigitDayIssueKeypresses_DayName << QString::fromLatin1("00/02/Tuesday");
@@ -3586,13 +3625,13 @@ void tst_QDateTimeEdit::dateEditCorrectSectionSize_data()
         << threeDigitDayIssueKeypresses_YearDayMonth << QString::fromLatin1("2000/29/2");
 
     QTest::newRow("fixday, leap, yyyy/MMM/dd") << defaultLocale << defaultDate << QString::fromLatin1("yyyy/MMM/dd")
-        << threeDigitDayIssueKeypresses_ShortMonthName << QString::fromLatin1("2000/Feb./29");
+        << threeDigitDayIssueKeypresses_ShortMonthName << QString::fromLatin1("2000/Feb/29");
 
     QTest::newRow("fixday, leap, yyyy/MMM/d") << defaultLocale << defaultDate << QString::fromLatin1("yyyy/MMM/d")
-        << threeDigitDayIssueKeypresses_ShortMonthName << QString::fromLatin1("2000/Feb./29");
+        << threeDigitDayIssueKeypresses_ShortMonthName << QString::fromLatin1("2000/Feb/29");
 
     QTest::newRow("fixday, leap, yy/MMM/dd") << defaultLocale << defaultDate << QString::fromLatin1("yy/MMM/dd")
-        << threeDigitDayIssueKeypresses_ShortMonthName << QString::fromLatin1("00/Feb./29");
+        << threeDigitDayIssueKeypresses_ShortMonthName << QString::fromLatin1("00/Feb/29");
 
     QTest::newRow("fixday, leap, yyyy/dddd/M") << defaultLocale << defaultDate << QString::fromLatin1("yyyy/dddd/M")
         << threeDigitDayIssueKeypresses_DayName_YearDayMonth << QString::fromLatin1("2000/Tuesday/2");
@@ -3667,16 +3706,16 @@ void tst_QDateTimeEdit::dateEditCorrectSectionSize_data()
         << threeDigitDayIssueKeypresses_MonthYearDay << QString::fromLatin1("02/2000/29");
 
     QTest::newRow("fixday, leap, MMM/yy/d") << defaultLocale << defaultDate << QString::fromLatin1("MMM/yy/d")
-        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb./00/29");
+        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb/00/29");
 
     QTest::newRow("fixday, leap, MMM/yyyy/d") << defaultLocale << defaultDate << QString::fromLatin1("MMM/yyyy/d")
-        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb./2000/29");
+        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb/2000/29");
 
     QTest::newRow("fixday, MMM/yyyy/d") << defaultLocale << defaultDate.addYears(1) << QString::fromLatin1("MMM/yyyy/d")
-        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb./2001/28");
+        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb/2001/28");
 
     QTest::newRow("fixday, leap, MMM/yyyy/dd") << defaultLocale << defaultDate << QString::fromLatin1("MMM/yyyy/dd")
-        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb./2000/29");
+        << threeDigitDayIssueKeypresses_ShortMonthName_MonthYearDay << QString::fromLatin1("Feb/2000/29");
 
     QTest::newRow("fixday, leap, dddd, dd. MMMM yyyy") << defaultLocale
         << defaultDate << QString::fromLatin1("dddd, dd. MMMM yyyy")

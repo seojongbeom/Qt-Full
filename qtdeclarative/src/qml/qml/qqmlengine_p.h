@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -134,12 +128,8 @@ public:
     QRecyclePool<QQmlJavaScriptExpressionGuard> jsExpressionGuardPool;
 
     QQmlContext *rootContext;
-
-#ifdef QT_NO_QML_DEBUGGER
-    static const quintptr profiler = 0;
-#else
     QQmlProfiler *profiler;
-#endif
+    void enableProfiler();
 
     bool outputWarningsToMsgLog;
 
@@ -162,12 +152,12 @@ public:
     void registerFinalizeCallback(QObject *obj, int index);
 
     QQmlObjectCreator *activeObjectCreator;
-#if QT_CONFIG(qml_network)
+
     QNetworkAccessManager *createNetworkAccessManager(QObject *parent) const;
     QNetworkAccessManager *getNetworkAccessManager() const;
     mutable QNetworkAccessManager *networkAccessManager;
     mutable QQmlNetworkAccessManagerFactory *networkAccessManagerFactory;
-#endif
+
     QHash<QString,QSharedPointer<QQmlImageProviderBase> > imageProviders;
 
     QQmlAbstractUrlInterceptor* urlInterceptor;
@@ -204,11 +194,10 @@ public:
     template<typename T>
     inline void deleteInEngineThread(T *);
     template<typename T>
-    inline static void deleteInEngineThread(QQmlEnginePrivate *, T *);
-    QString offlineStorageDatabaseDirectory() const;
+    inline static void deleteInEngineThread(QQmlEngine *, T *);
 
     // These methods may be called from the loader thread
-    inline QQmlPropertyCache *cache(const QQmlType &, int);
+    inline QQmlPropertyCache *cache(QQmlType *, int);
     using QJSEnginePrivate::cache;
 
     // These methods may be called from the loader thread
@@ -221,14 +210,16 @@ public:
     QQmlMetaObject metaObjectForType(int) const;
     QQmlPropertyCache *propertyCacheForType(int);
     QQmlPropertyCache *rawPropertyCacheForType(int);
-    void registerInternalCompositeType(QV4::CompiledData::CompilationUnit *compilationUnit);
-    void unregisterInternalCompositeType(QV4::CompiledData::CompilationUnit *compilationUnit);
+    void registerInternalCompositeType(QQmlCompiledData *);
+    void unregisterInternalCompositeType(QQmlCompiledData *);
 
     bool isTypeLoaded(const QUrl &url) const;
     bool isScriptLoaded(const QUrl &url) const;
 
+    inline void setDebugChangesCache(const QHash<QUrl, QByteArray> &changes);
+    inline QHash<QUrl, QByteArray> debugChangesCache();
+
     void sendQuit();
-    void sendExit(int retCode = 0);
     void warning(const QQmlError &);
     void warning(const QList<QQmlError> &);
     void warning(QQmlDelayedError *);
@@ -259,48 +250,22 @@ public:
     mutable QMutex networkAccessManagerMutex;
 
 private:
+    // Must be called locked
+    QQmlPropertyCache *createCache(QQmlType *, int);
+
     // These members must be protected by a QQmlEnginePrivate::Locker as they are required by
     // the threaded loader.  Only access them through their respective accessor methods.
-    QHash<int, QV4::CompiledData::CompilationUnit *> m_compositeTypes;
+    QHash<QPair<QQmlType *, int>, QQmlPropertyCache *> typePropertyCache;
+    QHash<int, int> m_qmlLists;
+    QHash<int, QQmlCompiledData *> m_compositeTypes;
+    QHash<QUrl, QByteArray> debugChangesHash;
     static bool s_designerMode;
 
     // These members is protected by the full QQmlEnginePrivate::mutex mutex
     struct Deletable { Deletable():next(0) {} virtual ~Deletable() {} Deletable *next; };
     QFieldList<Deletable, &Deletable::next> toDeleteInEngineThread;
     void doDeleteInEngineThread();
-
-    void cleanupScarceResources();
 };
-
-/*
-   This function should be called prior to evaluation of any js expression,
-   so that scarce resources are not freed prematurely (eg, if there is a
-   nested javascript expression).
- */
-inline void QQmlEnginePrivate::referenceScarceResources()
-{
-    scarceResourcesRefCount += 1;
-}
-
-/*
-   This function should be called after evaluation of the js expression is
-   complete, and so the scarce resources may be freed safely.
- */
-inline void QQmlEnginePrivate::dereferenceScarceResources()
-{
-    Q_ASSERT(scarceResourcesRefCount > 0);
-    scarceResourcesRefCount -= 1;
-
-    // if the refcount is zero, then evaluation of the "top level"
-    // expression must have completed.  We can safely release the
-    // scarce resources.
-    if (Q_LIKELY(scarceResourcesRefCount == 0)) {
-        QV4::ExecutionEngine *engine = QV8Engine::getV4(v8engine());
-        if (Q_UNLIKELY(!engine->scarceResources.isEmpty())) {
-            cleanupScarceResources();
-        }
-    }
-}
 
 /*!
 Returns true if the calling thread is the QQmlEngine thread.
@@ -359,10 +324,10 @@ Delete \a value in the \a engine thread.  If the calling thread is the engine
 thread, \a value will be deleted immediately.
 */
 template<typename T>
-void QQmlEnginePrivate::deleteInEngineThread(QQmlEnginePrivate *engine, T *value)
+void QQmlEnginePrivate::deleteInEngineThread(QQmlEngine *engine, T *value)
 {
     Q_ASSERT(engine);
-    engine->deleteInEngineThread<T>(value);
+    QQmlEnginePrivate::get(engine)->deleteInEngineThread<T>(value);
 }
 
 /*!
@@ -370,15 +335,17 @@ Returns a QQmlPropertyCache for \a type with \a minorVersion.
 
 The returned cache is not referenced, so if it is to be stored, call addref().
 */
-QQmlPropertyCache *QQmlEnginePrivate::cache(const QQmlType &type, int minorVersion)
+QQmlPropertyCache *QQmlEnginePrivate::cache(QQmlType *type, int minorVersion)
 {
-    Q_ASSERT(type.isValid());
+    Q_ASSERT(type);
 
-    if (minorVersion == -1 || !type.containsRevisionedAttributes())
-        return cache(type.metaObject());
+    if (minorVersion == -1 || !type->containsRevisionedAttributes())
+        return cache(type->metaObject());
 
     Locker locker(this);
-    return QQmlMetaType::propertyCache(type, minorVersion);
+    QQmlPropertyCache *rv = typePropertyCache.value(qMakePair(type, minorVersion));
+    if (!rv) rv = createCache(type, minorVersion);
+    return rv;
 }
 
 QV8Engine *QQmlEnginePrivate::getV8Engine(QQmlEngine *e)
@@ -406,7 +373,7 @@ const QQmlEnginePrivate *QQmlEnginePrivate::get(const QQmlEngine *e)
 {
     Q_ASSERT(e);
 
-    return e ? e->d_func() : nullptr;
+    return e->d_func();
 }
 
 QQmlEnginePrivate *QQmlEnginePrivate::get(QQmlContext *c)
@@ -434,6 +401,19 @@ QQmlEnginePrivate *QQmlEnginePrivate::get(QV4::ExecutionEngine *e)
     if (!qmlEngine)
         return 0;
     return get(qmlEngine);
+}
+
+void QQmlEnginePrivate::setDebugChangesCache(const QHash<QUrl, QByteArray> &changes)
+{
+    Locker locker(this);
+    foreach (const QUrl &key, changes.keys())
+        debugChangesHash.insert(key, changes.value(key));
+}
+
+QHash<QUrl, QByteArray> QQmlEnginePrivate::debugChangesCache()
+{
+    Locker locker(this);
+    return debugChangesHash;
 }
 
 QT_END_NAMESPACE

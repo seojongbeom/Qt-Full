@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Ruslan Baratov
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,7 +35,6 @@
 #include "androidsurfacetexture.h"
 #include "androidsurfaceview.h"
 #include "qandroidmultimediautils.h"
-#include "qandroidglobal.h"
 
 #include <qstringlist.h>
 #include <qdebug.h>
@@ -55,11 +47,6 @@
 QT_BEGIN_NAMESPACE
 
 static const char QtCameraListenerClassName[] = "org/qtproject/qt5/android/multimedia/QtCameraListener";
-
-static QString cameraPermissionKey()
-{
-    return QStringLiteral("android.permission.CAMERA");
-}
 
 typedef QHash<int, AndroidCamera *> CameraMap;
 Q_GLOBAL_STATIC(CameraMap, cameras)
@@ -188,21 +175,14 @@ public:
     Q_INVOKABLE QSize getPreferredPreviewSizeForVideo();
     Q_INVOKABLE QList<QSize> getSupportedPreviewSizes();
 
-    Q_INVOKABLE QList<AndroidCamera::FpsRange> getSupportedPreviewFpsRange();
-
-    Q_INVOKABLE AndroidCamera::FpsRange getPreviewFpsRange();
-    Q_INVOKABLE void setPreviewFpsRange(int min, int max);
-
     Q_INVOKABLE AndroidCamera::ImageFormat getPreviewFormat();
     Q_INVOKABLE void setPreviewFormat(AndroidCamera::ImageFormat fmt);
     Q_INVOKABLE QList<AndroidCamera::ImageFormat> getSupportedPreviewFormats();
 
     Q_INVOKABLE QSize previewSize() const { return m_previewSize; }
-    Q_INVOKABLE QSize getPreviewSize();
     Q_INVOKABLE void updatePreviewSize();
     Q_INVOKABLE bool setPreviewTexture(void *surfaceTexture);
     Q_INVOKABLE bool setPreviewDisplay(void *surfaceHolder);
-    Q_INVOKABLE void setDisplayOrientation(int degrees);
 
     Q_INVOKABLE bool isZoomSupported();
     Q_INVOKABLE int getMaxZoom();
@@ -403,24 +383,6 @@ QList<QSize> AndroidCamera::getSupportedPreviewSizes()
     return d->getSupportedPreviewSizes();
 }
 
-QList<AndroidCamera::FpsRange> AndroidCamera::getSupportedPreviewFpsRange()
-{
-    Q_D(AndroidCamera);
-    return d->getSupportedPreviewFpsRange();
-}
-
-AndroidCamera::FpsRange AndroidCamera::getPreviewFpsRange()
-{
-    Q_D(AndroidCamera);
-    return d->getPreviewFpsRange();
-}
-
-void AndroidCamera::setPreviewFpsRange(FpsRange range)
-{
-    Q_D(AndroidCamera);
-    QMetaObject::invokeMethod(d, "setPreviewFpsRange", Q_ARG(int, range.min), Q_ARG(int, range.max));
-}
-
 AndroidCamera::ImageFormat AndroidCamera::getPreviewFormat()
 {
     Q_D(AndroidCamera);
@@ -443,12 +405,6 @@ QSize AndroidCamera::previewSize() const
 {
     Q_D(const AndroidCamera);
     return d->m_previewSize;
-}
-
-QSize AndroidCamera::actualPreviewSize()
-{
-    Q_D(AndroidCamera);
-    return d->getPreviewSize();
 }
 
 void AndroidCamera::setPreviewSize(const QSize &size)
@@ -486,12 +442,6 @@ bool AndroidCamera::setPreviewDisplay(AndroidSurfaceHolder *surfaceHolder)
                               Q_RETURN_ARG(bool, ok),
                               Q_ARG(void *, surfaceHolder ? surfaceHolder->surfaceHolder() : 0));
     return ok;
-}
-
-void AndroidCamera::setDisplayOrientation(int degrees)
-{
-    Q_D(AndroidCamera);
-    QMetaObject::invokeMethod(d, "setDisplayOrientation", Qt::QueuedConnection, Q_ARG(int, degrees));
 }
 
 bool AndroidCamera::isZoomSupported()
@@ -762,9 +712,6 @@ QJNIObjectPrivate AndroidCamera::getCameraObject()
 
 int AndroidCamera::getNumberOfCameras()
 {
-    if (!requestCameraPermission())
-        return 0;
-
     return QJNIObjectPrivate::callStaticMethod<jint>("android/hardware/Camera",
                                                      "getNumberOfCameras");
 }
@@ -797,11 +744,6 @@ void AndroidCamera::getCameraInfo(int id, AndroidCameraInfo *info)
     default:
         break;
     }
-}
-
-bool AndroidCamera::requestCameraPermission()
-{
-    return qt_androidRequestPermission(cameraPermissionKey());
 }
 
 void AndroidCamera::startPreview()
@@ -938,80 +880,6 @@ QList<QSize> AndroidCameraPrivate::getSupportedPreviewSizes()
     return list;
 }
 
-QList<AndroidCamera::FpsRange> AndroidCameraPrivate::getSupportedPreviewFpsRange()
-{
-    QMutexLocker parametersLocker(&m_parametersMutex);
-
-    QJNIEnvironmentPrivate env;
-
-    QList<AndroidCamera::FpsRange> rangeList;
-
-    if (m_parameters.isValid()) {
-        QJNIObjectPrivate rangeListNative = m_parameters.callObjectMethod("getSupportedPreviewFpsRange",
-                                                                          "()Ljava/util/List;");
-        int count = rangeListNative.callMethod<jint>("size");
-
-        rangeList.reserve(count);
-
-        for (int i = 0; i < count; ++i) {
-            QJNIObjectPrivate range = rangeListNative.callObjectMethod("get",
-                                                                       "(I)Ljava/lang/Object;",
-                                                                       i);
-
-            jintArray jRange = static_cast<jintArray>(range.object());
-            jint* rangeArray = env->GetIntArrayElements(jRange, 0);
-
-            AndroidCamera::FpsRange fpsRange;
-
-            fpsRange.min = rangeArray[0];
-            fpsRange.max = rangeArray[1];
-
-            env->ReleaseIntArrayElements(jRange, rangeArray, 0);
-
-            rangeList << fpsRange;
-        }
-    }
-
-    return rangeList;
-}
-
-AndroidCamera::FpsRange AndroidCameraPrivate::getPreviewFpsRange()
-{
-    QMutexLocker parametersLocker(&m_parametersMutex);
-
-    QJNIEnvironmentPrivate env;
-
-    AndroidCamera::FpsRange range;
-
-    if (!m_parameters.isValid())
-        return range;
-
-    jintArray jRangeArray = env->NewIntArray(2);
-    m_parameters.callMethod<void>("getPreviewFpsRange", "([I)V", jRangeArray);
-
-    jint* jRangeElements = env->GetIntArrayElements(jRangeArray, 0);
-
-    range.min = jRangeElements[0];
-    range.max = jRangeElements[1];
-
-    env->ReleaseIntArrayElements(jRangeArray, jRangeElements, 0);
-    env->DeleteLocalRef(jRangeArray);
-
-    return range;
-}
-
-void AndroidCameraPrivate::setPreviewFpsRange(int min, int max)
-{
-    QMutexLocker parametersLocker(&m_parametersMutex);
-
-    if (!m_parameters.isValid())
-        return;
-
-    QJNIEnvironmentPrivate env;
-    m_parameters.callMethod<void>("setPreviewFpsRange", "(II)V", min, max);
-    exceptionCheckAndClear(env);
-}
-
 AndroidCamera::ImageFormat AndroidCameraPrivate::getPreviewFormat()
 {
     QMutexLocker parametersLocker(&m_parametersMutex);
@@ -1054,22 +922,6 @@ QList<AndroidCamera::ImageFormat> AndroidCameraPrivate::getSupportedPreviewForma
     return list;
 }
 
-QSize AndroidCameraPrivate::getPreviewSize()
-{
-    QMutexLocker parametersLocker(&m_parametersMutex);
-
-    if (!m_parameters.isValid())
-        return QSize();
-
-    QJNIObjectPrivate size = m_parameters.callObjectMethod("getPreviewSize",
-                                                           "()Landroid/hardware/Camera$Size;");
-
-    if (!size.isValid())
-        return QSize();
-
-    return QSize(size.getField<jint>("width"), size.getField<jint>("height"));
-}
-
 void AndroidCameraPrivate::updatePreviewSize()
 {
     QMutexLocker parametersLocker(&m_parametersMutex);
@@ -1098,11 +950,6 @@ bool AndroidCameraPrivate::setPreviewDisplay(void *surfaceHolder)
                               "(Landroid/view/SurfaceHolder;)V",
                               static_cast<jobject>(surfaceHolder));
     return !exceptionCheckAndClear(env);
-}
-
-void AndroidCameraPrivate::setDisplayOrientation(int degrees)
-{
-    m_camera.callMethod<void>("setDisplayOrientation", "(I)V", degrees);
 }
 
 bool AndroidCameraPrivate::isZoomSupported()

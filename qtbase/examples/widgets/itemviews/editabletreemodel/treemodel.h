@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -68,33 +58,33 @@ public:
     ~TreeModel();
 //! [0] //! [1]
 
-    QVariant data(const QModelIndex &index, int role) const override;
+    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const override;
+                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
 
     QModelIndex index(int row, int column,
-                      const QModelIndex &parent = QModelIndex()) const override;
-    QModelIndex parent(const QModelIndex &index) const override;
+                      const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QModelIndex parent(const QModelIndex &index) const Q_DECL_OVERRIDE;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
 //! [1]
 
 //! [2]
-    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const Q_DECL_OVERRIDE;
     bool setData(const QModelIndex &index, const QVariant &value,
-                 int role = Qt::EditRole) override;
+                 int role = Qt::EditRole) Q_DECL_OVERRIDE;
     bool setHeaderData(int section, Qt::Orientation orientation,
-                       const QVariant &value, int role = Qt::EditRole) override;
+                       const QVariant &value, int role = Qt::EditRole) Q_DECL_OVERRIDE;
 
     bool insertColumns(int position, int columns,
-                       const QModelIndex &parent = QModelIndex()) override;
+                       const QModelIndex &parent = QModelIndex()) Q_DECL_OVERRIDE;
     bool removeColumns(int position, int columns,
-                       const QModelIndex &parent = QModelIndex()) override;
+                       const QModelIndex &parent = QModelIndex()) Q_DECL_OVERRIDE;
     bool insertRows(int position, int rows,
-                    const QModelIndex &parent = QModelIndex()) override;
+                    const QModelIndex &parent = QModelIndex()) Q_DECL_OVERRIDE;
     bool removeRows(int position, int rows,
-                    const QModelIndex &parent = QModelIndex()) override;
+                    const QModelIndex &parent = QModelIndex()) Q_DECL_OVERRIDE;
 
 private:
     void setupModelData(const QStringList &lines, TreeItem *parent);

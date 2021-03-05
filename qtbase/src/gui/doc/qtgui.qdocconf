@@ -33,20 +33,17 @@ depends += \
     qtmultimedia \
     qtnetwork \
     qtopengl \
-    qtplatformheaders \
     qtsvg \
     qtqml \
     qtquick \
     qtwidgets \
     qtdoc \
-    qmake \
-    qttestlib
+    qmake
 
 headerdirs  += ..
 
 sourcedirs  += .. \
-               ../../../examples/gui/doc/src \
-               src/includes
+               ../../../examples/gui/doc/src
 
 exampledirs += ../../../examples/gui \
                snippets

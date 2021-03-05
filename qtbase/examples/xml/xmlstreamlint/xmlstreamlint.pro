@@ -1,6 +1,7 @@
 CONFIG   += console
 CONFIG   -= app_bundle
 QT       -= gui
+QT       += xml
 SOURCES  += main.cpp
 
 # install

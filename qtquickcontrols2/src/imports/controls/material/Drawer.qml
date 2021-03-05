@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,49 +34,20 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
-import QtQuick.Controls.Material.impl 2.2
+import QtQuick 2.6
+import QtQuick.Window 2.2
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.Drawer {
     id: control
 
-    parent: T.ApplicationWindow.overlay
+    parent: T.ApplicationWindow.overlay || Window.contentItem
+    width: parent ? parent.width : 0 // TODO: Window.width
+    height: parent ? parent.height : 0 // TODO: Window.height
 
-    implicitWidth: Math.max(background ? background.implicitWidth : 0, contentWidth + leftPadding + rightPadding)
-    implicitHeight: Math.max(background ? background.implicitHeight : 0, contentHeight + topPadding + bottomPadding)
-
-    contentWidth: contentItem.implicitWidth || (contentChildren.length === 1 ? contentChildren[0].implicitWidth : 0)
-    contentHeight: contentItem.implicitHeight || (contentChildren.length === 1 ? contentChildren[0].implicitHeight : 0)
-
-    topPadding: !dim && edge === Qt.BottomEdge && Material.elevation === 0
-    leftPadding: !dim && edge === Qt.RightEdge && Material.elevation === 0
-    rightPadding: !dim && edge === Qt.LeftEdge && Material.elevation === 0
-    bottomPadding: !dim && edge === Qt.TopEdge && Material.elevation === 0
-
-    enter: Transition { SmoothedAnimation { velocity: 5 } }
-    exit: Transition { SmoothedAnimation { velocity: 5 } }
-
-    Material.elevation: !interactive && !dim ? 0 : 16
-
-    background: Rectangle {
-        color: control.Material.dialogColor
-
-        Rectangle {
-            readonly property bool horizontal: control.edge === Qt.LeftEdge || control.edge === Qt.RightEdge
-            width: horizontal ? 1 : parent.width
-            height: horizontal ? parent.height : 1
-            color: control.Material.dividerColor
-            x: control.edge === Qt.LeftEdge ? parent.width - 1 : 0
-            y: control.edge === Qt.TopEdge ? parent.height - 1 : 0
-            visible: !control.dim && control.Material.elevation === 0
-        }
-
-        layer.enabled: control.position > 0
-        layer.effect: ElevationEffect {
-            elevation: control.Material.elevation
-            fullHeight: true
-        }
+    // TODO: make this a proper transition
+    animation: SmoothedAnimation {
+        velocity: 5
     }
 }

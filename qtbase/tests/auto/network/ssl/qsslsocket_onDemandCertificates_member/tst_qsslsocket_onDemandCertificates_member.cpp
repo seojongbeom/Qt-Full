@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -52,6 +57,8 @@ class tst_QSslSocket_onDemandCertificates_member : public QObject
     int proxyAuthCalled;
 
 public:
+    tst_QSslSocket_onDemandCertificates_member();
+    virtual ~tst_QSslSocket_onDemandCertificates_member();
 
 #ifndef QT_NO_OPENSSL
     QSslSocketPtr newSocket();
@@ -72,6 +79,14 @@ private:
     QSslSocket *socket;
 #endif // QT_NO_OPENSSL
 };
+
+tst_QSslSocket_onDemandCertificates_member::tst_QSslSocket_onDemandCertificates_member()
+{
+}
+
+tst_QSslSocket_onDemandCertificates_member::~tst_QSslSocket_onDemandCertificates_member()
+{
+}
 
 enum ProxyTests {
     NoProxy = 0x00,
@@ -168,59 +183,29 @@ void tst_QSslSocket_onDemandCertificates_member::proxyAuthenticationRequired(con
 
 #ifndef QT_NO_OPENSSL
 
-static bool waitForEncrypted(QSslSocket *socket)
-{
-    Q_ASSERT(socket);
-
-    QEventLoop eventLoop;
-
-    QTimer connectionTimeoutWatcher;
-    connectionTimeoutWatcher.setSingleShot(true);
-    connectionTimeoutWatcher.connect(&connectionTimeoutWatcher, &QTimer::timeout,
-                                     [&eventLoop]() {
-                                        eventLoop.exit();
-                                     });
-
-    bool encrypted = false;
-    socket->connect(socket, &QSslSocket::encrypted, [&eventLoop, &encrypted](){
-                        eventLoop.exit();
-                        encrypted = true;
-                    });
-
-    socket->connect(socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors),
-                    [&eventLoop](){
-                        eventLoop.exit();
-                    });
-
-    // Wait for 30 s. maximum - the default timeout in our QSslSocket::waitForEncrypted ...
-    connectionTimeoutWatcher.start(30000);
-    eventLoop.exec();
-    return encrypted;
-}
-
 void tst_QSslSocket_onDemandCertificates_member::onDemandRootCertLoadingMemberMethods()
 {
-    const QString host("www.qt.io");
+    QString host("www.qt.io");
 
     // not using any root certs -> should not work
     QSslSocketPtr socket2 = newSocket();
     this->socket = socket2.data();
     socket2->setCaCertificates(QList<QSslCertificate>());
     socket2->connectToHostEncrypted(host, 443);
-    QVERIFY(!waitForEncrypted(socket2.data()));
+    QVERIFY(!socket2->waitForEncrypted());
 
     // default: using on demand loading -> should work
     QSslSocketPtr socket = newSocket();
     this->socket = socket.data();
     socket->connectToHostEncrypted(host, 443);
-    QVERIFY2(waitForEncrypted(socket.data()), qPrintable(socket->errorString()));
+    QVERIFY2(socket->waitForEncrypted(), qPrintable(socket->errorString()));
 
     // not using any root certs again -> should not work
     QSslSocketPtr socket3 = newSocket();
     this->socket = socket3.data();
     socket3->setCaCertificates(QList<QSslCertificate>());
     socket3->connectToHostEncrypted(host, 443);
-    QVERIFY(!waitForEncrypted(socket3.data()));
+    QVERIFY(!socket3->waitForEncrypted());
 
     // setting empty SSL configuration explicitly -> depends on on-demand loading
     QSslSocketPtr socket4 = newSocket();
@@ -229,16 +214,24 @@ void tst_QSslSocket_onDemandCertificates_member::onDemandRootCertLoadingMemberMe
     socket4->setSslConfiguration(conf);
     socket4->connectToHostEncrypted(host, 443);
 #ifdef QT_BUILD_INTERNAL
-    const bool works = QSslSocketPrivate::rootCertOnDemandLoadingSupported();
-#if defined(Q_OS_LINUX) || defined(Q_OS_WIN)
-    QCOMPARE(works, true);
+    bool rootCertLoadingAllowed = QSslSocketPrivate::rootCertOnDemandLoadingSupported();
+#if defined(Q_OS_LINUX) || defined (Q_OS_BLACKBERRY)
+    QCOMPARE(rootCertLoadingAllowed, true);
 #elif defined(Q_OS_MAC)
-    QCOMPARE(works, false);
-#endif // other platforms: undecided.
-    // When we *allow* on-demand loading, we enable it by default; so, on Unix,
-    // it will work without setting any certificates.  Otherwise, the configuration
-    // contains an empty set of certificates, so on-demand loading shall fail.
-   QCOMPARE(waitForEncrypted(socket4.data()), works);
+    QCOMPARE(rootCertLoadingAllowed, false);
+#endif // other platforms: undecided (Windows: depends on the version)
+    // when we allow on demand loading, it is enabled by default,
+    // so on Unix it will work without setting any certificates. Otherwise,
+    // the configuration contains an empty set of certificates
+    // and will fail.
+    bool works;
+#if defined (Q_OS_WIN)
+    works = false; // on Windows, this won't work even though we use on demand loading
+    Q_UNUSED(rootCertLoadingAllowed)
+#else
+    works = rootCertLoadingAllowed;
+#endif
+    QCOMPARE(socket4->waitForEncrypted(), works);
 #endif // QT_BUILD_INTERNAL
 }
 

@@ -1,4 +1,4 @@
 TEMPLATE = subdirs
 
-SUBDIRS += mediaplayer
-!tvos: SUBDIRS += camera
+SUBDIRS += mediaplayer \
+           camera

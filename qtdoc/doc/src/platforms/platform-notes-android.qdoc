@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -33,7 +33,7 @@
 
     This page contains information particular to building Qt applications for
     and running them on the \l{Qt for Android}{Android} platform. Qt supports
-    Android versions 4.1 (API level 16) or later.
+    Android versions 2.3.3 (API level 10) or later.
 
     \tableofcontents
 
@@ -150,7 +150,12 @@
     application breaking on older devices that only support 2.0.
 
     \section1 Multimedia Special Considerations
-    The \l{Qt Multimedia Widgets} module is not supported on Android, which means
+
+    \l{Qt Multimedia}, like the rest of Qt, supports Android versions 2.3.3 (API level 10) or later.
+    There is however an exception for video output which requires Android versions 3.0 (API level 11)
+    or later. This affects camera preview and video player features.
+
+    Additionally, the \l{Qt Multimedia Widgets} module is not supported on Android, which means
     video display is only available using the VideoOutput and the \l [QML]{QtMultimedia::}{Video}
  QML Type.
 

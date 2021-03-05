@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -254,26 +244,28 @@ TestCase {
         gauge.height = gaugeHeightFor100PixelHighValueBar(gauge);
         compare(gauge.__panel.barLength, 100);
 
+        // Give stuff time to re-layout after the new control height, etc.,
+        // otherwise we'll be comparing against incorrect pixel positions.
+        wait(0);
+
         for (var tickmarkIndex = 0; tickmarkIndex < data.expectedTickmarkValues.length; ++tickmarkIndex) {
             var tickmark = TestUtils.findChild(gauge, "tickmark" + tickmarkIndex);
-            // QTBUG-58859: give stuff time to re-layout after the new control height, etc.,
-            // otherwise we'll be comparing against incorrect pixel positions.
-            tryCompare(tickmark, "value", data.expectedTickmarkValues[tickmarkIndex], undefined,
-                "Value of tickmark at index " + tickmarkIndex + " should be " + data.expectedTickmarkValues[tickmarkIndex]);
+            compare(tickmark.value, data.expectedTickmarkValues[tickmarkIndex],
+                "Value of tickmark at index " + tickmarkIndex + " is " + data.expectedTickmarkValues[tickmarkIndex]);
 
             var expectedValuePos = data.expectedTickmarkValuePositions[tickmarkIndex];
-            tryCompare(tickmark, "valuePosition", expectedValuePos, undefined,
-                "Value position of tickmark at index " + tickmarkIndex + " should be " + expectedValuePos);
+            compare(tickmark.valuePosition, expectedValuePos,
+                "Value position of tickmark at index " + tickmarkIndex + " is " + expectedValuePos);
         }
 
         for (var minorTickmarkIndex = 0; minorTickmarkIndex < data.expectedMinorTickmarkValues.length; ++minorTickmarkIndex) {
             var minorTickmark = TestUtils.findChild(gauge, "minorTickmark" + minorTickmarkIndex);
             compare(minorTickmark.value, data.expectedMinorTickmarkValues[minorTickmarkIndex],
-                "Value of minor tickmark at index " + minorTickmarkIndex + " should be " + data.expectedMinorTickmarkValues[minorTickmarkIndex]);
+                "Value of minor tickmark at index " + minorTickmarkIndex + " is " + data.expectedMinorTickmarkValues[minorTickmarkIndex]);
 
             expectedValuePos = data.expectedMinorTickmarkValuePositions[minorTickmarkIndex];
             compare(minorTickmark.valuePosition, expectedValuePos,
-                "Value position of minor tickmark at index " + minorTickmarkIndex + " should be " + expectedValuePos);
+                "Value position of minor tickmark at index " + minorTickmarkIndex + " is " + expectedValuePos);
         }
     }
 

@@ -13,7 +13,6 @@
 #include <stack>
 
 #include "angle_gl.h"
-#include "compiler/translator/ASTMetadataHLSL.h"
 #include "compiler/translator/IntermNode.h"
 #include "compiler/translator/ParseContext.h"
 
@@ -47,10 +46,8 @@ class OutputHLSL : public TIntermTraverser
 
     TInfoSinkBase &getInfoSink() { ASSERT(!mInfoSinkStack.empty()); return *mInfoSinkStack.top(); }
 
-    static bool canWriteAsHLSLLiteral(TIntermTyped *expression);
-
   protected:
-    void header(TInfoSinkBase &out, const BuiltInFunctionEmulator *builtInFunctionEmulator);
+    void header(const BuiltInFunctionEmulator *builtInFunctionEmulator);
 
     // Visit AST nodes and output their code to the body stream
     void visitSymbol(TIntermSymbol*);
@@ -65,52 +62,34 @@ class OutputHLSL : public TIntermTraverser
     bool visitLoop(Visit visit, TIntermLoop*);
     bool visitBranch(Visit visit, TIntermBranch*);
 
+    void traverseStatements(TIntermNode *node);
     bool isSingleStatement(TIntermNode *node);
-    bool handleExcessiveLoop(TInfoSinkBase &out, TIntermLoop *node);
+    bool handleExcessiveLoop(TIntermLoop *node);
 
     // Emit one of three strings depending on traverse phase. Called with literal strings so using const char* instead of TString.
-    void outputTriplet(TInfoSinkBase &out,
-                       Visit visit,
-                       const char *preString,
-                       const char *inString,
-                       const char *postString);
-    void outputLineDirective(TInfoSinkBase &out, int line);
+    void outputTriplet(Visit visit, const char *preString, const char *inString, const char *postString, TInfoSinkBase &out);
+    void outputTriplet(Visit visit, const char *preString, const char *inString, const char *postString);
+    void outputLineDirective(int line);
     TString argumentString(const TIntermSymbol *symbol);
     int vectorSize(const TType &type) const;
 
     // Emit constructor. Called with literal names so using const char* instead of TString.
-    void outputConstructor(TInfoSinkBase &out,
-                           Visit visit,
-                           const TType &type,
-                           const char *name,
-                           const TIntermSequence *parameters);
-    const TConstantUnion *writeConstantUnion(TInfoSinkBase &out,
-                                             const TType &type,
-                                             const TConstantUnion *constUnion);
+    void outputConstructor(Visit visit, const TType &type, const char *name, const TIntermSequence *parameters);
+    const ConstantUnion *writeConstantUnion(const TType &type, const ConstantUnion *constUnion);
 
     void outputEqual(Visit visit, const TType &type, TOperator op, TInfoSinkBase &out);
 
-    void writeEmulatedFunctionTriplet(TInfoSinkBase &out, Visit visit, const char *preStr);
+    void writeEmulatedFunctionTriplet(Visit visit, const char *preStr);
     void makeFlaggedStructMaps(const std::vector<TIntermTyped *> &flaggedStructs);
 
     // Returns true if it found a 'same symbol' initializer (initializer that references the variable it's initting)
     bool writeSameSymbolInitializer(TInfoSinkBase &out, TIntermSymbol *symbolNode, TIntermTyped *expression);
-    // Returns true if variable initializer could be written using literal {} notation.
-    bool writeConstantInitialization(TInfoSinkBase &out,
-                                     TIntermSymbol *symbolNode,
-                                     TIntermTyped *expression);
-
     void writeDeferredGlobalInitializers(TInfoSinkBase &out);
-    void writeSelection(TInfoSinkBase &out, TIntermSelection *node);
 
     // Returns the function name
     TString addStructEqualityFunction(const TStructure &structure);
     TString addArrayEqualityFunction(const TType &type);
     TString addArrayAssignmentFunction(const TType &type);
-    TString addArrayConstructIntoFunction(const TType &type);
-
-    // Ensures if the type is a struct, the struct is defined
-    void ensureStructDefined(const TType &type);
 
     sh::GLenum mShaderType;
     int mShaderVersion;
@@ -119,6 +98,7 @@ class OutputHLSL : public TIntermTraverser
     const ShShaderOutput mOutputType;
     int mCompileOptions;
 
+    UnfoldShortCircuit *mUnfoldShortCircuit;
     bool mInsideFunction;
 
     // Output streams
@@ -188,9 +168,8 @@ class OutputHLSL : public TIntermTraverser
 
     int mUniqueIndex;   // For creating unique names
 
-    CallDAG mCallDag;
-    MetadataList mASTMetadataList;
-    ASTMetadataHLSL *mCurrentFunctionMetadata;
+    bool mContainsLoopDiscontinuity;
+    bool mContainsAnyLoop;
     bool mOutputLod0Function;
     bool mInsideDiscontinuousLoop;
     int mNestedLoopDepth;
@@ -202,10 +181,11 @@ class OutputHLSL : public TIntermTraverser
     std::map<TIntermTyped*, TString> mFlaggedStructMappedNames;
     std::map<TIntermTyped*, TString> mFlaggedStructOriginalNames;
 
-    // Some initializers may have been unfolded into if statements, thus we can't evaluate all initializers
-    // at global static scope in HLSL. Instead, we can initialize these static globals inside a helper function.
-    // This also enables initialization of globals with uniforms.
-    TIntermSequence mDeferredGlobalInitializers;
+    // Some initializers use varyings, uniforms or attributes, thus we can't evaluate some variables
+    // at global static scope in HLSL. These variables depend on values which we retrieve from the
+    // shader input structure, which we set in the D3D main function. Instead, we can initialize
+    // these static globals after we initialize our other globals.
+    std::vector<std::pair<TIntermSymbol*, TIntermTyped*>> mDeferredGlobalInitializers;
 
     struct HelperFunction
     {
@@ -234,11 +214,6 @@ class OutputHLSL : public TIntermTraverser
     std::vector<ArrayHelperFunction*> mArrayEqualityFunctions;
 
     std::vector<ArrayHelperFunction> mArrayAssignmentFunctions;
-
-    // The construct-into functions are functions that fill an N-element array passed as an out parameter
-    // with the other N parameters of the function. This is used to work around that arrays can't be
-    // return values in HLSL.
-    std::vector<ArrayHelperFunction> mArrayConstructIntoFunctions;
 };
 
 }

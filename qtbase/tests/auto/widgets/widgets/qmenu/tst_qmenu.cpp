@@ -1,33 +1,37 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include <QtTest/QtTest>
-#include <QtTest/private/qtesthelpers_p.h>
 #include <qapplication.h>
 #include <QPushButton>
 #include <QMainWindow>
@@ -43,30 +47,22 @@
 
 #include <qmenu.h>
 #include <qstyle.h>
-#include <QStyleHints>
 #include <QTimer>
 #include <qdebug.h>
-
-#include <qpa/qplatformtheme.h>
-
-using namespace QTestPrivate;
 
 Q_DECLARE_METATYPE(Qt::Key);
 Q_DECLARE_METATYPE(Qt::KeyboardModifiers);
 
-struct MenuMetrics {
-    int fw;
-    int hmargin;
-    int vmargin;
-    int tearOffHeight;
+static inline void centerOnScreen(QWidget *w, const QSize &size)
+{
+    const QPoint offset = QPoint(size.width() / 2, size.height() / 2);
+    w->move(QGuiApplication::primaryScreen()->availableGeometry().center() - offset);
+}
 
-    MenuMetrics(const QMenu *menu) {
-        fw = menu->style()->pixelMetric(QStyle::PM_MenuPanelWidth, nullptr, menu);
-        hmargin = menu->style()->pixelMetric(QStyle::PM_MenuHMargin, nullptr, menu);
-        vmargin = menu->style()->pixelMetric(QStyle::PM_MenuVMargin, nullptr, menu);
-        tearOffHeight = menu->style()->pixelMetric(QStyle::PM_MenuTearoffHeight, nullptr, menu);
-    }
-};
+static inline void centerOnScreen(QWidget *w)
+{
+    centerOnScreen(w, w->geometry().size());
+}
 
 class tst_QMenu : public QObject
 {
@@ -90,7 +86,9 @@ private slots:
     void overrideMenuAction();
     void statusTip();
     void widgetActionFocus();
+#ifndef Q_OS_WINCE
     void mouseActivation();
+#endif
     void tearOff();
     void submenuTearOffDontClose();
     void layoutDirection();
@@ -103,7 +101,9 @@ private slots:
     void task250673_activeMultiColumnSubMenuPosition();
     void task256918_setFont();
     void menuSizeHint();
+#ifndef Q_OS_WINCE
     void task258920_mouseBorder();
+#endif
     void setFixedWidth();
     void deleteActionInTriggered();
     void pushButtonPopulateOnAboutToShow();
@@ -119,14 +119,6 @@ private slots:
     void QTBUG_37933_ampersands_data();
     void QTBUG_37933_ampersands();
 #endif
-    void QTBUG_56917_wideMenuSize();
-    void QTBUG_56917_wideMenuScreenNumber();
-    void QTBUG_56917_wideSubmenuScreenNumber();
-    void menuSize_Scrolling_data();
-    void menuSize_Scrolling();
-    void tearOffMenuNotDisplayed();
-    void QTBUG_61039_menu_shortcuts();
-
 protected slots:
     void onActivated(QAction*);
     void onHighlighted(QAction*);
@@ -306,6 +298,8 @@ void tst_QMenu::addActionsConnect()
 #endif // !QT_NO_SHORTCUT
 }
 
+// We have a separate mouseActivation test for Windows mobile
+#ifndef Q_OS_WINCE
 void tst_QMenu::mouseActivation()
 {
     QWidget topLevel;
@@ -345,6 +339,7 @@ void tst_QMenu::mouseActivation()
     QVERIFY(submenu.isVisible());
 #endif
 }
+#endif
 
 void tst_QMenu::keyboardNavigation_data()
 {
@@ -405,7 +400,7 @@ void tst_QMenu::keyboardNavigation()
 #ifndef Q_OS_MAC
         QEXPECT_FAIL("shortcut0", "QTBUG-22449: QMenu doesn't remove highlight if a menu item is activated by a shortcut", Abort);
 #endif
-        QCOMPARE(menus[expected_menu]->activeAction(), nullptr);
+        QCOMPARE(menus[expected_menu]->activeAction(), (QAction *)0);
     } else {
         QCOMPARE(menus[expected_menu]->activeAction(), builtins[expected_action]);
     }
@@ -413,7 +408,7 @@ void tst_QMenu::keyboardNavigation()
     if (expected_highlighted)
         QCOMPARE(menus[expected_menu]->activeAction(), highlighted);
     else
-        QCOMPARE(highlighted, nullptr);
+        QCOMPARE(highlighted, (QAction *)0);
 }
 
 #ifdef Q_OS_MAC
@@ -461,7 +456,6 @@ void tst_QMenu::overrideMenuAction()
     //test the override menu action by first creating an action to which we set its menu
     QMainWindow w;
     w.resize(300, 200);
-    w.menuBar()->setNativeMenuBar(false);
     centerOnScreen(&w);
 
     QAction *aFileMenu = new QAction("&File", &w);
@@ -475,7 +469,7 @@ void tst_QMenu::overrideMenuAction()
 
     // On Mac and Windows CE, we need to create native key events to test menu
     // action activation, so skip this part of the test.
-#if !defined(Q_OS_DARWIN)
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WINCE)
     QAction *aQuit = new QAction("Quit", &w);
     aQuit->setShortcut(QKeySequence("Ctrl+X"));
     m->addAction(aQuit);
@@ -565,7 +559,7 @@ void tst_QMenu::widgetActionFocus()
     QMenu m;
     QListWidget *l = new QListWidget(&m);
     for (int i = 1; i<3 ; i++)
-        l->addItem(QStringLiteral("item" ) + QString::number(i));
+        l->addItem(QString("item%1").arg(i));
     QWidgetAction *wa = new QWidgetAction(&m);
     wa->setDefaultWidget(l);
     m.addAction(wa);
@@ -602,22 +596,12 @@ void tst_QMenu::widgetActionFocus()
     QCOMPARE(m.activeAction(), (QAction *)wa);
 }
 
-static QMenu *getTornOffMenu()
-{
-    foreach (QWidget *w, QApplication::allWidgets()) {
-        if (w->isVisible() && w->inherits("QTornOffMenu"))
-            return static_cast<QMenu *>(w);
-    }
-    return Q_NULLPTR;
-}
-
 void tst_QMenu::tearOff()
 {
     QWidget widget;
-    QScopedPointer<QMenu> menu(new QMenu(&widget));
+    QMenu *menu = new QMenu(&widget);
     QVERIFY(!menu->isTearOffEnabled()); //default value
     menu->setTearOffEnabled(true);
-    menu->setTitle(QLatin1String("Same &Menu"));
     menu->addAction("aaa");
     menu->addAction("bbb");
     QVERIFY(menu->isTearOffEnabled());
@@ -628,59 +612,24 @@ void tst_QMenu::tearOff()
     widget.activateWindow();
     QVERIFY(QTest::qWaitForWindowActive(&widget));
     menu->popup(widget.geometry().topRight() + QPoint(50, 0));
-    QVERIFY(QTest::qWaitForWindowActive(menu.data()));
+    QVERIFY(QTest::qWaitForWindowActive(menu));
     QVERIFY(!menu->isTearOffMenuVisible());
 
-    MenuMetrics mm(menu.data());
-    const int tearOffOffset = mm.fw + mm.vmargin + mm.tearOffHeight / 2;
-
-    QTest::mouseClick(menu.data(), Qt::LeftButton, 0, QPoint(10, tearOffOffset), 10);
+    QTest::mouseClick(menu, Qt::LeftButton, 0, QPoint(3, 3), 10);
     QTRY_VERIFY(menu->isTearOffMenuVisible());
-    QPointer<QMenu> torn = getTornOffMenu();
+    QPointer<QMenu> torn = 0;
+    foreach (QWidget *w, QApplication::allWidgets()) {
+        if (w->inherits("QTornOffMenu")) {
+            torn = static_cast<QMenu *>(w);
+            break;
+        }
+    }
     QVERIFY(torn);
     QVERIFY(torn->isVisible());
-
-    // Check menu title
-    const QString cleanTitle = QPlatformTheme::removeMnemonics(menu->title()).trimmed();
-    QCOMPARE(torn->windowTitle(), cleanTitle);
-
-    // Change menu title and check again
-    menu->setTitle(QLatin1String("Sample &Menu"));
-    const QString newCleanTitle = QPlatformTheme::removeMnemonics(menu->title()).trimmed();
-    QCOMPARE(torn->windowTitle(), newCleanTitle);
-
-    // Clear menu title and check again
-    menu->setTitle(QString());
-    QCOMPARE(torn->windowTitle(), QString());
 
     menu->hideTearOffMenu();
     QVERIFY(!menu->isTearOffMenuVisible());
     QVERIFY(!torn->isVisible());
-
-#ifndef QT_NO_CURSOR
-    // Test under-mouse positioning
-    menu->showTearOffMenu();
-    torn = getTornOffMenu();
-    QVERIFY(torn);
-    QVERIFY(torn->isVisible());
-    QVERIFY(menu->isTearOffMenuVisible());
-    // Some platforms include the window title bar in its geometry.
-    QTRY_COMPARE(torn->windowHandle()->position(), QCursor::pos());
-
-    menu->hideTearOffMenu();
-    QVERIFY(!menu->isTearOffMenuVisible());
-    QVERIFY(!torn->isVisible());
-
-    // Test custom positioning
-    const QPoint &pos = QCursor::pos() / 2 + QPoint(10, 10);
-    menu->showTearOffMenu(pos);
-    torn = getTornOffMenu();
-    QVERIFY(torn);
-    QVERIFY(torn->isVisible());
-    QVERIFY(menu->isTearOffMenuVisible());
-    // Some platforms include the window title bar in its geometry.
-    QTRY_COMPARE(torn->windowHandle()->position(), pos);
-#endif // QT_NO_CURSOR
 }
 
 void tst_QMenu::submenuTearOffDontClose()
@@ -789,8 +738,10 @@ void tst_QMenu::activeSubMenuPosition()
     QVERIFY(sub->pos() != QPoint(0,0));
     // well, it's enough to check the pos is not (0,0) but it's more safe
     // to check that submenu is to the right of the main menu too.
+#ifndef Q_OS_WINCE_WM
     QVERIFY(sub->pos().x() > main->pos().x());
     QCOMPARE(sub->activeAction(), subAction);
+#endif
 }
 
 // QTBUG-49588, QTBUG-48396: activeSubMenuPositionExec() is the same as
@@ -842,8 +793,10 @@ private:
 
 void tst_QMenu::activeSubMenuPositionExec()
 {
+#ifndef Q_OS_WINCE
     SubMenuPositionExecMenu menu;
     menu.exec(QGuiApplication::primaryScreen()->availableGeometry().center());
+#endif // !Q_OS_WINCE
 }
 
 void tst_QMenu::task242454_sizeHint()
@@ -899,7 +852,7 @@ void tst_QMenu::task250673_activeMultiColumnSubMenuPosition()
 
     uint i = 2;
     while (main.columnCount() < 2) {
-        main.addAction(QLatin1String("Item ") + QString::number(i));
+        main.addAction(QString("Item %1").arg(i));
         ++i;
         QVERIFY(i<1000);
     }
@@ -977,6 +930,7 @@ public:
 };
 
 // Mouse move related signals for Windows Mobile unavailable
+#ifndef Q_OS_WINCE
 void tst_QMenu::task258920_mouseBorder()
 {
     Menu258920 menu;
@@ -1005,6 +959,7 @@ void tst_QMenu::task258920_mouseBorder()
     QTRY_COMPARE(static_cast<QAction*>(0), menu.activeAction());
     QTRY_VERIFY(menu.painted);
 }
+#endif
 
 void tst_QMenu::setFixedWidth()
 {
@@ -1277,7 +1232,7 @@ public:
     MyMenu() : m_currentIndex(0)
     {
         for (int i = 0; i < 2; ++i)
-            dialogActions[i] = addAction(QLatin1String("dialog ") + QString::number(i), dialogs + i, SLOT(exec()));
+            dialogActions[i] = addAction( QString("dialog %1").arg(i), dialogs + i, SLOT(exec()));
     }
 
     void activateAction(int index)
@@ -1344,290 +1299,6 @@ void tst_QMenu::QTBUG_37933_ampersands()
     tst_qmenu_QTBUG_37933_ampersands();
 }
 #endif
-
-void tst_QMenu::QTBUG_56917_wideMenuSize()
-{
-    // menu shouldn't to take on full screen height when menu width is larger than screen width
-    QMenu menu;
-    QString longString;
-    longString.fill(QLatin1Char('Q'), 3000);
-    menu.addAction(longString);
-    QSize menuSizeHint = menu.sizeHint();
-    menu.popup(QPoint());
-    QTest::qWait(100);
-    QVERIFY(QTest::qWaitForWindowExposed(&menu));
-    QVERIFY(menu.isVisible());
-    QVERIFY(menu.height() <= menuSizeHint.height());
-}
-
-void tst_QMenu::QTBUG_56917_wideMenuScreenNumber()
-{
-    if (QApplication::styleHints()->showIsFullScreen())
-        QSKIP("The platform defaults to windows being fullscreen.");
-    // menu must appear on the same screen where show action is triggered
-    QString longString;
-    longString.fill(QLatin1Char('Q'), 3000);
-
-    for (int i = 0; i < QApplication::desktop()->screenCount(); i++) {
-        QMenu menu;
-        menu.addAction(longString);
-        menu.popup(QApplication::desktop()->screen(i)->geometry().center());
-        QTest::qWait(100);
-        QVERIFY(QTest::qWaitForWindowExposed(&menu));
-        QVERIFY(menu.isVisible());
-        QCOMPARE(QApplication::desktop()->screenNumber(&menu), i);
-    }
-}
-
-void tst_QMenu::QTBUG_56917_wideSubmenuScreenNumber()
-{
-    if (QApplication::styleHints()->showIsFullScreen())
-        QSKIP("The platform defaults to windows being fullscreen.");
-    // submenu must appear on the same screen where its parent menu is shown
-    QString longString;
-    longString.fill(QLatin1Char('Q'), 3000);
-
-    for (int i = 0; i < QApplication::desktop()->screenCount(); i++) {
-        QMenu menu;
-        QMenu submenu("Submenu");
-        submenu.addAction(longString);
-        QAction *action = menu.addMenu(&submenu);
-        menu.popup(QApplication::desktop()->screen(i)->geometry().center());
-        QVERIFY(QTest::qWaitForWindowExposed(&menu));
-        QVERIFY(menu.isVisible());
-        QTest::mouseClick(&menu, Qt::LeftButton, 0, menu.actionGeometry(action).center());
-        QTest::qWait(100);
-        QVERIFY(QTest::qWaitForWindowExposed(&submenu));
-        QVERIFY(submenu.isVisible());
-        QCOMPARE(QApplication::desktop()->screenNumber(&submenu), i);
-    }
-}
-
-void tst_QMenu::menuSize_Scrolling_data()
-{
-    QTest::addColumn<int>("numItems");
-    QTest::addColumn<int>("topMargin");
-    QTest::addColumn<int>("bottomMargin");
-    QTest::addColumn<int>("leftMargin");
-    QTest::addColumn<int>("rightMargin");
-    QTest::addColumn<int>("topPadding");
-    QTest::addColumn<int>("bottomPadding");
-    QTest::addColumn<int>("leftPadding");
-    QTest::addColumn<int>("rightPadding");
-    QTest::addColumn<int>("border");
-    QTest::addColumn<bool>("scrollable");
-    QTest::addColumn<bool>("tearOff");
-
-    // test data
-    // a single column and non-scrollable menu with contents margins + border
-    QTest::newRow("data0") << 5 << 2 << 2 << 2 << 2 << 0 << 0 << 0 << 0 << 2 << false << false;
-    // a single column and non-scrollable menu with paddings + border
-    QTest::newRow("data1") << 5 << 0 << 0 << 0 << 0 << 2 << 2 << 2 << 2 << 2 << false << false;
-    // a single column and non-scrollable menu with contents margins + paddings + border
-    QTest::newRow("data2") << 5 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << false << false;
-    // a single column and non-scrollable menu with contents margins + paddings + border + tear-off
-    QTest::newRow("data3") << 5 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << false << true;
-    // a multi-column menu with contents margins + border
-    QTest::newRow("data4") << 80 << 2 << 2 << 2 << 2 << 0 << 0 << 0 << 0 << 2 << false << false;
-    // a multi-column menu with paddings + border
-    QTest::newRow("data5") << 80 << 0  << 0 << 0 << 0 << 2 << 2 << 2 << 2 << 2 << false << false;
-    // a multi-column menu with contents margins + paddings + border
-    QTest::newRow("data6") << 80 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << false << false;
-    // a multi-column menu with contents margins + paddings + border + tear-off
-    QTest::newRow("data7") << 80 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << false << true;
-    // a scrollable menu with contents margins + border
-    QTest::newRow("data8") << 80 << 2 << 2 << 2 << 2 << 0 << 0 << 0 << 0 << 2 << true << false;
-    // a scrollable menu with paddings + border
-    QTest::newRow("data9") << 80 << 0 << 0 << 0 << 0 << 2 << 2 << 2 << 2 << 2 << true << false;
-    // a scrollable menu with contents margins + paddings + border
-    QTest::newRow("data10") << 80 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << true << false;
-    // a scrollable menu with contents margins + paddings + border + tear-off
-    QTest::newRow("data11") << 80 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << 2 << true << true;
-}
-
-void tst_QMenu::menuSize_Scrolling()
-{
-    class TestMenu : public QMenu
-    {
-    public:
-        struct ContentsMargins
-        {
-            ContentsMargins(int l, int t, int r, int b)
-                : left(l), top(t), right(r), bottom(b) {}
-            int left;
-            int top;
-            int right;
-            int bottom;
-        };
-
-        struct MenuPaddings
-        {
-            MenuPaddings(int l, int t, int r, int b)
-                : left(l), top(t), right(r), bottom(b) {}
-            int left;
-            int top;
-            int right;
-            int bottom;
-        };
-
-        TestMenu(int numItems, const ContentsMargins &margins, const MenuPaddings &paddings,
-                 int border, bool scrollable, bool tearOff)
-            : QMenu("Test Menu"),
-              m_numItems(numItems),
-              m_scrollable(scrollable),
-              m_tearOff(tearOff)
-        {
-            init(margins, paddings, border);
-        }
-
-        ~TestMenu() {}
-
-    private:
-        void showEvent(QShowEvent *e) Q_DECL_OVERRIDE
-        {
-            QVERIFY(actions().length() == m_numItems);
-
-            int hmargin = style()->pixelMetric(QStyle::PM_MenuHMargin, nullptr, this);
-            int fw = style()->pixelMetric(QStyle::PM_MenuPanelWidth, nullptr, this);
-            int leftMargin, topMargin, rightMargin, bottomMargin;
-            getContentsMargins(&leftMargin, &topMargin, &rightMargin, &bottomMargin);
-            QRect lastItem = actionGeometry(actions().at(actions().length() - 1));
-            QSize s = size();
-            QCOMPARE( s.width(), lastItem.right() + fw + hmargin + rightMargin + 1);
-            QMenu::showEvent(e);
-        }
-
-        void init(const ContentsMargins &margins, const MenuPaddings &paddings, int border)
-        {
-            setLayoutDirection(Qt::LeftToRight);
-
-            setTearOffEnabled(m_tearOff);
-            setContentsMargins(margins.left, margins.top, margins.right, margins.bottom);
-            QString cssStyle("QMenu {menu-scrollable: ");
-            cssStyle += (m_scrollable ? QString::number(1) : QString::number(0));
-            cssStyle += "; border: ";
-            cssStyle += QString::number(border);
-            cssStyle += "px solid black; padding: ";
-            cssStyle += QString::number(paddings.top);
-            cssStyle += "px ";
-            cssStyle += QString::number(paddings.right);
-            cssStyle += "px ";
-            cssStyle += QString::number(paddings.bottom);
-            cssStyle += "px ";
-            cssStyle += QString::number(paddings.left);
-            cssStyle += "px;}";
-            setStyleSheet(cssStyle);
-            for (int i = 1; i <= m_numItems; i++)
-                addAction("MenuItem " + QString::number(i));
-        }
-
-    private:
-        int m_numItems;
-        bool m_scrollable;
-        bool m_tearOff;
-    };
-
-    QFETCH(int, numItems);
-    QFETCH(int, topMargin);
-    QFETCH(int, bottomMargin);
-    QFETCH(int, leftMargin);
-    QFETCH(int, rightMargin);
-    QFETCH(int, topPadding);
-    QFETCH(int, bottomPadding);
-    QFETCH(int, leftPadding);
-    QFETCH(int, rightPadding);
-    QFETCH(int, border);
-    QFETCH(bool, scrollable);
-    QFETCH(bool, tearOff);
-
-    qApp->setAttribute(Qt::AA_DontUseNativeMenuBar);
-
-    TestMenu::ContentsMargins margins(leftMargin, topMargin, rightMargin, bottomMargin);
-    TestMenu::MenuPaddings paddings(leftPadding, topPadding, rightPadding, bottomPadding);
-    TestMenu menu(numItems, margins, paddings, border, scrollable, tearOff);
-    menu.popup(QPoint(0,0));
-    centerOnScreen(&menu);
-    QVERIFY(QTest::qWaitForWindowExposed(&menu));
-
-    QList<QAction *> actions = menu.actions();
-    QCOMPARE(actions.length(), numItems);
-
-    MenuMetrics mm(&menu);
-    QTest::keyClick(&menu, Qt::Key_Home);
-    QTRY_COMPARE(menu.actionGeometry(actions.first()).y(), mm.fw + mm.vmargin + topMargin + (tearOff ? mm.tearOffHeight : 0));
-    QCOMPARE(menu.actionGeometry(actions.first()).x(), mm.fw + mm.hmargin + leftMargin);
-
-    if (!scrollable)
-        return;
-
-    QTest::keyClick(&menu, Qt::Key_End);
-    QTRY_COMPARE(menu.actionGeometry(actions.last()).right(),
-                 menu.width() - mm.fw - mm.hmargin - leftMargin - 1);
-    QCOMPARE(menu.actionGeometry(actions.last()).bottom(),
-             menu.height() - mm.fw - mm.vmargin - bottomMargin - 1);
-}
-
-void tst_QMenu::tearOffMenuNotDisplayed()
-{
-    QWidget widget;
-    QScopedPointer<QMenu> menu(new QMenu(&widget));
-    menu->setTearOffEnabled(true);
-    QVERIFY(menu->isTearOffEnabled());
-
-    menu->setStyleSheet("QMenu { menu-scrollable: 1 }");
-    for (int i = 0; i < 80; i++)
-        menu->addAction(QString::number(i));
-
-    widget.resize(300, 200);
-    centerOnScreen(&widget);
-    widget.show();
-    widget.activateWindow();
-    QVERIFY(QTest::qWaitForWindowActive(&widget));
-    menu->popup(widget.geometry().topRight() + QPoint(50, 0));
-    QVERIFY(QTest::qWaitForWindowActive(menu.data()));
-    QVERIFY(!menu->isTearOffMenuVisible());
-
-    MenuMetrics mm(menu.data());
-    const int tearOffOffset = mm.fw + mm.vmargin + mm.tearOffHeight / 2;
-
-    QTest::mouseClick(menu.data(), Qt::LeftButton, 0, QPoint(10, tearOffOffset), 10);
-    QTRY_VERIFY(menu->isTearOffMenuVisible());
-    QPointer<QMenu> torn = getTornOffMenu();
-    QVERIFY(torn);
-    QVERIFY(torn->isVisible());
-    QVERIFY(torn->minimumWidth() >=0 && torn->minimumWidth() < QWIDGETSIZE_MAX);
-
-    menu->hideTearOffMenu();
-    QVERIFY(!menu->isTearOffMenuVisible());
-    QVERIFY(!torn->isVisible());
-}
-
-void tst_QMenu::QTBUG_61039_menu_shortcuts()
-{
-    QAction *actionKamen = new QAction("Action Kamen");
-    actionKamen->setShortcut(QKeySequence(QLatin1String("K")));
-
-    QAction *actionJoe = new QAction("Action Joe");
-    actionJoe->setShortcut(QKeySequence(QLatin1String("Ctrl+J")));
-
-    QMenu menu;
-    menu.addAction(actionKamen);
-    menu.addAction(actionJoe);
-    QVERIFY(!menu.platformMenu());
-
-    QWidget widget;
-    widget.addAction(menu.menuAction());
-    widget.show();
-    QVERIFY(QTest::qWaitForWindowActive(&widget));
-
-    QSignalSpy actionKamenSpy(actionKamen, &QAction::triggered);
-    QTest::keyClick(&widget, Qt::Key_K);
-    QTRY_COMPARE(actionKamenSpy.count(), 1);
-
-    QSignalSpy actionJoeSpy(actionJoe, &QAction::triggered);
-    QTest::keyClick(&widget, Qt::Key_J, Qt::ControlModifier);
-    QTRY_COMPARE(actionJoeSpy.count(), 1);
-}
 
 QTEST_MAIN(tst_QMenu)
 #include "tst_qmenu.moc"

@@ -14,12 +14,19 @@ namespace rx
 
 Buffer9::Buffer9(Renderer9 *renderer)
     : BufferD3D(renderer),
+      mRenderer(renderer),
       mSize(0)
 {}
 
 Buffer9::~Buffer9()
 {
     mSize = 0;
+}
+
+Buffer9 *Buffer9::makeBuffer9(BufferImpl *buffer)
+{
+    ASSERT(HAS_DYNAMIC_TYPE(Buffer9*, buffer));
+    return static_cast<Buffer9*>(buffer);
 }
 
 gl::Error Buffer9::setData(const void* data, size_t size, GLenum usage)
@@ -38,9 +45,13 @@ gl::Error Buffer9::setData(const void* data, size_t size, GLenum usage)
         memcpy(mMemory.data(), data, size);
     }
 
-    invalidateStaticData(D3D_BUFFER_INVALIDATE_WHOLE_CACHE);
+    invalidateStaticData();
 
-    updateD3DBufferUsage(usage);
+    if (usage == GL_STATIC_DRAW)
+    {
+        initializeStaticData();
+    }
+
     return gl::Error(GL_NO_ERROR);
 }
 
@@ -66,7 +77,7 @@ gl::Error Buffer9::setSubData(const void* data, size_t size, size_t offset)
         memcpy(mMemory.data() + offset, data, size);
     }
 
-    invalidateStaticData(D3D_BUFFER_INVALIDATE_WHOLE_CACHE);
+    invalidateStaticData();
 
     return gl::Error(GL_NO_ERROR);
 }
@@ -74,30 +85,24 @@ gl::Error Buffer9::setSubData(const void* data, size_t size, size_t offset)
 gl::Error Buffer9::copySubData(BufferImpl* source, GLintptr sourceOffset, GLintptr destOffset, GLsizeiptr size)
 {
     // Note: this method is currently unreachable
-    Buffer9* sourceBuffer = GetAs<Buffer9>(source);
+    Buffer9* sourceBuffer = makeBuffer9(source);
     ASSERT(sourceBuffer);
 
     memcpy(mMemory.data() + destOffset, sourceBuffer->mMemory.data() + sourceOffset, size);
 
-    invalidateStaticData(D3D_BUFFER_INVALIDATE_WHOLE_CACHE);
+    invalidateStaticData();
 
     return gl::Error(GL_NO_ERROR);
 }
 
 // We do not support buffer mapping in D3D9
-gl::Error Buffer9::map(GLenum access, GLvoid **mapPtr)
+gl::Error Buffer9::map(size_t offset, size_t length, GLbitfield access, GLvoid **mapPtr)
 {
     UNREACHABLE();
     return gl::Error(GL_INVALID_OPERATION);
 }
 
-gl::Error Buffer9::mapRange(size_t offset, size_t length, GLbitfield access, GLvoid **mapPtr)
-{
-    UNREACHABLE();
-    return gl::Error(GL_INVALID_OPERATION);
-}
-
-gl::Error Buffer9::unmap(GLboolean *result)
+gl::Error Buffer9::unmap()
 {
     UNREACHABLE();
     return gl::Error(GL_INVALID_OPERATION);

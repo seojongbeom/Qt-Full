@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,6 +46,7 @@
 #include <QtDesigner/QExtensionManager>
 
 #include <QtWidgets/QToolButton>
+#include <QtCore/QSignalMapper>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QAction>
 #include <QtWidgets/QDialogButtonBox>
@@ -229,8 +235,9 @@ void IconSelectorPrivate::slotUpdate()
         icon = m_iconCache->icon(m_icon);
 
     QMap<QPair<QIcon::Mode, QIcon::State>, PropertySheetPixmapValue> paths = m_icon.paths();
-    for (auto itIndex = m_stateToIndex.cbegin(), end = m_stateToIndex.cend(); itIndex != end; ++itIndex) {
-        const QPair<QIcon::Mode, QIcon::State> state = itIndex.key();
+    QMapIterator<QPair<QIcon::Mode, QIcon::State>, int> itIndex(m_stateToIndex);
+    while (itIndex.hasNext()) {
+        const QPair<QIcon::Mode, QIcon::State> state = itIndex.next().key();
         const PropertySheetPixmapValue pixmap = paths.value(state);
         const int index = itIndex.value();
 
@@ -460,7 +467,9 @@ IconSelector::IconSelector(QWidget *parent) :
 
     int index = 0;
     QStringList items;
-    for (const auto &item : qAsConst(d_ptr->m_stateToName)) {
+    QListIterator<QPair<QPair<QIcon::Mode, QIcon::State>, QString> > itName(d_ptr->m_stateToName);
+    while (itName.hasNext()) {
+        QPair<QPair<QIcon::Mode, QIcon::State>, QString> item = itName.next();
         const QPair<QIcon::Mode, QIcon::State> state = item.first;
         const QString name = item.second;
 
@@ -573,14 +582,14 @@ IconThemeEditor::IconThemeEditor(QWidget *parent, bool wantResetButton) :
 
     d->m_themeLineEdit = new QLineEdit;
     d->m_themeLineEdit->setValidator(new BlankSuppressingValidator(d->m_themeLineEdit));
-    connect(d->m_themeLineEdit, &QLineEdit::textChanged, this, &IconThemeEditor::slotChanged);
-    connect(d->m_themeLineEdit, &QLineEdit::textEdited, this, &IconThemeEditor::edited);
+    connect(d->m_themeLineEdit, SIGNAL(textChanged(QString)), this, SLOT(slotChanged(QString)));
+    connect(d->m_themeLineEdit, SIGNAL(textEdited(QString)), this, SIGNAL(edited(QString)));
     mainHLayout->addWidget(d->m_themeLineEdit);
 
     if (wantResetButton) {
         QToolButton *themeResetButton = new QToolButton;
         themeResetButton->setIcon(createIconSet(QStringLiteral("resetproperty.png")));
-        connect(themeResetButton, &QAbstractButton::clicked, this, &IconThemeEditor::reset);
+        connect(themeResetButton, SIGNAL(clicked()), this, SLOT(reset()));
         mainHLayout->addWidget(themeResetButton);
     }
 

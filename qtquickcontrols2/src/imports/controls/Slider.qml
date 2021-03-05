@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,39 +34,37 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.Slider {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                           (handle ? handle.implicitWidth : 0) + leftPadding + rightPadding)
+                            Math.max(track ? track.implicitWidth : 0,
+                                     handle ? handle.implicitWidth : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                            (handle ? handle.implicitHeight : 0) + topPadding + bottomPadding)
+                             Math.max(track ? track.implicitHeight : 0,
+                                      handle ? handle.implicitHeight : 0) + topPadding + bottomPadding)
 
     padding: 6
 
+    //! [handle]
     handle: Rectangle {
         x: control.leftPadding + (horizontal ? control.visualPosition * (control.availableWidth - width) : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : control.visualPosition * (control.availableHeight - height))
         implicitWidth: 28
         implicitHeight: 28
         radius: width / 2
-        color: control.enabled ? (control.pressed
-            ? (control.visualFocus ? Default.focusPressedColor : Default.indicatorPressedColor)
-            : (control.visualFocus ? Default.focusLightColor : Default.backgroundColor)) : Default.indicatorDisabledColor
-        border.width: control.visualFocus ? 2 : 1
-        border.color: control.enabled ? (control.visualFocus
-            ? Default.focusColor
-            : (control.pressed ? Default.indicatorFramePressedColor : Default.indicatorFrameColor)) : Default.indicatorFrameDisabledColor
+        border.color: "#353637"
+        color: control.pressed ? "#bdbebf" : "#f6f6f6"
 
         readonly property bool horizontal: control.orientation === Qt.Horizontal
     }
+    //! [handle]
 
-    background: Rectangle {
+    //! [track]
+    track: Rectangle {
         x: control.leftPadding + (horizontal ? 0 : (control.availableWidth - width) / 2)
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : 0)
         implicitWidth: horizontal ? 200 : 6
@@ -74,9 +72,11 @@ T.Slider {
         width: horizontal ? control.availableWidth : implicitWidth
         height: horizontal ? implicitHeight : control.availableHeight
         radius: 3
-        color: Default.buttonColor
+        border.color: "#353637"
+        color: "#ffffff"
         scale: horizontal && control.mirrored ? -1 : 1
 
         readonly property bool horizontal: control.orientation === Qt.Horizontal
     }
+    //! [track]
 }

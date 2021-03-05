@@ -46,9 +46,9 @@ const char* getBasicString(TBasicType t)
 }
 
 TType::TType(const TPublicType &p)
-    : type(p.type), precision(p.precision), qualifier(p.qualifier), invariant(p.invariant),
-      layoutQualifier(p.layoutQualifier), primarySize(p.primarySize), secondarySize(p.secondarySize),
-      array(p.array), arraySize(p.arraySize), interfaceBlock(0), structure(0)
+    : type(p.type), precision(p.precision), qualifier(p.qualifier), layoutQualifier(p.layoutQualifier),
+      primarySize(p.primarySize), secondarySize(p.secondarySize), array(p.array), arraySize(p.arraySize),
+      interfaceBlock(0), structure(0)
 {
     if (p.userDef)
         structure = p.userDef->getStruct();
@@ -57,27 +57,6 @@ TType::TType(const TPublicType &p)
 bool TStructure::equals(const TStructure &other) const
 {
     return (uniqueId() == other.uniqueId());
-}
-
-TString TType::getCompleteString() const
-{
-    TStringStream stream;
-
-    if (invariant)
-        stream << "invariant ";
-    if (qualifier != EvqTemporary && qualifier != EvqGlobal)
-        stream << getQualifierString() << " ";
-    if (precision != EbpUndefined)
-        stream << getPrecisionString() << " ";
-    if (array)
-        stream << "array[" << getArraySize() << "] of ";
-    if (isMatrix())
-        stream << getCols() << "X" << getRows() << " matrix of ";
-    else if (isVector())
-        stream << getNominalSize() << "-component vector of ";
-
-    stream << getBasicString();
-    return stream.str();
 }
 
 //
@@ -163,8 +142,7 @@ TString TType::buildMangledName() const
         mangledName += interfaceBlock->mangledName();
         break;
       default:
-        // EbtVoid, EbtAddress and non types
-        break;
+        UNREACHABLE();
     }
 
     if (isMatrix())
@@ -222,17 +200,6 @@ bool TStructure::containsArrays() const
     return false;
 }
 
-bool TStructure::containsType(TBasicType type) const
-{
-    for (size_t i = 0; i < mFields->size(); ++i)
-    {
-        const TType *fieldType = (*mFields)[i]->type();
-        if (fieldType->getBasicType() == type || fieldType->isStructureContainingType(type))
-            return true;
-    }
-    return false;
-}
-
 bool TStructure::containsSamplers() const
 {
     for (size_t i = 0; i < mFields->size(); ++i)
@@ -244,9 +211,9 @@ bool TStructure::containsSamplers() const
     return false;
 }
 
-TString TFieldListCollection::buildMangledName(const TString &mangledNamePrefix) const
+TString TFieldListCollection::buildMangledName() const
 {
-    TString mangledName(mangledNamePrefix);
+    TString mangledName(mangledNamePrefix());
     mangledName += *mName;
     for (size_t i = 0; i < mFields->size(); ++i)
     {

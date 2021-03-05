@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,16 +50,16 @@
 
 QT_BEGIN_NAMESPACE
 
-QQuickRangeModel1Private::QQuickRangeModel1Private(QQuickRangeModel1 *qq)
+QQuickRangeModelPrivate::QQuickRangeModelPrivate(QQuickRangeModel *qq)
     : q_ptr(qq)
 {
 }
 
-QQuickRangeModel1Private::~QQuickRangeModel1Private()
+QQuickRangeModelPrivate::~QQuickRangeModelPrivate()
 {
 }
 
-void QQuickRangeModel1Private::init()
+void QQuickRangeModelPrivate::init()
 {
     minimum = 0;
     maximum = 99;
@@ -84,7 +81,7 @@ void QQuickRangeModel1Private::init()
     and \a position that is passed as parameter.
 */
 
-qreal QQuickRangeModel1Private::publicPosition(qreal position) const
+qreal QQuickRangeModelPrivate::publicPosition(qreal position) const
 {
     // Calculate the equivalent stepSize for the position property.
     const qreal min = effectivePosAtMin();
@@ -125,7 +122,7 @@ qreal QQuickRangeModel1Private::publicPosition(qreal position) const
     and \a value that is passed as parameter.
 */
 
-qreal QQuickRangeModel1Private::publicValue(qreal value) const
+qreal QQuickRangeModelPrivate::publicValue(qreal value) const
 {
     // It is important to do value-within-range check this
     // late (as opposed to during setPosition()). The reason is
@@ -153,9 +150,9 @@ qreal QQuickRangeModel1Private::publicValue(qreal value) const
     has changed.
 */
 
-void QQuickRangeModel1Private::emitValueAndPositionIfChanged(const qreal oldValue, const qreal oldPosition)
+void QQuickRangeModelPrivate::emitValueAndPositionIfChanged(const qreal oldValue, const qreal oldPosition)
 {
-    Q_Q(QQuickRangeModel1);
+    Q_Q(QQuickRangeModel);
 
     // Effective value and position might have changed even in cases when e.g. d->value is
     // unchanged. This will be the case when operating with values outside range:
@@ -177,10 +174,10 @@ void QQuickRangeModel1Private::emitValueAndPositionIfChanged(const qreal oldValu
     Constructs a QQuickRangeModel with \a parent
 */
 
-QQuickRangeModel1::QQuickRangeModel1(QObject *parent)
-    : QObject(parent), d_ptr(new QQuickRangeModel1Private(this))
+QQuickRangeModel::QQuickRangeModel(QObject *parent)
+    : QObject(parent), d_ptr(new QQuickRangeModelPrivate(this))
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
     d->init();
 }
 
@@ -189,10 +186,10 @@ QQuickRangeModel1::QQuickRangeModel1(QObject *parent)
     Constructs a QQuickRangeModel with private class pointer \a dd and \a parent
 */
 
-QQuickRangeModel1::QQuickRangeModel1(QQuickRangeModel1Private &dd, QObject *parent)
+QQuickRangeModel::QQuickRangeModel(QQuickRangeModelPrivate &dd, QObject *parent)
     : QObject(parent), d_ptr(&dd)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
     d->init();
 }
 
@@ -200,7 +197,7 @@ QQuickRangeModel1::QQuickRangeModel1(QQuickRangeModel1Private &dd, QObject *pare
     Destroys the QQuickRangeModel
 */
 
-QQuickRangeModel1::~QQuickRangeModel1()
+QQuickRangeModel::~QQuickRangeModel()
 {
     delete d_ptr;
     d_ptr = 0;
@@ -212,9 +209,9 @@ QQuickRangeModel1::~QQuickRangeModel1()
     Such range is represented by \l positionAtMinimum and \l positionAtMaximum
 */
 
-void QQuickRangeModel1::setPositionRange(qreal min, qreal max)
+void QQuickRangeModel::setPositionRange(qreal min, qreal max)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
 
     bool emitPosAtMinChanged = !qFuzzyCompare(min, d->posatmin);
     bool emitPosAtMaxChanged = !qFuzzyCompare(max, d->posatmax);
@@ -247,9 +244,9 @@ void QQuickRangeModel1::setPositionRange(qreal min, qreal max)
     Such range is represented by \l minimumValue and \l maximumValue
 */
 
-void QQuickRangeModel1::setRange(qreal min, qreal max)
+void QQuickRangeModel::setRange(qreal min, qreal max)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
 
     bool emitMinimumChanged = !qFuzzyCompare(min, d->minimum);
     bool emitMaximumChanged = !qFuzzyCompare(max, d->maximum);
@@ -275,56 +272,56 @@ void QQuickRangeModel1::setRange(qreal min, qreal max)
 }
 
 /*!
-    \property QQuickRangeModel1::minimumValue
+    \property QQuickRangeModel::minimumValue
     \brief the minimum value that \l value can assume
 
     This property's default value is 0
 */
 
-void QQuickRangeModel1::setMinimum(qreal min)
+void QQuickRangeModel::setMinimum(qreal min)
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     setRange(min, d->maximum);
 }
 
-qreal QQuickRangeModel1::minimum() const
+qreal QQuickRangeModel::minimum() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     return d->minimum;
 }
 
 /*!
-    \property QQuickRangeModel1::maximumValue
+    \property QQuickRangeModel::maximumValue
     \brief the maximum value that \l value can assume
 
     This property's default value is 99
 */
 
-void QQuickRangeModel1::setMaximum(qreal max)
+void QQuickRangeModel::setMaximum(qreal max)
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     // if the new maximum value is smaller than
     // minimum, update minimum too
     setRange(qMin(d->minimum, max), max);
 }
 
-qreal QQuickRangeModel1::maximum() const
+qreal QQuickRangeModel::maximum() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     return d->maximum;
 }
 
 /*!
-    \property QQuickRangeModel1::stepSize
+    \property QQuickRangeModel::stepSize
     \brief the value that is added to the \l value and \l position property
 
     Example: If a user sets a range of [0,100] and stepSize
     to 30, the valid values that are going to be seen externally would be: 0, 30, 60, 90, 100.
 */
 
-void QQuickRangeModel1::setStepSize(qreal stepSize)
+void QQuickRangeModel::setStepSize(qreal stepSize)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
 
     stepSize = qMax(qreal(0.0), stepSize);
     if (qFuzzyCompare(stepSize, d->stepSize))
@@ -338,9 +335,9 @@ void QQuickRangeModel1::setStepSize(qreal stepSize)
     d->emitValueAndPositionIfChanged(oldValue, oldPosition);
 }
 
-qreal QQuickRangeModel1::stepSize() const
+qreal QQuickRangeModel::stepSize() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     return d->stepSize;
 }
 
@@ -350,21 +347,21 @@ qreal QQuickRangeModel1::stepSize() const
     Such calculation is based on the parameter \a value (which is valid externally).
 */
 
-qreal QQuickRangeModel1::positionForValue(qreal value) const
+qreal QQuickRangeModel::positionForValue(qreal value) const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
 
     const qreal unconstrainedPosition = d->equivalentPosition(value);
     return d->publicPosition(unconstrainedPosition);
 }
 
-void QQuickRangeModel1::classBegin()
+void QQuickRangeModel::classBegin()
 {
 }
 
-void QQuickRangeModel1::componentComplete()
+void QQuickRangeModel::componentComplete()
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
     d->isComplete = true;
     emit minimumChanged(minimum());
     emit maximumChanged(maximum());
@@ -375,7 +372,7 @@ void QQuickRangeModel1::componentComplete()
 }
 
 /*!
-    \property QQuickRangeModel1::position
+    \property QQuickRangeModel::position
     \brief the current position of the model
 
     Represents a valid external position, based on the \l positionAtMinimum,
@@ -384,18 +381,18 @@ void QQuickRangeModel1::componentComplete()
     since it can become valid if the user changes the position range later.
 */
 
-qreal QQuickRangeModel1::position() const
+qreal QQuickRangeModel::position() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
 
     // Return the internal position but observe boundaries and
     // stepSize restrictions.
     return d->publicPosition(d->pos);
 }
 
-void QQuickRangeModel1::setPosition(qreal newPosition)
+void QQuickRangeModel::setPosition(qreal newPosition)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
 
     if (qFuzzyCompare(newPosition, d->pos))
         return;
@@ -410,40 +407,40 @@ void QQuickRangeModel1::setPosition(qreal newPosition)
 }
 
 /*!
-    \property QQuickRangeModel1::positionAtMinimum
+    \property QQuickRangeModel::positionAtMinimum
     \brief the minimum value that \l position can assume
 
     This property's default value is 0
 */
 
-void QQuickRangeModel1::setPositionAtMinimum(qreal min)
+void QQuickRangeModel::setPositionAtMinimum(qreal min)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
     setPositionRange(min, d->posatmax);
 }
 
-qreal QQuickRangeModel1::positionAtMinimum() const
+qreal QQuickRangeModel::positionAtMinimum() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     return d->posatmin;
 }
 
 /*!
-    \property QQuickRangeModel1::positionAtMaximum
+    \property QQuickRangeModel::positionAtMaximum
     \brief the maximum value that \l position can assume
 
     This property's default value is 0
 */
 
-void QQuickRangeModel1::setPositionAtMaximum(qreal max)
+void QQuickRangeModel::setPositionAtMaximum(qreal max)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
     setPositionRange(d->posatmin, max);
 }
 
-qreal QQuickRangeModel1::positionAtMaximum() const
+qreal QQuickRangeModel::positionAtMaximum() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     return d->posatmax;
 }
 
@@ -453,16 +450,16 @@ qreal QQuickRangeModel1::positionAtMaximum() const
     Such calculation is based on the parameter \a position (which is valid externally).
 */
 
-qreal QQuickRangeModel1::valueForPosition(qreal position) const
+qreal QQuickRangeModel::valueForPosition(qreal position) const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
 
     const qreal unconstrainedValue = d->equivalentValue(position);
     return d->publicValue(unconstrainedValue);
 }
 
 /*!
-    \property QQuickRangeModel1::value
+    \property QQuickRangeModel::value
     \brief the current value of the model
 
     Represents a valid external value, based on the \l minimumValue,
@@ -471,18 +468,18 @@ qreal QQuickRangeModel1::valueForPosition(qreal position) const
     since it can become valid if the user changes the range later.
 */
 
-qreal QQuickRangeModel1::value() const
+qreal QQuickRangeModel::value() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
 
     // Return internal value but observe boundaries and
     // stepSize restrictions
     return d->publicValue(d->value);
 }
 
-void QQuickRangeModel1::setValue(qreal newValue)
+void QQuickRangeModel::setValue(qreal newValue)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
 
     if (qFuzzyCompare(newValue, d->value))
         return;
@@ -497,7 +494,7 @@ void QQuickRangeModel1::setValue(qreal newValue)
 }
 
 /*!
-    \property QQuickRangeModel1::inverted
+    \property QQuickRangeModel::inverted
     \brief the model is inverted or not
 
     The model can be represented with an inverted behavior, e.g. when \l value assumes
@@ -505,9 +502,9 @@ void QQuickRangeModel1::setValue(qreal newValue)
     minimum (represented by \l positionAtMinimum).
 */
 
-void QQuickRangeModel1::setInverted(bool inverted)
+void QQuickRangeModel::setInverted(bool inverted)
 {
-    Q_D(QQuickRangeModel1);
+    Q_D(QQuickRangeModel);
     if (inverted == d->inverted)
         return;
 
@@ -518,9 +515,9 @@ void QQuickRangeModel1::setInverted(bool inverted)
     setPosition(d->equivalentPosition(d->value));
 }
 
-bool QQuickRangeModel1::inverted() const
+bool QQuickRangeModel::inverted() const
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     return d->inverted;
 }
 
@@ -528,9 +525,9 @@ bool QQuickRangeModel1::inverted() const
     Sets the \l value to \l minimumValue.
 */
 
-void QQuickRangeModel1::toMinimum()
+void QQuickRangeModel::toMinimum()
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     setValue(d->minimum);
 }
 
@@ -538,24 +535,24 @@ void QQuickRangeModel1::toMinimum()
     Sets the \l value to \l maximumValue.
 */
 
-void QQuickRangeModel1::toMaximum()
+void QQuickRangeModel::toMaximum()
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     setValue(d->maximum);
 }
 
-void QQuickRangeModel1::increaseSingleStep()
+void QQuickRangeModel::increaseSingleStep()
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     if (qFuzzyIsNull(d->stepSize))
         setValue(value() + (d->maximum - d->minimum)/10.0);
     else
         setValue(value() + d->stepSize);
 }
 
-void QQuickRangeModel1::decreaseSingleStep()
+void QQuickRangeModel::decreaseSingleStep()
 {
-    Q_D(const QQuickRangeModel1);
+    Q_D(const QQuickRangeModel);
     if (qFuzzyIsNull(d->stepSize))
         setValue(value() - (d->maximum - d->minimum)/10.0);
     else

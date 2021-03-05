@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,6 +46,7 @@
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTextStream>
+#include <QFutureSynchronizer>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <QtTest/QtTest>
@@ -72,12 +78,12 @@ static inline QString testSuiteWarning()
     str << "\nCannot find the shared-mime-info test suite\nstarting from: "
         << QDir::toNativeSeparators(QDir::currentPath()) << "\n"
            "cd " << QDir::toNativeSeparators(QStringLiteral("tests/auto/corelib/mimetypes/qmimedatabase")) << "\n"
-           "wget http://cgit.freedesktop.org/xdg/shared-mime-info/snapshot/Release-1-8.zip\n"
-           "unzip Release-1-8.zip\n";
+           "wget http://cgit.freedesktop.org/xdg/shared-mime-info/snapshot/Release-1-0.zip\n"
+           "unzip Release-1-0.zip\n";
 #ifdef Q_OS_WIN
-    str << "mkdir testfiles\nxcopy /s Release-1-8 s-m-i\n";
+    str << "mkdir testfiles\nxcopy /s Release-1-0\\tests testfiles\n";
 #else
-    str << "ln -s Release-1-8 s-m-i\n";
+    str << "ln -s Release-1-0/tests testfiles\n";
 #endif
     return result;
 }
@@ -115,7 +121,7 @@ Q_CONSTRUCTOR_FUNCTION(initializeLang)
 
 static QString seedAndTemplate()
 {
-    qsrand(QDateTime::currentSecsSinceEpoch());
+    qsrand(QDateTime::currentDateTimeUtc().toTime_t());
     return QDir::tempPath() + "/tst_qmimedatabase-XXXXXX";
 }
 
@@ -154,7 +160,7 @@ void tst_QMimeDatabase::initTestCase()
     QVERIFY2(copyResourceFile(xmlFileName, xmlTargetFileName, &errorMessage), qPrintable(errorMessage));
 #endif
 
-    m_testSuite = QFINDTESTDATA("s-m-i/tests");
+    m_testSuite = QFINDTESTDATA("testfiles");
     if (m_testSuite.isEmpty())
         qWarning("%s", qPrintable(testSuiteWarning()));
 
@@ -307,7 +313,6 @@ void tst_QMimeDatabase::mimeTypesForFileName_data()
     QTest::newRow("txtfoobar, 0 hit") << "foo.foobar" << QStringList();
     QTest::newRow("m, 2 hits") << "foo.m" << (QStringList() << "text/x-matlab" << "text/x-objcsrc");
     QTest::newRow("sub, 3 hits") << "foo.sub" << (QStringList() << "text/x-microdvd" << "text/x-mpsub" << "text/x-subviewer");
-    QTest::newRow("non_ascii") << QString::fromUtf8("AİİA.pdf") << (QStringList() << "application/pdf");
 }
 
 void tst_QMimeDatabase::mimeTypesForFileName()
@@ -438,7 +443,7 @@ void tst_QMimeDatabase::icons()
     QMimeType directory = db.mimeTypeForFile(QString::fromLatin1("/"));
     QCOMPARE(directory.name(), QString::fromLatin1("inode/directory"));
     QCOMPARE(directory.iconName(), QString::fromLatin1("inode-directory"));
-    QCOMPARE(directory.genericIconName(), QString::fromLatin1("folder"));
+    QCOMPARE(directory.genericIconName(), QString::fromLatin1("inode-x-generic"));
 
     QMimeType pub = db.mimeTypeForFile(QString::fromLatin1("foo.epub"), QMimeDatabase::MatchExtension);
     QCOMPARE(pub.name(), QString::fromLatin1("application/epub+zip"));
@@ -510,7 +515,7 @@ void tst_QMimeDatabase::mimeTypeForFileWithContent()
         mime = db.mimeTypeForFile(txtTempFileName);
         QCOMPARE(mime.name(), QString::fromLatin1("text/plain"));
         mime = db.mimeTypeForFile(txtTempFileName, QMimeDatabase::MatchContent);
-        QCOMPARE(mime.name(), QString::fromLatin1("application/smil+xml"));
+        QCOMPARE(mime.name(), QString::fromLatin1("application/smil"));
     }
 
     // Test what happens with an incorrect path
@@ -607,7 +612,7 @@ void tst_QMimeDatabase::allMimeTypes()
     QVERIFY(!lst.isEmpty());
 
     // Hardcoding this is the only way to check both providers find the same number of mimetypes.
-    QCOMPARE(lst.count(), 749);
+    QCOMPARE(lst.count(), 661);
 
     foreach (const QMimeType &mime, lst) {
         const QString name = mime.name();
@@ -802,7 +807,7 @@ void tst_QMimeDatabase::findByData()
         // Expected to fail
         QVERIFY2(resultMimeTypeName != mimeTypeName, qPrintable(resultMimeTypeName));
     } else {
-        QCOMPARE(resultMimeTypeName.toLower(), mimeTypeName.toLower());
+        QCOMPARE(resultMimeTypeName, mimeTypeName);
     }
 
     QFileInfo info(filePath);
@@ -833,7 +838,7 @@ void tst_QMimeDatabase::findByFile()
         // Expected to fail
         QVERIFY2(resultMimeTypeName != mimeTypeName, qPrintable(resultMimeTypeName));
     } else {
-        QCOMPARE(resultMimeTypeName.toLower(), mimeTypeName.toLower());
+        QCOMPARE(resultMimeTypeName, mimeTypeName);
     }
 
     // Test QFileInfo overload
@@ -844,21 +849,21 @@ void tst_QMimeDatabase::findByFile()
 
 void tst_QMimeDatabase::fromThreads()
 {
-    QThreadPool tp;
-    tp.setMaxThreadCount(20);
+    QThreadPool::globalInstance()->setMaxThreadCount(20);
     // Note that data-based tests cannot be used here (QTest::fetchData asserts).
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::mimeTypeForName);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::aliases);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::allMimeTypes);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::icons);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::inheritance);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::knownSuffix);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::mimeTypeForFileWithContent);
-    QtConcurrent::run(&tp, this, &tst_QMimeDatabase::allMimeTypes); // a second time
-    QVERIFY(tp.waitForDone(60000));
+    QFutureSynchronizer<void> sync;
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::mimeTypeForName));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::aliases));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::allMimeTypes));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::icons));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::inheritance));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::knownSuffix));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::mimeTypeForFileWithContent));
+    sync.addFuture(QtConcurrent::run(this, &tst_QMimeDatabase::allMimeTypes)); // a second time
+    // sync dtor blocks waiting for finished
 }
 
-#if QT_CONFIG(process)
+#ifndef QT_NO_PROCESS
 
 enum {
     UpdateMimeDatabaseTimeout = 4 * 60 * 1000 // 4min
@@ -901,7 +906,7 @@ static bool waitAndRunUpdateMimeDatabase(const QString &path)
     }
     return runUpdateMimeDatabase(path);
 }
-#endif // QT_CONFIG(process)
+#endif // !QT_NO_PROCESS
 
 static void checkHasMimeType(const QString &mimeType)
 {
@@ -936,7 +941,7 @@ void tst_QMimeDatabase::installNewGlobalMimeType()
     QSKIP("This test requires XDG_DATA_DIRS");
 #endif
 
-#if !QT_CONFIG(process)
+#ifdef QT_NO_PROCESS
     QSKIP("This test requires QProcess support");
 #else
     qmime_secondsBetweenChecks = 0;
@@ -989,12 +994,12 @@ void tst_QMimeDatabase::installNewGlobalMimeType()
     QCOMPARE(db.mimeTypeForFile(QLatin1String("foo.ymu"), QMimeDatabase::MatchExtension).name(),
              QString::fromLatin1("application/octet-stream"));
     QVERIFY(!db.mimeTypeForName(QLatin1String("text/x-suse-ymp")).isValid());
-#endif // QT_CONFIG(process)
+#endif // !QT_NO_PROCESS
 }
 
 void tst_QMimeDatabase::installNewLocalMimeType()
 {
-#if !QT_CONFIG(process)
+#ifdef QT_NO_PROCESS
     QSKIP("This test requires QProcess support");
 #else
     qmime_secondsBetweenChecks = 0;
@@ -1057,7 +1062,7 @@ void tst_QMimeDatabase::installNewLocalMimeType()
     QCOMPARE(db.mimeTypeForFile(QLatin1String("foo.ymu"), QMimeDatabase::MatchExtension).name(),
              QString::fromLatin1("application/octet-stream"));
     QVERIFY(!db.mimeTypeForName(QLatin1String("text/x-suse-ymp")).isValid());
-#endif // QT_CONFIG(process)
+#endif
 }
 
 QTEST_GUILESS_MAIN(tst_QMimeDatabase)

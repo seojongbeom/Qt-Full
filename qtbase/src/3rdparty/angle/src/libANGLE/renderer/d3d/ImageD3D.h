@@ -60,11 +60,10 @@ class ImageD3D : angle::NonCopyable
     virtual gl::Error setManagedSurface2DArray(TextureStorage *storage, int layer, int level) { return gl::Error(GL_NO_ERROR); };
     virtual gl::Error copyToStorage(TextureStorage *storage, const gl::ImageIndex &index, const gl::Box &region) = 0;
 
-    virtual gl::Error copyFromTexStorage(const gl::ImageIndex &imageIndex,
-                                         TextureStorage *source) = 0;
-    virtual gl::Error copyFromFramebuffer(const gl::Offset &destOffset,
-                                          const gl::Rectangle &sourceArea,
-                                          const gl::Framebuffer *source) = 0;
+    virtual gl::Error copy(const gl::Offset &destOffset, const gl::Box &sourceArea,
+                           const gl::ImageIndex &sourceIndex, TextureStorage *source) = 0;
+
+    gl::Error copy(const gl::Offset &destOffset, const gl::Rectangle &sourceArea, const gl::Framebuffer *source);
 
   protected:
     GLsizei mWidth;
@@ -75,6 +74,9 @@ class ImageD3D : angle::NonCopyable
     GLenum mTarget;
 
     bool mDirty;
+
+  private:
+    virtual gl::Error copy(const gl::Offset &destOffset, const gl::Rectangle &sourceArea, RenderTargetD3D *source) = 0;
 };
 
 }

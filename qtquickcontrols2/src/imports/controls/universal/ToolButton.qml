@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,45 +34,46 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.ToolButton {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            label ? label.implicitWidth + leftPadding + rightPadding : 0)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + contentItem.baselineOffset
+                             label ? label.implicitHeight + topPadding + bottomPadding : 0)
+    baselineOffset: label ? label.y + label.baselineOffset : 0
 
     padding: 6
 
     property bool useSystemFocusVisuals: true
 
-    contentItem: Text {
+    //! [label]
+    label: Text {
+        x: control.leftPadding
+        y: control.topPadding
+        width: control.availableWidth
+        height: control.availableHeight
+
         text: control.text
         font: control.font
+        color: control.enabled ? control.Universal.baseHighColor : control.Universal.baseLowColor
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-
-        opacity: enabled ? 1.0 : 0.2
-        color: control.Universal.foreground
     }
+    //! [label]
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 68
         implicitHeight: 48 // AppBarThemeCompactHeight
 
-        color: control.enabled && (control.highlighted || control.checked) ? control.Universal.accent : "transparent"
-
-        Rectangle {
-            width: parent.width
-            height: parent.height
-            visible: control.down || control.hovered
-            color: control.down ? control.Universal.listMediumColor : control.Universal.listLowColor
-        }
+        color: control.pressed ? control.Universal.listMediumColor :
+               control.enabled && (control.highlighted || control.checked) ? control.Universal.accent : "transparent"
     }
+    //! [background]
 }

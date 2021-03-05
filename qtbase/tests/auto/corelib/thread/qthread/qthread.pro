@@ -1,7 +1,5 @@
-CONFIG += testcase
+CONFIG += testcase parallel_test
 TARGET = tst_qthread
 QT = core testlib
 SOURCES = tst_qthread.cpp
-
-INCLUDEPATH += ../../../../shared/
-HEADERS += ../../../../shared/emulationdetector.h
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

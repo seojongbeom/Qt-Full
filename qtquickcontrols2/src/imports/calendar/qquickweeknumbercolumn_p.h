@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Labs Calendar module of the Qt Toolkit.
@@ -48,7 +48,7 @@
 // We mean it.
 //
 
-#include <QtQuickTemplates2/private/qquickcontrol_p.h>
+#include <QtLabsTemplates/private/qquickcontrol_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -64,7 +64,7 @@ class QQuickWeekNumberColumn : public QQuickControl
     Q_PROPERTY(QQmlComponent *delegate READ delegate WRITE setDelegate NOTIFY delegateChanged FINAL)
 
 public:
-    explicit QQuickWeekNumberColumn(QQuickItem *parent = nullptr);
+    explicit QQuickWeekNumberColumn(QQuickItem *parent = Q_NULLPTR);
 
     int month() const;
     void setMonth(int month);
@@ -85,10 +85,10 @@ Q_SIGNALS:
     void delegateChanged();
 
 protected:
-    void componentComplete() override;
-    void geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry) override;
-    void localeChange(const QLocale &newLocale, const QLocale &oldLocale) override;
-    void paddingChange(const QMarginsF &newPadding, const QMarginsF &oldPadding) override;
+    void componentComplete() Q_DECL_OVERRIDE;
+    void geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry) Q_DECL_OVERRIDE;
+    void localeChange(const QLocale &newLocale, const QLocale &oldLocale) Q_DECL_OVERRIDE;
+    void paddingChange(const QMarginsF &newPadding, const QMarginsF &oldPadding) Q_DECL_OVERRIDE;
 
 private:
     Q_DISABLE_COPY(QQuickWeekNumberColumn)

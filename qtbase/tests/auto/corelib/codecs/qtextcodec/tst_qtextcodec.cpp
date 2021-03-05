@@ -1,27 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -33,9 +37,7 @@
 #include <qtextcodec.h>
 #include <qfile.h>
 #include <time.h>
-#if QT_CONFIG(process)
-# include <qprocess.h>
-#endif
+#include <qprocess.h>
 #include <QThreadPool>
 
 class tst_QTextCodec : public QObject
@@ -154,7 +156,7 @@ void tst_QTextCodec::codecForName()
 
     QTextCodec *codec = QTextCodec::codecForName(hint.toLatin1());
     if (actualCodecName.isEmpty()) {
-        QVERIFY(!codec);
+        QVERIFY(codec == 0);
     } else {
         QVERIFY(codec != 0);
         QCOMPARE(QString(codec->name()), actualCodecName);
@@ -263,7 +265,7 @@ void tst_QTextCodec::fromUnicode()
         array is correct (no off by one, no trailing '\0').
     */
     QByteArray result = codec->fromUnicode(QString("abc"));
-    if (result.startsWith('a')) {
+    if (result.startsWith("a")) {
         QCOMPARE(result.size(), 3);
         QCOMPARE(result, QByteArray("abc"));
     } else {
@@ -334,8 +336,7 @@ void tst_QTextCodec::codecForLocale()
 
     // find a codec that is not the codecForLocale()
     QTextCodec *codec2 = 0;
-    const auto availableMibs = QTextCodec::availableMibs();
-    for (int mib : availableMibs ) {
+    foreach (int mib, QTextCodec::availableMibs()) {
         if (mib != codec->mibEnum()) {
             codec2 = QTextCodec::codecForMib(mib);
             if (codec2)
@@ -572,7 +573,7 @@ void tst_QTextCodec::utf8Codec_data()
     str = "Prohl";
     str += QChar::ReplacementCharacter;
     str += QChar::ReplacementCharacter;
-    str += QLatin1Char('e');
+    str += "e";
     str += QChar::ReplacementCharacter;
     str += " plugin";
     str += QChar::ReplacementCharacter;
@@ -2081,13 +2082,13 @@ void tst_QTextCodec::codecForUtfText()
     if (detected)
         QCOMPARE(codec->mibEnum(), mib);
     else
-        QVERIFY(!codec);
+        QVERIFY(codec == 0);
 }
 
 #if defined(Q_OS_UNIX)
 void tst_QTextCodec::toLocal8Bit()
 {
-#if !QT_CONFIG(process)
+#ifdef QT_NO_PROCESS
     QSKIP("No qprocess support", SkipAll);
 #else
     QProcess process;
@@ -2151,7 +2152,7 @@ public:
 void tst_QTextCodec::threadSafety()
 {
     QList<QByteArray> codecList = QTextCodec::availableCodecs();
-    const QVector<int> mibList = QTextCodec::availableMibs().toVector();
+    QList<int> mibList = QTextCodec::availableMibs();
     QThreadPool::globalInstance()->setMaxThreadCount(12);
 
     QVector<QByteArray> res;
@@ -2170,7 +2171,7 @@ void tst_QTextCodec::threadSafety()
     QThreadPool::globalInstance()->waitForDone();
 
     QCOMPARE(res.toList(), codecList);
-    QCOMPARE(res2, mibList);
+    QCOMPARE(res2.toList(), mibList);
 }
 
 void tst_QTextCodec::invalidNames()
@@ -2192,9 +2193,10 @@ void tst_QTextCodec::invalidNames()
 void tst_QTextCodec::checkAliases_data()
 {
     QTest::addColumn<QByteArray>("codecName");
-    const QList<QByteArray> codecList = QTextCodec::availableCodecs();
-    for (const QByteArray &a : codecList)
+    QList<QByteArray> codecList = QTextCodec::availableCodecs();
+    foreach (const QByteArray &a, codecList) {
         QTest::newRow( a.constData() ) << a;
+    }
 }
 
 void tst_QTextCodec::checkAliases()
@@ -2205,8 +2207,7 @@ void tst_QTextCodec::checkAliases()
     QCOMPARE(QTextCodec::codecForName(codecName), c);
     QCOMPARE(QTextCodec::codecForName(c->name()), c);
 
-    const auto aliases = c->aliases();
-    for (const QByteArray &a : aliases) {
+    foreach(const QByteArray &a, c->aliases()) {
         QCOMPARE(QTextCodec::codecForName(a), c);
     }
 }

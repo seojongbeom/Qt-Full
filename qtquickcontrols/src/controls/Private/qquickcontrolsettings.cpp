@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,15 +39,12 @@
 #include <qcoreapplication.h>
 #include <qdebug.h>
 #include <qqmlengine.h>
-#include <qfileinfo.h>
-#if QT_CONFIG(library)
 #include <qlibrary.h>
-#endif
 #include <qdir.h>
 #include <QTouchDevice>
 #include <QGuiApplication>
 #include <QStyleHints>
-#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_EMBEDDED)
+#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
 #include <private/qjnihelpers_p.h>
 #endif
 
@@ -58,44 +52,24 @@ QT_BEGIN_NAMESPACE
 
 static QString defaultStyleName()
 {
-    static const QMap<QString, QString> styleMap {
-#if defined(QT_WIDGETS_LIB)
-        {QLatin1String("cocoa"), QLatin1String("Desktop")},
-        {QLatin1String("wayland"), QLatin1String("Desktop")},
-        {QLatin1String("windows"), QLatin1String("Desktop")},
-        {QLatin1String("xcb"), QLatin1String("Desktop")},
+    //Only enable QStyle support when we are using QApplication
+#if defined(QT_WIDGETS_LIB) && !defined(Q_OS_IOS) && !defined(Q_OS_ANDROID) && !defined(Q_OS_BLACKBERRY) && !defined(Q_OS_QNX) && !defined(Q_OS_WINRT)
+    if (QCoreApplication::instance()->inherits("QApplication"))
+        return QLatin1String("Desktop");
+#elif defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
+    if (QtAndroidPrivate::androidSdkVersion() >= 11)
+        return QLatin1String("Android");
+#elif defined(Q_OS_IOS)
+    return QLatin1String("iOS");
+#elif defined(Q_OS_WINRT) && 0 // Enable once style is ready
+    return QLatin1String("WinRT");
 #endif
-        {QLatin1String("android"), QLatin1String("Android")},
-        {QLatin1String("ios"), QLatin1String("iOS")},
-#if 0 // Enable once style is ready
-        {QLatin1String("winrt"), QLatin1String("WinRT")},
-#endif
-    };
-
-    QGuiApplication *app = static_cast<QGuiApplication *>(
-        QCoreApplication::instance());
-    const QString styleName = styleMap.value(app->platformName(), QLatin1String("Base"));
-
-#if defined(QT_WIDGETS_LIB)
-    // Only enable QStyle support when we are using QApplication
-    if (styleName == QLatin1String("Desktop") && !app->inherits("QApplication"))
-        return QLatin1String("Base");
-#endif
-
-    return styleName;
-}
-
-static QString styleEnvironmentVariable()
-{
-    QString style = qgetenv("QT_QUICK_CONTROLS_1_STYLE");
-    if (style.isEmpty())
-        style = qgetenv("QT_QUICK_CONTROLS_STYLE");
-    return style;
+    return QLatin1String("Base");
 }
 
 static QString styleImportName()
 {
-    QString name = styleEnvironmentVariable();
+    QString name = qgetenv("QT_QUICK_CONTROLS_STYLE");
     if (name.isEmpty())
         name = defaultStyleName();
     return QFileInfo(name).fileName();
@@ -106,16 +80,15 @@ static bool fromResource(const QString &path)
     return path.startsWith(":/");
 }
 
-bool QQuickControlSettings1::hasTouchScreen() const
+bool QQuickControlSettings::hasTouchScreen() const
 {
-    const auto devices = QTouchDevice::devices();
-    for (const QTouchDevice *dev : devices)
+    foreach (const QTouchDevice *dev, QTouchDevice::devices())
         if (dev->type() == QTouchDevice::TouchScreen)
             return true;
     return false;
 }
 
-bool QQuickControlSettings1::isMobile() const
+bool QQuickControlSettings::isMobile() const
 {
 #if defined(Q_OS_IOS) || defined(Q_OS_ANDROID) || defined(Q_OS_BLACKBERRY) || defined(Q_OS_QNX) || defined(Q_OS_WINRT)
     return true;
@@ -127,17 +100,17 @@ bool QQuickControlSettings1::isMobile() const
 #endif
 }
 
-bool QQuickControlSettings1::hoverEnabled() const
+bool QQuickControlSettings::hoverEnabled() const
 {
     return !isMobile() || !hasTouchScreen();
 }
 
-QString QQuickControlSettings1::makeStyleComponentPath(const QString &controlStyleName, const QString &styleDirPath)
+QString QQuickControlSettings::makeStyleComponentPath(const QString &controlStyleName, const QString &styleDirPath)
 {
     return styleDirPath + QStringLiteral("/") + controlStyleName;
 }
 
-QUrl QQuickControlSettings1::makeStyleComponentUrl(const QString &controlStyleName, const QString &styleDirPath)
+QUrl QQuickControlSettings::makeStyleComponentUrl(const QString &controlStyleName, const QString &styleDirPath)
 {
     QString styleFilePath = makeStyleComponentPath(controlStyleName, styleDirPath);
 
@@ -147,7 +120,7 @@ QUrl QQuickControlSettings1::makeStyleComponentUrl(const QString &controlStyleNa
     return QUrl::fromLocalFile(styleFilePath);
 }
 
-QQmlComponent *QQuickControlSettings1::styleComponent(const QUrl &styleDirUrl, const QString &controlStyleName, QObject *control)
+QQmlComponent *QQuickControlSettings::styleComponent(const QUrl &styleDirUrl, const QString &controlStyleName, QObject *control)
 {
     Q_UNUSED(styleDirUrl); // required for hack that forces this function to be re-called from within QML when style changes
 
@@ -167,74 +140,52 @@ QQmlComponent *QQuickControlSettings1::styleComponent(const QUrl &styleDirUrl, c
 static QString relativeStyleImportPath(QQmlEngine *engine, const QString &styleName)
 {
     QString path;
-#ifndef QT_STATIC
     bool found = false;
-    const auto importPathList = engine->importPathList(); // ideally we'd call QQmlImportDatabase::importPathList(Local) here, but it's not exported
-    for (QString import : importPathList) {
-        bool localPath = QFileInfo(import).isAbsolute();
-        if (import.startsWith(QLatin1String("qrc:/"), Qt::CaseInsensitive)) {
-            import = QLatin1Char(':') + import.mid(4);
-            localPath = true;
+    foreach (const QString &import, engine->importPathList()) {
+        QDir dir(import + QStringLiteral("/QtQuick/Controls/Styles"));
+        if (dir.exists(styleName)) {
+            found = true;
+            path = dir.absolutePath();
+            break;
         }
-        if (localPath) {
-            QDir dir(import + QStringLiteral("/QtQuick/Controls/Styles"));
-            if (dir.exists(styleName)) {
-                found = true;
-                path = dir.absolutePath();
-                break;
-            }
-        }
+        if (found)
+            break;
     }
     if (!found)
         path = ":/QtQuick/Controls/Styles";
-#else
-    Q_UNUSED(engine);
-    Q_UNUSED(styleName);
-    path = ":/qt-project.org/imports/QtQuick/Controls/Styles";
-#endif
     return path;
 }
 
 static QString styleImportPath(QQmlEngine *engine, const QString &styleName)
 {
-    QString path = styleEnvironmentVariable();
+    QString path = qgetenv("QT_QUICK_CONTROLS_STYLE");
     QFileInfo info(path);
     if (fromResource(path)) {
         path = info.path();
     } else if (info.isRelative()) {
         path = relativeStyleImportPath(engine, styleName);
     } else {
-#ifndef QT_STATIC
         path = info.absolutePath();
-#else
-        path = "qrc:/qt-project.org/imports/QtQuick/Controls/Styles";
-#endif
     }
     return path;
 }
 
-QQuickControlSettings1::QQuickControlSettings1(QQmlEngine *engine)
-    : m_engine(engine)
+QQuickControlSettings::QQuickControlSettings(QQmlEngine *engine)
 {
     // First, register all style paths in the default style location.
     QDir dir;
     const QString defaultStyle = defaultStyleName();
-#ifndef QT_STATIC
     dir.setPath(relativeStyleImportPath(engine, defaultStyle));
-#else
-    dir.setPath(":/qt-project.org/imports/QtQuick/Controls/Styles");
-#endif
     dir.setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
-    const auto list = dir.entryList();
-    for (const QString &styleDirectory : list) {
+    foreach (const QString &styleDirectory, dir.entryList()) {
         findStyle(engine, styleDirectory);
     }
 
     m_name = styleImportName();
 
     // If the style name is a path..
-    const QString styleNameFromEnvVar = styleEnvironmentVariable();
-    if (!styleNameFromEnvVar.isEmpty() && QFile::exists(styleNameFromEnvVar)) {
+    const QString styleNameFromEnvVar = qgetenv("QT_QUICK_CONTROLS_STYLE");
+    if (QFile::exists(styleNameFromEnvVar)) {
         StyleData styleData;
         styleData.m_styleDirPath = styleNameFromEnvVar;
         m_styleMap[m_name] = styleData;
@@ -244,14 +195,10 @@ QQuickControlSettings1::QQuickControlSettings1(QQmlEngine *engine)
     if (m_styleMap.contains(m_name)) {
         m_path = m_styleMap.value(m_name).m_styleDirPath;
     } else {
+        QString unknownStyle = m_name;
+        m_name = defaultStyle;
         m_path = m_styleMap.value(defaultStyle).m_styleDirPath;
-        // Maybe the requested style is not next to the default style, but elsewhere in the import path
-        findStyle(engine, m_name);
-        if (!m_styleMap.contains(m_name)) {
-            QString unknownStyle = m_name;
-            m_name = defaultStyle;
-            qWarning() << "WARNING: Cannot find style" << unknownStyle << "- fallback:" << styleFilePath();
-        }
+        qWarning() << "WARNING: Cannot find style" << unknownStyle << "- fallback:" << styleFilePath();
     }
 
     // Can't really do anything about this failing here, so don't bother checking...
@@ -261,9 +208,8 @@ QQuickControlSettings1::QQuickControlSettings1(QQmlEngine *engine)
     connect(this, SIGNAL(stylePathChanged()), SIGNAL(styleChanged()));
 }
 
-bool QQuickControlSettings1::resolveCurrentStylePath()
+bool QQuickControlSettings::resolveCurrentStylePath()
 {
-#if QT_CONFIG(library)
     if (!m_styleMap.contains(m_name)) {
         qWarning() << "WARNING: Cannot find style" << m_name;
         return false;
@@ -294,24 +240,21 @@ bool QQuickControlSettings1::resolveCurrentStylePath()
         m_styleMap[m_name] = styleData;
         m_path = styleData.m_styleDirPath;
     }
-#endif // QT_CONFIG(library)
+
     return true;
 }
 
-void QQuickControlSettings1::findStyle(QQmlEngine *engine, const QString &styleName)
+void QQuickControlSettings::findStyle(QQmlEngine *engine, const QString &styleName)
 {
     QString path = styleImportPath(engine, styleName);
     QDir dir;
     dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);
     dir.setPath(path);
-    if (!dir.cd(styleName))
-        return;
+    dir.cd(styleName);
 
     StyleData styleData;
 
-#if QT_CONFIG(library) && !defined(QT_STATIC)
-    const auto list = dir.entryList();
-    for (const QString &fileName : list) {
+    foreach (const QString &fileName, dir.entryList()) {
         // This assumes that there is only one library in the style directory,
         // which should be a safe assumption. If at some point it's determined
         // not to be safe, we'll have to resolve the init and path functions
@@ -321,7 +264,6 @@ void QQuickControlSettings1::findStyle(QQmlEngine *engine, const QString &styleN
             break;
         }
     }
-#endif
 
     // If there's no plugin for the style, then the style's files are
     // contained in this directory (which contains a qmldir file instead).
@@ -330,7 +272,7 @@ void QQuickControlSettings1::findStyle(QQmlEngine *engine, const QString &styleN
     m_styleMap[styleName] = styleData;
 }
 
-QUrl QQuickControlSettings1::style() const
+QUrl QQuickControlSettings::style() const
 {
     QUrl result;
     QString path = styleFilePath();
@@ -343,21 +285,16 @@ QUrl QQuickControlSettings1::style() const
     return result;
 }
 
-QString QQuickControlSettings1::styleName() const
+QString QQuickControlSettings::styleName() const
 {
     return m_name;
 }
 
-void QQuickControlSettings1::setStyleName(const QString &name)
+void QQuickControlSettings::setStyleName(const QString &name)
 {
     if (m_name != name) {
         QString oldName = m_name;
         m_name = name;
-
-        if (!m_styleMap.contains(name)) {
-            // Maybe this style is not next to the default style, but elsewhere in the import path
-            findStyle(m_engine, name);
-        }
 
         // Don't change the style if it can't be resolved.
         if (!resolveCurrentStylePath())
@@ -367,12 +304,12 @@ void QQuickControlSettings1::setStyleName(const QString &name)
     }
 }
 
-QString QQuickControlSettings1::stylePath() const
+QString QQuickControlSettings::stylePath() const
 {
     return m_path;
 }
 
-void QQuickControlSettings1::setStylePath(const QString &path)
+void QQuickControlSettings::setStylePath(const QString &path)
 {
     if (m_path != path) {
         m_path = path;
@@ -380,14 +317,14 @@ void QQuickControlSettings1::setStylePath(const QString &path)
     }
 }
 
-QString QQuickControlSettings1::styleFilePath() const
+QString QQuickControlSettings::styleFilePath() const
 {
     return m_path;
 }
 
 extern Q_GUI_EXPORT int qt_defaultDpiX();
 
-qreal QQuickControlSettings1::dpiScaleFactor() const
+qreal QQuickControlSettings::dpiScaleFactor() const
 {
 #ifndef Q_OS_MAC
     return (qreal(qt_defaultDpiX()) / 96.0);
@@ -395,7 +332,7 @@ qreal QQuickControlSettings1::dpiScaleFactor() const
     return 1.0;
 }
 
-qreal QQuickControlSettings1::dragThreshold() const
+qreal QQuickControlSettings::dragThreshold() const
 {
     return qApp->styleHints()->startDragDistance();
 }

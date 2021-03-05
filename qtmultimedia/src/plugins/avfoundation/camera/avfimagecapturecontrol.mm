@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2016 The Qt Company Ltd and/or its subsidiary(-ies).
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -54,7 +48,6 @@ QT_USE_NAMESPACE
 
 AVFImageCaptureControl::AVFImageCaptureControl(AVFCameraService *service, QObject *parent)
    : QCameraImageCaptureControl(parent)
-   , m_service(service)
    , m_session(service->session())
    , m_cameraControl(service->cameraControl())
    , m_ready(false)
@@ -69,6 +62,7 @@ AVFImageCaptureControl::AVFImageCaptureControl(AVFCameraService *service, QObjec
 
     [m_stillImageOutput setOutputSettings:outputSettings];
     [outputSettings release];
+
     connect(m_cameraControl, SIGNAL(captureModeChanged(QCamera::CaptureModes)), SLOT(updateReadyStatus()));
     connect(m_cameraControl, SIGNAL(statusChanged(QCamera::Status)), SLOT(updateReadyStatus()));
 
@@ -119,13 +113,17 @@ int AVFImageCaptureControl::capture(const QString &fileName)
 
     qDebugCamera() << "Capture image to" << actualFileName;
 
-    CaptureRequest request = { m_lastCaptureId, QSharedPointer<QSemaphore>::create()};
+    CaptureRequest request = { m_lastCaptureId, new QSemaphore };
     m_requestsMutex.lock();
     m_captureRequests.enqueue(request);
     m_requestsMutex.unlock();
 
     [m_stillImageOutput captureStillImageAsynchronouslyFromConnection:m_videoConnection
                         completionHandler: ^(CMSampleBufferRef imageSampleBuffer, NSError *error) {
+
+        // Wait for the preview to be generated before saving the JPEG
+        request.previewReady->acquire();
+        delete request.previewReady;
 
         if (error) {
             QStringList messageParts;
@@ -140,19 +138,7 @@ int AVFImageCaptureControl::capture(const QString &fileName)
                                       Q_ARG(int, request.captureId),
                                       Q_ARG(int, QCameraImageCapture::ResourceError),
                                       Q_ARG(QString, errorMessage));
-            return;
-        }
-
-        // Wait for the preview to be generated before saving the JPEG (but only
-        // if we have AVFCameraRendererControl attached).
-        // It is possible to stop camera immediately after trying to capture an
-        // image; this can result in a blocked callback's thread, waiting for a
-        // new viewfinder's frame to arrive/semaphore to be released. It is also
-        // unspecified on which thread this callback gets executed, (probably it's
-        // not the same thread that initiated a capture and stopped the camera),
-        // so we cannot reliably check the camera's status. Instead, we wait
-        // with a timeout and treat a failure to acquire a semaphore as an error.
-        if (!m_service->videoOutput() || request.previewReady->tryAcquire(1, 1000)) {
+        } else {
             qDebugCamera() << "Image capture completed:" << actualFileName;
 
             NSData *nsJpgData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageSampleBuffer];
@@ -177,14 +163,6 @@ int AVFImageCaptureControl::capture(const QString &fileName)
                                           Q_ARG(int, QCameraImageCapture::ResourceError),
                                           Q_ARG(QString, errorMessage));
             }
-        } else {
-            const QLatin1String errorMessage("Image capture failed: timed out waiting"
-                                             " for a preview frame.");
-            qDebugCamera() << errorMessage;
-            QMetaObject::invokeMethod(this, "error", Qt::QueuedConnection,
-                                      Q_ARG(int, request.captureId),
-                                      Q_ARG(int, QCameraImageCapture::ResourceError),
-                                      Q_ARG(QString, errorMessage));
         }
     }];
 

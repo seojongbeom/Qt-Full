@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -66,24 +60,20 @@ FontPanel::FontPanel(QWidget *parentWidget) :
 
     QList<QFontDatabase::WritingSystem> writingSystems = m_fontDatabase.writingSystems();
     writingSystems.push_front(QFontDatabase::Any);
-    for (QFontDatabase::WritingSystem ws : qAsConst(writingSystems))
+    foreach (QFontDatabase::WritingSystem ws, writingSystems)
         m_writingSystemComboBox->addItem(QFontDatabase::writingSystemName(ws), QVariant(ws));
-    connect(m_writingSystemComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &FontPanel::slotWritingSystemChanged);
+    connect(m_writingSystemComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slotWritingSystemChanged(int)));
     formLayout->addRow(tr("&Writing system"), m_writingSystemComboBox);
 
-    connect(m_familyComboBox, &QFontComboBox::currentFontChanged,
-            this, &FontPanel::slotFamilyChanged);
+    connect(m_familyComboBox, SIGNAL(currentFontChanged(QFont)), this, SLOT(slotFamilyChanged(QFont)));
     formLayout->addRow(tr("&Family"), m_familyComboBox);
 
     m_styleComboBox->setEditable(false);
-    connect(m_styleComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &FontPanel::slotStyleChanged);
+    connect(m_styleComboBox,  SIGNAL(currentIndexChanged(int)),  this, SLOT(slotStyleChanged(int)));
     formLayout->addRow(tr("&Style"), m_styleComboBox);
 
     m_pointSizeComboBox->setEditable(false);
-    connect(m_pointSizeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &FontPanel::slotPointSizeChanged);
+    connect(m_pointSizeComboBox, SIGNAL(currentIndexChanged(int)),  this, SLOT(slotPointSizeChanged(int)));
     formLayout->addRow(tr("&Point size"), m_pointSizeComboBox);
 
     m_previewLineEdit->setReadOnly(true);
@@ -210,9 +200,9 @@ void FontPanel::updateFamily(const QString &family)
 {
     // Update styles and trigger update of point sizes.
     // Try to maintain selection or select normal
-    const QString &oldStyleString = styleString();
+    const QString oldStyleString = styleString();
 
-    const QStringList &styles = m_fontDatabase.styles(family);
+    const QStringList styles = m_fontDatabase.styles(family);
     const bool hasStyles = !styles.empty();
 
     m_styleComboBox->setCurrentIndex(-1);
@@ -223,7 +213,7 @@ void FontPanel::updateFamily(const QString &family)
     const QString normalStyle = QLatin1String("Normal");
 
     if (hasStyles) {
-        for (const QString &style : styles) {
+        foreach (const QString &style, styles) {
             // try to maintain selection or select 'normal' preferably
             const int newIndex = m_styleComboBox->count();
             m_styleComboBox->addItem(style);
@@ -281,7 +271,7 @@ void FontPanel::updatePointSizes(const QString &family, const QString &styleStri
     //  try to maintain selection or select closest.
     if (hasSizes) {
         QString n;
-        for (int pointSize : qAsConst(pointSizes))
+        foreach (int pointSize, pointSizes)
             m_pointSizeComboBox->addItem(n.setNum(pointSize), QVariant(pointSize));
         const int closestIndex = closestPointSizeIndex(oldPointSize);
         if (closestIndex != -1)
@@ -298,8 +288,7 @@ void FontPanel::delayedPreviewFontUpdate()
 {
     if (!m_previewFontUpdateTimer) {
         m_previewFontUpdateTimer = new QTimer(this);
-        connect(m_previewFontUpdateTimer, &QTimer::timeout,
-                this, &FontPanel::slotUpdatePreviewFont);
+        connect(m_previewFontUpdateTimer, SIGNAL(timeout()), this, SLOT(slotUpdatePreviewFont()));
         m_previewFontUpdateTimer->setInterval(0);
         m_previewFontUpdateTimer->setSingleShot(true);
     }

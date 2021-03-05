@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -111,14 +101,14 @@ Item {
                 ctx.moveTo(75 + 50  * Math.cos(0),
                            75 - 50  * Math.sin(Math.PI*2));
                 ctx.arc(75,75,50,0,Math.PI*2,true); // Outer circle
-                ctx.moveTo(60,60);
-                ctx.arc(60,60,5,0,Math.PI*2,true);  // Left eye
-                ctx.moveTo(90 + 5  * Math.cos(0),
-                           65 - 5  * Math.sin(Math.PI*2));
-                ctx.moveTo(90,60);
-                ctx.arc(90,60,5,-Math.PI,Math.PI*3,false);  // Right eye
                 ctx.moveTo(75,70);
                 ctx.arc(75,70,35,0,Math.PI,false);   // Mouth (clockwise)
+                ctx.moveTo(60,65);
+                ctx.arc(60,65,5,0,Math.PI*2,true);  // Left eye
+                ctx.moveTo(90 + 5  * Math.cos(0),
+                           65 - 5  * Math.sin(Math.PI*2));
+                ctx.moveTo(90,65);
+                ctx.arc(90,65,5,0,Math.PI*2,true);  // Right eye
                 ctx.closePath();
                 if (canvas.fill)
                     ctx.fill();

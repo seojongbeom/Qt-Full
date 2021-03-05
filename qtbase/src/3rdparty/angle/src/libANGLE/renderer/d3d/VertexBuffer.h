@@ -16,7 +16,6 @@
 #include <GLES2/gl2.h>
 
 #include <cstddef>
-#include <cstdint>
 #include <vector>
 
 namespace gl
@@ -37,13 +36,8 @@ class VertexBuffer : angle::NonCopyable
 
     virtual gl::Error initialize(unsigned int size, bool dynamicUsage) = 0;
 
-    virtual gl::Error storeVertexAttributes(const gl::VertexAttribute &attrib,
-                                            GLenum currentValueType,
-                                            GLint start,
-                                            GLsizei count,
-                                            GLsizei instances,
-                                            unsigned int offset,
-                                            const uint8_t *sourceData) = 0;
+    virtual gl::Error storeVertexAttributes(const gl::VertexAttribute &attrib, const gl::VertexAttribCurrentValueData &currentValue,
+                                            GLint start, GLsizei count, GLsizei instances, unsigned int offset) = 0;
     virtual gl::Error getSpaceRequired(const gl::VertexAttribute &attrib, GLsizei count, GLsizei instances,
                                        unsigned int *outSpaceRequired) const = 0;
 
@@ -76,16 +70,11 @@ class VertexBufferInterface : angle::NonCopyable
 
     unsigned int getSerial() const;
 
-    virtual gl::Error storeVertexAttributes(const gl::VertexAttribute &attrib,
-                                            GLenum currentValueType,
-                                            GLint start,
-                                            GLsizei count,
-                                            GLsizei instances,
-                                            unsigned int *outStreamOffset,
-                                            const uint8_t *sourceData);
+    virtual gl::Error storeVertexAttributes(const gl::VertexAttribute &attrib, const gl::VertexAttribCurrentValueData &currentValue,
+                                            GLint start, GLsizei count, GLsizei instances, unsigned int *outStreamOffset);
 
     bool directStoragePossible(const gl::VertexAttribute &attrib,
-                               GLenum currentValueType) const;
+                               const gl::VertexAttribCurrentValueData &currentValue) const;
 
     VertexBuffer* getVertexBuffer() const;
 
@@ -125,20 +114,10 @@ class StaticVertexBufferInterface : public VertexBufferInterface
     explicit StaticVertexBufferInterface(BufferFactoryD3D *factory);
     ~StaticVertexBufferInterface();
 
-    gl::Error storeVertexAttributes(const gl::VertexAttribute &attrib,
-                                    GLenum currentValueType,
-                                    GLint start,
-                                    GLsizei count,
-                                    GLsizei instances,
-                                    unsigned int *outStreamOffset,
-                                    const uint8_t *sourceData) override;
+    gl::Error storeVertexAttributes(const gl::VertexAttribute &attrib, const gl::VertexAttribCurrentValueData &currentValue,
+                                    GLint start, GLsizei count, GLsizei instances, unsigned int *outStreamOffset);
 
     bool lookupAttribute(const gl::VertexAttribute &attribute, unsigned int* outStreamFffset);
-
-    // If a static vertex buffer is committed then no more attribute data can be added to it
-    // A new static vertex buffer should be created instead
-    void commit();
-    bool isCommitted() { return mIsCommitted; }
 
   protected:
     gl::Error reserveSpace(unsigned int size);
@@ -156,7 +135,6 @@ class StaticVertexBufferInterface : public VertexBufferInterface
         unsigned int streamOffset;
     };
 
-    bool mIsCommitted;
     std::vector<VertexElement> mCache;
 };
 

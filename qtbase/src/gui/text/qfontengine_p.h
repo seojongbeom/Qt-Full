@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,7 +45,7 @@
 // We mean it.
 //
 
-#include <QtGui/private/qtguiglobal_p.h>
+#include "QtCore/qglobal.h"
 #include "QtCore/qatomic.h"
 #include <QtCore/qvarlengtharray.h>
 #include <QtCore/QLinkedList>
@@ -211,7 +205,6 @@ public:
     glyph_metrics_t tightBoundingBox(const QGlyphLayout &glyphs);
 
     virtual QFixed ascent() const = 0;
-    virtual QFixed capHeight() const = 0;
     virtual QFixed descent() const = 0;
     virtual QFixed leading() const = 0;
     virtual QFixed xHeight() const;
@@ -254,7 +247,6 @@ public:
     static QByteArray convertToPostscriptFontFamilyName(const QByteArray &fontFamily);
 
     virtual bool hasUnreliableGlyphOutline() const;
-    virtual bool expectsGammaCorrectedBlending() const;
 
     enum HintStyle {
         HintNone,
@@ -279,45 +271,10 @@ public:
     QAtomicInt ref;
     QFontDef fontDef;
 
-    class Holder { // replace by std::unique_ptr once available
-        void *ptr;
-        qt_destroy_func_t destroy_func;
-    public:
-        Holder() : ptr(nullptr), destroy_func(nullptr) {}
-        explicit Holder(void *p, qt_destroy_func_t d) : ptr(p), destroy_func(d) {}
-        ~Holder() { if (ptr && destroy_func) destroy_func(ptr); }
-        Holder(Holder &&other) Q_DECL_NOTHROW
-            : ptr(other.ptr),
-              destroy_func(other.destroy_func)
-        {
-            other.ptr = nullptr;
-            other.destroy_func = nullptr;
-        }
-        Holder &operator=(Holder &&other) Q_DECL_NOTHROW
-        { swap(other); return *this; }
-
-        void swap(Holder &other) Q_DECL_NOTHROW
-        {
-            qSwap(ptr, other.ptr);
-            qSwap(destroy_func, other.destroy_func);
-        }
-
-        void *get() const Q_DECL_NOTHROW { return ptr; }
-        void *release() Q_DECL_NOTHROW {
-            void *result = ptr;
-            ptr = nullptr;
-            destroy_func = nullptr;
-            return result;
-        }
-        void reset() Q_DECL_NOTHROW { Holder().swap(*this); }
-        qt_destroy_func_t get_deleter() const Q_DECL_NOTHROW { return destroy_func; }
-
-        bool operator!() const Q_DECL_NOTHROW { return !ptr; }
-    };
-
-    mutable Holder font_; // \ NOTE: Declared before m_glyphCaches, so font_, face_
-    mutable Holder face_; // / are destroyed _after_ m_glyphCaches is destroyed.
-
+    mutable void *font_;
+    mutable qt_destroy_func_t font_destroy_func;
+    mutable void *face_;
+    mutable qt_destroy_func_t face_destroy_func;
     struct FaceData {
         void *user_data;
         qt_get_font_table_func_t get_font_table;
@@ -351,7 +308,6 @@ protected:
     QFixed lastRightBearing(const QGlyphLayout &glyphs, bool round = false);
 
     inline void setUserData(const QVariant &userData) { m_userData = userData; }
-    QFixed calculatedCapHeight() const;
 
 private:
     struct GlyphCacheEntry {
@@ -374,7 +330,6 @@ private:
     mutable qreal m_minRightBearing;
 
 };
-Q_DECLARE_TYPEINFO(QFontEngine::KernPair, Q_PRIMITIVE_TYPE);
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QFontEngine::ShaperFlags)
 
@@ -417,7 +372,6 @@ public:
     virtual QFontEngine *cloneWithSize(qreal pixelSize) const Q_DECL_OVERRIDE;
 
     virtual QFixed ascent() const Q_DECL_OVERRIDE;
-    virtual QFixed capHeight() const Q_DECL_OVERRIDE;
     virtual QFixed descent() const Q_DECL_OVERRIDE;
     virtual QFixed leading() const Q_DECL_OVERRIDE;
     virtual qreal maxCharWidth() const Q_DECL_OVERRIDE;
@@ -455,7 +409,6 @@ public:
     virtual void getGlyphBearings(glyph_t glyph, qreal *leftBearing = 0, qreal *rightBearing = 0) Q_DECL_OVERRIDE;
 
     virtual QFixed ascent() const Q_DECL_OVERRIDE;
-    virtual QFixed capHeight() const Q_DECL_OVERRIDE;
     virtual QFixed descent() const Q_DECL_OVERRIDE;
     virtual QFixed leading() const Q_DECL_OVERRIDE;
     virtual QFixed xHeight() const Q_DECL_OVERRIDE;

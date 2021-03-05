@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -50,14 +47,14 @@ static const QQuickItemPrivate::ChangeTypes ItemChangeTypes = QQuickItemPrivate:
                                                              | QQuickItemPrivate::Parent
                                                              | QQuickItemPrivate::Destroyed;
 
-QQuickScenePosListener1::QQuickScenePosListener1(QObject *parent)
+QQuickScenePosListener::QQuickScenePosListener(QObject *parent)
     : QObject(parent)
     , m_enabled(false)
     , m_item(0)
 {
 }
 
-QQuickScenePosListener1::~QQuickScenePosListener1()
+QQuickScenePosListener::~QQuickScenePosListener()
 {
     if (m_item == 0)
         return;
@@ -66,12 +63,12 @@ QQuickScenePosListener1::~QQuickScenePosListener1()
     removeAncestorListeners(m_item->parentItem());
 }
 
-QQuickItem *QQuickScenePosListener1::item() const
+QQuickItem *QQuickScenePosListener::item() const
 {
     return m_item;
 }
 
-void QQuickScenePosListener1::setItem(QQuickItem *item)
+void QQuickScenePosListener::setItem(QQuickItem *item)
 {
     if (m_item == item)
         return;
@@ -94,17 +91,17 @@ void QQuickScenePosListener1::setItem(QQuickItem *item)
     updateScenePos();
 }
 
-QPointF QQuickScenePosListener1::scenePos() const
+QPointF QQuickScenePosListener::scenePos() const
 {
     return m_scenePos;
 }
 
-bool QQuickScenePosListener1::isEnabled() const
+bool QQuickScenePosListener::isEnabled() const
 {
     return m_enabled;
 }
 
-void QQuickScenePosListener1::setEnabled(bool enabled)
+void QQuickScenePosListener::setEnabled(bool enabled)
 {
     if (m_enabled == enabled)
         return;
@@ -124,23 +121,23 @@ void QQuickScenePosListener1::setEnabled(bool enabled)
     emit enabledChanged();
 }
 
-void QQuickScenePosListener1::itemGeometryChanged(QQuickItem *, QQuickGeometryChange, const QRectF &)
+void QQuickScenePosListener::itemGeometryChanged(QQuickItem *, const QRectF &, const QRectF &)
 {
     updateScenePos();
 }
 
-void QQuickScenePosListener1::itemParentChanged(QQuickItem *, QQuickItem *parent)
+void QQuickScenePosListener::itemParentChanged(QQuickItem *, QQuickItem *parent)
 {
     addAncestorListeners(parent);
 }
 
-void QQuickScenePosListener1::itemChildRemoved(QQuickItem *, QQuickItem *child)
+void QQuickScenePosListener::itemChildRemoved(QQuickItem *, QQuickItem *child)
 {
     if (isAncestor(child))
         removeAncestorListeners(child);
 }
 
-void QQuickScenePosListener1::itemDestroyed(QQuickItem *item)
+void QQuickScenePosListener::itemDestroyed(QQuickItem *item)
 {
     Q_ASSERT(m_item == item);
 
@@ -150,7 +147,7 @@ void QQuickScenePosListener1::itemDestroyed(QQuickItem *item)
     removeAncestorListeners(item->parentItem());
 }
 
-void QQuickScenePosListener1::updateScenePos()
+void QQuickScenePosListener::updateScenePos()
 {
     const QPointF &scenePos = m_item->mapToScene(QPointF(0, 0));
     if (m_scenePos != scenePos) {
@@ -164,7 +161,7 @@ void QQuickScenePosListener1::updateScenePos()
 
     Remove this listener from \a item and all its ancestors.
  */
-void QQuickScenePosListener1::removeAncestorListeners(QQuickItem *item)
+void QQuickScenePosListener::removeAncestorListeners(QQuickItem *item)
 {
     if (item == m_item)
         return;
@@ -181,7 +178,7 @@ void QQuickScenePosListener1::removeAncestorListeners(QQuickItem *item)
 
     Injects this as a listener to \a item and all its ancestors.
  */
-void QQuickScenePosListener1::addAncestorListeners(QQuickItem *item)
+void QQuickScenePosListener::addAncestorListeners(QQuickItem *item)
 {
     if (item == m_item)
         return;
@@ -193,7 +190,7 @@ void QQuickScenePosListener1::addAncestorListeners(QQuickItem *item)
     }
 }
 
-bool QQuickScenePosListener1::isAncestor(QQuickItem *item) const
+bool QQuickScenePosListener::isAncestor(QQuickItem *item) const
 {
     if (!m_item)
         return false;

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -68,11 +62,10 @@ static inline qreal initialGlobalScaleFactor()
         }
     } else {
         if (qEnvironmentVariableIsSet(legacyDevicePixelEnvVar)) {
-            qWarning("Warning: %s is deprecated. Instead use:\n"
-                     "   %s to enable platform plugin controlled per-screen factors.\n"
-                     "   %s to set per-screen factors.\n"
-                     "   %s to set the application global scale factor.",
-                     legacyDevicePixelEnvVar, autoScreenEnvVar, screenFactorsEnvVar, scaleFactorEnvVar);
+            qWarning() << "Warning:" << legacyDevicePixelEnvVar << "is deprecated. Instead use:" << endl
+                       << "   " << autoScreenEnvVar << "to enable platform plugin controlled per-screen factors." << endl
+                       << "   " << screenFactorsEnvVar << "to set per-screen factors." << endl
+                       << "   " << scaleFactorEnvVar << "to set the application global scale factor.";
 
             int dpr = qEnvironmentVariableIntValue(legacyDevicePixelEnvVar);
             if (dpr > 0)
@@ -268,8 +261,7 @@ void QHighDpiScaling::updateHighDpiScaling()
         return;
 
     if (m_usePixelDensity && !m_pixelDensityScalingActive) {
-        const auto screens = QGuiApplication::screens();
-        for (QScreen *screen : screens) {
+        Q_FOREACH (QScreen *screen, QGuiApplication::screens()) {
             if (!qFuzzyCompare(screenSubfactor(screen->handle()), qreal(1))) {
                 m_pixelDensityScalingActive = true;
                 break;
@@ -278,8 +270,7 @@ void QHighDpiScaling::updateHighDpiScaling()
     }
     if (qEnvironmentVariableIsSet(screenFactorsEnvVar)) {
         int i = 0;
-        const auto specs = qgetenv(screenFactorsEnvVar).split(';');
-        for (const QByteArray &spec : specs) {
+        Q_FOREACH (const QByteArray &spec, qgetenv(screenFactorsEnvVar).split(';')) {
             QScreen *screen = 0;
             int equalsPos = spec.lastIndexOf('=');
             double factor = 0;
@@ -290,8 +281,7 @@ void QHighDpiScaling::updateHighDpiScaling()
                 bool ok;
                 factor = f.toDouble(&ok);
                 if (ok) {
-                    const auto screens = QGuiApplication::screens();
-                    for (QScreen *s : screens) {
+                    Q_FOREACH (QScreen *s, QGuiApplication::screens()) {
                         if (s->name() == QString::fromLocal8Bit(name)) {
                             screen = s;
                             break;
@@ -331,8 +321,7 @@ void QHighDpiScaling::setGlobalFactor(qreal factor)
     m_globalScalingActive = !qFuzzyCompare(factor, qreal(1));
     m_factor = m_globalScalingActive ? factor : qreal(1);
     m_active = m_globalScalingActive || m_screenFactorSet || m_pixelDensityScalingActive;
-    const auto screens = QGuiApplication::screens();
-    for (QScreen *screen : screens)
+    Q_FOREACH (QScreen *screen, QGuiApplication::screens())
          screen->d_func()->updateHighDpi();
 }
 

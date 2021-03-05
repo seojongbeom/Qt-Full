@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -34,14 +34,15 @@
 
     \image simpletextviewer-example.png
 
-    This example shows how to use \QA as a customized help viewer in
-    a custom application. This is done in two stages. Firstly,
-    documentation is created and \QA is customized; secondly, the
-    functionality to launch and control \QA is added to the application.
+    This is done in two stages. Firstly, documentation is created and \QA
+    is customized; secondly, the functionality to launch and control
+    \QA is added to the application.
 
     The Simple Text Viewer application lets the user select and view
-    existing files. The application provides its own custom documentation
-    that is available from the \gui Help menu in the main window's menu bar
+    existing files.
+
+    The application provides its own custom documentation that is
+    available from the \gui Help menu in the main window's menu bar
     or by clicking the \gui Help button in the application's find file
     dialog.
 
@@ -352,8 +353,8 @@
     The implementation for \c showDocumentation() is now straightforward.
     Firstly, we ensure that \QA is running, then we send the request to
     display the \a page via the \c stdin channel of the process. It is very
-    important here that the command is terminated by an end of line token
-    to flush the channel.
+    important here that the command is terminated by the '\\0' character
+    followed by an end of line token to flush the channel.
 
     \snippet simpletextviewer/assistant.cpp 1
 

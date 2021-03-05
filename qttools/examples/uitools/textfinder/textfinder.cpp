@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -48,43 +38,15 @@
 **
 ****************************************************************************/
 
+#include <QtUiTools>
+#include <QtWidgets>
 #include "textfinder.h"
-#include <QFile>
-#include <QLineEdit>
-#include <QMessageBox>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QTextStream>
-#include <QUiLoader>
-#include <QVBoxLayout>
-
-//! [4]
-static QWidget *loadUiFile(QWidget *parent)
-{
-    QFile file(":/forms/textfinder.ui");
-    file.open(QIODevice::ReadOnly);
-
-    QUiLoader loader;
-    return loader.load(&file, parent);
-}
-//! [4]
-
-//! [5]
-static QString loadTextFile()
-{
-    QFile inputFile(":/forms/input.txt");
-    inputFile.open(QIODevice::ReadOnly);
-    QTextStream in(&inputFile);
-    in.setCodec("UTF-8");
-    return in.readAll();
-}
-//! [5]
 
 //! [0]
 TextFinder::TextFinder(QWidget *parent)
     : QWidget(parent)
 {
-    QWidget *formWidget = loadUiFile(this);
+    QWidget *formWidget = loadUiFile();
 
 //! [1]
     ui_findButton = findChild<QPushButton*>("findButton");
@@ -97,7 +59,7 @@ TextFinder::TextFinder(QWidget *parent)
 //! [2]
 
 //! [3a]
-    ui_textEdit->setText(loadTextFile());
+    loadTextFile();
 //! [3a]
 
 //! [3b]
@@ -108,8 +70,39 @@ TextFinder::TextFinder(QWidget *parent)
 
 //! [3c]
     setWindowTitle(tr("Text Finder"));
+    isFirstTime = true;
 }
 //! [3c]
+
+//! [4]
+QWidget* TextFinder::loadUiFile()
+{
+    QUiLoader loader;
+
+    QFile file(":/forms/textfinder.ui");
+    file.open(QFile::ReadOnly);
+
+    QWidget *formWidget = loader.load(&file, this);
+    file.close();
+
+    return formWidget;
+}
+//! [4]
+
+//! [5]
+void TextFinder::loadTextFile()
+{
+    QFile inputFile(":/forms/input.txt");
+    inputFile.open(QIODevice::ReadOnly);
+    QTextStream in(&inputFile);
+    QString line = in.readAll();
+    inputFile.close();
+
+    ui_textEdit->append(line);
+    ui_textEdit->setUndoRedoEnabled(false);
+    ui_textEdit->setUndoRedoEnabled(true);
+}
+//! [5]
 
 //! [6] //! [7]
 void TextFinder::on_findButton_clicked()
@@ -119,14 +112,14 @@ void TextFinder::on_findButton_clicked()
 
     bool found = false;
 
-    // undo previous change (if any)
-    document->undo();
+    if (isFirstTime == false)
+        document->undo();
 
     if (searchString.isEmpty()) {
         QMessageBox::information(this, tr("Empty Search Field"),
-                                 tr("The search field is empty. "
-                                    "Please enter a word and click Find."));
+                "The search field is empty. Please enter a word and click Find.");
     } else {
+
         QTextCursor highlightCursor(document);
         QTextCursor cursor(document);
 
@@ -138,13 +131,12 @@ void TextFinder::on_findButton_clicked()
         colorFormat.setForeground(Qt::red);
 
         while (!highlightCursor.isNull() && !highlightCursor.atEnd()) {
-            highlightCursor = document->find(searchString, highlightCursor,
-                                             QTextDocument::FindWholeWords);
+            highlightCursor = document->find(searchString, highlightCursor, QTextDocument::FindWholeWords);
 
             if (!highlightCursor.isNull()) {
                 found = true;
                 highlightCursor.movePosition(QTextCursor::WordRight,
-                                             QTextCursor::KeepAnchor);
+                                       QTextCursor::KeepAnchor);
                 highlightCursor.mergeCharFormat(colorFormat);
             }
         }
@@ -152,10 +144,11 @@ void TextFinder::on_findButton_clicked()
 //! [8]
         cursor.endEditBlock();
 //! [7] //! [9]
+        isFirstTime = false;
 
         if (found == false) {
             QMessageBox::information(this, tr("Word Not Found"),
-                                     tr("Sorry, the word cannot be found."));
+                "Sorry, the word cannot be found.");
         }
     }
 }

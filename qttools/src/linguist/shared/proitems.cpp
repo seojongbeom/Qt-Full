@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Linguist of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -365,11 +370,6 @@ static QString ProStringList_join(const ProStringList &this_, const QChar *sep, 
     return res;
 }
 
-QString ProStringList::join(const ProString &sep) const
-{
-    return ProStringList_join(*this, sep.constData(), sep.size());
-}
-
 QString ProStringList::join(const QString &sep) const
 {
     return ProStringList_join(*this, sep.constData(), sep.size());
@@ -396,7 +396,7 @@ void ProStringList::removeAll(const char *str)
 
 void ProStringList::removeEach(const ProStringList &value)
 {
-    for (const ProString &str : value)
+    foreach (const ProString &str, value)
         if (!str.isEmpty())
             removeAll(str);
 }
@@ -429,7 +429,7 @@ void ProStringList::removeDuplicates()
 
 void ProStringList::insertUnique(const ProStringList &value)
 {
-    for (const ProString &str : value)
+    foreach (const ProString &str, value)
         if (!str.isEmpty() && !contains(str))
             append(str);
 }
@@ -437,7 +437,7 @@ void ProStringList::insertUnique(const ProStringList &value)
 ProStringList::ProStringList(const QStringList &list)
 {
     reserve(list.size());
-    for (const QString &str : list)
+    foreach (const QString &str, list)
         *this << ProString(str);
 }
 
@@ -445,8 +445,8 @@ QStringList ProStringList::toQStringList() const
 {
     QStringList ret;
     ret.reserve(size());
-    for (const auto &e : *this)
-        ret.append(e.toQString());
+    for (int i = 0; i < size(); i++) // foreach causes MSVC2010 ICE
+        ret << at(i).toQString();
     return ret;
 }
 
@@ -454,14 +454,6 @@ bool ProStringList::contains(const ProString &str, Qt::CaseSensitivity cs) const
 {
     for (int i = 0; i < size(); i++)
         if (!at(i).compare(str, cs))
-            return true;
-    return false;
-}
-
-bool ProStringList::contains(const QStringRef &str, Qt::CaseSensitivity cs) const
-{
-    for (int i = 0; i < size(); i++)
-        if (!at(i).toQStringRef().compare(str, cs))
             return true;
     return false;
 }

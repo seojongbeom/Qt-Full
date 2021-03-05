@@ -6,48 +6,41 @@
 
 // queryconversions.cpp: Implementation of state query cast conversions
 
-#include "libANGLE/queryconversions.h"
-
-#include <vector>
-
 #include "libANGLE/Context.h"
 #include "common/utilities.h"
 
 namespace gl
 {
 
-namespace
-{
+// Helper class for converting a GL type to a GLenum:
+// We can't use CastStateValueEnum generally, because of GLboolean + GLubyte overlap.
+// We restrict our use to CastStateValue, where it eliminates duplicate parameters.
 
-GLint64 ExpandFloatToInteger(GLfloat value)
-{
-    return static_cast<GLint64>((static_cast<double>(0xFFFFFFFFULL) * value - 1.0) / 2.0);
-}
+template <typename GLType>
+struct CastStateValueEnum { static GLenum mEnumForType; };
 
-template <typename QueryT>
-QueryT ClampToQueryRange(GLint64 value)
-{
-    const GLint64 min = static_cast<GLint64>(std::numeric_limits<QueryT>::min());
-    const GLint64 max = static_cast<GLint64>(std::numeric_limits<QueryT>::max());
-    return static_cast<QueryT>(clamp(value, min, max));
-}
+template <> GLenum CastStateValueEnum<GLint>::mEnumForType      = GL_INT;
+template <> GLenum CastStateValueEnum<GLuint>::mEnumForType     = GL_UNSIGNED_INT;
+template <> GLenum CastStateValueEnum<GLboolean>::mEnumForType  = GL_BOOL;
+template <> GLenum CastStateValueEnum<GLint64>::mEnumForType    = GL_INT_64_ANGLEX;
+template <> GLenum CastStateValueEnum<GLfloat>::mEnumForType    = GL_FLOAT;
 
 template <typename QueryT, typename NativeT>
 QueryT CastStateValueToInt(GLenum pname, NativeT value)
 {
-    GLenum queryType  = GLTypeToGLenum<QueryT>::value;
-    GLenum nativeType = GLTypeToGLenum<NativeT>::value;
+    GLenum queryType = CastStateValueEnum<QueryT>::mEnumForType;
+    GLenum nativeType = CastStateValueEnum<NativeT>::mEnumForType;
 
     if (nativeType == GL_FLOAT)
     {
         // RGBA color values and DepthRangeF values are converted to integer using Equation 2.4 from Table 4.5
         if (pname == GL_DEPTH_RANGE || pname == GL_COLOR_CLEAR_VALUE || pname == GL_DEPTH_CLEAR_VALUE || pname == GL_BLEND_COLOR)
         {
-            return ClampToQueryRange<QueryT>(ExpandFloatToInteger(static_cast<GLfloat>(value)));
+            return static_cast<QueryT>((static_cast<GLfloat>(0xFFFFFFFF) * value - 1.0f) / 2.0f);
         }
         else
         {
-            return gl::iround<QueryT>(static_cast<GLfloat>(value));
+            return gl::iround<QueryT>(value);
         }
     }
 
@@ -66,36 +59,17 @@ QueryT CastStateValueToInt(GLenum pname, NativeT value)
 template <typename QueryT, typename NativeT>
 QueryT CastStateValue(GLenum pname, NativeT value)
 {
-    GLenum queryType = GLTypeToGLenum<QueryT>::value;
+    GLenum queryType = CastStateValueEnum<QueryT>::mEnumForType;
 
     switch (queryType)
     {
-        case GL_INT:
-            return CastStateValueToInt<QueryT, NativeT>(pname, value);
-        case GL_INT_64_ANGLEX:
-            return CastStateValueToInt<QueryT, NativeT>(pname, value);
-        case GL_FLOAT:
-            return static_cast<QueryT>(value);
-        case GL_BOOL:
-            return static_cast<QueryT>(value == static_cast<NativeT>(0) ? GL_FALSE : GL_TRUE);
-        default:
-            UNREACHABLE();
-            return 0;
+      case GL_INT:              return CastStateValueToInt<QueryT, NativeT>(pname, value);
+      case GL_INT_64_ANGLEX:    return CastStateValueToInt<QueryT, NativeT>(pname, value);
+      case GL_FLOAT:            return static_cast<QueryT>(value);
+      case GL_BOOL:             return (value == static_cast<NativeT>(0) ? GL_FALSE : GL_TRUE);
+      default: UNREACHABLE();   return 0;
     }
 }
-
-}  // anonymous namespace
-
-template <>
-GLenum GLTypeToGLenum<GLint>::value = GL_INT;
-template <>
-GLenum GLTypeToGLenum<GLuint>::value = GL_UNSIGNED_INT;
-template <>
-GLenum GLTypeToGLenum<GLboolean>::value = GL_BOOL;
-template <>
-GLenum GLTypeToGLenum<GLint64>::value = GL_INT_64_ANGLEX;
-template <>
-GLenum GLTypeToGLenum<GLfloat>::value = GL_FLOAT;
 
 template <typename QueryT>
 void CastStateValues(Context *context, GLenum nativeType, GLenum pname,
@@ -103,43 +77,59 @@ void CastStateValues(Context *context, GLenum nativeType, GLenum pname,
 {
     if (nativeType == GL_INT)
     {
-        std::vector<GLint> intParams(numParams, 0);
-        context->getIntegerv(pname, intParams.data());
+        GLint *intParams = NULL;
+        intParams = new GLint[numParams];
+
+        context->getIntegerv(pname, intParams);
 
         for (unsigned int i = 0; i < numParams; ++i)
         {
             outParams[i] = CastStateValue<QueryT>(pname, intParams[i]);
         }
+
+        delete [] intParams;
     }
     else if (nativeType == GL_BOOL)
     {
-        std::vector<GLboolean> boolParams(numParams, GL_FALSE);
-        context->getBooleanv(pname, boolParams.data());
+        GLboolean *boolParams = NULL;
+        boolParams = new GLboolean[numParams];
+
+        context->getBooleanv(pname, boolParams);
 
         for (unsigned int i = 0; i < numParams; ++i)
         {
             outParams[i] = (boolParams[i] == GL_FALSE ? static_cast<QueryT>(0) : static_cast<QueryT>(1));
         }
+
+        delete [] boolParams;
     }
     else if (nativeType == GL_FLOAT)
     {
-        std::vector<GLfloat> floatParams(numParams, 0.0f);
-        context->getFloatv(pname, floatParams.data());
+        GLfloat *floatParams = NULL;
+        floatParams = new GLfloat[numParams];
+
+        context->getFloatv(pname, floatParams);
 
         for (unsigned int i = 0; i < numParams; ++i)
         {
             outParams[i] = CastStateValue<QueryT>(pname, floatParams[i]);
         }
+
+        delete [] floatParams;
     }
     else if (nativeType == GL_INT_64_ANGLEX)
     {
-        std::vector<GLint64> int64Params(numParams, 0);
-        context->getInteger64v(pname, int64Params.data());
+        GLint64 *int64Params = NULL;
+        int64Params = new GLint64[numParams];
+
+        context->getInteger64v(pname, int64Params);
 
         for (unsigned int i = 0; i < numParams; ++i)
         {
             outParams[i] = CastStateValue<QueryT>(pname, int64Params[i]);
         }
+
+        delete [] int64Params;
     }
     else UNREACHABLE();
 }

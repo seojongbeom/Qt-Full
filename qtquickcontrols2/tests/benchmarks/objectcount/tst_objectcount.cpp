@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -61,11 +61,17 @@ private slots:
     void init();
     void cleanup();
 
-    void qobjects();
-    void qobjects_data();
+    void calendar();
+    void calendar_data();
 
-    void qquickitems();
-    void qquickitems_data();
+    void controls();
+    void controls_data();
+
+    void material();
+    void material_data();
+
+    void universal();
+    void universal_data();
 
 private:
     QQmlEngine engine;
@@ -78,7 +84,7 @@ void tst_ObjectCount::init()
 
     // warmup
     QQmlComponent component(&engine);
-    component.setData("import QtQuick 2.0; import QtQuick.Controls 2.1; Item { Button {} }", QUrl());
+    component.setData("import QtQuick 2.0; import QtQuick.Controls 1.3 as C1; import Qt.labs.controls 1.0 as C2; Row { C1.Button {} C2.Button {} }", QUrl());
     delete component.create();
 }
 
@@ -88,12 +94,23 @@ void tst_ObjectCount::cleanup()
     qtHookData[QHooks::RemoveQObject] = 0;
 }
 
-static void addTestRows(QQmlEngine *engine, const QString &sourcePath, const QString &targetPath, const QStringList &skiplist = QStringList())
+static void printItems(const QList<QQuickItem *> &items)
+{
+    std::cout << "RESULT tst_ObjectCount::" << QTest::currentTestFunction() << "():\"" << QTest::currentDataTag() << "\":" << std::endl;
+    std::cout << "     QQuickItems: " << items.count() << " (total of QObjects: " << qt_qobjects->count() << ")" << std::endl;
+
+    if (qt_verbose) {
+        foreach (QObject *object, *qt_qobjects)
+            qInfo() << "\t" << object;
+    }
+}
+
+static void addTestRows(QQmlEngine *engine, const QString &targetPath, const QStringList &skiplist = QStringList())
 {
     // We cannot use QQmlComponent to load QML files directly from the source tree.
     // For styles that use internal QML types (eg. material/Ripple.qml), the source
     // dir would be added as an "implicit" import path overriding the actual import
-    // path (qtbase/qml/QtQuick/Controls.2/Material). => The QML engine fails to load
+    // path (qtbase/qml/Qt/labs/controls/material). => The QML engine fails to load
     // the style C++ plugin from the implicit import path (the source dir).
     //
     // Therefore we only use the source tree for finding out the set of QML files that
@@ -101,19 +118,14 @@ static void addTestRows(QQmlEngine *engine, const QString &sourcePath, const QSt
     // the engine's import path. This way we can use QQmlComponent to load each QML file
     // for benchmarking.
 
-    const QFileInfoList entries = QDir(QQC2_IMPORT_PATH "/" + sourcePath).entryInfoList(QStringList("*.qml"), QDir::Files);
-    for (const QFileInfo &entry : entries) {
+    QFileInfoList entries = QDir(QQC2_IMPORT_PATH + targetPath).entryInfoList(QStringList("*.qml"), QDir::Files);
+    foreach (const QFileInfo &entry, entries) {
         QString name = entry.baseName();
         if (!skiplist.contains(name)) {
-            const auto importPathList = engine->importPathList();
-            for (const QString &importPath : importPathList) {
-                QString name = entry.dir().dirName() + "/" + entry.fileName();
-                QString filePath = importPath + "/" + targetPath + "/" + entry.fileName();
+            foreach (const QString &importPath, engine->importPathList()) {
+                QString filePath = QDir(importPath + "/Qt/labs/" + targetPath).absoluteFilePath(entry.fileName());
                 if (QFile::exists(filePath)) {
                     QTest::newRow(qPrintable(name)) << QUrl::fromLocalFile(filePath);
-                    break;
-                } else if (QFile::exists(QQmlFile::urlToLocalFileOrQrc(filePath))) {
-                    QTest::newRow(qPrintable(name)) << QUrl(filePath);
                     break;
                 }
             }
@@ -121,14 +133,6 @@ static void addTestRows(QQmlEngine *engine, const QString &sourcePath, const QSt
     }
 }
 
-static void initTestRows(QQmlEngine *engine)
-{
-    addTestRows(engine, "controls", "QtQuick/Controls.2", QStringList() << "CheckIndicator" << "RadioIndicator" << "SwitchIndicator");
-    addTestRows(engine, "controls/material", "QtQuick/Controls.2/Material", QStringList() << "Ripple" << "SliderHandle" << "CheckIndicator" << "RadioIndicator" << "SwitchIndicator" << "BoxShadow" << "ElevationEffect" << "CursorDelegate");
-    addTestRows(engine, "controls/universal", "QtQuick/Controls.2/Universal", QStringList() << "CheckIndicator" << "RadioIndicator" << "SwitchIndicator");
-}
-
-template <typename T>
 static void doBenchmark(QQmlEngine *engine, const QUrl &url)
 {
     QQmlComponent component(engine);
@@ -139,42 +143,61 @@ static void doBenchmark(QQmlEngine *engine, const QUrl &url)
     QScopedPointer<QObject> object(component.create());
     QVERIFY2(object.data(), qPrintable(component.errorString()));
 
-    QObjectList objects;
-    for (QObject *object : qAsConst(*qt_qobjects())) {
-        if (qobject_cast<T *>(object))
-            objects += object;
+    QList<QQuickItem *> items;
+    foreach (QObject *object, *qt_qobjects()) {
+        QQuickItem *item = qobject_cast<QQuickItem *>(object);
+        if (item)
+            items += item;
     }
-
-    if (qt_verbose) {
-        for (QObject *object : objects)
-            qInfo() << "\t" << object;
-    }
-
-    QTest::setBenchmarkResult(objects.count(), QTest::Events);
+    printItems(items);
 }
 
-void tst_ObjectCount::qobjects()
+void tst_ObjectCount::calendar()
 {
     QFETCH(QUrl, url);
-    doBenchmark<QObject>(&engine, url);
+    doBenchmark(&engine, url);
 }
 
-void tst_ObjectCount::qobjects_data()
+void tst_ObjectCount::calendar_data()
 {
     QTest::addColumn<QUrl>("url");
-    initTestRows(&engine);
+    addTestRows(&engine, "/calendar");
 }
 
-void tst_ObjectCount::qquickitems()
+void tst_ObjectCount::controls()
 {
     QFETCH(QUrl, url);
-    doBenchmark<QQuickItem>(&engine, url);
+    doBenchmark(&engine, url);
 }
 
-void tst_ObjectCount::qquickitems_data()
+void tst_ObjectCount::controls_data()
 {
     QTest::addColumn<QUrl>("url");
-    initTestRows(&engine);
+    addTestRows(&engine, "/controls");
+}
+
+void tst_ObjectCount::material()
+{
+    QFETCH(QUrl, url);
+    doBenchmark(&engine, url);
+}
+
+void tst_ObjectCount::material_data()
+{
+    QTest::addColumn<QUrl>("url");
+    addTestRows(&engine, "/controls/material", QStringList() << "Ripple" << "SliderHandle");
+}
+
+void tst_ObjectCount::universal()
+{
+    QFETCH(QUrl, url);
+    doBenchmark(&engine, url);
+}
+
+void tst_ObjectCount::universal_data()
+{
+    QTest::addColumn<QUrl>("url");
+    addTestRows(&engine, "/controls/universal");
 }
 
 QTEST_MAIN(tst_ObjectCount)

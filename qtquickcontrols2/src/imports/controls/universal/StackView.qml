@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,43 +34,55 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.StackView {
-    id: control
+    id: root
 
+    //! [popEnter]
     popEnter: Transition {
         ParallelAnimation {
             NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.InQuint }
-            NumberAnimation { property: "x"; from: (control.mirrored ? -0.3 : 0.3) * -control.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "x"; from: (root.mirrored ? -0.3 : 0.3) * -root.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
         }
     }
+    //! [popEnter]
 
+    //! [popExit]
     popExit: Transition {
         NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 200; easing.type: Easing.OutQuint }
     }
+    //! [popExit]
 
+    //! [pushEnter]
     pushEnter: Transition {
         ParallelAnimation {
             NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.InQuint }
-            NumberAnimation { property: "x"; from: (control.mirrored ? -0.3 : 0.3) * control.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "x"; from: (root.mirrored ? -0.3 : 0.3) * root.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
         }
     }
+    //! [pushEnter]
 
+    //! [pushExit]
     pushExit: Transition {
         NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 200; easing.type: Easing.OutQuint }
     }
+    //! [pushExit]
 
+    //! [replaceEnter]
     replaceEnter: Transition {
         ParallelAnimation {
             NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.InQuint }
-            NumberAnimation { property: "x"; from: (control.mirrored ? -0.3 : 0.3) * control.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "x"; from: (root.mirrored ? -0.3 : 0.3) * root.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
         }
     }
+    //! [replaceEnter]
 
+    //! [replaceExit]
     replaceExit: Transition {
         NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 200; easing.type: Easing.OutQuint }
     }
+    //! [replaceExit]
 }

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,7 +33,6 @@
 
 #include <qglobal.h>
 #include <qguiapplication.h>
-#include <qpa/qplatformtheme.h>
 
 #include "qiosglobal.h"
 #include "qiosmenu.h"
@@ -47,9 +40,6 @@
 #include "qiosinputcontext.h"
 #include "qiosintegration.h"
 #include "qiostextresponder.h"
-
-#include <algorithm>
-#include <iterator>
 
 // m_currentMenu points to the currently visible menu.
 // Only one menu will be visible at a time, and if a second menu
@@ -281,7 +271,7 @@ quintptr QIOSMenuItem::tag() const
 
 void QIOSMenuItem::setText(const QString &text)
 {
-    m_text = QPlatformTheme::removeMnemonics(text);
+    m_text = removeMnemonics(text);
 }
 
 void QIOSMenuItem::setMenu(QPlatformMenu *menu)
@@ -304,18 +294,51 @@ void QIOSMenuItem::setRole(QPlatformMenuItem::MenuRole role)
     m_role = role;
 }
 
-#ifndef QT_NO_SHORTCUT
 void QIOSMenuItem::setShortcut(const QKeySequence &sequence)
 {
     m_shortcut = sequence;
 }
-#endif
 
 void QIOSMenuItem::setEnabled(bool enabled)
 {
     m_enabled = enabled;
 }
 
+QString QIOSMenuItem::removeMnemonics(const QString &original)
+{
+    // Copied from qcocoahelpers
+    QString returnText(original.size(), 0);
+    int finalDest = 0;
+    int currPos = 0;
+    int l = original.length();
+    while (l) {
+        if (original.at(currPos) == QLatin1Char('&')
+            && (l == 1 || original.at(currPos + 1) != QLatin1Char('&'))) {
+            ++currPos;
+            --l;
+            if (l == 0)
+                break;
+        } else if (original.at(currPos) == QLatin1Char('(') && l >= 4 &&
+                   original.at(currPos + 1) == QLatin1Char('&') &&
+                   original.at(currPos + 2) != QLatin1Char('&') &&
+                   original.at(currPos + 3) == QLatin1Char(')')) {
+            /* remove mnemonics its format is "\s*(&X)" */
+            int n = 0;
+            while (finalDest > n && returnText.at(finalDest - n - 1).isSpace())
+                ++n;
+            finalDest -= n;
+            currPos += 4;
+            l -= 4;
+            continue;
+        }
+        returnText[finalDest] = original.at(currPos);
+        ++currPos;
+        ++finalDest;
+        --l;
+    }
+    returnText.truncate(finalDest);
+    return returnText;
+}
 
 QIOSMenu::QIOSMenu()
     : QPlatformMenu()
@@ -534,10 +557,14 @@ bool QIOSMenu::eventFilter(QObject *obj, QEvent *event)
 
 QIOSMenuItemList QIOSMenu::visibleMenuItems() const
 {
-    QIOSMenuItemList visibleMenuItems;
-    visibleMenuItems.reserve(m_menuItems.size());
-    std::copy_if(m_menuItems.begin(), m_menuItems.end(), std::back_inserter(visibleMenuItems),
-                 [](QIOSMenuItem *item) { return item->m_enabled && item->m_visible && !item->m_separator; });
+    QIOSMenuItemList visibleMenuItems = m_menuItems;
+
+    for (int i = visibleMenuItems.count() - 1; i >= 0; --i) {
+        QIOSMenuItem *item = visibleMenuItems.at(i);
+        if (!item->m_enabled || !item->m_visible || item->m_separator)
+            visibleMenuItems.removeAt(i);
+    }
+
     return visibleMenuItems;
 }
 
@@ -553,7 +580,6 @@ QIOSMenuItemList QIOSMenu::filterFirstResponderActions(const QIOSMenuItemList &m
 
     for (int i = 0; i < menuItems.count(); ++i) {
         QIOSMenuItem *menuItem = menuItems.at(i);
-#ifndef QT_NO_SHORTCUT
         QKeySequence shortcut = menuItem->m_shortcut;
         if ((shortcut == QKeySequence::Cut && [responder canPerformAction:@selector(cut:) withSender:nil])
                 || (shortcut == QKeySequence::Copy && [responder canPerformAction:@selector(copy:) withSender:nil])
@@ -567,7 +593,6 @@ QIOSMenuItemList QIOSMenu::filterFirstResponderActions(const QIOSMenuItemList &m
                 || (shortcut == QKeySequence::Underline && [responder canPerformAction:@selector(toggleUnderline:) withSender:nil])) {
             continue;
         }
-#endif
         filteredMenuItems.append(menuItem);
     }
     return filteredMenuItems;
@@ -578,7 +603,7 @@ void QIOSMenu::repositionMenu()
     switch (m_effectiveMenuType) {
     case EditMenu: {
         UIView *view = reinterpret_cast<UIView *>(m_parentWindow->winId());
-        [[UIMenuController sharedMenuController] setTargetRect:m_targetRect.toCGRect() inView:view];
+        [[UIMenuController sharedMenuController] setTargetRect:toCGRect(m_targetRect) inView:view];
         [[UIMenuController sharedMenuController] setMenuVisible:YES animated:YES];
         break; }
     default:

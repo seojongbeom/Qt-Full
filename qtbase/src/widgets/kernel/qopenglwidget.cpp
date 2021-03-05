@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -537,7 +531,6 @@ public:
           w(widget) { }
 
     void beginPaint() Q_DECL_OVERRIDE;
-    void endPaint() Q_DECL_OVERRIDE;
 
     QOpenGLWidget *w;
 };
@@ -627,16 +620,6 @@ void QOpenGLWidgetPaintDevicePrivate::beginPaint()
     }
 }
 
-void QOpenGLWidgetPaintDevicePrivate::endPaint()
-{
-    QOpenGLWidgetPrivate *wd = static_cast<QOpenGLWidgetPrivate *>(QWidgetPrivate::get(w));
-    if (!wd->initialized)
-        return;
-
-    if (!wd->inPaintGL)
-        QOpenGLContextPrivate::get(wd->context)->defaultFboRedirect = 0;
-}
-
 void QOpenGLWidgetPaintDevice::ensureActiveTarget()
 {
     QOpenGLWidgetPaintDevicePrivate *d = static_cast<QOpenGLWidgetPaintDevicePrivate *>(d_ptr.data());
@@ -648,9 +631,6 @@ void QOpenGLWidgetPaintDevice::ensureActiveTarget()
         d->w->makeCurrent();
     else
         wd->fbo->bind();
-
-    if (!wd->inPaintGL)
-        QOpenGLContextPrivate::get(wd->context)->defaultFboRedirect = wd->fbo->handle();
 
     // When used as a viewport, drawing is done via opening a QPainter on the widget
     // without going through paintEvent(). We will have to make sure a glFlush() is done
@@ -755,7 +735,7 @@ void QOpenGLWidgetPrivate::initialize()
     // texture usable by the underlying window's backingstore.
     QWidget *tlw = q->window();
     QOpenGLContext *shareContext = get(tlw)->shareContext();
-    if (Q_UNLIKELY(!shareContext)) {
+    if (!shareContext) {
         qWarning("QOpenGLWidget: Cannot be used without a context shared with the toplevel.");
         return;
     }
@@ -771,7 +751,7 @@ void QOpenGLWidgetPrivate::initialize()
     ctx->setShareContext(shareContext);
     ctx->setFormat(requestedFormat);
     ctx->setScreen(shareContext->screen());
-    if (Q_UNLIKELY(!ctx->create())) {
+    if (!ctx->create()) {
         qWarning("QOpenGLWidget: Failed to create context");
         return;
     }
@@ -797,7 +777,7 @@ void QOpenGLWidgetPrivate::initialize()
     surface->setScreen(ctx->screen());
     surface->create();
 
-    if (Q_UNLIKELY(!ctx->makeCurrent(surface))) {
+    if (!ctx->makeCurrent(surface)) {
         qWarning("QOpenGLWidget: Failed to make context current");
         return;
     }
@@ -932,10 +912,10 @@ QOpenGLWidget::QOpenGLWidget(QWidget *parent, Qt::WindowFlags f)
     : QWidget(*(new QOpenGLWidgetPrivate), parent, f)
 {
     Q_D(QOpenGLWidget);
-    if (Q_UNLIKELY(!QGuiApplicationPrivate::platformIntegration()->hasCapability(QPlatformIntegration::RasterGLSurface)))
-        qWarning("QOpenGLWidget is not supported on this platform.");
-    else
+    if (QGuiApplicationPrivate::platformIntegration()->hasCapability(QPlatformIntegration::RasterGLSurface))
         d->setRenderToTexture();
+    else
+        qWarning("QOpenGLWidget is not supported on this platform.");
 }
 
 /*!
@@ -1002,7 +982,7 @@ void QOpenGLWidget::setFormat(const QSurfaceFormat &format)
 {
     Q_UNUSED(format);
     Q_D(QOpenGLWidget);
-    if (Q_UNLIKELY(d->initialized)) {
+    if (d->initialized) {
         qWarning("QOpenGLWidget: Already initialized, setting the format has no effect");
         return;
     }
@@ -1342,8 +1322,6 @@ bool QOpenGLWidget::event(QEvent *e)
             break;
         if (d->initialized)
             d->reset();
-        if (isHidden())
-            break;
         // FALLTHROUGH
     case QEvent::Show: // reparenting may not lead to a resize so reinitalize on Show too
         if (!d->initialized && !size().isEmpty() && window() && window()->windowHandle()) {

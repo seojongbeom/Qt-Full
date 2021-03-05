@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -49,7 +39,7 @@
 ****************************************************************************/
 
 import QtQuick 2.0
-import QtQuick.Window 2.3
+import QtQuick.Window 2.1
 import "../shared" as Shared
 
 QtObject {
@@ -57,7 +47,7 @@ QtObject {
     property SystemPalette palette: SystemPalette { }
 
     property var controlWindow: Window {
-        width: col.implicitWidth + defaultSpacing * 2
+        width: visibilityLabel.implicitWidth * 1.2
         height: col.implicitHeight + defaultSpacing * 2
         color: palette.window
         title: "Control Window"
@@ -67,7 +57,7 @@ QtObject {
             anchors.margins: defaultSpacing
             spacing: defaultSpacing
             property real cellWidth: col.width / 3 - spacing
-            Shared.Label { text: "Control the second window:" }
+            Text { text: "Control the second window:" }
             Grid {
                 id: grid
                 columns: 3
@@ -131,23 +121,18 @@ QtObject {
                 }
                 return "unknown";
             }
-            Shared.Label {
+            Text {
                 id: visibilityLabel
                 text: "second window is " + (testWindow.visible ? "visible" : "invisible") +
                       " and has visibility " + parent.visibilityToString(testWindow.visibility)
             }
             Rectangle {
-                color: palette.text
+                id: horizontalRule
+                color: "black"
                 width: parent.width
                 height: 1
             }
-            CurrentScreen { }
-            Rectangle {
-                color: palette.text
-                width: parent.width
-                height: 1
-            }
-            AllScreens { width: parent.width }
+            ScreenInfo { }
         }
     }
 
@@ -160,7 +145,7 @@ QtObject {
         Rectangle {
             anchors.fill: parent
             anchors.margins: defaultSpacing
-            Shared.Label {
+            Text {
                 anchors.centerIn: parent
                 text: "Second Window"
             }

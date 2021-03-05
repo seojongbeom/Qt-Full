@@ -1,37 +1,31 @@
 /***************************************************************************
 **
 ** Copyright (C) 2013 BlackBerry Limited. All rights reserved.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -385,7 +379,7 @@ static int32_t ic_perform_editor_action(input_session_t *ic, int32_t editor_acti
     Q_UNUSED(ic);
     Q_UNUSED(editor_action);
 
-    qCritical("ic_perform_editor_action not implemented");
+    qCritical() << "ic_perform_editor_action not implemented";
     return 0;
 }
 
@@ -395,7 +389,7 @@ static int32_t ic_report_fullscreen_mode(input_session_t *ic, int32_t enabled)
     Q_UNUSED(ic);
     Q_UNUSED(enabled);
 
-    qCritical("ic_report_fullscreen_mode not implemented");
+    qCritical() << "ic_report_fullscreen_mode not implemented";
     return 0;
 }
 
@@ -406,7 +400,7 @@ static extracted_text_t *ic_get_extracted_text(input_session_t *ic, extracted_te
     Q_UNUSED(request);
     Q_UNUSED(flags);
 
-    qCritical("ic_get_extracted_text not implemented");
+    qCritical() << "ic_get_extracted_text not implemented";
     return 0;
 }
 
@@ -416,7 +410,7 @@ static spannable_string_t *ic_get_selected_text(input_session_t *ic, int32_t fla
     Q_UNUSED(ic);
     Q_UNUSED(flags);
 
-    qCritical("ic_get_selected_text not implemented");
+    qCritical() << "ic_get_selected_text not implemented";
     return 0;
 }
 
@@ -426,7 +420,7 @@ static int32_t ic_get_cursor_caps_mode(input_session_t *ic, int32_t req_modes)
     Q_UNUSED(ic);
     Q_UNUSED(req_modes);
 
-    qCritical("ic_get_cursor_caps_mode not implemented");
+    qCritical() << "ic_get_cursor_caps_mode not implemented";
     return 0;
 }
 
@@ -436,7 +430,7 @@ static int32_t ic_clear_meta_key_states(input_session_t *ic, int32_t states)
     Q_UNUSED(ic);
     Q_UNUSED(states);
 
-    qCritical("ic_clear_meta_key_states not implemented");
+    qCritical() << "ic_clear_meta_key_states not implemented";
     return 0;
 }
 
@@ -447,7 +441,7 @@ static int32_t ic_set_selection(input_session_t *ic, int32_t start, int32_t end)
     Q_UNUSED(start);
     Q_UNUSED(end);
 
-    qCritical("ic_set_selection not implemented");
+    qCritical() << "ic_set_selection not implemented";
     return 0;
 }
 
@@ -536,28 +530,29 @@ static bool imfAvailable()
 
     if ( p_imf_client_init == 0 ) {
         void *handle = dlopen("libinput_client.so.1", 0);
-        if (Q_UNLIKELY(!handle)) {
+        if ( handle ) {
+            p_imf_client_init = (int32_t (*)()) dlsym(handle, "imf_client_init");
+            p_imf_client_disconnect = (void (*)()) dlsym(handle, "imf_client_disconnect");
+            p_ictrl_open_session = (const input_session_t *(*)(connection_interface_t *))dlsym(handle, "ictrl_open_session");
+            p_ictrl_close_session = (void (*)(input_session_t *))dlsym(handle, "ictrl_close_session");
+            p_ictrl_dispatch_event = (int32_t (*)(event_t *))dlsym(handle, "ictrl_dispatch_event");
+            p_vkb_init_selection_service = (int32_t (*)())dlsym(handle, "vkb_init_selection_service");
+            p_ictrl_get_num_active_sessions = (int32_t (*)())dlsym(handle, "ictrl_get_num_active_sessions");
+        } else {
             qCritical("libinput_client.so.1 is not present - IMF services are disabled.");
             s_imfDisabled = true;
             return false;
         }
-        p_imf_client_init = (int32_t (*)()) dlsym(handle, "imf_client_init");
-        p_imf_client_disconnect = (void (*)()) dlsym(handle, "imf_client_disconnect");
-        p_ictrl_open_session = (const input_session_t *(*)(connection_interface_t *))dlsym(handle, "ictrl_open_session");
-        p_ictrl_close_session = (void (*)(input_session_t *))dlsym(handle, "ictrl_close_session");
-        p_ictrl_dispatch_event = (int32_t (*)(event_t *))dlsym(handle, "ictrl_dispatch_event");
-        p_vkb_init_selection_service = (int32_t (*)())dlsym(handle, "vkb_init_selection_service");
-        p_ictrl_get_num_active_sessions = (int32_t (*)())dlsym(handle, "ictrl_get_num_active_sessions");
 
-        if (Q_UNLIKELY(!p_imf_client_init || !p_ictrl_open_session || !p_ictrl_dispatch_event)) {
+        if ( p_imf_client_init && p_ictrl_open_session && p_ictrl_dispatch_event ) {
+            s_imfReady = true;
+        } else {
             p_ictrl_open_session = 0;
             p_ictrl_dispatch_event = 0;
             s_imfDisabled = true;
             qCritical("libinput_client.so.1 did not contain the correct symbols, library mismatch? IMF services are disabled.");
             return false;
         }
-
-        s_imfReady = true;
     }
 
     return s_imfReady;
@@ -586,7 +581,7 @@ QQnxInputContext::QQnxInputContext(QQnxIntegration *integration, QQnxAbstractVir
     Q_ASSERT(sInputContextInstance == 0);
     sInputContextInstance = this;
 
-    if (Q_UNLIKELY(p_imf_client_init() != 0)) {
+    if (p_imf_client_init() != 0) {
         s_imfInitFailed = true;
         qCritical("imf_client_init failed - IMF services will be unavailable");
     }
@@ -721,7 +716,7 @@ void QQnxInputContext::update(Qt::InputMethodQueries queries)
             initEvent(&caretEvent.event, sInputSession, EVENT_CARET, CARET_POS_CHANGED, sizeof(caretEvent));
             caretEvent.old_pos = lastCaret;
             caretEvent.new_pos = m_caretPosition;
-            qInputContextDebug("ictrl_dispatch_event caret changed %d %d", lastCaret, m_caretPosition);
+            qInputContextDebug() << "ictrl_dispatch_event caret changed" << lastCaret << m_caretPosition;
             p_ictrl_dispatch_event(&caretEvent.event);
         }
     }
@@ -914,7 +909,7 @@ bool QQnxInputContext::handleKeyboardEvent(int flags, int sym, int mod, int scan
             navigation_event_t navEvent;
             initEvent(&navEvent.event, sInputSession, EVENT_NAVIGATION, key, sizeof(navEvent));
             navEvent.magnitude = 1;
-            qInputContextDebug("ictrl_dispatch_even navigation %d", key);
+            qInputContextDebug() << "ictrl_dispatch_even navigation" << key;
             p_ictrl_dispatch_event(&navEvent.event);
         }
     } else {
@@ -927,7 +922,7 @@ bool QQnxInputContext::handleKeyboardEvent(int flags, int sym, int mod, int scan
         keyEvent.sequence_id = sequenceId;
 
         p_ictrl_dispatch_event(&keyEvent.event);
-        qInputContextDebug("ictrl_dispatch_even key %d", key);
+        qInputContextDebug() << "ictrl_dispatch_even key" << key;
     }
 
     return true;
@@ -943,7 +938,7 @@ void QQnxInputContext::updateCursorPosition()
     QCoreApplication::sendEvent(input, &query);
     m_caretPosition = query.value(Qt::ImCursorPosition).toInt();
 
-    qInputContextDebug("%d", m_caretPosition);
+    qInputContextDebug() << m_caretPosition;
 }
 
 void QQnxInputContext::endComposition()
@@ -1116,7 +1111,7 @@ int32_t QQnxInputContext::processEvent(event_t *event)
         int flags = KEY_SYM_VALID | KEY_CAP_VALID;
         if (event->event_id == IMF_KEY_DOWN)
             flags |= KEY_DOWN;
-        qInputContextDebug("EVENT_KEY %d %d", flags, keySym);
+        qInputContextDebug() << "EVENT_KEY" << flags << keySym;
         QQnxScreenEventHandler::injectKeyboardEvent(flags, keySym, modifiers, 0, keyCap);
         result = 0;
         break;
@@ -1156,7 +1151,7 @@ int32_t QQnxInputContext::onCommitText(spannable_string_t *text, int32_t new_cur
 
 int32_t QQnxInputContext::onDeleteSurroundingText(int32_t left_length, int32_t right_length)
 {
-    qInputContextDebug("L: %d R: %d", int(left_length), int(right_length));
+    qInputContextDebug() << "L:" << left_length << " R:" << right_length;
 
     QObject *input = qGuiApp->focusObject();
     if (!input)

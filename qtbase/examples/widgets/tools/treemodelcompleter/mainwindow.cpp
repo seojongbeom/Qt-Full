@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -194,17 +184,16 @@ QAbstractItemModel *MainWindow::modelFromFile(const QString& fileName)
         if (line.isEmpty() || trimmedLine.isEmpty())
             continue;
 
-        QRegularExpression re("^\\s+");
-        QRegularExpressionMatch match = re.match(line);
-        int nonws = match.capturedStart();
+        QRegExp re("^\\s+");
+        int nonws = re.indexIn(line);
         int level = 0;
         if (nonws == -1) {
             level = 0;
         } else {
             if (line.startsWith("\t")) {
-                level = match.capturedLength();
+                level = re.cap(0).length();
             } else {
-                level = match.capturedLength()/4;
+                level = re.cap(0).length()/4;
             }
         }
 

@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,11 +36,9 @@
 
 #include "qquickspinboxvalidator_p.h"
 
-#if QT_CONFIG(validator)
-
 QT_BEGIN_NAMESPACE
 
-QQuickSpinBoxValidator1::QQuickSpinBoxValidator1(QObject *parent)
+QQuickSpinBoxValidator::QQuickSpinBoxValidator(QObject *parent)
     : QValidator(parent), m_value(0), m_step(1), m_initialized(false)
 {
     m_validator.setTop(99);
@@ -63,21 +58,21 @@ QQuickSpinBoxValidator1::QQuickSpinBoxValidator1(QObject *parent)
     connect(this, SIGNAL(suffixChanged()), this, SIGNAL(textChanged()));
 }
 
-QQuickSpinBoxValidator1::~QQuickSpinBoxValidator1()
+QQuickSpinBoxValidator::~QQuickSpinBoxValidator()
 {
 }
 
-QString QQuickSpinBoxValidator1::text() const
+QString QQuickSpinBoxValidator::text() const
 {
     return textFromValue(m_value);
 }
 
-qreal QQuickSpinBoxValidator1::value() const
+qreal QQuickSpinBoxValidator::value() const
 {
     return m_value;
 }
 
-void QQuickSpinBoxValidator1::setValue(qreal value)
+void QQuickSpinBoxValidator::setValue(qreal value)
 {
     if (m_initialized) {
         value = qBound(minimumValue(), value, maximumValue());
@@ -92,12 +87,12 @@ void QQuickSpinBoxValidator1::setValue(qreal value)
     }
 }
 
-qreal QQuickSpinBoxValidator1::minimumValue() const
+qreal QQuickSpinBoxValidator::minimumValue() const
 {
     return m_validator.bottom();
 }
 
-void QQuickSpinBoxValidator1::setMinimumValue(qreal min)
+void QQuickSpinBoxValidator::setMinimumValue(qreal min)
 {
     if (min != m_validator.bottom()) {
         m_validator.setBottom(min);
@@ -107,12 +102,12 @@ void QQuickSpinBoxValidator1::setMinimumValue(qreal min)
     }
 }
 
-qreal QQuickSpinBoxValidator1::maximumValue() const
+qreal QQuickSpinBoxValidator::maximumValue() const
 {
     return m_validator.top();
 }
 
-void QQuickSpinBoxValidator1::setMaximumValue(qreal max)
+void QQuickSpinBoxValidator::setMaximumValue(qreal max)
 {
     if (max != m_validator.top()) {
         m_validator.setTop(max);
@@ -122,12 +117,12 @@ void QQuickSpinBoxValidator1::setMaximumValue(qreal max)
     }
 }
 
-int QQuickSpinBoxValidator1::decimals() const
+int QQuickSpinBoxValidator::decimals() const
 {
     return m_validator.decimals();
 }
 
-void QQuickSpinBoxValidator1::setDecimals(int decimals)
+void QQuickSpinBoxValidator::setDecimals(int decimals)
 {
     if (decimals != m_validator.decimals()) {
         m_validator.setDecimals(decimals);
@@ -137,12 +132,12 @@ void QQuickSpinBoxValidator1::setDecimals(int decimals)
     }
 }
 
-qreal QQuickSpinBoxValidator1::stepSize() const
+qreal QQuickSpinBoxValidator::stepSize() const
 {
     return m_step;
 }
 
-void QQuickSpinBoxValidator1::setStepSize(qreal step)
+void QQuickSpinBoxValidator::setStepSize(qreal step)
 {
     if (m_step != step) {
         m_step = step;
@@ -150,12 +145,12 @@ void QQuickSpinBoxValidator1::setStepSize(qreal step)
     }
 }
 
-QString QQuickSpinBoxValidator1::prefix() const
+QString QQuickSpinBoxValidator::prefix() const
 {
     return m_prefix;
 }
 
-void QQuickSpinBoxValidator1::setPrefix(const QString &prefix)
+void QQuickSpinBoxValidator::setPrefix(const QString &prefix)
 {
     if (m_prefix != prefix) {
         m_prefix = prefix;
@@ -163,12 +158,12 @@ void QQuickSpinBoxValidator1::setPrefix(const QString &prefix)
     }
 }
 
-QString QQuickSpinBoxValidator1::suffix() const
+QString QQuickSpinBoxValidator::suffix() const
 {
     return m_suffix;
 }
 
-void QQuickSpinBoxValidator1::setSuffix(const QString &suffix)
+void QQuickSpinBoxValidator::setSuffix(const QString &suffix)
 {
     if (m_suffix != suffix) {
         m_suffix = suffix;
@@ -176,12 +171,12 @@ void QQuickSpinBoxValidator1::setSuffix(const QString &suffix)
     }
 }
 
-void QQuickSpinBoxValidator1::fixup(QString &input) const
+void QQuickSpinBoxValidator::fixup(QString &input) const
 {
     input = textFromValue(m_value).remove(locale().groupSeparator());
 }
 
-QValidator::State QQuickSpinBoxValidator1::validate(QString &input, int &pos) const
+QValidator::State QQuickSpinBoxValidator::validate(QString &input, int &pos) const
 {
     if (pos > 0 && pos < input.length()) {
         if (input.at(pos - 1) == locale().groupSeparator())
@@ -211,7 +206,7 @@ QValidator::State QQuickSpinBoxValidator1::validate(QString &input, int &pos) co
             if (state == QValidator::Acceptable ||
                (state == QValidator::Intermediate && val >= 0 && val <= m_validator.top()) ||
                (state == QValidator::Intermediate && val < 0 && val >= m_validator.bottom())) {
-                const_cast<QQuickSpinBoxValidator1 *>(this)->setValue(val);
+                const_cast<QQuickSpinBoxValidator *>(this)->setValue(val);
                 if (input != textFromValue(val))
                     state = QValidator::Intermediate;
             } else if (val < m_validator.bottom() || val > m_validator.top()) {
@@ -222,27 +217,25 @@ QValidator::State QQuickSpinBoxValidator1::validate(QString &input, int &pos) co
     return state;
 }
 
-void QQuickSpinBoxValidator1::componentComplete()
+void QQuickSpinBoxValidator::componentComplete()
 {
     m_initialized = true;
     setValue(m_value);
 }
 
-void QQuickSpinBoxValidator1::increment()
+void QQuickSpinBoxValidator::increment()
 {
     setValue(m_value + m_step);
 }
 
-void QQuickSpinBoxValidator1::decrement()
+void QQuickSpinBoxValidator::decrement()
 {
     setValue(m_value - m_step);
 }
 
-QString QQuickSpinBoxValidator1::textFromValue(qreal value) const
+QString QQuickSpinBoxValidator::textFromValue(qreal value) const
 {
     return m_prefix + locale().toString(value, 'f', m_validator.decimals()) + m_suffix;
 }
 
 QT_END_NAMESPACE
-
-#endif // QT_CONFIG(validator)

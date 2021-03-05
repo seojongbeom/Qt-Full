@@ -5,33 +5,27 @@
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -82,57 +76,6 @@ bool QInputControl::isAcceptableInput(const QKeyEvent *event) const
     if (m_type == TextEdit && c == QLatin1Char('\t'))
         return true;
 
-    return false;
-}
-
-bool QInputControl::isCommonTextEditShortcut(const QKeyEvent *ke)
-{
-    if (ke->modifiers() == Qt::NoModifier
-        || ke->modifiers() == Qt::ShiftModifier
-        || ke->modifiers() == Qt::KeypadModifier) {
-        if (ke->key() < Qt::Key_Escape) {
-            return true;
-        } else {
-            switch (ke->key()) {
-                case Qt::Key_Return:
-                case Qt::Key_Enter:
-                case Qt::Key_Delete:
-                case Qt::Key_Home:
-                case Qt::Key_End:
-                case Qt::Key_Backspace:
-                case Qt::Key_Left:
-                case Qt::Key_Right:
-                case Qt::Key_Up:
-                case Qt::Key_Down:
-                case Qt::Key_Tab:
-                return true;
-            default:
-                break;
-            }
-        }
-#if QT_CONFIG(shortcut)
-    } else if (ke->matches(QKeySequence::Copy)
-               || ke->matches(QKeySequence::Paste)
-               || ke->matches(QKeySequence::Cut)
-               || ke->matches(QKeySequence::Redo)
-               || ke->matches(QKeySequence::Undo)
-               || ke->matches(QKeySequence::MoveToNextWord)
-               || ke->matches(QKeySequence::MoveToPreviousWord)
-               || ke->matches(QKeySequence::MoveToStartOfDocument)
-               || ke->matches(QKeySequence::MoveToEndOfDocument)
-               || ke->matches(QKeySequence::SelectNextWord)
-               || ke->matches(QKeySequence::SelectPreviousWord)
-               || ke->matches(QKeySequence::SelectStartOfLine)
-               || ke->matches(QKeySequence::SelectEndOfLine)
-               || ke->matches(QKeySequence::SelectStartOfBlock)
-               || ke->matches(QKeySequence::SelectEndOfBlock)
-               || ke->matches(QKeySequence::SelectStartOfDocument)
-               || ke->matches(QKeySequence::SelectEndOfDocument)
-               || ke->matches(QKeySequence::SelectAll)
-              ) {
-        return true;
-#endif
-    }
     return false;
 }
 

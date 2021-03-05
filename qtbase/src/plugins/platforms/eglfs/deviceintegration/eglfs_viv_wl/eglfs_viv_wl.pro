@@ -1,10 +1,11 @@
 TARGET = qeglfs-viv-wl-integration
 
-QT += core-private gui-private eglfsdeviceintegration-private
+QT += core-private gui-private platformsupport-private eglfs_device_lib-private
 
-INCLUDEPATH += $$PWD/../../api
+INCLUDEPATH += $$PWD/../..
 CONFIG += egl
 DEFINES += LINUX=1 EGL_API_FB=1
+LIBS += -lGAL
 QMAKE_LFLAGS += $$QMAKE_LFLAGS_NOUNDEF
 
 SOURCES += $$PWD/qeglfsvivwlmain.cpp \
@@ -14,7 +15,8 @@ HEADERS += $$PWD/qeglfsvivwlintegration.h
 
 OTHER_FILES += $$PWD/eglfs_viv_wl.json
 
-QMAKE_USE_PRIVATE += wayland_server
+CONFIG += link_pkgconfig
+PKGCONFIG_PRIVATE += wayland-server
 
 PLUGIN_TYPE = egldeviceintegrations
 PLUGIN_CLASS_NAME = QEglFSVivWaylandIntegrationPlugin

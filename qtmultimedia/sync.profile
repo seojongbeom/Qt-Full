@@ -12,8 +12,3 @@
     "qmediametadata.h" => "QMediaMetaData",
     "qmultimedia.h" => "QMultimedia"
 );
-%deprecatedheaders = (
-    "QtMultimedia" =>  {
-        "qtmultimediadefs.h" => "QtMultimedia/qtmultimediaglobal.h"
-    },
-);

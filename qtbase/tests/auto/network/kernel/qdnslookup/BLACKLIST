@@ -1,2 +1,6 @@
-[lookup]
-ci
+[normal:any-multi]
+windows-7
+windows-8.1
+[idn:any-multi]
+windows-7
+windows-8.1

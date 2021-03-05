@@ -23,8 +23,7 @@ INCLUDEPATH += $$EXTRA_INCLUDEPATH
 # The other flags are relevant only for actual libraries.
 equals(TEMPLATE, aux): return()
 
-QMAKE_LIBDIR += $$EXTRA_LIBDIR
-QMAKE_FRAMEWORKPATH += $$EXTRA_FRAMEWORKPATH
+LIBS += $$EXTRA_LIBS
 
 # Static libs need no rpaths
 static: return()

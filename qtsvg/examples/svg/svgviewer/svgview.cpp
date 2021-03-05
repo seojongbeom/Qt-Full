@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -49,8 +39,7 @@
 ****************************************************************************/
 #include "svgview.h"
 
-#include <QSvgRenderer>
-
+#include <QFile>
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QGraphicsRectItem>
@@ -65,9 +54,9 @@
 SvgView::SvgView(QWidget *parent)
     : QGraphicsView(parent)
     , m_renderer(Native)
-    , m_svgItem(nullptr)
-    , m_backgroundItem(nullptr)
-    , m_outlineItem(nullptr)
+    , m_svgItem(0)
+    , m_backgroundItem(0)
+    , m_outlineItem(0)
 {
     setScene(new QGraphicsScene(this));
     setTransformationAnchor(AnchorUnderMouse);
@@ -94,26 +83,20 @@ void SvgView::drawBackground(QPainter *p, const QRectF &)
     p->restore();
 }
 
-QSize SvgView::svgSize() const
+void SvgView::openFile(const QFile &file)
 {
-    return m_svgItem ? m_svgItem->boundingRect().size().toSize() : QSize();
-}
+    if (!file.exists())
+        return;
 
-bool SvgView::openFile(const QString &fileName)
-{
     QGraphicsScene *s = scene();
 
-    const bool drawBackground = (m_backgroundItem ? m_backgroundItem->isVisible() : false);
-    const bool drawOutline = (m_outlineItem ? m_outlineItem->isVisible() : true);
-
-    QScopedPointer<QGraphicsSvgItem> svgItem(new QGraphicsSvgItem(fileName));
-    if (!svgItem->renderer()->isValid())
-        return false;
+    bool drawBackground = (m_backgroundItem ? m_backgroundItem->isVisible() : false);
+    bool drawOutline = (m_outlineItem ? m_outlineItem->isVisible() : true);
 
     s->clear();
     resetTransform();
 
-    m_svgItem = svgItem.take();
+    m_svgItem = new QGraphicsSvgItem(file.fileName());
     m_svgItem->setFlags(QGraphicsItem::ItemClipsToShape);
     m_svgItem->setCacheMode(QGraphicsItem::NoCache);
     m_svgItem->setZValue(0);
@@ -137,7 +120,6 @@ bool SvgView::openFile(const QString &fileName)
     s->addItem(m_outlineItem);
 
     s->setSceneRect(m_outlineItem->boundingRect().adjusted(-10, -10, 10, 10));
-    return true;
 }
 
 void SvgView::setRenderer(RendererType type)
@@ -204,9 +186,3 @@ void SvgView::wheelEvent(QWheelEvent *event)
     event->accept();
 }
 
-QSvgRenderer *SvgView::renderer() const
-{
-    if (m_svgItem)
-        return m_svgItem->renderer();
-    return nullptr;
-}

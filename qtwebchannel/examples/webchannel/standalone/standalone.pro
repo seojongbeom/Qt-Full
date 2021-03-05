@@ -4,13 +4,10 @@ CONFIG += warn_on
 
 SOURCES += \
     main.cpp \
-    dialog.cpp \
     ../shared/websockettransport.cpp \
     ../shared/websocketclientwrapper.cpp
 
 HEADERS += \
-    core.h \
-    dialog.h \
     ../shared/websockettransport.h \
     ../shared/websocketclientwrapper.h
 

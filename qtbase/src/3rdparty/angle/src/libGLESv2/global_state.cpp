@@ -55,6 +55,13 @@ Current *AllocateCurrent()
     return current;
 }
 
+void DeallocateCurrent()
+{
+    Current *current = reinterpret_cast<Current*>(GetTLSValue(currentTLS));
+    SafeDelete(current);
+    SetTLSValue(currentTLS, NULL);
+}
+
 Current *GetCurrentData()
 {
     // Create a TLS index if one has not been created for this DLL
@@ -71,14 +78,6 @@ Current *GetCurrentData()
 }
 
 #ifdef ANGLE_PLATFORM_WINDOWS
-
-void DeallocateCurrent()
-{
-    Current *current = reinterpret_cast<Current*>(GetTLSValue(currentTLS));
-    SafeDelete(current);
-    SetTLSValue(currentTLS, NULL);
-}
-
 extern "C" BOOL WINAPI DllMain(HINSTANCE, DWORD reason, LPVOID)
 {
     switch (reason)

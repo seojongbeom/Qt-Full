@@ -1,38 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -170,10 +163,10 @@ QT_BEGIN_NAMESPACE
     \value LeaveEditFocus                   An editor widget loses focus for editing. QT_KEYPAD_NAVIGATION must be defined.
     \value LeaveWhatsThisMode               Send to toplevel widgets when the application leaves "What's This?" mode.
     \value LocaleChange                     The system locale has changed.
-    \value NonClientAreaMouseButtonDblClick A mouse double click occurred outside the client area (QMouseEvent).
-    \value NonClientAreaMouseButtonPress    A mouse button press occurred outside the client area (QMouseEvent).
-    \value NonClientAreaMouseButtonRelease  A mouse button release occurred outside the client area (QMouseEvent).
-    \value NonClientAreaMouseMove           A mouse move occurred outside the client area (QMouseEvent).
+    \value NonClientAreaMouseButtonDblClick A mouse double click occurred outside the client area.
+    \value NonClientAreaMouseButtonPress    A mouse button press occurred outside the client area.
+    \value NonClientAreaMouseButtonRelease  A mouse button release occurred outside the client area.
+    \value NonClientAreaMouseMove           A mouse move occurred outside the client area.
     \value MacSizeChange                    The user changed his widget sizes (\macos only).
     \value MetaCall                         An asynchronous method invocation via QMetaObject::invokeMethod().
     \value ModifiedChange                   Widgets modification state has been changed.
@@ -191,7 +184,6 @@ QT_BEGIN_NAMESPACE
     \value ParentChange                     The widget parent has changed.
     \value PlatformPanel                    A platform specific panel has been requested.
     \value PlatformSurface                  A native platform surface has been created or is about to be destroyed (QPlatformSurfaceEvent).
-    \omitvalue Pointer
     \value Polish                           The widget is polished.
     \value PolishRequest                    The widget should be polished.
     \value QueryWhatsThis                   The widget should accept the event if it has "What's This?" help.
@@ -213,10 +205,9 @@ QT_BEGIN_NAMESPACE
     \value TabletMove                       Wacom tablet move (QTabletEvent).
     \value TabletPress                      Wacom tablet press (QTabletEvent).
     \value TabletRelease                    Wacom tablet release (QTabletEvent).
-    \omitvalue OkRequest
+    \value OkRequest                        Ok button in decoration pressed. Supported only for Windows CE.
     \value TabletEnterProximity             Wacom tablet enter proximity event (QTabletEvent), sent to QApplication.
     \value TabletLeaveProximity             Wacom tablet leave proximity event (QTabletEvent), sent to QApplication.
-    \value TabletTrackingChange             The Wacom tablet tracking state has changed (since Qt 5.9).
     \omitvalue ThemeChange
     \value ThreadChange                     The object is moved to another thread. This is the last event sent to this object in the previous thread. See QObject::moveToThread().
     \value Timer                            Regular timer events (QTimerEvent).
@@ -652,5 +643,3 @@ QDeferredDeleteEvent::~QDeferredDeleteEvent()
 */
 
 QT_END_NAMESPACE
-
-#include "moc_qcoreevent.cpp"

@@ -12,7 +12,7 @@ SOURCES += \
     $$PWD/qquickmousethief.cpp \
     $$PWD/qquickmathutils.cpp
 
-QML_FILES += \
+OTHER_FILES += \
     $$PWD/qmldir \
     $$PWD/CircularButton.qml \
     $$PWD/CircularButtonStyleHelper.qml \

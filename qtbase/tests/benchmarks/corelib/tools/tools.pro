@@ -10,6 +10,7 @@ SUBDIRS = \
         qlocale \
         qmap \
         qrect \
+        qregexp \
         qringbuffer \
         qstack \
         qstring \

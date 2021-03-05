@@ -26,7 +26,7 @@
 #include "config.h"
 #include "Disassembler.h"
 
-#if USE(ARMV7_DISASSEMBLER) && CPU(ARM_THUMB2)
+#if USE(ARMV7_DISASSEMBLER)
 
 #include "ARMv7/ARMv7DOpcode.h"
 #include "MacroAssemblerCodeRef.h"

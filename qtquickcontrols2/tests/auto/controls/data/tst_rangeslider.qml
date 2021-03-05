@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -50,7 +40,7 @@
 
 import QtQuick 2.2
 import QtTest 1.0
-import QtQuick.Controls 2.2
+import Qt.labs.controls 1.0
 
 TestCase {
     id: testCase
@@ -60,9 +50,14 @@ TestCase {
     when: windowShown
     name: "RangeSlider"
 
-    Component {
-        id: signalSpy
-        SignalSpy { }
+    SignalSpy {
+        id: firstPressedSpy
+        signalName: "pressedChanged"
+    }
+
+    SignalSpy {
+        id: secondPressedSpy
+        signalName: "pressedChanged"
     }
 
     Component {
@@ -89,17 +84,34 @@ TestCase {
         }
     }
 
+    function init() {
+        verify(!firstPressedSpy.target)
+        compare(firstPressedSpy.count, 0)
+
+        verify(!secondPressedSpy.target)
+        compare(secondPressedSpy.count, 0)
+    }
+
+    function cleanup() {
+        firstPressedSpy.target = null
+        firstPressedSpy.clear()
+        secondPressedSpy.target = null
+        secondPressedSpy.clear()
+    }
+
     function test_defaults() {
-        var control = createTemporaryObject(sliderComponent, testCase)
+        var control = sliderComponent.createObject(testCase)
         verify(control)
 
         compare(control.stepSize, 0)
         compare(control.snapMode, RangeSlider.NoSnap)
         compare(control.orientation, Qt.Horizontal)
+
+        control.destroy()
     }
 
     function test_values() {
-        var control = createTemporaryObject(sliderComponent, testCase)
+        var control = sliderComponent.createObject(testCase)
         verify(control)
 
         compare(control.first.value, 0.0)
@@ -121,10 +133,12 @@ TestCase {
         compare(control.first.value, 0.5)
         control.second.value = 0
         compare(control.second.value, 0.5)
+
+        control.destroy()
     }
 
     function test_range() {
-        var control = createTemporaryObject(sliderComponent, testCase, { from: 0, to: 100, "first.value": 50, "second.value": 100 })
+        var control = sliderComponent.createObject(testCase, { from: 0, to: 100, "first.value": 50, "second.value": 100 })
         verify(control)
 
         compare(control.from, 0)
@@ -155,10 +169,12 @@ TestCase {
         control.first.value = 50
         compare(control.first.value, 50)
         compare(control.first.position, 0.5)
+
+        control.destroy()
     }
 
     function test_setValues() {
-        var control = createTemporaryObject(sliderComponent, testCase)
+        var control = sliderComponent.createObject(testCase)
         verify(control)
 
         compare(control.from, 0)
@@ -180,10 +196,12 @@ TestCase {
         compare(control.second.value, 200)
         compare(control.first.position, 0.333333)
         compare(control.second.position, 0.666666)
+
+        control.destroy()
     }
 
     function test_inverted() {
-        var control = createTemporaryObject(sliderComponent, testCase, { from: 1.0, to: -1.0 })
+        var control = sliderComponent.createObject(testCase, { from: 1.0, to: -1.0 })
         verify(control)
 
         compare(control.from, 1.0)
@@ -210,10 +228,12 @@ TestCase {
         compare(control.first.position, 0.5)
         compare(control.second.value, 0.0);
         compare(control.second.position, 0.5);
+
+        control.destroy()
     }
 
     function test_visualPosition() {
-        var control = createTemporaryObject(sliderComponent, testCase)
+        var control = sliderComponent.createObject(testCase)
         verify(control)
 
         compare(control.first.value, 0.0)
@@ -255,10 +275,12 @@ TestCase {
         control.LayoutMirroring.enabled = true
         compare(control.first.visualPosition, 0.75)
         compare(control.second.visualPosition, 0.0)
+
+        control.destroy()
     }
 
     function test_orientation() {
-        var control = createTemporaryObject(sliderComponent, testCase)
+        var control = sliderComponent.createObject(testCase)
         verify(control)
 
         compare(control.orientation, Qt.Horizontal)
@@ -266,28 +288,28 @@ TestCase {
         control.orientation = Qt.Vertical
         compare(control.orientation, Qt.Vertical)
         verify(control.width < control.height)
+
+        control.destroy()
     }
 
     function test_mouse_data() {
         return [
-            { tag: "horizontal", orientation: Qt.Horizontal, live: false },
-            { tag: "vertical", orientation: Qt.Vertical, live: false },
-            { tag: "horizontal:live", orientation: Qt.Horizontal, live: true },
-            { tag: "vertical:live", orientation: Qt.Vertical, live: true }
+            { tag: "horizontal", orientation: Qt.Horizontal },
+            { tag: "vertical", orientation: Qt.Vertical }
         ]
     }
 
     function test_mouse(data) {
-        var control = createTemporaryObject(sliderComponent, testCase, { orientation: data.orientation, live: data.live })
+        var control = sliderComponent.createObject(testCase, { orientation: data.orientation })
         verify(control)
 
-        var firstPressedSpy = signalSpy.createObject(control, {target: control.first, signalName: "pressedChanged"})
+        firstPressedSpy.target = control.first
         verify(firstPressedSpy.valid)
 
-        var secondPressedSpy = signalSpy.createObject(control, {target: control.second, signalName: "pressedChanged"})
+        secondPressedSpy.target = control.second
         verify(secondPressedSpy.valid)
 
-        mousePress(control, control.leftPadding, control.height - control.bottomPadding, Qt.LeftButton)
+        mousePress(control, control.width * 0.25, control.height * 0.75, Qt.LeftButton)
         compare(firstPressedSpy.count, 1)
         compare(secondPressedSpy.count, 0)
         compare(control.first.pressed, true)
@@ -297,7 +319,7 @@ TestCase {
         compare(control.second.value, 1.0)
         compare(control.second.position, 1.0)
 
-        mouseRelease(control, control.leftPadding, control.height - control.bottomPadding, Qt.LeftButton)
+        mouseRelease(control, control.width * 0.25, control.height * 0.75, Qt.LeftButton)
         compare(firstPressedSpy.count, 2)
         compare(secondPressedSpy.count, 0)
         compare(control.first.pressed, false)
@@ -307,7 +329,7 @@ TestCase {
         compare(control.second.value, 1.0)
         compare(control.second.position, 1.0)
 
-        mousePress(control, control.width - control.rightPadding, control.topPadding, Qt.LeftButton)
+        mousePress(control, control.width * 0.75, control.height * 0.25, Qt.LeftButton)
         compare(firstPressedSpy.count, 2)
         compare(secondPressedSpy.count, 1)
         compare(control.first.pressed, false)
@@ -317,7 +339,7 @@ TestCase {
         compare(control.second.value, 1.0)
         compare(control.second.position, 1.0)
 
-        mouseRelease(control, control.width - control.rightPadding, control.topPadding, Qt.LeftButton)
+        mouseRelease(control, control.width * 0.75, control.height * 0.25, Qt.LeftButton)
         compare(firstPressedSpy.count, 2)
         compare(secondPressedSpy.count, 2)
         compare(control.first.pressed, false)
@@ -347,7 +369,7 @@ TestCase {
         compare(control.second.value, 1.0)
         compare(control.second.position, 1.0)
 
-        mousePress(control, control.leftPadding, control.height - control.bottomPadding, Qt.LeftButton)
+        mousePress(control, control.first.handle.x, control.first.handle.y, Qt.LeftButton)
         compare(firstPressedSpy.count, 5)
         compare(secondPressedSpy.count, 2)
         compare(control.first.pressed, true)
@@ -360,11 +382,11 @@ TestCase {
         var horizontal = control.orientation === Qt.Horizontal
         var toX = horizontal ? control.width * 0.5 : control.first.handle.x
         var toY = horizontal ? control.first.handle.y : control.height * 0.5
-        mouseMove(control, toX, toY)
+        mouseMove(control, toX, toY, Qt.LeftButton)
         compare(firstPressedSpy.count, 5)
         compare(secondPressedSpy.count, 2)
         compare(control.first.pressed, true)
-        compare(control.first.value, data.live ? 0.5 : 0.0)
+        compare(control.first.value, 0.0)
         compare(control.first.position, 0.5)
         compare(control.first.visualPosition, 0.5)
         compare(control.second.pressed, false)
@@ -383,187 +405,12 @@ TestCase {
         compare(control.second.value, 1.0)
         compare(control.second.position, 1.0)
         compare(control.second.visualPosition, horizontal ? 1.0 : 0.0)
-    }
 
-    function test_touch_data() {
-        return [
-            { tag: "horizontal", orientation: Qt.Horizontal, live: false },
-            { tag: "vertical", orientation: Qt.Vertical, live: false },
-            { tag: "horizontal:live", orientation: Qt.Horizontal, live: true },
-            { tag: "vertical:live", orientation: Qt.Vertical, live: true }
-        ]
-    }
-
-    function test_touch(data) {
-        var control = createTemporaryObject(sliderComponent, testCase, { orientation: data.orientation, live: data.live })
-        verify(control)
-
-        var firstPressedSpy = signalSpy.createObject(control, {target: control.first, signalName: "pressedChanged"})
-        verify(firstPressedSpy.valid)
-
-        var secondPressedSpy = signalSpy.createObject(control, {target: control.second, signalName: "pressedChanged"})
-        verify(secondPressedSpy.valid)
-
-        var touch = touchEvent(control)
-        touch.press(0, control, control.width * 0.25, control.height * 0.75).commit()
-        compare(firstPressedSpy.count, 1)
-        compare(secondPressedSpy.count, 0)
-        compare(control.first.pressed, true)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        touch.release(0, control, control.width * 0.25, control.height * 0.75).commit()
-        compare(firstPressedSpy.count, 2)
-        compare(secondPressedSpy.count, 0)
-        compare(control.first.pressed, false)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        touch.press(0, control, control.width * 0.75, control.height * 0.25).commit()
-        compare(firstPressedSpy.count, 2)
-        compare(secondPressedSpy.count, 1)
-        compare(control.first.pressed, false)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, true)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        touch.release(0, control, control.width * 0.75, control.height * 0.25).commit()
-        compare(firstPressedSpy.count, 2)
-        compare(secondPressedSpy.count, 2)
-        compare(control.first.pressed, false)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        touch.press(0, control, 0, control.height).commit()
-        compare(firstPressedSpy.count, 3)
-        compare(secondPressedSpy.count, 2)
-        compare(control.first.pressed, true)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        touch.release(0, control, 0, control.height).commit()
-        compare(firstPressedSpy.count, 4)
-        compare(secondPressedSpy.count, 2)
-        compare(control.first.pressed, false)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        touch.press(0, control, control.first.handle.x, control.first.handle.y).commit()
-        compare(firstPressedSpy.count, 5)
-        compare(secondPressedSpy.count, 2)
-        compare(control.first.pressed, true)
-        compare(control.first.value, 0.0)
-        compare(control.first.position, 0.0)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-
-        var horizontal = control.orientation === Qt.Horizontal
-        var toX = horizontal ? control.width * 0.5 : control.first.handle.x
-        var toY = horizontal ? control.first.handle.y : control.height * 0.5
-        touch.move(0, control, toX, toY).commit()
-        compare(firstPressedSpy.count, 5)
-        compare(secondPressedSpy.count, 2)
-        compare(control.first.pressed, true)
-        compare(control.first.value, data.live ? 0.5 : 0.0)
-        compare(control.first.position, 0.5)
-        compare(control.first.visualPosition, 0.5)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-        compare(control.second.visualPosition, horizontal ? 1.0 : 0.0)
-
-        touch.release(0, control, toX, toY).commit()
-        compare(firstPressedSpy.count, 6)
-        compare(secondPressedSpy.count, 2)
-        compare(control.first.pressed, false)
-        compare(control.first.value, 0.5)
-        compare(control.first.position, 0.5)
-        compare(control.first.visualPosition, 0.5)
-        compare(control.second.pressed, false)
-        compare(control.second.value, 1.0)
-        compare(control.second.position, 1.0)
-        compare(control.second.visualPosition, horizontal ? 1.0 : 0.0)
-    }
-
-    function test_multiTouch() {
-        var control1 = createTemporaryObject(sliderComponent, testCase)
-        verify(control1)
-
-        // press and move the first handle of the first slider
-        var touch = touchEvent(control1)
-        touch.press(0, control1, 0, 0).commit().move(0, control1, control1.width / 2, control1.height / 2).commit()
-        compare(control1.first.pressed, true)
-        compare(control1.first.position, 0.5)
-        compare(control1.second.pressed, false)
-        compare(control1.second.position, 1.0)
-
-        // press and move the second handle of the first slider
-        touch.stationary(0).press(1, control1, control1.width, control1.height).commit()
-        touch.stationary(0).move(1, control1, control1.width / 2, control1.height / 2).commit()
-        compare(control1.first.pressed, true)
-        compare(control1.first.position, 0.5)
-        compare(control1.second.pressed, true)
-        compare(control1.second.position, 0.5)
-
-        var control2 = createTemporaryObject(sliderComponent, testCase, {y: control1.height})
-        verify(control2)
-
-        // press and move the first handle of the second slider
-        touch.stationary(0).stationary(1).press(2, control2, 0, 0).commit()
-        touch.stationary(0).stationary(1).move(2, control2, control2.width / 2, control2.height / 2).commit()
-        compare(control1.first.pressed, true)
-        compare(control1.first.position, 0.5)
-        compare(control1.second.pressed, true)
-        compare(control1.second.position, 0.5)
-        compare(control2.first.pressed, true)
-        compare(control2.first.position, 0.5)
-        compare(control2.second.pressed, false)
-        compare(control2.second.position, 1.0)
-
-        // press and move the second handle of the second slider
-        touch.stationary(0).stationary(1).stationary(2).press(3, control2, control2.width, control2.height).commit()
-        touch.stationary(0).stationary(1).stationary(2).move(3, control2, control2.width / 2, control2.height / 2).commit()
-        compare(control1.first.pressed, true)
-        compare(control1.first.position, 0.5)
-        compare(control1.second.pressed, true)
-        compare(control1.second.position, 0.5)
-        compare(control2.first.pressed, true)
-        compare(control2.first.position, 0.5)
-        compare(control2.second.pressed, true)
-        compare(control2.second.position, 0.5)
-
-        // release the both handles of the both sliders
-        touch.release(0, control1).release(1, control1).release(2, control2).release(3, control2).commit()
-        compare(control1.first.pressed, false)
-        compare(control1.first.position, 0.5)
-        compare(control1.second.pressed, false)
-        compare(control1.second.position, 0.5)
-        compare(control2.first.pressed, false)
-        compare(control2.first.position, 0.5)
-        compare(control2.second.pressed, false)
-        compare(control2.second.position, 0.5)
+        control.destroy()
     }
 
     function test_overlappingHandles() {
-        var control = createTemporaryObject(sliderComponent, testCase, { orientation: data.orientation })
+        var control = sliderComponent.createObject(testCase, { orientation: data.orientation })
         verify(control)
 
         // By default, we force the second handle to be after the first in
@@ -580,7 +427,7 @@ TestCase {
         compare(control.first.handle.z, 0)
 
         // Move the second handle out of the way.
-        mouseMove(control, control.width, control.first.handle.y)
+        mouseMove(control, control.width, control.first.handle.y, Qt.LeftButton)
         mouseRelease(control, control.width, control.first.handle.y, Qt.LeftButton)
         verify(!control.second.pressed)
         compare(control.second.value, 1.0)
@@ -593,7 +440,7 @@ TestCase {
         compare(control.first.handle.z, 1)
         compare(control.second.handle.z, 0)
 
-        mouseMove(control, control.width, control.first.handle.y)
+        mouseMove(control, control.width, control.first.handle.y, Qt.LeftButton)
         mouseRelease(control, control.width, control.first.handle.y, Qt.LeftButton)
         verify(!control.first.pressed)
         compare(control.first.handle.z, 1)
@@ -609,6 +456,8 @@ TestCase {
         verify(!control.first.pressed)
         compare(control.first.handle.z, 1)
         compare(control.second.handle.z, 0)
+
+        control.destroy()
     }
 
     function test_keys_data() {
@@ -619,12 +468,12 @@ TestCase {
     }
 
     function test_keys(data) {
-        var control = createTemporaryObject(sliderComponent, testCase, { orientation: data.orientation })
+        var control = sliderComponent.createObject(testCase, { orientation: data.orientation })
         verify(control)
 
         var pressedCount = 0
 
-        var firstPressedSpy = signalSpy.createObject(control, {target: control.first, signalName: "pressedChanged"})
+        firstPressedSpy.target = control.first
         verify(firstPressedSpy.valid)
 
         control.first.handle.forceActiveFocus()
@@ -662,7 +511,7 @@ TestCase {
         control.stepSize = 0.25
 
         pressedCount = 0;
-        var secondPressedSpy = signalSpy.createObject(control, {target: control.second, signalName: "pressedChanged"})
+        secondPressedSpy.target = control.second
         verify(secondPressedSpy.valid)
 
         control.second.handle.forceActiveFocus()
@@ -693,16 +542,18 @@ TestCase {
             compare(control.second.pressed, false)
             compare(secondPressedSpy.count, ++pressedCount)
         }
+
+        control.destroy()
     }
 
     function test_padding() {
         // test with "unbalanced" paddings (left padding != right padding) to ensure
         // that the slider position calculation is done taking padding into account
         // ==> the position is _not_ 0.5 in the middle of the control
-        var control = createTemporaryObject(sliderComponent, testCase, { leftPadding: 10, rightPadding: 20, live: false })
+        var control = sliderComponent.createObject(testCase, { leftPadding: 10, rightPadding: 20 })
         verify(control)
 
-        var firstPressedSpy = signalSpy.createObject(control, {target: control.first, signalName: "pressedChanged"})
+        firstPressedSpy.target = control.first
         verify(firstPressedSpy.valid)
 
         mousePress(control, control.first.handle.x, control.first.handle.y, Qt.LeftButton)
@@ -712,14 +563,14 @@ TestCase {
         compare(control.first.position, 0.0)
         compare(control.first.visualPosition, 0.0)
 
-        mouseMove(control, control.leftPadding + control.availableWidth * 0.5, control.height * 0.5, 0)
+        mouseMove(control, control.leftPadding + control.availableWidth * 0.5, control.height * 0.5, 0, Qt.LeftButton)
         compare(firstPressedSpy.count, 1)
         compare(control.first.pressed, true)
         compare(control.first.value, 0.0)
         compare(control.first.position, 0.5)
         compare(control.first.visualPosition, 0.5)
 
-        mouseMove(control, control.width * 0.5, control.height * 0.5, 0)
+        mouseMove(control, control.width * 0.5, control.height * 0.5, 0, Qt.LeftButton)
         compare(firstPressedSpy.count, 1)
         compare(control.first.pressed, true)
         compare(control.first.value, 0.0)
@@ -737,22 +588,21 @@ TestCase {
         control.first.value = 0
         control.locale = Qt.locale("ar_EG")
 
-        mousePress(control, control.first.handle.x + control.first.handle.width / 2,
-                            control.first.handle.y + control.first.handle.height / 2, Qt.LeftButton)
+        mousePress(control, control.first.handle.x, control.first.handle.y, Qt.LeftButton)
         compare(firstPressedSpy.count, 3)
         compare(control.first.pressed, true)
         compare(control.first.value, 0.0)
         compare(control.first.position, 0.0)
         compare(control.first.visualPosition, 1.0)
 
-        mouseMove(control, control.leftPadding + control.availableWidth * 0.5, control.height * 0.5, 0)
+        mouseMove(control, control.leftPadding + control.availableWidth * 0.5, control.height * 0.5, 0, Qt.LeftButton)
         compare(firstPressedSpy.count, 3)
         compare(control.first.pressed, true)
         compare(control.first.value, 0.0)
         compare(control.first.position, 0.5)
         compare(control.first.visualPosition, 0.5)
 
-        mouseMove(control, control.width * 0.5, control.height * 0.5, 0)
+        mouseMove(control, control.width * 0.5, control.height * 0.5, 0, Qt.LeftButton)
         compare(firstPressedSpy.count, 3)
         compare(control.first.pressed, true)
         compare(control.first.value, 0.0)
@@ -765,85 +615,52 @@ TestCase {
         compare(control.first.value, 0.5)
         compare(control.first.position, 0.5)
         compare(control.first.visualPosition, 0.5)
+
+        control.destroy()
     }
 
-    function test_snapMode_data(immediate) {
+    function test_snapMode_data() {
         return [
-            { tag: "NoSnap", snapMode: RangeSlider.NoSnap, from: 0, to: 2, values: [0, 0, 0.25], positions: [0, 0.1, 0.1] },
-            { tag: "SnapAlways (0..2)", snapMode: RangeSlider.SnapAlways, from: 0, to: 2, values: [0.0, 0.0, 0.2], positions: [0.0, 0.1, 0.1] },
-            { tag: "SnapAlways (1..3)", snapMode: RangeSlider.SnapAlways, from: 1, to: 3, values: [1.0, 1.0, 1.2], positions: [0.0, 0.1, 0.1] },
-            { tag: "SnapAlways (-1..1)", snapMode: RangeSlider.SnapAlways, from: -1, to: 1, values: [0.0, 0.0, -0.8], positions: [immediate ? 0.0 : 0.5, 0.1, 0.1] },
-            { tag: "SnapAlways (1..-1)", snapMode: RangeSlider.SnapAlways, from: 1, to: -1, values: [0.0, 0.0,  0.8], positions: [immediate ? 0.0 : 0.5, 0.1, 0.1] },
-            { tag: "SnapOnRelease (0..2)", snapMode: RangeSlider.SnapOnRelease, from: 0, to: 2, values: [0.0, 0.0, 0.2], positions: [0.0, 0.1, 0.1] },
-            { tag: "SnapOnRelease (1..3)", snapMode: RangeSlider.SnapOnRelease, from: 1, to: 3, values: [1.0, 1.0, 1.2], positions: [0.0, 0.1, 0.1] },
-            { tag: "SnapOnRelease (-1..1)", snapMode: RangeSlider.SnapOnRelease, from: -1, to: 1, values: [0.0, 0.0, -0.8], positions: [immediate ? 0.0 : 0.5, 0.1, 0.1] },
-            { tag: "SnapOnRelease (1..-1)", snapMode: RangeSlider.SnapOnRelease, from: 1, to: -1, values: [0.0, 0.0,  0.8], positions: [immediate ? 0.0 : 0.5, 0.1, 0.1] }
+            { tag: "NoSnap", snapMode: Slider.NoSnap, values: [0, 0, 0.25], positions: [0, 0.1, 0.1] },
+            { tag: "SnapAlways", snapMode: Slider.SnapAlways, values: [0, 0, 0.2], positions: [0, 0.1, 0.1] },
+            { tag: "SnapOnRelease", snapMode: Slider.SnapOnRelease, values: [0, 0, 0.2], positions: [0, 0.1, 0.1] }
         ]
     }
 
-    function test_snapMode_mouse_data() {
-        return test_snapMode_data(true)
-    }
-
-    function test_snapMode_mouse(data) {
-        var control = createTemporaryObject(sliderComponent, testCase, {snapMode: data.snapMode, from: data.from, to: data.to, stepSize: 0.2, live: false})
+    function test_snapMode(data) {
+        var control = sliderComponent.createObject(testCase, {snapMode: data.snapMode, from: 0, to: 2, stepSize: 0.2})
         verify(control)
 
         control.first.value = 0
-        control.second.value = data.to
+        control.second.value = 2
 
-        var fuzz = 0.05
+        function sliderCompare(left, right) {
+            return Math.abs(left - right) < 0.05
+        }
 
-        mousePress(control, control.leftPadding)
+        mousePress(control, control.first.handle.x, control.first.handle.y)
         compare(control.first.pressed, true)
         compare(control.first.value, data.values[0])
         compare(control.first.position, data.positions[0])
 
         mouseMove(control, control.leftPadding + 0.15 * (control.availableWidth + control.first.handle.width / 2))
         compare(control.first.pressed, true)
-        fuzzyCompare(control.first.value, data.values[1], fuzz)
-        fuzzyCompare(control.first.position, data.positions[1], fuzz)
+        verify(sliderCompare(control.first.value, data.values[1]))
+        verify(sliderCompare(control.first.position, data.positions[1]))
 
         mouseRelease(control, control.leftPadding + 0.15 * (control.availableWidth + control.first.handle.width / 2))
         compare(control.first.pressed, false)
-        fuzzyCompare(control.first.value, data.values[2], fuzz)
-        fuzzyCompare(control.first.position, data.positions[2], fuzz)
-    }
+        verify(sliderCompare(control.first.value, data.values[2]))
+        verify(sliderCompare(control.first.position, data.positions[2]))
 
-    function test_snapMode_touch_data() {
-        return test_snapMode_data(false)
-    }
-
-    function test_snapMode_touch(data) {
-        var control = createTemporaryObject(sliderComponent, testCase, {snapMode: data.snapMode, from: data.from, to: data.to, stepSize: 0.2, live: false})
-        verify(control)
-
-        control.first.value = 0
-        control.second.value = data.to
-
-        var fuzz = 0.05
-
-        var touch = touchEvent(control)
-        touch.press(0, control, control.first.handle.x, control.first.handle.y).commit()
-        compare(control.first.pressed, true)
-        compare(control.first.value, data.values[0])
-        compare(control.first.position, data.positions[0])
-
-        touch.move(0, control, control.leftPadding + 0.15 * (control.availableWidth + control.first.handle.width / 2)).commit()
-        compare(control.first.pressed, true)
-        fuzzyCompare(control.first.value, data.values[1], fuzz)
-        fuzzyCompare(control.first.position, data.positions[1], fuzz)
-
-        touch.release(0, control, control.leftPadding + 0.15 * (control.availableWidth + control.first.handle.width / 2)).commit()
-        compare(control.first.pressed, false)
-        fuzzyCompare(control.first.value, data.values[2], fuzz)
-        fuzzyCompare(control.first.position, data.positions[2], fuzz)
+        control.destroy()
     }
 
     function test_focus() {
-        var control = createTemporaryObject(sliderComponent, testCase)
+        var control = sliderComponent.createObject(testCase)
         verify(control)
 
+        waitForRendering(control)
         compare(control.activeFocus, false)
 
         // focus is forwarded to the first handle
@@ -869,57 +686,7 @@ TestCase {
         compare(control.activeFocus, true)
         compare(control.first.handle.activeFocus, false)
         compare(control.second.handle.activeFocus, true)
-    }
 
-    function test_hover_data() {
-        return [
-            { tag: "first:true", node: "first", hoverEnabled: true },
-            { tag: "first:false", node: "first", hoverEnabled: false },
-            { tag: "second:true", node: "second", hoverEnabled: true },
-            { tag: "second:false", node: "second", hoverEnabled: false }
-        ]
-    }
-
-    function test_hover(data) {
-        var control = createTemporaryObject(sliderComponent, testCase, {hoverEnabled: data.hoverEnabled})
-        verify(control)
-
-        var node = control[data.node]
-        compare(control.hovered, false)
-        compare(node.hovered, false)
-
-        mouseMove(control, node.handle.x + node.handle.width / 2, node.handle.y + node.handle.height / 2)
-        compare(control.hovered, data.hoverEnabled)
-        compare(node.hovered, data.hoverEnabled && node.handle.enabled)
-
-        mouseMove(control, node.handle.x - 1, node.handle.y - 1)
-        compare(node.hovered, false)
-    }
-
-    function test_nullHandles() {
-        var control = createTemporaryObject(sliderComponent, testCase, {"second.value": 1})
-        verify(control)
-
-        verify(control.first.handle)
-        verify(control.second.handle)
-
-        control.first.handle = null
-        control.second.handle = null
-
-        mousePress(control, control.leftPadding, control.height / 2)
-        verify(control.first.pressed, true)
-        compare(control.second.pressed, false)
-
-        mouseRelease(control, control.leftPadding, control.height / 2)
-        compare(control.first.pressed, false)
-        compare(control.second.pressed, false)
-
-        mousePress(control, control.width - control.rightPadding, control.height / 2)
-        compare(control.first.pressed, false)
-        compare(control.second.pressed, true)
-
-        mouseRelease(control, control.width - control.rightPadding, control.height / 2)
-        compare(control.first.pressed, false)
-        compare(control.second.pressed, false)
+        control.destroy()
     }
 }

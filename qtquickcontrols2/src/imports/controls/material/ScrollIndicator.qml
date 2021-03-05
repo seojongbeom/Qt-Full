@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,21 +34,24 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.ScrollIndicator {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            contentItem.implicitWidth + leftPadding + rightPadding)
+                            indicator.implicitWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentItem.implicitHeight + topPadding + bottomPadding)
+                             indicator.implicitHeight + topPadding + bottomPadding)
 
     padding: 2
 
-    contentItem: Rectangle {
+    //! [indicator]
+    indicator: Rectangle {
+        id: indicator
+
         implicitWidth: 4
         implicitHeight: 4
 
@@ -56,10 +59,16 @@ T.ScrollIndicator {
         visible: control.size < 1.0
         opacity: 0.0
 
+        readonly property bool horizontal: control.orientation === Qt.Horizontal
+        x: control.leftPadding + (horizontal ? control.position * control.width : 0)
+        y: control.topPadding + (horizontal ? 0 : control.position * control.height)
+        width: horizontal ? control.size * control.availableWidth : implicitWidth
+        height: horizontal ? implicitHeight : control.size * control.availableHeight
+
         states: State {
             name: "active"
             when: control.active
-            PropertyChanges { target: control.contentItem; opacity: 0.75 }
+            PropertyChanges { target: indicator; opacity: 0.75 }
         }
 
         transitions: [
@@ -67,9 +76,10 @@ T.ScrollIndicator {
                 from: "active"
                 SequentialAnimation {
                     PauseAnimation { duration: 450 }
-                    NumberAnimation { target: control.contentItem; duration: 200; property: "opacity"; to: 0.0 }
+                    NumberAnimation { target: indicator; duration: 200; property: "opacity"; to: 0.0 }
                 }
             }
         ]
     }
+    //! [indicator]
 }

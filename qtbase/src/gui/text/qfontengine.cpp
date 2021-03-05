@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2018 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,7 +47,7 @@
 #include <qendian.h>
 #include <private/qstringiterator_p.h>
 
-#if QT_CONFIG(harfbuzz)
+#ifdef QT_ENABLE_HARFBUZZ_NG
 #  include "qharfbuzzng_p.h"
 #  include <harfbuzz/hb-ot.h>
 #endif
@@ -93,7 +87,7 @@ static inline bool qSafeFromBigEndian(const uchar *source, const uchar *end, T *
 
 // Harfbuzz helper functions
 
-#if QT_CONFIG(harfbuzz)
+#ifdef QT_ENABLE_HARFBUZZ_NG
 Q_GLOBAL_STATIC_WITH_ARGS(bool, useHarfbuzzNG,(qgetenv("QT_HARFBUZZ") != "old"))
 
 bool qt_useHarfbuzzNG()
@@ -246,8 +240,8 @@ Q_AUTOTEST_EXPORT QList<QFontEngine *> QFontEngine_stopCollectingEngines()
 
 QFontEngine::QFontEngine(Type type)
     : m_type(type), ref(0),
-      font_(),
-      face_(),
+      font_(0), font_destroy_func(0),
+      face_(0), face_destroy_func(0),
       m_minLeftBearing(kBearingNotInitialized),
       m_minRightBearing(kBearingNotInitialized)
 {
@@ -270,6 +264,17 @@ QFontEngine::QFontEngine(Type type)
 
 QFontEngine::~QFontEngine()
 {
+    m_glyphCaches.clear();
+
+    if (font_ && font_destroy_func) {
+        font_destroy_func(font_);
+        font_ = 0;
+    }
+    if (face_ && face_destroy_func) {
+        face_destroy_func(face_);
+        face_ = 0;
+    }
+
 #ifdef QT_BUILD_INTERNAL
     if (enginesCollector)
         enginesCollector->removeOne(this);
@@ -297,7 +302,7 @@ QFixed QFontEngine::underlinePosition() const
 void *QFontEngine::harfbuzzFont() const
 {
     Q_ASSERT(type() != QFontEngine::Multi);
-#if QT_CONFIG(harfbuzz)
+#ifdef QT_ENABLE_HARFBUZZ_NG
     if (qt_useHarfbuzzNG())
         return hb_qt_font_get_for_engine(const_cast<QFontEngine *>(this));
 #endif
@@ -324,15 +329,16 @@ void *QFontEngine::harfbuzzFont() const
         hbFont->x_scale = (((qint64)hbFont->x_ppem << 6) * 0x10000L + (emSquare >> 1)) / emSquare;
         hbFont->y_scale = (((qint64)hbFont->y_ppem << 6) * 0x10000L + (emSquare >> 1)) / emSquare;
 
-        font_ = Holder(hbFont, free);
+        font_ = (void *)hbFont;
+        font_destroy_func = free;
     }
-    return font_.get();
+    return font_;
 }
 
 void *QFontEngine::harfbuzzFace() const
 {
     Q_ASSERT(type() != QFontEngine::Multi);
-#if QT_CONFIG(harfbuzz)
+#ifdef QT_ENABLE_HARFBUZZ_NG
     if (qt_useHarfbuzzNG())
         return hb_qt_face_get_for_engine(const_cast<QFontEngine *>(this));
 #endif
@@ -346,9 +352,10 @@ void *QFontEngine::harfbuzzFace() const
         Q_CHECK_PTR(hbFace);
         hbFace->isSymbolFont = symbol;
 
-        face_ = Holder(hbFace, hb_freeFace);
+        face_ = (void *)hbFace;
+        face_destroy_func = hb_freeFace;
     }
-    return face_.get();
+    return face_;
 }
 
 bool QFontEngine::supportsScript(QChar::Script script) const
@@ -364,7 +371,7 @@ bool QFontEngine::supportsScript(QChar::Script script) const
         return true;
     }
 
-#if QT_CONFIG(harfbuzz)
+#ifdef QT_ENABLE_HARFBUZZ_NG
     if (qt_useHarfbuzzNG()) {
 #if defined(Q_OS_DARWIN)
         // in AAT fonts, 'gsub' table is effectively replaced by 'mort'/'morx' table
@@ -419,13 +426,6 @@ glyph_metrics_t QFontEngine::boundingBox(glyph_t glyph, const QTransform &matrix
     return metrics;
 }
 
-QFixed QFontEngine::calculatedCapHeight() const
-{
-    const glyph_t glyph = glyphIndex('H');
-    glyph_metrics_t bb = const_cast<QFontEngine *>(this)->boundingBox(glyph);
-    return bb.height;
-}
-
 QFixed QFontEngine::xHeight() const
 {
     const glyph_t glyph = glyphIndex('x');
@@ -443,11 +443,6 @@ QFixed QFontEngine::averageCharWidth() const
 bool QFontEngine::supportsTransformation(const QTransform &transform) const
 {
     return transform.type() < QTransform::TxProject;
-}
-
-bool QFontEngine::expectsGammaCorrectedBlending() const
-{
-    return true;
 }
 
 void QFontEngine::getGlyphPositions(const QGlyphLayout &glyphs, const QTransform &matrix, QTextItem::RenderFlags flags,
@@ -1273,7 +1268,7 @@ const uchar *QFontEngine::getCMap(const uchar *table, uint tableSize, bool *isSy
         if (!qSafeFromBigEndian(maps + 8 * n, endPtr, &platformId))
             return 0;
 
-        quint16 platformSpecificId = 0;
+        quint16 platformSpecificId;
         if (!qSafeFromBigEndian(maps + 8 * n + 2, endPtr, &platformSpecificId))
             return 0;
 
@@ -1713,11 +1708,6 @@ QFixed QFontEngineBox::ascent() const
     return _size;
 }
 
-QFixed QFontEngineBox::capHeight() const
-{
-    return _size;
-}
-
 QFixed QFontEngineBox::descent() const
 {
     return 0;
@@ -1847,12 +1837,7 @@ QFontEngine *QFontEngineMulti::loadEngine(int at)
     request.styleStrategy |= QFont::NoFontMerging;
     request.family = fallbackFamilyAt(at - 1);
 
-    // At this point, the main script of the text has already been considered
-    // when fetching the list of fallback families from the database, and the
-    // info about the actual script of the characters may have been discarded,
-    // so we do not check for writing system support, but instead just load
-    // the family indiscriminately.
-    if (QFontEngine *engine = QFontDatabase::findFont(request, QFontDatabase::Any)) {
+    if (QFontEngine *engine = QFontDatabase::findFont(request, m_script)) {
         engine->fontDef.weight = request.weight;
         if (request.style > QFont::StyleNormal)
             engine->fontDef.style = request.style;
@@ -1865,11 +1850,7 @@ QFontEngine *QFontEngineMulti::loadEngine(int at)
 glyph_t QFontEngineMulti::glyphIndex(uint ucs4) const
 {
     glyph_t glyph = engine(0)->glyphIndex(ucs4);
-    if (glyph == 0
-            && ucs4 != QChar::LineSeparator
-            && ucs4 != QChar::LineFeed
-            && ucs4 != QChar::CarriageReturn
-            && ucs4 != QChar::ParagraphSeparator) {
+    if (glyph == 0 && ucs4 != QChar::LineSeparator) {
         if (!m_fallbackFamiliesQueried)
             const_cast<QFontEngineMulti *>(this)->ensureFallbackFamiliesQueried();
         for (int x = 1, n = qMin(m_engines.size(), 256); x < n; ++x) {
@@ -1905,38 +1886,9 @@ bool QFontEngineMulti::stringToCMap(const QChar *str, int len,
 
     int glyph_pos = 0;
     QStringIterator it(str, str + len);
-
-    int lastFallback = -1;
     while (it.hasNext()) {
         const uint ucs4 = it.peekNext();
-
-        // If we applied a fallback font to previous glyph, and the current is either
-        // ZWJ or ZWNJ, we should also try applying the same fallback font to that, in order
-        // to get the correct shaping rules applied.
-        if (lastFallback >= 0 && (ucs4 == QChar(0x200d) || ucs4 == QChar(0x200c))) {
-            QFontEngine *engine = m_engines.at(lastFallback);
-            glyph_t glyph = engine->glyphIndex(ucs4);
-            if (glyph != 0) {
-                glyphs->glyphs[glyph_pos] = glyph;
-                if (!(flags & GlyphIndicesOnly)) {
-                    QGlyphLayout g = glyphs->mid(glyph_pos, 1);
-                    engine->recalcAdvances(&g, flags);
-                }
-
-                // set the high byte to indicate which engine the glyph came from
-                glyphs->glyphs[glyph_pos] |= (lastFallback << 24);
-            } else {
-                lastFallback = -1;
-            }
-        } else {
-            lastFallback = -1;
-        }
-
-        if (glyphs->glyphs[glyph_pos] == 0
-                && ucs4 != QChar::LineSeparator
-                && ucs4 != QChar::LineFeed
-                && ucs4 != QChar::CarriageReturn
-                && ucs4 != QChar::ParagraphSeparator) {
+        if (glyphs->glyphs[glyph_pos] == 0 && ucs4 != QChar::LineSeparator) {
             if (!m_fallbackFamiliesQueried)
                 const_cast<QFontEngineMulti *>(this)->ensureFallbackFamiliesQueried();
             for (int x = 1, n = qMin(m_engines.size(), 256); x < n; ++x) {
@@ -1960,9 +1912,6 @@ bool QFontEngineMulti::stringToCMap(const QChar *str, int len,
                         QGlyphLayout g = glyphs->mid(glyph_pos, 1);
                         engine->recalcAdvances(&g, flags);
                     }
-
-                    lastFallback = x;
-
                     // set the high byte to indicate which engine the glyph came from
                     glyphs->glyphs[glyph_pos] |= (x << 24);
                     break;
@@ -2210,9 +2159,6 @@ glyph_metrics_t QFontEngineMulti::boundingBox(glyph_t glyph)
 
 QFixed QFontEngineMulti::ascent() const
 { return engine(0)->ascent(); }
-
-QFixed QFontEngineMulti::capHeight() const
-{ return engine(0)->capHeight(); }
 
 QFixed QFontEngineMulti::descent() const
 { return engine(0)->descent(); }

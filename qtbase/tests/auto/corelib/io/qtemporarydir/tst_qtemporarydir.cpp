@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -35,7 +40,6 @@
 #include <qdir.h>
 #include <qset.h>
 #include <qtextcodec.h>
-#include <QtTest/private/qtesthelpers_p.h>
 #ifdef Q_OS_WIN
 # include <windows.h>
 #endif
@@ -43,7 +47,6 @@
 # include <sys/types.h>
 # include <unistd.h>
 #endif
-#include "emulationdetector.h"
 
 class tst_QTemporaryDir : public QObject
 {
@@ -59,8 +62,6 @@ private slots:
     void fileTemplate_data();
     void getSetCheck();
     void fileName();
-    void filePath_data();
-    void filePath();
     void autoRemove();
     void nonWritableCurrentDir();
     void openOnRootDrives();
@@ -113,6 +114,16 @@ void tst_QTemporaryDir::getSetCheck()
     QCOMPARE(true, obj1.autoRemove());
 }
 
+static inline bool canHandleUnicodeFileNames()
+{
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE)
+    return true;
+#else
+    // Check for UTF-8 by converting the Euro symbol (see tst_utf8)
+    return QFile::encodeName(QString(QChar(0x20AC))) == QByteArrayLiteral("\342\202\254");
+#endif
+}
+
 static QString hanTestText()
 {
     QString text;
@@ -151,7 +162,7 @@ void tst_QTemporaryDir::fileTemplate_data()
     QTest::newRow("constructor with XXXX suffix") << "qt_XXXXXX_XXXX" << "qt_";
     QTest::newRow("constructor with XXXX prefix") << "qt_XXXX" << "qt_";
     QTest::newRow("constructor with XXXXX prefix") << "qt_XXXXX" << "qt_";
-    if (QTestPrivate::canHandleUnicodeFileNames()) {
+    if (canHandleUnicodeFileNames()) {
         // Test Umlauts (contained in Latin1)
         QString prefix = "qt_" + umlautTestText();
         QTest::newRow("Umlauts") << (prefix + "XXXXXX") << prefix;
@@ -196,29 +207,6 @@ void tst_QTemporaryDir::fileName()
     absoluteTempPath = absoluteTempPath.toLower();
 #endif
     QCOMPARE(absoluteFilePath, absoluteTempPath);
-}
-
-void tst_QTemporaryDir::filePath_data()
-{
-    QTest::addColumn<QString>("templatePath");
-    QTest::addColumn<QString>("fileName");
-
-    QTest::newRow("0") << QString() << "/tmpfile";
-    QTest::newRow("1") << QString() << "tmpfile";
-    QTest::newRow("2") << "XXXXX" << "tmpfile";
-    QTest::newRow("3") << "YYYYY" << "subdir/file";
-}
-
-void tst_QTemporaryDir::filePath()
-{
-    QFETCH(QString, templatePath);
-    QFETCH(QString, fileName);
-
-    QTemporaryDir dir(templatePath);
-    const QString filePath = dir.filePath(fileName);
-    const QString expectedFilePath = QDir::isAbsolutePath(fileName) ?
-                                     QString() : dir.path() + QLatin1Char('/') + fileName;
-    QCOMPARE(filePath, expectedFilePath);
 }
 
 void tst_QTemporaryDir::autoRemove()
@@ -288,7 +276,7 @@ void tst_QTemporaryDir::nonWritableCurrentDir()
 {
 #ifdef Q_OS_UNIX
 
-#  if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_EMBEDDED)
+#  if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
     const char nonWritableDir[] = "/data";
 #  else
     const char nonWritableDir[] = "/home";
@@ -308,13 +296,6 @@ void tst_QTemporaryDir::nonWritableCurrentDir()
 
     const QFileInfo nonWritableDirFi = QFileInfo(QLatin1String(nonWritableDir));
     QVERIFY(nonWritableDirFi.isDir());
-
-    if (EmulationDetector::isRunningArmOnX86()) {
-        if (nonWritableDirFi.ownerId() == ::geteuid()) {
-            QSKIP("Sysroot directories are owned by the current user");
-        }
-    }
-
     QVERIFY(!nonWritableDirFi.isWritable());
 
     ChdirOnReturn cor(QDir::currentPath());
@@ -331,7 +312,7 @@ void tst_QTemporaryDir::nonWritableCurrentDir()
 
 void tst_QTemporaryDir::openOnRootDrives()
 {
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     unsigned int lastErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 #endif
     // If it's possible to create a file in the root directory, it
@@ -345,7 +326,7 @@ void tst_QTemporaryDir::openOnRootDrives()
             QVERIFY(dir.isValid());
         }
     }
-#if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     SetErrorMode(lastErrorMode);
 #endif
 }

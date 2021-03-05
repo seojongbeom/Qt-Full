@@ -1,7 +1,7 @@
 ﻿/****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -61,8 +61,8 @@
      <table style="background:transparent; border: none">
       <tr><td style="width:50%; border: none; vertical-align: top">
     \endraw
-    Qt now comes with production-ready ports for Android, iOS, and WinRT.
-    Extensive work has gone into these platform
+    Qt now comes with production-ready ports for Android, iOS, and WinRT
+    (including Windows Phone 8). Extensive work has gone into these platform
     ports, which now extend Qt’s multi-platform promise to cover desktop,
     embedded, and mobile platforms.
     \raw HTML
@@ -214,26 +214,30 @@
     \raw HTML
     <div class="table">
      <table style="background:transparent; border: none">
-      <tr><td style="width:50%; border: none; vertical-align: top">
+      <tr><td style="width:25%; border: none; vertical-align: top">
     \endraw
-    \image qtquickcontrols2-material.png
-    \caption Qt Quick Controls 2 Material style
+    \image qtquickcontrols-example-gallery-android.png
+    \caption Controls gallery example on Android
     \raw HTML
-      </td><td style="width:50%; border: none; vertical-align: top">
+      </td><td style="width:30%; border: none; vertical-align: top">
+    \endraw
+    \image qtquickcontrols-example-gallery-osx.png
+    \caption Controls gallery example on \macos
+    \raw HTML
+      </td><td style="width:45%; border: none; vertical-align: top">
     \endraw
     UI designing can be time consuming if there are not enough tools to help.
-    Qt Quick reduces the effort considerably compared to the traditional
-    native (C or C++) approach, especially if the \l{Qt Quick Controls} or
-    \l{Qt Quick Controls 2} and \l{Qt Quick Layouts} modules are used. These
-    modules provide ready-to-use UI controls and layouts to enable faster
-    application development with less code. For a comparison of the two sets of
-    controls, see \l {Differences between Qt Quick Controls}.
+    Qt Quick does reduce the effort considerably compared to the traditional
+    native (C or C++) approach, but the new \l{Qt Quick Controls} and
+    \l{Qt Quick Layouts} take it a step further. These new modules provide
+    ready-to-use UI controls and layouts to enable faster application
+    development and with less code.
     \raw HTML
       <br>
     \endraw
     Qt Quick Controls and Qt Quick Layouts provide a vast set of UI controls
-    ranging from the most basic text field and button to the more complex
-    stack view and tumbler. The controls are also made available in
+    ranging from the most basic TextField and Button to the more complex
+    TableView and TabView. These controls are also made available in
     \l{Qt Creator: Using Qt Quick Designer}{Qt Quick Designer}.
     \raw HTML
       </td></tr>
@@ -382,7 +386,7 @@
     \endraw
     In today's world, location and maps information is more widely used, be it
     to look up nearby restaurants or plan commute to the office. With Qt,
-    it is now possible to cater to these use cases by consuming map data
+    it is now possible to cater to these usecases by consuming map data
     provided by the third-party vendors. The \l{QtLocation}{Qt Location} module
     provides the APIs and the necessary backend to fetch map data from some of
     the popular third-party mapping solutions. Here is a snapshot of the demo
@@ -508,9 +512,6 @@
 
     \section1 Related Topics
     \list
-    \li \l{What's New in Qt 5.9}
-    \li \l{What's New in Qt 5.8}
-    \li \l{What's New in Qt 5.7}
     \li \l{What's New in Qt 5.6}
     \li \l{What's New in Qt 5.5}
     \li \l{What's New in Qt 5.4}

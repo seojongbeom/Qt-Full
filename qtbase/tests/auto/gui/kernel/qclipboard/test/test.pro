@@ -13,6 +13,10 @@ win32 {
   }
 }
 
+wince* {
+  DEPLOYMENT += rsc reg_resource
+}
+
 !winrt: TEST_HELPER_INSTALLS = \
     ../copier/copier \
     ../paster/paster

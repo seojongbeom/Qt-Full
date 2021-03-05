@@ -4,7 +4,3 @@
 
 %moduleheaders = (
 );
-
-%classnames = (
-    "qwebsocketprotocol.h" => "QWebSocketProtocol",
-);

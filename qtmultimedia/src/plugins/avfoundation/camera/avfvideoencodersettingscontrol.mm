@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,6 +50,7 @@ Q_GLOBAL_STATIC_WITH_ARGS(QStringList, supportedCodecs, (QStringList() << QLatin
                                                          #endif
                                                          ))
 
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
 static bool format_supports_framerate(AVCaptureDeviceFormat *format, qreal fps)
 {
     if (format && fps > qreal(0)) {
@@ -73,6 +68,7 @@ static bool format_supports_framerate(AVCaptureDeviceFormat *format, qreal fps)
 
     return false;
 }
+#endif
 
 static bool real_list_contains(const QList<qreal> &list, qreal value)
 {
@@ -105,20 +101,24 @@ QList<QSize> AVFVideoEncoderSettingsControl::supportedResolutions(const QVideoEn
     QList<QSize> resolutions;
     resolutions.append(QSize(32, 32));
 
-    AVCaptureDevice *device = m_service->session()->videoCaptureDevice();
-    if (device) {
-        int maximumWidth = 0;
-        const QVector<AVCaptureDeviceFormat *> formats(qt_unique_device_formats(device,
-                                                                                m_service->session()->defaultCodec()));
-        for (int i = 0; i < formats.size(); ++i) {
-            const QSize res(qt_device_format_resolution(formats[i]));
-            if (res.width() > maximumWidth)
-                maximumWidth = res.width();
-        }
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_7, QSysInfo::MV_IOS_7_0)) {
+        AVCaptureDevice *device = m_service->session()->videoCaptureDevice();
+        if (device) {
+            int maximumWidth = 0;
+            const QVector<AVCaptureDeviceFormat *> formats(qt_unique_device_formats(device,
+                                                                                    m_service->session()->defaultCodec()));
+            for (int i = 0; i < formats.size(); ++i) {
+                const QSize res(qt_device_format_resolution(formats[i]));
+                if (res.width() > maximumWidth)
+                    maximumWidth = res.width();
+            }
 
-        if (maximumWidth > 0)
-            resolutions.append(QSize(maximumWidth, maximumWidth));
+            if (maximumWidth > 0)
+                resolutions.append(QSize(maximumWidth, maximumWidth));
+        }
     }
+#endif
 
     if (resolutions.count() == 1)
         resolutions.append(QSize(3840, 3840));
@@ -129,39 +129,45 @@ QList<QSize> AVFVideoEncoderSettingsControl::supportedResolutions(const QVideoEn
 QList<qreal> AVFVideoEncoderSettingsControl::supportedFrameRates(const QVideoEncoderSettings &settings,
                                                                  bool *continuous) const
 {
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
     QList<qreal> uniqueFrameRates;
 
-    AVCaptureDevice *device = m_service->session()->videoCaptureDevice();
-    if (!device)
-        return uniqueFrameRates;
+    if (QSysInfo::MacintoshVersion >= qt_OS_limit(QSysInfo::MV_10_7, QSysInfo::MV_IOS_7_0)) {
+        AVCaptureDevice *device = m_service->session()->videoCaptureDevice();
+        if (!device)
+            return uniqueFrameRates;
 
-    if (continuous)
-        *continuous = false;
+        if (continuous)
+            *continuous = false;
 
-    QVector<AVFPSRange> allRates;
+        QVector<AVFPSRange> allRates;
 
-    if (!settings.resolution().isValid()) {
-        const QVector<AVCaptureDeviceFormat *> formats(qt_unique_device_formats(device, 0));
-        for (int i = 0; i < formats.size(); ++i) {
-            AVCaptureDeviceFormat *format = formats.at(i);
-            allRates += qt_device_format_framerates(format);
+        if (!settings.resolution().isValid()) {
+            const QVector<AVCaptureDeviceFormat *> formats(qt_unique_device_formats(device, 0));
+            for (int i = 0; i < formats.size(); ++i) {
+                AVCaptureDeviceFormat *format = formats.at(i);
+                allRates += qt_device_format_framerates(format);
+            }
+        } else {
+            AVCaptureDeviceFormat *format = qt_find_best_resolution_match(device,
+                                                                          settings.resolution(),
+                                                                          m_service->session()->defaultCodec());
+            if (format)
+                allRates = qt_device_format_framerates(format);
         }
-    } else {
-        AVCaptureDeviceFormat *format = qt_find_best_resolution_match(device,
-                                                                      settings.resolution(),
-                                                                      m_service->session()->defaultCodec());
-        if (format)
-            allRates = qt_device_format_framerates(format);
-    }
 
-    for (int j = 0; j < allRates.size(); ++j) {
-        if (!real_list_contains(uniqueFrameRates, allRates[j].first))
-            uniqueFrameRates.append(allRates[j].first);
-        if (!real_list_contains(uniqueFrameRates, allRates[j].second))
-            uniqueFrameRates.append(allRates[j].second);
+        for (int j = 0; j < allRates.size(); ++j) {
+            if (!real_list_contains(uniqueFrameRates, allRates[j].first))
+                uniqueFrameRates.append(allRates[j].first);
+            if (!real_list_contains(uniqueFrameRates, allRates[j].second))
+                uniqueFrameRates.append(allRates[j].second);
+        }
     }
 
     return uniqueFrameRates;
+#else
+    return QList<qreal>();
+#endif
 }
 
 QStringList AVFVideoEncoderSettingsControl::supportedVideoCodecs() const
@@ -231,6 +237,7 @@ NSDictionary *AVFVideoEncoderSettingsControl::applySettings(AVCaptureConnection 
     int w = m_requestedSettings.resolution().width();
     int h = m_requestedSettings.resolution().height();
 
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
     if (AVCaptureDeviceFormat *currentFormat = device.activeFormat) {
         CMFormatDescriptionRef formatDesc = currentFormat.formatDescription;
         CMVideoDimensions dim = CMVideoFormatDescriptionGetDimensions(formatDesc);
@@ -287,6 +294,7 @@ NSDictionary *AVFVideoEncoderSettingsControl::applySettings(AVCaptureConnection 
             h = qMin(h, dim.height);
         }
     }
+#endif
 
     if (w > 0 && h > 0) {
         // Width and height must be divisible by 2
@@ -368,11 +376,13 @@ void AVFVideoEncoderSettingsControl::unapplySettings(AVCaptureConnection *connec
 
     const bool needFpsChanged = m_restoreFps.first || m_restoreFps.second;
 
+#if QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_7, __IPHONE_7_0)
     if (m_restoreFormat) {
         qt_set_active_format(device, m_restoreFormat, !needFpsChanged);
         [m_restoreFormat release];
         m_restoreFormat = nil;
     }
+#endif
 
     if (needFpsChanged) {
         qt_set_framerate_limits(device, connection, m_restoreFps.first, m_restoreFps.second);

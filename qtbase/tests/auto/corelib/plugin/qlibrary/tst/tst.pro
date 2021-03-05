@@ -1,4 +1,6 @@
 CONFIG += testcase
+CONFIG += parallel_test
+CONFIG -= app_bundle
 TARGET = ../tst_qlibrary
 QT = core testlib
 SOURCES = ../tst_qlibrary.cpp
@@ -12,3 +14,4 @@ win32 {
 }
 
 TESTDATA += ../library_path/invalid.so
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

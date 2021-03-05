@@ -6,7 +6,7 @@ SOURCES += \
     $$PWD/tst_calendar.cpp
 
 OTHER_FILES += \
-    $$PWD/data/*.qml
+    $$PWD/data/*
 
 TESTDATA += \
     $$PWD/data/tst_*

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -143,7 +148,7 @@ void Layout::setup()
     // Widgets which are already laid out are thrown away here too
 
     QMultiMap<QWidget*, QWidget*> lists;
-    for (QWidget *w : qAsConst(m_widgets)) {
+    foreach (QWidget *w, m_widgets) {
         QWidget *p = w->parentWidget();
 
         if (p && LayoutInfo::layoutType(m_formWindow->core(), p) != LayoutInfo::NoLayout
@@ -154,10 +159,12 @@ void Layout::setup()
     }
 
     QWidgetList lastList;
-    const QWidgetList &parents = lists.keys();
-    for (QWidget *p : parents) {
-        if (lists.count(p) > lastList.count())
-            lastList = lists.values(p);
+    QWidgetList parents = lists.keys();
+    foreach (QWidget *p, parents) {
+        QWidgetList children = lists.values(p);
+
+        if (children.count() > lastList.count())
+            lastList = children;
     }
 
 
@@ -187,7 +194,7 @@ void Layout::setup()
     // be placed and connect to widgetDestroyed() signals of the
     // widgets to get informed if one gets deleted to be able to
     // handle that and do not crash in this case
-    for (QWidget *w : qAsConst(m_widgets)) {
+    foreach (QWidget *w, m_widgets) {
         connect(w, &QObject::destroyed, this, &Layout::widgetDestroyed);
         m_startPoint = QPoint(qMin(m_startPoint.x(), w->x()), qMin(m_startPoint.y(), w->y()));
         const QRect rc(w->geometry());
@@ -212,8 +219,9 @@ void Layout::widgetDestroyed()
 
 bool Layout::prepareLayout(bool &needMove, bool &needReparent)
 {
-    for (QWidget *widget : qAsConst(m_widgets))
+    foreach (QWidget *widget, m_widgets) {
         widget->raise();
+    }
 
     needMove = !m_layoutBase;
     needReparent = needMove || (m_reparentLayoutWidget && qobject_cast<QLayoutWidget*>(m_layoutBase)) || qobject_cast<QSplitter*>(m_layoutBase);
@@ -325,7 +333,10 @@ void Layout::undoLayout()
     m_formWindow->selectWidget(m_layoutBase, false);
 
     QDesignerWidgetFactoryInterface *widgetFactory = m_formWindow->core()->widgetFactory();
-    for (auto it = m_geometries.cbegin(), end = m_geometries.cend(); it != end; ++it) {
+    QHashIterator<QWidget *, QRect> it(m_geometries);
+    while (it.hasNext()) {
+        it.next();
+
         if (!it.key())
             continue;
 
@@ -372,7 +383,7 @@ void Layout::breakLayout()
      * to grow (expanding widgets like QTextEdit), in which the geometry is
      * preserved. Note that historically, geometries were re-applied
      * only after breaking splitters. */
-    for (QWidget *w : qAsConst(m_widgets)) {
+    foreach (QWidget *w, m_widgets) {
         const QRect geom = w->geometry();
         const QSize sizeHint = w->sizeHint();
         const bool restoreGeometry = sizeHint.isEmpty() || sizeHint.width() > geom.width() || sizeHint.height() > geom.height();
@@ -389,7 +400,10 @@ void Layout::breakLayout()
                           m_layoutBase != m_formWindow->mainContainer());
     const bool add = m_geometries.isEmpty();
 
-    for (auto it = rects.cbegin(), end = rects.cend(); it != end; ++it) {
+    QMapIterator<QWidget*, QRect> it(rects);
+    while (it.hasNext()) {
+        it.next();
+
         QWidget *w = it.key();
         if (needReparent) {
             w->setParent(m_layoutBase->parentWidget(), 0);
@@ -597,15 +611,20 @@ public:
 
     void setCells(const QRect &c, QWidget* w);
 
-    bool empty() const  { return !m_nrows || !m_ncols; }
+    bool empty() const  { return m_nrows * m_ncols; }
     int numRows() const { return m_nrows; }
     int numCols() const { return m_ncols; }
 
     void simplify();
     bool locateWidget(QWidget* w, int& row, int& col, int& rowspan, int& colspan) const;
 
+    QDebug debug(QDebug str) const;
+    friend inline QDebug operator<<(QDebug str, const Grid &g)
+    { return g.debug(str); }
+
 private:
     void setCell(int row, int col, QWidget* w) { m_cells[ row * m_ncols + col] = w; }
+    void swapCells(int r1, int c1, int r2, int c2);
     void shrink();
     void reallocFormLayout();
     int countRow(int r, int c) const;
@@ -655,6 +674,26 @@ void Grid::resize(int nrows, int ncols)
     }
 }
 
+QDebug Grid::debug(QDebug str) const
+{
+    str << m_nrows << 'x' << m_ncols << '\n';
+    QSet<QWidget *> widgets;
+    const int cellCount = m_nrows * m_ncols;
+    int row, col, rowspan, colspan;
+    for (int c = 0; c < cellCount; c++)
+        if (QWidget *w = m_cells[c])
+            if (!widgets.contains(w)) {
+                widgets.insert(w);
+                locateWidget(w, row, col, rowspan, colspan);
+                str << w << " at " << row <<  col << rowspan << 'x' << colspan << '\n';
+            }
+    for (int r = 0; r < m_nrows; r++)
+        for (int c = 0; c < m_ncols; c++)
+            str << "At " << r << c << cell(r, c) << '\n';
+
+    return str;
+}
+
 void Grid::setCells(const QRect &c, QWidget* w)
 {
     const int bottom = c.top() + c.height();
@@ -664,6 +703,14 @@ void Grid::setCells(const QRect &c, QWidget* w)
         QWidget **pos = m_cells + r * m_ncols + c.left();
         std::fill(pos, pos + width, w);
     }
+}
+
+
+void Grid::swapCells(int r1, int c1, int r2, int c2)
+{
+    QWidget *w1 = cell(r1, c1);
+    setCell(r1, c1, cell(r2, c2));
+    setCell(r2, c2, w1);
 }
 
 int Grid::countRow(int r, int c) const
@@ -943,10 +990,8 @@ bool Grid::shrinkFormLayoutSpans()
     for (WidgetSet::const_iterator it = widgets.constBegin(); it != cend ; ++it) {
         QWidget *w = *it;
         int row, col,  rowspan, colspan;
-        if (!locateWidget(w, row, col, rowspan, colspan)) {
+        if (!locateWidget(w, row, col, rowspan, colspan))
             qDebug("ooops, widget '%s' does not fit in layout", w->objectName().toUtf8().constData());
-            row = col = rowspan = colspan = 0;
-        }
         const int maxColSpan = col == 0 ? 2 : 1;
         const int newColSpan = qMin(colspan, maxColSpan);
         const int newRowSpan = qMin(rowspan, maxRowSpan);
@@ -1089,7 +1134,7 @@ void GridLayout<GridLikeLayout, LayoutType, GridMode>::doLayout()
 
     GridLikeLayout *layout =  static_cast<GridLikeLayout *>(createLayout(LayoutType));
 
-    if (!m_grid.empty())
+    if (m_grid.empty())
         sort();
 
     QDesignerWidgetItemInstaller wii; // Make sure we use QDesignerWidgetItem.

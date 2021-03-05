@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -52,73 +42,6 @@ import QtQuick 2.0
 
 ListModel {
     id: stocks
-
-    // pre-fetch data for all entries
-    Component.onCompleted: {
-        for (var idx = 0; idx < count; ++idx) {
-            getCloseValue(idx)
-        }
-    }
-
-    function requestUrl(stockId) {
-        var endDate = new Date(""); // today
-        var startDate = new Date()
-        startDate.setDate(startDate.getDate() - 5);
-
-        var request = "http://ichart.finance.yahoo.com/table.csv?";
-        request += "s=" + stockId;
-        request += "&g=d";
-        request += "&a=" + startDate.getMonth();
-        request += "&b=" + startDate.getDate();
-        request += "&c=" + startDate.getFullYear();
-        request += "&d=" + endDate.getMonth();
-        request += "&e=" + endDate.getDate();
-        request += "&f=" + endDate.getFullYear();
-        request += "&g=d";
-        request += "&ignore=.csv";
-        return request;
-    }
-
-    function getCloseValue(index) {
-        var req = requestUrl(get(index).stockId);
-
-        if (!req)
-            return;
-
-        var xhr = new XMLHttpRequest;
-
-        xhr.open("GET", req, true);
-
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
-                var records = xhr.responseText.split('\n');
-                var unknown = "n/a";
-                set(index, {"value": unknown, "change": unknown, "changePercentage": unknown});
-                if (records.length > 0 && xhr.status == 200) {
-                    var r = records[1].split(',');
-                    var today = parseFloat(r[4]);
-                    if (!isNaN(today))
-                        setProperty(index, "value", today.toFixed(2));
-                    if (records.length > 2) {
-                        r = records[2].split(',');
-                        var yesterday = parseFloat(r[4]);
-                        var change = today - yesterday;
-                        if (change >= 0.0)
-                            setProperty(index, "change", "+" + change.toFixed(2));
-                        else
-                            setProperty(index, "change", change.toFixed(2));
-
-                        var changePercentage = (change / yesterday) * 100.0;
-                        if (changePercentage >= 0.0)
-                            setProperty(index, "changePercentage", "+" + changePercentage.toFixed(2) + "%");
-                        else
-                            setProperty(index, "changePercentage", changePercentage.toFixed(2) + "%");
-                    }
-                }
-            }
-        }
-        xhr.send()
-    }
     // Uncomment to test invalid entries
     // ListElement {name: "The Qt Company"; stockId: "TQTC"; value: "999.0"; change: "0.0"; changePercentage: "0.0"}
 

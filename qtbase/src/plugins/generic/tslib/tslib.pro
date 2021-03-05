@@ -2,9 +2,9 @@ TARGET = qtslibplugin
 
 SOURCES = main.cpp
 
-QT += core-private gui-private input_support-private
+QT += gui-private platformsupport-private
 
-QMAKE_USE += tslib
+LIBS += -lts
 
 OTHER_FILES += tslib.json
 

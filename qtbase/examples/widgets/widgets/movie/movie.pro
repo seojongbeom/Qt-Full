@@ -9,3 +9,10 @@ EXAMPLE_FILES = animation.gif
 # install
 target.path = $$[QT_INSTALL_EXAMPLES]/widgets/widgets/movie
 INSTALLS += target
+
+
+wince {
+   addFiles.files += *.gif
+   addFiles.path = .
+   INSTALLS += addFiles
+}

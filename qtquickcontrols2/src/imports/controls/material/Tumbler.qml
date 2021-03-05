@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,38 +34,49 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
+import QtQuick 2.6
+import Qt.labs.controls 1.0
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.Tumbler {
     id: control
     implicitWidth: 60
     implicitHeight: 200
 
+    //! [delegate]
     delegate: Text {
+        id: label
         text: modelData
-        color: control.Material.foreground
+        color: control.Material.primaryTextColor
         font: control.font
-        opacity: (1.0 - Math.abs(Tumbler.displacement) / (control.visibleItemCount / 2)) * (control.enabled ? 1 : 0.6)
+        opacity: 0.4 + Math.max(0, 1 - Math.abs(Tumbler.displacement)) * 0.6
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
+    //! [delegate]
 
-    contentItem: TumblerView {
+    //! [contentItem]
+    contentItem: PathView {
+        id: pathView
         model: control.model
         delegate: control.delegate
+        clip: true
+        pathItemCount: control.visibleItemCount + 1
+        preferredHighlightBegin: 0.5
+        preferredHighlightEnd: 0.5
+        dragMargin: width / 2
+
         path: Path {
-            startX: contentItem.width / 2
-            startY: -contentItem.delegateHeight / 2
+            startX: pathView.width / 2
+            startY: -pathView.delegateHeight / 2
             PathLine {
-                x: contentItem.width / 2
-                y: (control.visibleItemCount + 1) * contentItem.delegateHeight - contentItem.delegateHeight / 2
+                x: pathView.width / 2
+                y: pathView.pathItemCount * pathView.delegateHeight - pathView.delegateHeight / 2
             }
         }
 
         property real delegateHeight: control.availableHeight / control.visibleItemCount
     }
+    //! [contentItem]
 }

@@ -10,6 +10,8 @@
 #define LIBANGLE_RENDERER_D3D_SHADERD3D_H_
 
 #include "libANGLE/renderer/ShaderImpl.h"
+#include "libANGLE/renderer/Workarounds.h"
+#include "libANGLE/Shader.h"
 
 #include <map>
 
@@ -17,42 +19,51 @@ namespace rx
 {
 class DynamicHLSL;
 class RendererD3D;
-struct D3DCompilerWorkarounds;
 
 class ShaderD3D : public ShaderImpl
 {
+    friend class DynamicHLSL;
+
   public:
-    ShaderD3D(const gl::Shader::Data &data);
+    ShaderD3D(GLenum type);
     virtual ~ShaderD3D();
 
+    static ShaderD3D *makeShaderD3D(ShaderImpl *impl);
+    static const ShaderD3D *makeShaderD3D(const ShaderImpl *impl);
+
     // ShaderImpl implementation
-    int prepareSourceAndReturnOptions(std::stringstream *sourceStream,
-                                      std::string *sourcePath) override;
-    bool postTranslateCompile(gl::Compiler *compiler, std::string *infoLog) override;
-    std::string getDebugInfo() const override;
+    virtual std::string getDebugInfo() const;
 
     // D3D-specific methods
-    void uncompile();
+    virtual void uncompile();
+    void resetVaryingsRegisterAssignment();
     unsigned int getUniformRegister(const std::string &uniformName) const;
     unsigned int getInterfaceBlockRegister(const std::string &blockName) const;
-    void appendDebugInfo(const std::string &info) const { mDebugInfo += info; }
+    void appendDebugInfo(const std::string &info) { mDebugInfo += info; }
 
     void generateWorkarounds(D3DCompilerWorkarounds *workarounds) const;
-
-    bool usesMultipleRenderTargets() const { return mUsesMultipleRenderTargets; }
-    bool usesFragColor() const { return mUsesFragColor; }
-    bool usesFragData() const { return mUsesFragData; }
-    bool usesFragCoord() const { return mUsesFragCoord; }
-    bool usesFrontFacing() const { return mUsesFrontFacing; }
-    bool usesPointSize() const { return mUsesPointSize; }
-    bool usesPointCoord() const { return mUsesPointCoord; }
+    int getShaderVersion() const { return mShaderVersion; }
     bool usesDepthRange() const { return mUsesDepthRange; }
-    bool usesFragDepth() const { return mUsesFragDepth; }
+    bool usesPointSize() const { return mUsesPointSize; }
     bool usesDeferredInit() const { return mUsesDeferredInit; }
 
+    GLenum getShaderType() const;
     ShShaderOutput getCompilerOutputType() const;
 
+    virtual bool compile(gl::Compiler *compiler, const std::string &source);
+
   private:
+    void compileToHLSL(ShHandle compiler, const std::string &source);
+    void parseVaryings(ShHandle compiler);
+
+    void parseAttributes(ShHandle compiler);
+
+    static bool compareVarying(const gl::PackedVarying &x, const gl::PackedVarying &y);
+
+    GLenum mShaderType;
+
+    int mShaderVersion;
+
     bool mUsesMultipleRenderTargets;
     bool mUsesFragColor;
     bool mUsesFragData;
@@ -68,10 +79,11 @@ class ShaderD3D : public ShaderImpl
     bool mRequiresIEEEStrictCompiling;
 
     ShShaderOutput mCompilerOutputType;
-    mutable std::string mDebugInfo;
+    std::string mDebugInfo;
     std::map<std::string, unsigned int> mUniformRegisterMap;
     std::map<std::string, unsigned int> mInterfaceBlockRegisterMap;
 };
+
 }
 
-#endif  // LIBANGLE_RENDERER_D3D_SHADERD3D_H_
+#endif // LIBANGLE_RENDERER_D3D_SHADERD3D_H_

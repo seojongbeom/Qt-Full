@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -94,7 +88,7 @@ bool Qt::mightBeRichText(const QString& text)
         ++start;
 
     // skip a leading <?xml ... ?> as for example with xhtml
-    if (text.midRef(start, 5).compare(QLatin1String("<?xml")) == 0) {
+    if (text.mid(start, 5) == QLatin1String("<?xml")) {
         while (start < text.length()) {
             if (text.at(start) == QLatin1Char('?')
                 && start + 2 < text.length()
@@ -109,12 +103,12 @@ bool Qt::mightBeRichText(const QString& text)
             ++start;
     }
 
-    if (text.midRef(start, 5).compare(QLatin1String("<!doc"), Qt::CaseInsensitive) == 0)
+    if (text.mid(start, 5).toLower() == QLatin1String("<!doc"))
         return true;
     int open = start;
     while (open < text.length() && text.at(open) != QLatin1Char('<')
             && text.at(open) != QLatin1Char('\n')) {
-        if (text.at(open) == QLatin1Char('&') &&  text.midRef(open + 1, 3) == QLatin1String("lt;"))
+        if (text.at(open) == QLatin1Char('&') &&  text.mid(open+1,3) == QLatin1String("lt;"))
             return true; // support desperate attempt of user to see <...>
         ++open;
     }
@@ -133,7 +127,7 @@ bool Qt::mightBeRichText(const QString& text)
                     return false; // that's not a tag
             }
 #ifndef QT_NO_TEXTHTMLPARSER
-            return QTextHtmlParser::lookupElement(std::move(tag).toLower()) != -1;
+            return QTextHtmlParser::lookupElement(tag.toLower()) != -1;
 #else
             return false;
 #endif // QT_NO_TEXTHTMLPARSER
@@ -1145,30 +1139,8 @@ void QTextDocument::setMetaInformation(MetaInformation info, const QString &stri
 }
 
 /*!
-    Returns the raw text contained in the document without any
-    formatting information. If you want formatting information
-    use a QTextCursor instead.
-
-    \since 5.9
-    \sa toPlainText()
-*/
-QString QTextDocument::toRawText() const
-{
-    Q_D(const QTextDocument);
-    return d->plainText();
-}
-
-/*!
     Returns the plain text contained in the document. If you want
     formatting information use a QTextCursor instead.
-
-    This function returns the same as toRawText(), but will replace
-    some unicode characters with ASCII alternatives.
-    In particular, no-break space (U+00A0) is replaced by a regular
-    space (U+0020), and both paragraph (U+2029) and line (U+2028)
-    separators are replaced by line feed (U+000A).
-    If you need the precise contents of the document, use toRawText()
-    instead.
 
     \note Embedded objects, such as images, are represented by a
     Unicode value U+FFFC (OBJECT REPLACEMENT CHARACTER).
@@ -2456,7 +2428,7 @@ bool QTextHtmlExporter::emitCharFormatStyle(const QTextCharFormat &format)
         html += QLatin1Char(';');
         attributesEmitted = true;
     } else {
-        html.chop(decorationTag.size());
+        html.chop(qstrlen(decorationTag.latin1()));
     }
 
     if (format.foreground() != defaultCharFormat.foreground()
@@ -2691,7 +2663,7 @@ void QTextHtmlExporter::emitFragment(const QTextFragment &fragment)
     if (attributesEmitted)
         html += QLatin1String("\">");
     else
-        html.chop(styleTag.size());
+        html.chop(qstrlen(styleTag.latin1()));
 
     if (isObject) {
         for (int i = 0; isImage && i < txt.length(); ++i) {
@@ -2726,8 +2698,13 @@ void QTextHtmlExporter::emitFragment(const QTextFragment &fragment)
         // split for [\n{LineSeparator}]
         QString forcedLineBreakRegExp = QString::fromLatin1("[\\na]");
         forcedLineBreakRegExp[3] = QChar::LineSeparator;
-        // space in BR on purpose for compatibility with old-fashioned browsers
-        html += txt.replace(QRegExp(forcedLineBreakRegExp), QLatin1String("<br />"));
+
+        const QStringList lines = txt.split(QRegExp(forcedLineBreakRegExp));
+        for (int i = 0; i < lines.count(); ++i) {
+            if (i > 0)
+                html += QLatin1String("<br />"); // space on purpose for compatibility with Netscape, Lynx & Co.
+            html += lines.at(i);
+        }
     }
 
     if (attributesEmitted)
@@ -2784,25 +2761,26 @@ void QTextHtmlExporter::emitBlockAttributes(const QTextBlock &block)
     }
 
     if (format.lineHeightType() != QTextBlockFormat::SingleHeight) {
-        html += QLatin1String(" line-height:")
-             + QString::number(format.lineHeight());
         switch (format.lineHeightType()) {
             case QTextBlockFormat::ProportionalHeight:
-                html += QLatin1String("%;");
-                break;
             case QTextBlockFormat::FixedHeight:
-                html += QLatin1String("; -qt-line-height-type: fixed;");
+                html += QLatin1String(" line-height:");
                 break;
             case QTextBlockFormat::MinimumHeight:
-                html += QLatin1String("px;");
+                html += QLatin1String(" min-height:");
                 break;
             case QTextBlockFormat::LineDistanceHeight:
-                html += QLatin1String("; -qt-line-height-type: line-distance;");
+                html += QLatin1String(" line-spacing:");
                 break;
+            case QTextBlockFormat::SingleHeight:
             default:
-                html += QLatin1String(";");
                 break; // Should never reach here
         }
+        html += QString::number(format.lineHeight());
+        if (format.lineHeightType() == QTextBlockFormat::ProportionalHeight)
+            html += QLatin1String("%;");
+        else
+            html += QLatin1String("px;");
     }
 
     emitPageBreakPolicy(format.pageBreakPolicy());
@@ -3161,7 +3139,7 @@ void QTextHtmlExporter::emitTable(const QTextTable *table)
     html += QLatin1String("</table>");
 }
 
-void QTextHtmlExporter::emitFrame(const QTextFrame::Iterator &frameIt)
+void QTextHtmlExporter::emitFrame(QTextFrame::Iterator frameIt)
 {
     if (!frameIt.atEnd()) {
         QTextFrame::Iterator next = frameIt;
@@ -3248,7 +3226,7 @@ void QTextHtmlExporter::emitFrameStyle(const QTextFrameFormat &format, FrameType
                     QString::number(format.rightMargin()));
 
     if (html.length() == originalHtmlLength) // nothing emitted?
-        html.chop(styleAttribute.size());
+        html.chop(qstrlen(styleAttribute.latin1()));
     else
         html += QLatin1Char('\"');
 }

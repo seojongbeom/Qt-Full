@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,9 +34,9 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.GroupBox {
     id: control
@@ -51,22 +51,28 @@ T.GroupBox {
 
     spacing: 12
     padding: 12
-    topPadding: padding + (label && label.implicitWidth > 0 ? label.implicitHeight + spacing : 0)
+    topPadding: 12 + (label && label.implicitWidth > 0 ? label.implicitHeight + spacing : 0)
 
+    //! [contentItem]
+    contentItem: Item { }
+    //! [contentItem]
+
+    //! [label]
     label: Text {
         x: control.leftPadding
         width: control.availableWidth
 
         text: control.title
         font: control.font
+        color: !control.enabled ? control.Universal.baseLowColor : control.Universal.baseHighColor
         elide: Text.ElideRight
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
-
-        opacity: enabled ? 1.0 : 0.2
-        color: control.Universal.foreground
     }
+    //! [label]
 
-    background: Rectangle {
+    //! [frame]
+    frame: Rectangle {
         y: control.topPadding - control.padding
         width: parent.width
         height: parent.height - control.topPadding + control.padding
@@ -74,4 +80,5 @@ T.GroupBox {
         color: "transparent"
         border.color: control.Universal.chromeDisabledLowColor
     }
+    //! [frame]
 }

@@ -1,5 +1,6 @@
 CONFIG += testcase
+CONFIG += parallel_test
 TARGET = tst_qmutex
 QT = core testlib
 SOURCES = tst_qmutex.cpp
-win32:QT += core-private
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -68,15 +62,17 @@ public:
 
     struct WidgetItem
     {
-        QWidget *widget{nullptr}; // can be null
-        QLabel *label{nullptr}; // main label with property name
-        QLabel *widgetLabel{nullptr}; // label substitute showing the current value if there is no widget
-        QToolButton *button{nullptr}; // expandable button for items with children
-        QWidget *container{nullptr}; // container which is expanded when the button is clicked
-        QGridLayout *layout{nullptr}; // layout in container
-        WidgetItem *parent{nullptr};
+        WidgetItem() : widget(0), label(0), widgetLabel(0),
+                button(0), container(0), layout(0), /*line(0), */parent(0), expanded(false) { }
+        QWidget *widget; // can be null
+        QLabel *label; // main label with property name
+        QLabel *widgetLabel; // label substitute showing the current value if there is no widget
+        QToolButton *button; // expandable button for items with children
+        QWidget *container; // container which is expanded when the button is clicked
+        QGridLayout *layout; // layout in container
+        WidgetItem *parent;
         QList<WidgetItem *> children;
-        bool expanded{false};
+        bool expanded;
     };
 private:
     void updateLater();
@@ -123,7 +119,9 @@ int QtButtonPropertyBrowserPrivate::gridRow(WidgetItem *item) const
         siblings = m_children;
 
     int row = 0;
-    for (WidgetItem *sibling : qAsConst(siblings)) {
+    QListIterator<WidgetItem *> it(siblings);
+    while (it.hasNext()) {
+        WidgetItem *sibling = it.next();
         if (sibling == item)
             return row;
         row += gridSpan(sibling);
@@ -160,7 +158,10 @@ void QtButtonPropertyBrowserPrivate::slotEditorDestroyed()
 
 void QtButtonPropertyBrowserPrivate::slotUpdate()
 {
-    for (WidgetItem *item : qAsConst(m_recreateQueue)) {
+    QListIterator<WidgetItem *> itItem(m_recreateQueue);
+    while (itItem.hasNext()) {
+        WidgetItem *item = itItem.next();
+
         WidgetItem *parent = item->parent;
         QWidget *w = 0;
         QGridLayout *l = 0;
@@ -409,7 +410,8 @@ void QtButtonPropertyBrowserPrivate::insertRow(QGridLayout *layout, int row) con
         }
     }
 
-    for (auto it = itemToPos.constBegin(), icend = itemToPos.constEnd(); it != icend; ++it) {
+    const QMap<QLayoutItem *, QRect>::ConstIterator icend =  itemToPos.constEnd();
+    for(QMap<QLayoutItem *, QRect>::ConstIterator it = itemToPos.constBegin(); it != icend; ++it) {
         const QRect r = it.value();
         layout->addItem(it.key(), r.x(), r.y(), r.width(), r.height());
     }
@@ -429,7 +431,8 @@ void QtButtonPropertyBrowserPrivate::removeRow(QGridLayout *layout, int row) con
         }
     }
 
-    for (auto it = itemToPos.constBegin(), icend = itemToPos.constEnd(); it != icend; ++it) {
+    const QMap<QLayoutItem *, QRect>::ConstIterator icend =  itemToPos.constEnd();
+    for(QMap<QLayoutItem *, QRect>::ConstIterator it = itemToPos.constBegin(); it != icend; ++it) {
         const QRect r = it.value();
         layout->addItem(it.key(), r.x(), r.y(), r.width(), r.height());
     }

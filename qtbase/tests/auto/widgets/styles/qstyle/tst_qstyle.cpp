@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,28 +61,48 @@
 #include <qlineedit.h>
 #include <qmdiarea.h>
 #include <qscrollarea.h>
+
+#ifdef Q_OS_WINCE_WM
+#include <windows.h>
+
+static bool qt_wince_is_smartphone() {
+    wchar_t tszPlatform[64];
+    if (SystemParametersInfo(SPI_GETPLATFORMTYPE,
+                             sizeof(tszPlatform)/sizeof(*tszPlatform),tszPlatform,0))
+      if (0 == _tcsicmp(reinterpret_cast<const wchar_t *> (QString::fromLatin1("Smartphone").utf16()), tszPlatform))
+            return true;
+    return false;
+}
+#endif
+
 #include <qwidget.h>
 
-#include <algorithm>
-
-#include <QtTest/private/qtesthelpers_p.h>
-
-using namespace QTestPrivate;
+// Make a widget frameless to prevent size constraints of title bars
+// from interfering (Windows).
+static inline void setFrameless(QWidget *w)
+{
+    Qt::WindowFlags flags = w->windowFlags();
+    flags |= Qt::FramelessWindowHint;
+    flags &= ~(Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+    w->setWindowFlags(flags);
+}
 
 class tst_QStyle : public QObject
 {
     Q_OBJECT
 public:
     tst_QStyle();
-
+    virtual ~tst_QStyle();
 private:
     bool testAllFunctions(QStyle *);
-    bool testScrollBarSubControls();
+    bool testScrollBarSubControls(QStyle *);
     void testPainting(QStyle *style, const QString &platform);
 private slots:
     void drawItemPixmap();
-    void init();
+    void initTestCase();
     void cleanup();
+    void cleanupTestCase();
+    void init();
 #ifndef QT_NO_STYLE_FUSION
     void testFusionStyle();
 #endif
@@ -90,6 +115,12 @@ private slots:
 #endif
 #ifdef Q_OS_MAC
     void testMacStyle();
+#endif
+#ifdef Q_OS_WINCE
+    void testWindowsCEStyle();
+#endif
+#ifdef Q_OS_WINCE_WM
+    void testWindowsMobileStyle();
 #endif
     void testStyleFactory();
     void testProxyStyle();
@@ -114,6 +145,10 @@ tst_QStyle::tst_QStyle()
     testWidget = 0;
 }
 
+tst_QStyle::~tst_QStyle()
+{
+}
+
 class MyWidget : public QWidget
 {
 public:
@@ -131,6 +166,14 @@ void tst_QStyle::cleanup()
 {
     delete testWidget;
     testWidget = 0;
+}
+
+void tst_QStyle::initTestCase()
+{
+}
+
+void tst_QStyle::cleanupTestCase()
+{
 }
 
 void tst_QStyle::testStyleFactory()
@@ -204,12 +247,13 @@ void tst_QStyle::drawItemPixmap()
     testWidget->resize(300, 300);
     testWidget->showNormal();
 
-    QImage image = testWidget->grab().toImage();
-    const QRgb green = QColor(Qt::green).rgb();
-    QVERIFY(image.reinterpretAsFormat(QImage::Format_RGB32));
-    const QRgb *bits = reinterpret_cast<const QRgb *>(image.constBits());
-    const QRgb *end = bits + image.byteCount() / sizeof(QRgb);
-    QVERIFY(std::all_of(bits, end, [green] (QRgb r) { return r == green; }));
+    const QString imageFileName = QFINDTESTDATA("task_25863.png");
+    QVERIFY(!imageFileName.isEmpty());
+
+    QPixmap p(imageFileName, "PNG");
+    const QPixmap actualPix = testWidget->grab();
+
+    QCOMPARE(actualPix, p);
     testWidget->hide();
 }
 
@@ -290,11 +334,19 @@ bool tst_QStyle::testAllFunctions(QStyle *style)
     style->itemPixmapRect(QRect(0, 0, 100, 100), Qt::AlignHCenter, QPixmap(200, 200));
     style->itemTextRect(QFontMetrics(qApp->font()), QRect(0, 0, 100, 100), Qt::AlignHCenter, true, QString("Test"));
 
-    return testScrollBarSubControls();
+    return testScrollBarSubControls(style);
 }
 
-bool tst_QStyle::testScrollBarSubControls()
+bool tst_QStyle::testScrollBarSubControls(QStyle* style)
 {
+    // WinCE SmartPhone doesn't have scrollbar subcontrols, so skip the rest of the test.
+#ifdef Q_OS_WINCE_WM
+    if (style->inherits("QWindowsMobileStyle") && qt_wince_is_smartphone())
+        return true;
+#else
+    Q_UNUSED(style);
+#endif
+
     QScrollBar scrollBar;
     setFrameless(&scrollBar);
     scrollBar.show();
@@ -486,6 +538,26 @@ void tst_QStyle::testMacStyle()
     QStyle *mstyle = QStyleFactory::create("Macintosh");
     QVERIFY(testAllFunctions(mstyle));
     delete mstyle;
+}
+#endif
+
+#ifdef Q_OS_WINCE
+// WindowsCEStyle style
+void tst_QStyle::testWindowsCEStyle()
+{
+    QStyle *cstyle = QStyleFactory::create("WindowsCE");
+    QVERIFY(testAllFunctions(cstyle));
+    delete cstyle;
+}
+#endif
+
+#ifdef Q_OS_WINCE_WM
+// WindowsMobileStyle style
+void tst_QStyle::testWindowsMobileStyle()
+{
+    QStyle *cstyle = QStyleFactory::create("WindowsMobile");
+    QVERIFY(testAllFunctions(cstyle));
+    delete cstyle;
 }
 #endif
 

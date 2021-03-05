@@ -1,7 +1,6 @@
 CONFIG += testcase
 TARGET = tst_qtemporarydir
 SOURCES       += tst_qtemporarydir.cpp
-INCLUDEPATH += ../../../../shared/
-HEADERS += ../../../../shared/emulationdetector.h
 
-QT = core testlib testlib-private
+QT = core testlib
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

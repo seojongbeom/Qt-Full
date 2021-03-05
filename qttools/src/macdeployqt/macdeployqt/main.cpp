@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,7 +58,6 @@ int main(int argc, char **argv)
         qDebug() << "   -codesign=<ident>  : Run codesign with the given identity on all executables";
         qDebug() << "   -appstore-compliant: Skip deployment of components that use private API";
         qDebug() << "   -libpath=<path>    : Add the given path to the library search path";
-        qDebug() << "   -fs=<filesystem>   : Set the filesystem used for the .dmg disk image (defaults to HFS+)";
         qDebug() << "";
         qDebug() << "macdeployqt takes an application bundle as input and makes it";
         qDebug() << "self-contained by copying in the Qt frameworks and plugins that";
@@ -84,7 +88,6 @@ int main(int argc, char **argv)
 
     bool plugins = true;
     bool dmg = false;
-    QByteArray filesystem("HFS+");
     bool useDebugLibs = false;
     extern bool runStripEnabled;
     extern bool alwaysOwerwriteEnabled;
@@ -95,7 +98,6 @@ int main(int argc, char **argv)
     extern bool runCodesign;
     extern QString codesignIdentiy;
     extern bool appstoreCompliant;
-    extern bool deployFramework;
 
     for (int i = 2; i < argc; ++i) {
         QByteArray argument = QByteArray(argv[i]);
@@ -158,29 +160,13 @@ int main(int argc, char **argv)
         } else if (argument == QByteArray("-appstore-compliant")) {
             LogDebug() << "Argument found:" << argument;
             appstoreCompliant = true;
-
-        // Undocumented option, may not work as intented
-        } else if (argument == QByteArray("-deploy-framework")) {
-            LogDebug() << "Argument found:" << argument;
-            deployFramework = true;
-
-        } else if (argument.startsWith(QByteArray("-fs"))) {
-            LogDebug() << "Argument found:" << argument;
-            int index = argument.indexOf('=');
-            if (index == -1)
-                LogError() << "Missing filesystem type";
-            else
-                filesystem = argument.mid(index+1);
         } else if (argument.startsWith("-")) {
             LogError() << "Unknown argument" << argument << "\n";
             return 1;
         }
      }
 
-    DeploymentInfo deploymentInfo = deployQtFrameworks(appBundlePath, additionalExecutables, useDebugLibs);
-
-    if (deployFramework && deploymentInfo.isFramework)
-        fixupFramework(appBundlePath);
+    DeploymentInfo deploymentInfo  = deployQtFrameworks(appBundlePath, additionalExecutables, useDebugLibs);
 
     // Convenience: Look for .qml files in the current directoty if no -qmldir specified.
     if (qmlDirs.isEmpty()) {
@@ -216,7 +202,7 @@ int main(int argc, char **argv)
 
     if (dmg) {
         LogNormal();
-        createDiskImage(appBundlePath, filesystem);
+        createDiskImage(appBundlePath);
     }
 
     return 0;

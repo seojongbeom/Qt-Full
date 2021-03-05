@@ -1,8 +1,9 @@
 CONFIG += testcase
+CONFIG += parallel_test
 testcase.timeout = 300 # this test is slow
 
 SOURCES += tst_qsslsocket_onDemandCertificates_member.cpp
-win32:LIBS += -lws2_32
+win32:!wince: LIBS += -lws2_32
 QT = core core-private network-private testlib
 
 TARGET = tst_qsslsocket_onDemandCertificates_member
@@ -15,6 +16,10 @@ win32 {
   }
 }
 
-DEFINES += SRCDIR=\\\"$$PWD/\\\"
+wince* {
+    DEFINES += SRCDIR=\\\"./\\\"
+} else {
+    DEFINES += SRCDIR=\\\"$$PWD/\\\"
+}
 
-requires(qtConfig(private_tests))
+requires(contains(QT_CONFIG,private_tests))

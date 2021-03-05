@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -41,7 +35,6 @@
 
 #include "qaudiosystem.h"
 #include "qaudiosystemplugin.h"
-#include "qaudiosystempluginext_p.h"
 
 #include "qmediapluginloader_p.h"
 #include "qaudiodevicefactory_p.h"
@@ -61,64 +54,64 @@ Q_GLOBAL_STATIC_WITH_ARGS(QMediaPluginLoader, audioLoader,
 class QNullDeviceInfo : public QAbstractAudioDeviceInfo
 {
 public:
-    QAudioFormat preferredFormat() const override { qWarning()<<"using null deviceinfo, none available"; return QAudioFormat(); }
-    bool isFormatSupported(const QAudioFormat& ) const override { return false; }
+    QAudioFormat preferredFormat() const { qWarning()<<"using null deviceinfo, none available"; return QAudioFormat(); }
+    bool isFormatSupported(const QAudioFormat& ) const { return false; }
     QAudioFormat nearestFormat(const QAudioFormat& ) const { return QAudioFormat(); }
-    QString deviceName() const override { return QString(); }
-    QStringList supportedCodecs() override { return QStringList(); }
-    QList<int> supportedSampleRates() override  { return QList<int>(); }
-    QList<int> supportedChannelCounts() override { return QList<int>(); }
-    QList<int> supportedSampleSizes() override { return QList<int>(); }
-    QList<QAudioFormat::Endian> supportedByteOrders() override { return QList<QAudioFormat::Endian>(); }
-    QList<QAudioFormat::SampleType> supportedSampleTypes() override { return QList<QAudioFormat::SampleType>(); }
+    QString deviceName() const { return QString(); }
+    QStringList supportedCodecs() { return QStringList(); }
+    QList<int> supportedSampleRates()  { return QList<int>(); }
+    QList<int> supportedChannelCounts() { return QList<int>(); }
+    QList<int> supportedSampleSizes() { return QList<int>(); }
+    QList<QAudioFormat::Endian> supportedByteOrders() { return QList<QAudioFormat::Endian>(); }
+    QList<QAudioFormat::SampleType> supportedSampleTypes() { return QList<QAudioFormat::SampleType>(); }
 };
 
 class QNullInputDevice : public QAbstractAudioInput
 {
 public:
-    void start(QIODevice*) override { qWarning()<<"using null input device, none available";}
-    QIODevice* start() override { qWarning()<<"using null input device, none available"; return 0; }
-    void stop() override {}
-    void reset() override {}
-    void suspend() override {}
-    void resume() override {}
-    int bytesReady() const override { return 0; }
-    int periodSize() const override { return 0; }
-    void setBufferSize(int ) override {}
-    int bufferSize() const override  { return 0; }
-    void setNotifyInterval(int ) override {}
-    int notifyInterval() const override { return 0; }
-    qint64 processedUSecs() const override { return 0; }
-    qint64 elapsedUSecs() const override { return 0; }
-    QAudio::Error error() const override { return QAudio::OpenError; }
-    QAudio::State state() const override { return QAudio::StoppedState; }
-    void setFormat(const QAudioFormat&) override {}
-    QAudioFormat format() const override { return QAudioFormat(); }
-    void setVolume(qreal) override {}
-    qreal volume() const override {return 1.0f;}
+    void start(QIODevice*) { qWarning()<<"using null input device, none available";}
+    QIODevice* start() { qWarning()<<"using null input device, none available"; return 0; }
+    void stop() {}
+    void reset() {}
+    void suspend() {}
+    void resume() {}
+    int bytesReady() const { return 0; }
+    int periodSize() const { return 0; }
+    void setBufferSize(int ) {}
+    int bufferSize() const  { return 0; }
+    void setNotifyInterval(int ) {}
+    int notifyInterval() const { return 0; }
+    qint64 processedUSecs() const { return 0; }
+    qint64 elapsedUSecs() const { return 0; }
+    QAudio::Error error() const { return QAudio::OpenError; }
+    QAudio::State state() const { return QAudio::StoppedState; }
+    void setFormat(const QAudioFormat&) {}
+    QAudioFormat format() const { return QAudioFormat(); }
+    void setVolume(qreal) {}
+    qreal volume() const {return 1.0f;}
 };
 
 class QNullOutputDevice : public QAbstractAudioOutput
 {
 public:
-    void start(QIODevice*) override {qWarning()<<"using null output device, none available";}
-    QIODevice* start() override { qWarning()<<"using null output device, none available"; return 0; }
-    void stop() override {}
-    void reset() override {}
-    void suspend() override {}
-    void resume() override {}
-    int bytesFree() const override { return 0; }
-    int periodSize() const override { return 0; }
-    void setBufferSize(int ) override {}
-    int bufferSize() const override  { return 0; }
-    void setNotifyInterval(int ) override {}
-    int notifyInterval() const override { return 0; }
-    qint64 processedUSecs() const override { return 0; }
-    qint64 elapsedUSecs() const override { return 0; }
-    QAudio::Error error() const override { return QAudio::OpenError; }
-    QAudio::State state() const override { return QAudio::StoppedState; }
-    void setFormat(const QAudioFormat&) override {}
-    QAudioFormat format() const override { return QAudioFormat(); }
+    void start(QIODevice*) {qWarning()<<"using null output device, none available";}
+    QIODevice* start() { qWarning()<<"using null output device, none available"; return 0; }
+    void stop() {}
+    void reset() {}
+    void suspend() {}
+    void resume() {}
+    int bytesFree() const { return 0; }
+    int periodSize() const { return 0; }
+    void setBufferSize(int ) {}
+    int bufferSize() const  { return 0; }
+    void setNotifyInterval(int ) {}
+    int notifyInterval() const { return 0; }
+    qint64 processedUSecs() const { return 0; }
+    qint64 elapsedUSecs() const { return 0; }
+    QAudio::Error error() const { return QAudio::OpenError; }
+    QAudio::State state() const { return QAudio::StoppedState; }
+    void setFormat(const QAudioFormat&) {}
+    QAudioFormat format() const { return QAudioFormat(); }
 };
 
 QList<QAudioDeviceInfo> QAudioDeviceFactory::availableDevices(QAudio::Mode mode)
@@ -126,12 +119,10 @@ QList<QAudioDeviceInfo> QAudioDeviceFactory::availableDevices(QAudio::Mode mode)
     QList<QAudioDeviceInfo> devices;
 #if !defined (QT_NO_LIBRARY) && !defined(QT_NO_SETTINGS)
     QMediaPluginLoader* l = audioLoader();
-    const auto keys = l->keys();
-    for (const QString& key : keys) {
+    foreach (const QString& key, l->keys()) {
         QAudioSystemFactoryInterface* plugin = qobject_cast<QAudioSystemFactoryInterface*>(l->instance(key));
         if (plugin) {
-            const auto availableDevices = plugin->availableDevices(mode);
-            for (const QByteArray& handle : availableDevices)
+            foreach (QByteArray const& handle, plugin->availableDevices(mode))
                 devices << QAudioDeviceInfo(key, handle, mode);
         }
     }
@@ -140,53 +131,41 @@ QList<QAudioDeviceInfo> QAudioDeviceFactory::availableDevices(QAudio::Mode mode)
     return devices;
 }
 
-QAudioDeviceInfo QAudioDeviceFactory::defaultDevice(QAudio::Mode mode)
+QAudioDeviceInfo QAudioDeviceFactory::defaultInputDevice()
 {
 #if !defined (QT_NO_LIBRARY) && !defined(QT_NO_SETTINGS)
-    QMediaPluginLoader* l = audioLoader();
-
-    // Check if there is a default plugin.
-    QAudioSystemFactoryInterface *plugin = qobject_cast<QAudioSystemFactoryInterface *>(l->instance(defaultKey()));
+    QAudioSystemFactoryInterface* plugin = qobject_cast<QAudioSystemFactoryInterface*>(audioLoader()->instance(defaultKey()));
     if (plugin) {
-        // Check if the plugin has the extension interface.
-        QAudioSystemPluginExtension *pluginExt = qobject_cast<QAudioSystemPluginExtension *>(l->instance(defaultKey()));
-        // Ask for the default device.
-        if (pluginExt) {
-            const QByteArray &device = pluginExt->defaultDevice(mode);
-            if (!device.isEmpty())
-                return QAudioDeviceInfo(defaultKey(), device, mode);
-        }
-
-        // If there were no default devices, e.g., if the plugin did not implement the extent-ion interface,
-        // then just pick the first device that's available.
-        const auto &devices = plugin->availableDevices(mode);
-        if (!devices.isEmpty())
-            return QAudioDeviceInfo(defaultKey(), devices.first(), mode);
+        QList<QByteArray> list = plugin->availableDevices(QAudio::AudioInput);
+        if (list.size() > 0)
+            return QAudioDeviceInfo(defaultKey(), list.at(0), QAudio::AudioInput);
     }
 
-    // If no plugin is marked as default, check the other plugins.
-    // Note: We're going to prioritize plugins that report a default device.
-    const auto &keys = l->keys();
-    QAudioDeviceInfo fallbackDevice;
-    for (const auto &key : keys) {
-        if (key == defaultKey())
-            continue;
-        QAudioSystemFactoryInterface* plugin = qobject_cast<QAudioSystemFactoryInterface*>(l->instance(key));
-        if (plugin) {
-            // Check if the plugin has the extent-ion interface.
-            QAudioSystemPluginExtension *pluginExt = qobject_cast<QAudioSystemPluginExtension *>(l->instance(key));
-            if (pluginExt) {
-                const QByteArray &device = pluginExt->defaultDevice(mode);
-                if (!device.isEmpty())
-                    return QAudioDeviceInfo(key, device, mode);
-            } else if (fallbackDevice.isNull()) {
-                const auto &devices = plugin->availableDevices(mode);
-                if (!devices.isEmpty())
-                    fallbackDevice = QAudioDeviceInfo(key, devices.first(), mode);
-            }
-        }
+    // if no plugin is marked as default or if the default plugin doesn't have any input device,
+    // return the first input available from other plugins.
+    QList<QAudioDeviceInfo> inputDevices = availableDevices(QAudio::AudioInput);
+    if (!inputDevices.isEmpty())
+        return inputDevices.first();
+#endif
+
+    return QAudioDeviceInfo();
+}
+
+QAudioDeviceInfo QAudioDeviceFactory::defaultOutputDevice()
+{
+#if !defined (QT_NO_LIBRARY) && !defined(QT_NO_SETTINGS)
+    QAudioSystemFactoryInterface* plugin = qobject_cast<QAudioSystemFactoryInterface*>(audioLoader()->instance(defaultKey()));
+    if (plugin) {
+        QList<QByteArray> list = plugin->availableDevices(QAudio::AudioOutput);
+        if (list.size() > 0)
+            return QAudioDeviceInfo(defaultKey(), list.at(0), QAudio::AudioOutput);
     }
 
+    // if no plugin is marked as default or if the default plugin doesn't have any output device,
+    // return the first output available from other plugins.
+    QList<QAudioDeviceInfo> outputDevices = availableDevices(QAudio::AudioOutput);
+    if (!outputDevices.isEmpty())
+        return outputDevices.first();
 #endif
 
     return QAudioDeviceInfo();
@@ -209,12 +188,12 @@ QAbstractAudioDeviceInfo* QAudioDeviceFactory::audioDeviceInfo(const QString &re
 
 QAbstractAudioInput* QAudioDeviceFactory::createDefaultInputDevice(QAudioFormat const &format)
 {
-    return createInputDevice(defaultDevice(QAudio::AudioInput), format);
+    return createInputDevice(defaultInputDevice(), format);
 }
 
 QAbstractAudioOutput* QAudioDeviceFactory::createDefaultOutputDevice(QAudioFormat const &format)
 {
-    return createOutputDevice(defaultDevice(QAudio::AudioOutput), format);
+    return createOutputDevice(defaultOutputDevice(), format);
 }
 
 QAbstractAudioInput* QAudioDeviceFactory::createInputDevice(QAudioDeviceInfo const& deviceInfo, QAudioFormat const &format)

@@ -25,5 +25,6 @@ PRIVATETESTS += \
     qquickturbulence \
     qquickwander
 
-qtConfig(private_tests): \
+contains(QT_CONFIG, private_tests) {
     SUBDIRS += $$PRIVATETESTS
+}

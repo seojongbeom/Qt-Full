@@ -1,8 +1,8 @@
-import QtQml 2.0
+import QtQuick 2.0
 
-QtObject {
-    property int width: 400
-    property int height: 400
+Rectangle {
+    width: 400
+    height: 400
 
     onWidthChanged: console.log(width);
     Component.onCompleted: width = 500;

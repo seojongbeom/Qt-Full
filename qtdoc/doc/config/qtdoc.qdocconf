@@ -20,7 +20,6 @@ depends += \
     qtenginio \
     qtenginiooverview \
     qtenginioqml \
-    qtgamepad \
     qtgraphicaleffects \
     qthelp \
     qtimageformats \
@@ -43,13 +42,13 @@ depends += \
     qtquicklayouts \
     qtscript \
     qtscripttools \
-    qtscxml \
     qtsensors \
     qtserialbus \
     qtserialport \
     qtsql \
     qtsvg \
     qttestlib \
+    qttools \
     qtuitools \
     qtwebchannel \
     qtwebengine \
@@ -64,15 +63,7 @@ depends += \
     qt3d \
     qtcanvas3d \
     qtwebview \
-    qtquickcontrols2 \
-    qtwaylandcompositor \
-    qtcharts \
-    qtdatavisualization \
-    qtpurchasing \
-    qtvirtualkeyboard \
-    qtspeech \
-    qtnetworkauth \
-    qtremoteobjects
+    qtlabscontrols
 
 headerdirs  += ../src
 imagedirs   += ../src/images \
@@ -120,6 +111,3 @@ qhp.QtDoc.extraFiles         += images/qt-codesample.png
 
 # Add an .html file with sidebar content, used in the online style
 HTML.stylesheets             += style/qt5-sidebar.html
-
-macro.indextitle              = "\\title Qt $QT_VER"
-macro.qtver                   = "$QT_VER"

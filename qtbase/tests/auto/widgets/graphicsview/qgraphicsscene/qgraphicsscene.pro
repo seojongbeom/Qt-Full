@@ -4,9 +4,17 @@ QT += widgets widgets-private testlib
 QT += core-private gui-private
 SOURCES  += tst_qgraphicsscene.cpp
 RESOURCES += images.qrc
-win32:!winrt: LIBS += -luser32
+win32:!wince:!winrt: LIBS += -luser32
 
-DEFINES += SRCDIR=\\\"$$PWD\\\"
+!wince: DEFINES += SRCDIR=\\\"$$PWD\\\"
 DEFINES += QT_NO_CAST_TO_ASCII
 
-RESOURCES += testdata.qrc
+wince* {
+   rootFiles.files = Ash_European.jpg graphicsScene_selection.data
+   rootFiles.path = .
+   renderFiles.files = testData\\render\\*
+   renderFiles.path = testData\\render
+   DEPLOYMENT += rootFiles renderFiles
+   DEFINES += SRCDIR=\\\".\\\"
+}
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

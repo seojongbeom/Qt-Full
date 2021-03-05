@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -43,21 +40,21 @@
 
 QT_BEGIN_NAMESPACE
 
-class QQuickAndroid9PatchNode1 : public QSGGeometryNode
+class QQuickAndroid9PatchNode : public QSGGeometryNode
 {
 public:
-    QQuickAndroid9PatchNode1();
-    ~QQuickAndroid9PatchNode1();
+    QQuickAndroid9PatchNode();
+    ~QQuickAndroid9PatchNode();
 
     void initialize(QSGTexture *texture, const QRectF &bounds, const QSize &sourceSize,
-                    const QQuickAndroid9PatchDivs1 &xDivs, const QQuickAndroid9PatchDivs1 &yDivs);
+                    const QQuickAndroid9PatchDivs &xDivs, const QQuickAndroid9PatchDivs &yDivs);
 
 private:
     QSGGeometry m_geometry;
     QSGTextureMaterial m_material;
 };
 
-QQuickAndroid9PatchNode1::QQuickAndroid9PatchNode1()
+QQuickAndroid9PatchNode::QQuickAndroid9PatchNode()
     : m_geometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4)
 {
     m_geometry.setDrawingMode(GL_TRIANGLES);
@@ -65,13 +62,13 @@ QQuickAndroid9PatchNode1::QQuickAndroid9PatchNode1()
     setMaterial(&m_material);
 }
 
-QQuickAndroid9PatchNode1::~QQuickAndroid9PatchNode1()
+QQuickAndroid9PatchNode::~QQuickAndroid9PatchNode()
 {
     delete m_material.texture();
 }
 
-void QQuickAndroid9PatchNode1::initialize(QSGTexture *texture, const QRectF &bounds, const QSize &sourceSize,
-                                         const QQuickAndroid9PatchDivs1 &xDivs, const QQuickAndroid9PatchDivs1 &yDivs)
+void QQuickAndroid9PatchNode::initialize(QSGTexture *texture, const QRectF &bounds, const QSize &sourceSize,
+                                         const QQuickAndroid9PatchDivs &xDivs, const QQuickAndroid9PatchDivs &yDivs)
 {
     delete m_material.texture();
     m_material.setTexture(texture);
@@ -115,7 +112,7 @@ void QQuickAndroid9PatchNode1::initialize(QSGTexture *texture, const QRectF &bou
     markDirty(QSGNode::DirtyGeometry | QSGNode::DirtyMaterial);
 }
 
-QVector<qreal> QQuickAndroid9PatchDivs1::coordsForSize(qreal size) const
+QVector<qreal> QQuickAndroid9PatchDivs::coordsForSize(qreal size) const
 {
     // n = number of stretchable sections
     // We have to compensate when adding 0 and/or
@@ -141,7 +138,7 @@ QVector<qreal> QQuickAndroid9PatchDivs1::coordsForSize(qreal size) const
     return coords;
 }
 
-void QQuickAndroid9PatchDivs1::fill(const QVariantList &divs, qreal size)
+void QQuickAndroid9PatchDivs::fill(const QVariantList &divs, qreal size)
 {
     if (!data.isEmpty())
         return;
@@ -155,33 +152,33 @@ void QQuickAndroid9PatchDivs1::fill(const QVariantList &divs, qreal size)
         data.reserve(divs.size() + 1);
     }
 
-    for (const QVariant &div : divs)
+    foreach (const QVariant &div, divs)
         data.append(div.toReal());
 
     data.append(size);
 }
 
-void QQuickAndroid9PatchDivs1::clear()
+void QQuickAndroid9PatchDivs::clear()
 {
     data.clear();
 }
 
-QQuickAndroid9Patch1::QQuickAndroid9Patch1(QQuickItem *parent) : QQuickItem(parent)
+QQuickAndroid9Patch::QQuickAndroid9Patch(QQuickItem *parent) : QQuickItem(parent)
 {
     connect(this, SIGNAL(widthChanged()), this, SLOT(updateDivs()));
     connect(this, SIGNAL(heightChanged()), this, SLOT(updateDivs()));
 }
 
-QQuickAndroid9Patch1::~QQuickAndroid9Patch1()
+QQuickAndroid9Patch::~QQuickAndroid9Patch()
 {
 }
 
-QUrl QQuickAndroid9Patch1::source() const
+QUrl QQuickAndroid9Patch::source() const
 {
     return m_source;
 }
 
-void QQuickAndroid9Patch1::setSource(const QUrl &source)
+void QQuickAndroid9Patch::setSource(const QUrl &source)
 {
     if (m_source != source) {
         m_source = source;
@@ -195,12 +192,12 @@ void QQuickAndroid9Patch1::setSource(const QUrl &source)
     }
 }
 
-QVariantList QQuickAndroid9Patch1::xDivs() const
+QVariantList QQuickAndroid9Patch::xDivs() const
 {
     return m_xVars;
 }
 
-void QQuickAndroid9Patch1::setXDivs(const QVariantList &divs)
+void QQuickAndroid9Patch::setXDivs(const QVariantList &divs)
 {
     if (m_xVars != divs) {
         m_xVars = divs;
@@ -211,12 +208,12 @@ void QQuickAndroid9Patch1::setXDivs(const QVariantList &divs)
     }
 }
 
-QVariantList QQuickAndroid9Patch1::yDivs() const
+QVariantList QQuickAndroid9Patch::yDivs() const
 {
     return m_yVars;
 }
 
-void QQuickAndroid9Patch1::setYDivs(const QVariantList &divs)
+void QQuickAndroid9Patch::setYDivs(const QVariantList &divs)
 {
     if (m_yVars != divs) {
         m_yVars = divs;
@@ -227,23 +224,23 @@ void QQuickAndroid9Patch1::setYDivs(const QVariantList &divs)
     }
 }
 
-QSize QQuickAndroid9Patch1::sourceSize() const
+QSize QQuickAndroid9Patch::sourceSize() const
 {
     return m_sourceSize;
 }
 
-void QQuickAndroid9Patch1::classBegin()
+void QQuickAndroid9Patch::classBegin()
 {
     QQuickItem::classBegin();
 }
 
-void QQuickAndroid9Patch1::componentComplete()
+void QQuickAndroid9Patch::componentComplete()
 {
     QQuickItem::componentComplete();
     loadImage();
 }
 
-QSGNode *QQuickAndroid9Patch1::updatePaintNode(QSGNode *node, UpdatePaintNodeData *data)
+QSGNode *QQuickAndroid9Patch::updatePaintNode(QSGNode *node, UpdatePaintNodeData *data)
 {
     Q_UNUSED(data);
 
@@ -252,9 +249,9 @@ QSGNode *QQuickAndroid9Patch1::updatePaintNode(QSGNode *node, UpdatePaintNodeDat
         return 0;
     }
 
-    QQuickAndroid9PatchNode1 *patchNode = static_cast<QQuickAndroid9PatchNode1 *>(node);
+    QQuickAndroid9PatchNode *patchNode = static_cast<QQuickAndroid9PatchNode *>(node);
     if (!patchNode)
-        patchNode = new QQuickAndroid9PatchNode1;
+        patchNode = new QQuickAndroid9PatchNode;
 
 #ifdef QSG_RUNTIME_DESCRIPTION
     qsgnode_set_description(patchNode, QString::fromLatin1("Android9Patch: '%1'").arg(m_source.toString()));
@@ -265,7 +262,7 @@ QSGNode *QQuickAndroid9Patch1::updatePaintNode(QSGNode *node, UpdatePaintNodeDat
     return patchNode;
 }
 
-void QQuickAndroid9Patch1::loadImage()
+void QQuickAndroid9Patch::loadImage()
 {
     if (!isComponentComplete())
         return;
@@ -281,7 +278,7 @@ void QQuickAndroid9Patch1::loadImage()
     updateDivs();
 }
 
-void QQuickAndroid9Patch1::updateDivs()
+void QQuickAndroid9Patch::updateDivs()
 {
     if (!isComponentComplete() || m_image.isNull() || width() <= 0 || height() <= 0)
         return;

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -82,17 +76,36 @@ QByteArray QMimeMagicRule::typeName(QMimeMagicRule::Type theType)
     return magicRuleTypes_string + magicRuleTypes_indices[theType];
 }
 
-bool QMimeMagicRule::operator==(const QMimeMagicRule &other) const
+class QMimeMagicRulePrivate
 {
-    return m_type == other.m_type &&
-           m_value == other.m_value &&
-           m_startPos == other.m_startPos &&
-           m_endPos == other.m_endPos &&
-           m_mask == other.m_mask &&
-           m_pattern == other.m_pattern &&
-           m_number == other.m_number &&
-           m_numberMask == other.m_numberMask &&
-           m_matchFunction == other.m_matchFunction;
+public:
+    bool operator==(const QMimeMagicRulePrivate &other) const;
+
+    QMimeMagicRule::Type type;
+    QByteArray value;
+    int startPos;
+    int endPos;
+    QByteArray mask;
+
+    QByteArray pattern;
+    quint32 number;
+    quint32 numberMask;
+
+    typedef bool (*MatchFunction)(const QMimeMagicRulePrivate *d, const QByteArray &data);
+    MatchFunction matchFunction;
+};
+
+bool QMimeMagicRulePrivate::operator==(const QMimeMagicRulePrivate &other) const
+{
+    return type == other.type &&
+           value == other.value &&
+           startPos == other.startPos &&
+           endPos == other.endPos &&
+           mask == other.mask &&
+           pattern == other.pattern &&
+           number == other.number &&
+           numberMask == other.numberMask &&
+           matchFunction == other.matchFunction;
 }
 
 // Used by both providers
@@ -145,25 +158,25 @@ bool QMimeMagicRule::matchSubstring(const char *dataPtr, int dataSize, int range
     return true;
 }
 
-bool QMimeMagicRule::matchString(const QByteArray &data) const
+static bool matchString(const QMimeMagicRulePrivate *d, const QByteArray &data)
 {
-    const int rangeLength = m_endPos - m_startPos + 1;
-    return QMimeMagicRule::matchSubstring(data.constData(), data.size(), m_startPos, rangeLength, m_pattern.size(), m_pattern.constData(), m_mask.constData());
+    const int rangeLength = d->endPos - d->startPos + 1;
+    return QMimeMagicRule::matchSubstring(data.constData(), data.size(), d->startPos, rangeLength, d->pattern.size(), d->pattern.constData(), d->mask.constData());
 }
 
 template <typename T>
-bool QMimeMagicRule::matchNumber(const QByteArray &data) const
+static bool matchNumber(const QMimeMagicRulePrivate *d, const QByteArray &data)
 {
-    const T value(m_number);
-    const T mask(m_numberMask);
+    const T value(d->number);
+    const T mask(d->numberMask);
 
-    //qDebug() << "matchNumber" << "0x" << QString::number(m_number, 16) << "size" << sizeof(T);
-    //qDebug() << "mask" << QString::number(m_numberMask, 16);
+    //qDebug() << "matchNumber" << "0x" << QString::number(d->number, 16) << "size" << sizeof(T);
+    //qDebug() << "mask" << QString::number(d->numberMask, 16);
 
-    const char *p = data.constData() + m_startPos;
-    const char *e = data.constData() + qMin(data.size() - int(sizeof(T)), m_endPos);
+    const char *p = data.constData() + d->startPos;
+    const char *e = data.constData() + qMin(data.size() - int(sizeof(T)), d->endPos + 1);
     for ( ; p <= e; ++p) {
-        if ((qFromUnaligned<T>(p) & mask) == (value & mask))
+        if ((qFromUnaligned<T>(reinterpret_cast<const uchar *>(p)) & mask) == (value & mask))
             return true;
     }
 
@@ -223,109 +236,105 @@ static inline QByteArray makePattern(const QByteArray &value)
 //  <match value="must be converted with BinHex" type="string" offset="11"/>
 //  <match value="0x9501" type="big16" offset="0:64"/>
 
-QMimeMagicRule::QMimeMagicRule(const QString &type,
-                               const QByteArray &value,
+QMimeMagicRule::QMimeMagicRule(const QString &typeStr,
+                               const QByteArray &theValue,
                                const QString &offsets,
-                               const QByteArray &mask,
-                               QString *errorString)
-    : m_type(QMimeMagicRule::type(type.toLatin1())),
-      m_value(value),
-      m_mask(mask),
-      m_matchFunction(nullptr)
+                               const QByteArray &theMask,
+                               QString *errorString) :
+    d(new QMimeMagicRulePrivate)
 {
-    if (Q_UNLIKELY(m_type == Invalid))
-        *errorString = QLatin1String("Type ") + type + QLatin1String(" is not supported");
+    d->value = theValue;
+    d->mask = theMask;
+    d->matchFunction = 0;
+
+    d->type = QMimeMagicRule::type(typeStr.toLatin1());
+    if (d->type == Invalid) {
+        *errorString = QStringLiteral("Type %s is not supported").arg(typeStr);
+    }
 
     // Parse for offset as "1" or "1:10"
     const int colonIndex = offsets.indexOf(QLatin1Char(':'));
-    const QStringRef startPosStr = offsets.midRef(0, colonIndex); // \ These decay to returning 'offsets'
-    const QStringRef endPosStr   = offsets.midRef(colonIndex + 1);// / unchanged when colonIndex == -1
-    if (Q_UNLIKELY(!QMimeTypeParserBase::parseNumber(startPosStr, &m_startPos, errorString)) ||
-        Q_UNLIKELY(!QMimeTypeParserBase::parseNumber(endPosStr, &m_endPos, errorString))) {
-        m_type = Invalid;
+    const QString startPosStr = colonIndex == -1 ? offsets : offsets.mid(0, colonIndex);
+    const QString endPosStr   = colonIndex == -1 ? offsets : offsets.mid(colonIndex + 1);
+    if (!QMimeTypeParserBase::parseNumber(startPosStr, &d->startPos, errorString) ||
+        !QMimeTypeParserBase::parseNumber(endPosStr, &d->endPos, errorString)) {
+        d->type = Invalid;
         return;
     }
 
-    if (Q_UNLIKELY(m_value.isEmpty())) {
-        m_type = Invalid;
+    if (d->value.isEmpty()) {
+        d->type = Invalid;
         if (errorString)
-            *errorString = QStringLiteral("Invalid empty magic rule value");
+            *errorString = QLatin1String("Invalid empty magic rule value");
         return;
     }
 
-    if (m_type >= Host16 && m_type <= Byte) {
+    if (d->type >= Host16 && d->type <= Byte) {
         bool ok;
-        m_number = m_value.toUInt(&ok, 0); // autodetect base
-        if (Q_UNLIKELY(!ok)) {
-            m_type = Invalid;
+        d->number = d->value.toUInt(&ok, 0); // autodetect
+        if (!ok) {
+            d->type = Invalid;
             if (errorString)
-                *errorString = QLatin1String("Invalid magic rule value \"") + QLatin1String(m_value) + QLatin1Char('"');
+                *errorString = QString::fromLatin1("Invalid magic rule value \"%1\"").arg(
+                        QString::fromLatin1(d->value));
             return;
         }
-        m_numberMask = !m_mask.isEmpty() ? m_mask.toUInt(&ok, 0) : 0; // autodetect base
+        d->numberMask = !d->mask.isEmpty() ? d->mask.toUInt(&ok, 0) : 0; // autodetect
     }
 
-    switch (m_type) {
+    switch (d->type) {
     case String:
-        m_pattern = makePattern(m_value);
-        m_pattern.squeeze();
-        if (!m_mask.isEmpty()) {
-            if (Q_UNLIKELY(m_mask.size() < 4 || !m_mask.startsWith("0x"))) {
-                m_type = Invalid;
+        d->pattern = makePattern(d->value);
+        d->pattern.squeeze();
+        if (!d->mask.isEmpty()) {
+            if (d->mask.size() < 4 || !d->mask.startsWith("0x")) {
+                d->type = Invalid;
                 if (errorString)
-                    *errorString = QLatin1String("Invalid magic rule mask \"") + QLatin1String(m_mask) + QLatin1Char('"');
+                    *errorString = QString::fromLatin1("Invalid magic rule mask \"%1\"").arg(
+                            QString::fromLatin1(d->mask));
                 return;
             }
             const QByteArray &tempMask = QByteArray::fromHex(QByteArray::fromRawData(
-                                                     m_mask.constData() + 2, m_mask.size() - 2));
-            if (Q_UNLIKELY(tempMask.size() != m_pattern.size())) {
-                m_type = Invalid;
+                                                     d->mask.constData() + 2, d->mask.size() - 2));
+            if (tempMask.size() != d->pattern.size()) {
+                d->type = Invalid;
                 if (errorString)
-                    *errorString = QLatin1String("Invalid magic rule mask size \"") + QLatin1String(m_mask) + QLatin1Char('"');
+                    *errorString = QString::fromLatin1("Invalid magic rule mask size \"%1\"").arg(
+                            QString::fromLatin1(d->mask));
                 return;
             }
-            m_mask = tempMask;
+            d->mask = tempMask;
         } else {
-            m_mask.fill(char(-1), m_pattern.size());
+            d->mask.fill(char(-1), d->pattern.size());
         }
-        m_mask.squeeze();
-        m_matchFunction = &QMimeMagicRule::matchString;
+        d->mask.squeeze();
+        d->matchFunction = matchString;
         break;
     case Byte:
-        if (m_number <= quint8(-1)) {
-            if (m_numberMask == 0)
-                m_numberMask = quint8(-1);
-            m_matchFunction = &QMimeMagicRule::matchNumber<quint8>;
+        if (d->number <= quint8(-1)) {
+            if (d->numberMask == 0)
+                d->numberMask = quint8(-1);
+            d->matchFunction = matchNumber<quint8>;
         }
         break;
     case Big16:
-    case Little16:
-        if (m_number <= quint16(-1)) {
-            m_number = m_type == Little16 ? qFromLittleEndian<quint16>(m_number) : qFromBigEndian<quint16>(m_number);
-            if (m_numberMask != 0)
-                m_numberMask = m_type == Little16 ? qFromLittleEndian<quint16>(m_numberMask) : qFromBigEndian<quint16>(m_numberMask);
-        }
-        Q_FALLTHROUGH();
     case Host16:
-        if (m_number <= quint16(-1)) {
-            if (m_numberMask == 0)
-                m_numberMask = quint16(-1);
-            m_matchFunction = &QMimeMagicRule::matchNumber<quint16>;
+    case Little16:
+        if (d->number <= quint16(-1)) {
+            d->number = d->type == Little16 ? qFromLittleEndian<quint16>(d->number) : qFromBigEndian<quint16>(d->number);
+            if (d->numberMask == 0)
+                d->numberMask = quint16(-1);
+            d->matchFunction = matchNumber<quint16>;
         }
         break;
     case Big32:
-    case Little32:
-        if (m_number <= quint32(-1)) {
-            m_number = m_type == Little32 ? qFromLittleEndian<quint32>(m_number) : qFromBigEndian<quint32>(m_number);
-            if (m_numberMask != 0)
-                m_numberMask = m_type == Little32 ? qFromLittleEndian<quint32>(m_numberMask) : qFromBigEndian<quint32>(m_numberMask);
-        }
-        Q_FALLTHROUGH();
     case Host32:
-        if (m_number <= quint32(-1)) {
-            if (m_numberMask == 0)
-                m_numberMask = quint32(-1);
-            m_matchFunction = &QMimeMagicRule::matchNumber<quint32>;
+    case Little32:
+        if (d->number <= quint32(-1)) {
+            d->number = d->type == Little32 ? qFromLittleEndian<quint32>(d->number) : qFromBigEndian<quint32>(d->number);
+            if (d->numberMask == 0)
+                d->numberMask = quint32(-1);
+            d->matchFunction = matchNumber<quint32>;
         }
         break;
     default:
@@ -333,19 +342,65 @@ QMimeMagicRule::QMimeMagicRule(const QString &type,
     }
 }
 
+QMimeMagicRule::QMimeMagicRule(const QMimeMagicRule &other) :
+    d(new QMimeMagicRulePrivate(*other.d))
+{
+}
+
+QMimeMagicRule::~QMimeMagicRule()
+{
+}
+
+QMimeMagicRule &QMimeMagicRule::operator=(const QMimeMagicRule &other)
+{
+    *d = *other.d;
+    return *this;
+}
+
+bool QMimeMagicRule::operator==(const QMimeMagicRule &other) const
+{
+    return d == other.d ||
+           *d == *other.d;
+}
+
+QMimeMagicRule::Type QMimeMagicRule::type() const
+{
+    return d->type;
+}
+
+QByteArray QMimeMagicRule::value() const
+{
+    return d->value;
+}
+
+int QMimeMagicRule::startPos() const
+{
+    return d->startPos;
+}
+
+int QMimeMagicRule::endPos() const
+{
+    return d->endPos;
+}
+
 QByteArray QMimeMagicRule::mask() const
 {
-    QByteArray result = m_mask;
-    if (m_type == String) {
+    QByteArray result = d->mask;
+    if (d->type == String) {
         // restore '0x'
         result = "0x" + result.toHex();
     }
     return result;
 }
 
+bool QMimeMagicRule::isValid() const
+{
+    return d->matchFunction;
+}
+
 bool QMimeMagicRule::matches(const QByteArray &data) const
 {
-    const bool ok = m_matchFunction && (this->*m_matchFunction)(data);
+    const bool ok = d->matchFunction && d->matchFunction(d.data(), data);
     if (!ok)
         return false;
 

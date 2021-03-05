@@ -17,7 +17,7 @@ include($$WEBKITDIR/WebKit.pri)
 
 # Disable a few warnings on Windows.
 # These are in addition to the ones disabled in WebKit.pri
-win32-msvc*: QMAKE_CXXFLAGS += -wd4396 -wd4099 -wd4577
+win32-msvc*: QMAKE_CXXFLAGS += -wd4396 -wd4099
 
 # Windows CE-specific stuff copied from WebCore.pro
 # ### Should rather be in JavaScriptCore.pri?
@@ -58,6 +58,3 @@ integrity {
 TR_EXCLUDE = $$WEBKITDIR/*
 
 load(qt_module)
-# Override the module default, as it breaks compilation with libc++>=5.0:
-# auto_ptr is no longer part of the c++1z standard.
-CONFIG -= c++1z

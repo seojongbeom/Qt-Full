@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,9 +34,21 @@
 #include "cglconvenience_p.h"
 #include <QtCore/qglobal.h>
 #include <QtCore/private/qcore_mac_p.h>
-#include <AppKit/AppKit.h>
+#include <Cocoa/Cocoa.h>
 #include <QVector>
-#include <qdebug.h>
+
+void (*qcgl_getProcAddress(const QByteArray &procName))()
+{
+    CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,
+            CFSTR("/System/Library/Frameworks/OpenGL.framework"), kCFURLPOSIXPathStyle, false);
+    CFBundleRef bundle = CFBundleCreate(kCFAllocatorDefault, url);
+    CFStringRef procNameCF = QCFString::toCFStringRef(QString::fromLatin1(procName.constData()));
+    void *proc = CFBundleGetFunctionPointerForName(bundle, procNameCF);
+    CFRelease(url);
+    CFRelease(bundle);
+    CFRelease(procNameCF);
+    return (void (*) ())proc;
+}
 
 // Match up with createNSOpenGLPixelFormat below!
 QSurfaceFormat qcgl_surfaceFormat()
@@ -81,15 +87,22 @@ void *qcgl_createNSOpenGLPixelFormat(const QSurfaceFormat &format)
     else if (format.swapBehavior() == QSurfaceFormat::TripleBuffer)
         attrs.append(NSOpenGLPFATripleBuffer);
 
-    if (format.profile() == QSurfaceFormat::CoreProfile
-            && ((format.majorVersion() == 3 && format.minorVersion() >= 2)
-                || format.majorVersion() > 3)) {
-        attrs << NSOpenGLPFAOpenGLProfile;
-        attrs << NSOpenGLProfileVersion3_2Core;
-    } else {
-        attrs << NSOpenGLPFAOpenGLProfile;
-        attrs << NSOpenGLProfileVersionLegacy;
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+    if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_7) {
+        if (format.profile() == QSurfaceFormat::CoreProfile
+                && ((format.majorVersion() == 3 && format.minorVersion() >= 2)
+                    || format.majorVersion() > 3)) {
+            attrs << NSOpenGLPFAOpenGLProfile;
+            attrs << NSOpenGLProfileVersion3_2Core;
+        } else {
+            attrs << NSOpenGLPFAOpenGLProfile;
+            attrs << NSOpenGLProfileVersionLegacy;
+        }
     }
+#else
+    if (format.profile() == QSurfaceFormat::CoreProfile)
+        qWarning("Mac OSX >= 10.7 is needed for OpenGL Core Profile support");
+#endif
 
     if (format.depthBufferSize() > 0)
         attrs <<  NSOpenGLPFADepthSize << format.depthBufferSize();
@@ -115,12 +128,7 @@ void *qcgl_createNSOpenGLPixelFormat(const QSurfaceFormat &format)
     if (format.stereo())
         attrs << NSOpenGLPFAStereo;
 
-    //Workaround for problems with Chromium and offline renderers on the lat 2013 Mac Pros.
-    static bool offlineRenderersAllowed = qEnvironmentVariableIsEmpty("QT_MAC_PRO_WEBENGINE_WORKAROUND");
-    if (offlineRenderersAllowed) {
-        // Allow rendering on GPUs without a connected display
-        attrs << NSOpenGLPFAAllowOfflineRenderers;
-    }
+    attrs << NSOpenGLPFAAllowOfflineRenderers;
 
     QByteArray useLayer = qgetenv("QT_MAC_WANTS_LAYER");
     if (!useLayer.isEmpty() && useLayer.toInt() > 0) {

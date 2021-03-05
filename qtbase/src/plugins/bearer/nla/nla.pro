@@ -2,7 +2,11 @@ TARGET = qnlabearer
 
 QT = core core-private network network-private
 
-LIBS += -lws2_32
+!wince* {
+    LIBS += -lws2_32
+} else {
+    LIBS += -lws2
+}
 
 HEADERS += qnlaengine.h \
            ../platformdefs_win.h \

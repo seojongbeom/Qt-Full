@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,6 +56,8 @@
 #include <qfont.h>
 
 #include "tst_qvariant_common.h"
+
+#include "../../../../qtest-config.h"
 
 class tst_QGuiVariant : public QObject
 {
@@ -170,7 +177,7 @@ void tst_QGuiVariant::canConvert_data()
     var = QVariant::fromValue(QColor());
     QTest::newRow("Color")
         << var << N << N << N << Y << Y << Y << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << Y << N << N << N << N;
-#ifndef QT_NO_CURSOR
+#ifndef QTEST_NO_CURSOR
     var = QVariant::fromValue(QCursor());
     QTest::newRow("Cursor")
         << var << N << N << N << N << N << N << Y << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N << N;
@@ -383,7 +390,7 @@ void tst_QGuiVariant::toString_data()
 #ifndef Q_OS_MAC
         << QString( "Ctrl+A" );
 #else
-        << QString(QChar(0x2318)) + QLatin1Char('A');
+        << QString(QChar(0x2318)) + "A";
 #endif
 
     QFont font( "times", 12 );
@@ -506,7 +513,7 @@ void tst_QGuiVariant::writeToReadFromDataStream_data()
     QTest::newRow( "bitmap_valid" ) << QVariant::fromValue( bitmap ) << false;
     QTest::newRow( "brush_valid" ) << QVariant::fromValue( QBrush( Qt::red ) ) << false;
     QTest::newRow( "color_valid" ) << QVariant::fromValue( QColor( Qt::red ) ) << false;
-#ifndef QT_NO_CURSOR
+#ifndef QTEST_NO_CURSOR
     QTest::newRow( "cursor_valid" ) << QVariant::fromValue( QCursor( Qt::PointingHandCursor ) ) << false;
 #endif
     QTest::newRow( "font_valid" ) << QVariant::fromValue( QFont( "times", 12 ) ) << false;
@@ -714,14 +721,14 @@ void tst_QGuiVariant::implicitConstruction()
     F(Quaternion) \
     F(PolygonF)
 
-#ifndef QT_NO_CURSOR
+#ifndef QTEST_NO_CURSOR
 #  define FOR_EACH_GUI_CLASS(F) \
     FOR_EACH_GUI_CLASS_BASE(F) \
     F(Cursor)
-#else // !QT_NO_CURSOR
+#else // !QTEST_NO_CURSOR
 #  define FOR_EACH_GUI_CLASS(F) \
     FOR_EACH_GUI_CLASS_BASE(F)
-#endif // QT_NO_CURSOR
+#endif // QTEST_NO_CURSOR
 
 #define CONSTRUCT(TYPE) \
     { \
@@ -739,14 +746,14 @@ void tst_QGuiVariant::implicitConstruction()
 void tst_QGuiVariant::guiVariantAtExit()
 {
     // crash test, it should not crash at QGuiApplication exit
-#ifndef QT_NO_CURSOR
+#ifndef QTEST_NO_CURSOR
     static QVariant cursor = QCursor();
 #endif
     static QVariant point = QPoint();
     static QVariant icon = QIcon();
     static QVariant image = QImage();
     static QVariant palette = QPalette();
-#ifndef QT_NO_CURSOR
+#ifndef QTEST_NO_CURSOR
     Q_UNUSED(cursor);
 #endif
     Q_UNUSED(point);

@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Copyright (C) 2014 BlackBerry Limited. All rights reserved.
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,7 +47,6 @@ const QSsl::SslOptions QSslConfigurationPrivate::defaultSslOptions = QSsl::SslOp
                                                                     |QSsl::SslOptionDisableCompression
                                                                     |QSsl::SslOptionDisableSessionPersistence;
 
-const char QSslConfiguration::ALPNProtocolHTTP2[] = "h2";
 const char QSslConfiguration::NextProtocolSpdy3_0[] = "spdy/3";
 const char QSslConfiguration::NextProtocolHttp1_1[] = "http/1.1";
 
@@ -120,8 +113,7 @@ const char QSslConfiguration::NextProtocolHttp1_1[] = "http/1.1";
 /*!
     \enum QSslConfiguration::NextProtocolNegotiationStatus
 
-    Describes the status of the Next Protocol Negotiation (NPN) or
-    Application-Layer Protocol Negotiation (ALPN).
+    Describes the status of the Next Protocol Negotiation (NPN).
 
     \value NextProtocolNegotiationNone No application protocol
     has been negotiated (yet).
@@ -211,11 +203,8 @@ bool QSslConfiguration::operator==(const QSslConfiguration &other) const
         d->privateKey == other.d->privateKey &&
         d->sessionCipher == other.d->sessionCipher &&
         d->sessionProtocol == other.d->sessionProtocol &&
-        d->preSharedKeyIdentityHint == other.d->preSharedKeyIdentityHint &&
         d->ciphers == other.d->ciphers &&
         d->ellipticCurves == other.d->ellipticCurves &&
-        d->ephemeralServerKey == other.d->ephemeralServerKey &&
-        d->dhParams == other.d->dhParams &&
         d->caCertificates == other.d->caCertificates &&
         d->protocol == other.d->protocol &&
         d->peerVerifyMode == other.d->peerVerifyMode &&
@@ -257,8 +246,6 @@ bool QSslConfiguration::isNull() const
             d->caCertificates.count() == 0 &&
             d->ciphers.count() == 0 &&
             d->ellipticCurves.isEmpty() &&
-            d->ephemeralServerKey.isNull() &&
-            d->dhParams == QSslDiffieHellmanParameters::defaultParameters() &&
             d->localCertificateChain.isEmpty() &&
             d->privateKey.isNull() &&
             d->peerCertificate.isNull() &&
@@ -266,7 +253,6 @@ bool QSslConfiguration::isNull() const
             d->sslOptions == QSslConfigurationPrivate::defaultSslOptions &&
             d->sslSession.isNull() &&
             d->sslSessionTicketLifeTimeHint == -1 &&
-            d->preSharedKeyIdentityHint.isNull() &&
             d->nextAllowedProtocols.isEmpty() &&
             d->nextNegotiatedProtocol.isNull() &&
             d->nextProtocolNegotiationStatus == QSslConfiguration::NextProtocolNegotiationNone);
@@ -672,7 +658,10 @@ QList<QSslCertificate> QSslConfiguration::systemCaCertificates()
 */
 void QSslConfiguration::setSslOption(QSsl::SslOption option, bool on)
 {
-    d->sslOptions.setFlag(option, on);
+    if (on)
+        d->sslOptions |= option;
+    else
+        d->sslOptions &= ~option;
 }
 
 /*!
@@ -742,23 +731,6 @@ int QSslConfiguration::sessionTicketLifeTimeHint() const
 }
 
 /*!
-   \since 5.7
-
-   Returns the ephemeral server key used for cipher algorithms
-   with forward secrecy, e.g. DHE-RSA-AES128-SHA.
-
-   The ephemeral key is only available when running in client mode, i.e.
-   QSslSocket::SslClientMode. When running in server mode or using a
-   cipher algorithm without forward secrecy a null key is returned.
-   The ephemeral server key will be set before emitting the encrypted()
-   signal.
- */
-QSslKey QSslConfiguration::ephemeralServerKey() const
-{
-    return d->ephemeralServerKey;
-}
-
-/*!
     \since 5.5
 
     Returns this connection's current list of elliptic curves. This
@@ -817,65 +789,11 @@ QVector<QSslEllipticCurve> QSslConfiguration::supportedEllipticCurves()
 }
 
 /*!
-    \since 5.8
-
-    Returns the identity hint.
-
-    \sa setPreSharedKeyIdentityHint()
-*/
-QByteArray QSslConfiguration::preSharedKeyIdentityHint() const
-{
-    return d->preSharedKeyIdentityHint;
-}
-
-/*!
-    \since 5.8
-
-    Sets the identity hint for a preshared key authentication to \a hint. This will
-    affect the next initiated handshake; calling this function on an already-encrypted
-    socket will not affect the socket's identity hint.
-
-    The identity hint is used in QSslSocket::SslServerMode only!
-*/
-void QSslConfiguration::setPreSharedKeyIdentityHint(const QByteArray &hint)
-{
-    d->preSharedKeyIdentityHint = hint;
-}
-
-/*!
-    \since 5.8
-
-    Retrieves the current set of Diffie-Hellman parameters.
-
-    If no Diffie-Hellman parameters have been set, the QSslConfiguration object
-    defaults to using the 1024-bit MODP group from RFC 2409.
- */
-QSslDiffieHellmanParameters QSslConfiguration::diffieHellmanParameters() const
-{
-    return d->dhParams;
-}
-
-/*!
-    \since 5.8
-
-    Sets a custom set of Diffie-Hellman parameters to be used by this socket when functioning as
-    a server to \a dhparams.
-
-    If no Diffie-Hellman parameters have been set, the QSslConfiguration object
-    defaults to using the 1024-bit MODP group from RFC 2409.
- */
-void QSslConfiguration::setDiffieHellmanParameters(const QSslDiffieHellmanParameters &dhparams)
-{
-    d->dhParams = dhparams;
-}
-
-/*!
   \since 5.3
 
   This function returns the protocol negotiated with the server
-  if the Next Protocol Negotiation (NPN) or Application-Layer Protocol
-  Negotiation (ALPN) TLS extension was enabled.
-  In order for the NPN/ALPN extension to be enabled, setAllowedNextProtocols()
+  if the Next Protocol Negotiation (NPN) TLS extension was enabled.
+  In order for the NPN extension to be enabled, setAllowedNextProtocols()
   needs to be called explicitly before connecting to the server.
 
   If no protocol could be negotiated or the extension was not enabled,
@@ -892,10 +810,9 @@ QByteArray QSslConfiguration::nextNegotiatedProtocol() const
   \since 5.3
 
   This function sets the allowed \a protocols to be negotiated with the
-  server through the Next Protocol Negotiation (NPN) or Application-Layer
-  Protocol Negotiation (ALPN) TLS extension; each
+  server through the Next Protocol Negotiation (NPN) TLS extension; each
   element in \a protocols must define one allowed protocol.
-  The function must be called explicitly before connecting to send the NPN/ALPN
+  The function must be called explicitly before connecting to send the NPN
   extension in the SSL handshake.
   Whether or not the negotiation succeeded can be queried through
   nextProtocolNegotiationStatus().
@@ -915,8 +832,8 @@ void QSslConfiguration::setAllowedNextProtocols(QList<QByteArray> protocols)
   \since 5.3
 
   This function returns the allowed protocols to be negotiated with the
-  server through the Next Protocol Negotiation (NPN) or Application-Layer
-  Protocol Negotiation (ALPN) TLS extension, as set by setAllowedNextProtocols().
+  server through the Next Protocol Negotiation (NPN) TLS extension, as set
+  by setAllowedNextProtocols().
 
   \sa nextNegotiatedProtocol(), nextProtocolNegotiationStatus(), setAllowedNextProtocols(), QSslConfiguration::NextProtocolSpdy3_0, QSslConfiguration::NextProtocolHttp1_1
  */
@@ -928,8 +845,7 @@ QList<QByteArray> QSslConfiguration::allowedNextProtocols() const
 /*!
   \since 5.3
 
-  This function returns the status of the Next Protocol Negotiation (NPN)
-  or Application-Layer Protocol Negotiation (ALPN).
+  This function returns the status of the Next Protocol Negotiation (NPN).
   If the feature has not been enabled through setAllowedNextProtocols(),
   this function returns NextProtocolNegotiationNone.
   The status will be set before emitting the encrypted() signal.

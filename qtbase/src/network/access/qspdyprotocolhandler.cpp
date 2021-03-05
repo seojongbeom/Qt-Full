@@ -1,38 +1,32 @@
 /****************************************************************************
 **
 ** Copyright (C) 2014 BlackBerry Limited. All rights reserved.
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtNetwork module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -43,7 +37,7 @@
 #include <private/qhttpnetworkconnectionchannel_p.h>
 #include <QtCore/QtEndian>
 
-#if !defined(QT_NO_SSL)
+#if !defined(QT_NO_HTTP) && !defined(QT_NO_SSL)
 
 QT_BEGIN_NAMESPACE
 
@@ -364,43 +358,43 @@ void QSpdyProtocolHandler::_q_readyRead()
 
 static qint16 twoBytesToInt(const char *bytes)
 {
-    return qFromBigEndian<qint16>(bytes);
+    return qFromBigEndian<qint16>(reinterpret_cast<const uchar *>(bytes));
 }
 
 static qint32 threeBytesToInt(const char *bytes)
 {
-    return qFromBigEndian<qint32>(bytes) >> 8;
+    return qFromBigEndian<qint32>(reinterpret_cast<const uchar *>(bytes)) >> 8;
 }
 
 static qint32 fourBytesToInt(const char *bytes)
 {
-    return qFromBigEndian<qint32>(bytes);
+    return qFromBigEndian<qint32>(reinterpret_cast<const uchar *>(bytes));
 }
 
 static void appendIntToThreeBytes(char *output, qint32 number)
 {
-    qToBigEndian<qint16>(number, output + 1);
-    qToBigEndian<qint8>(number >> 16, output);
+    qToBigEndian<qint16>(number, reinterpret_cast<uchar *>(output + 1));
+    qToBigEndian<qint8>(number >> 16, reinterpret_cast<uchar *>(output));
 }
 
 static void appendIntToFourBytes(char *output, qint32 number)
 {
-    qToBigEndian<qint32>(number, output);
+    qToBigEndian<qint32>(number, reinterpret_cast<uchar *>(output));
 }
 
 static QByteArray intToFourBytes(qint32 number) // ### try to use appendIntToFourBytes where possible
 {
-    char data[4];
+    uchar data[4];
     qToBigEndian<qint32>(number, data);
-    QByteArray ret(data, 4);
+    QByteArray ret(reinterpret_cast<char *>(data), 4);
     return ret;
 }
 
 static QByteArray intToThreeBytes(qint32 number)
 {
-    char data[4];
+    uchar data[4];
     qToBigEndian<qint32>(number << 8, data);
-    QByteArray ret(data, 3);
+    QByteArray ret(reinterpret_cast<char *>(data), 3);
     return ret;
 }
 
@@ -458,7 +452,7 @@ bool QSpdyProtocolHandler::uncompressHeader(const QByteArray &input, QByteArray 
             break;
         }
         default: {
-            qWarning("got unexpected zlib return value: %d", zlibRet);
+            qWarning() << "got unexpected zlib return value:" << zlibRet;
             return false;
         }
         }
@@ -476,7 +470,7 @@ QByteArray QSpdyProtocolHandler::composeHeader(const QHttpNetworkRequest &reques
     // calculate additional headers first, because we need to know the size
     // ### do not partially copy the list, but restrict the set header fields
     // in QHttpNetworkConnection
-    QVector<QPair<QByteArray, QByteArray> > additionalHeaders;
+    QList<QPair<QByteArray, QByteArray> > additionalHeaders;
     for (int a = 0; a < request.header().count(); ++a) {
         QByteArray key = request.header().at(a).first;
         if (key == "Connection" || key == "Host" || key == "Keep-Alive"
@@ -607,7 +601,7 @@ void QSpdyProtocolHandler::sendControlFrame(FrameType type,
     Q_UNUSED(written); // silence -Wunused-variable
 }
 
-void QSpdyProtocolHandler::sendSYN_STREAM(const HttpMessagePair &messagePair,
+void QSpdyProtocolHandler::sendSYN_STREAM(HttpMessagePair messagePair,
                                           qint32 streamID, qint32 associatedToStreamID)
 {
     QHttpNetworkRequest request = messagePair.first;
@@ -849,7 +843,7 @@ void QSpdyProtocolHandler::handleControlFrame(const QByteArray &frameHeaders) //
         break;
     }
     default:
-        qWarning("cannot handle frame of type %d", int(type));
+        qWarning() << "cannot handle frame of type" << type;
     }
 }
 
@@ -872,8 +866,7 @@ void QSpdyProtocolHandler::handleSYN_REPLY(char flags, quint32 /*length*/, const
 void QSpdyProtocolHandler::parseHttpHeaders(char flags, const QByteArray &frameData)
 {
     qint32 streamID = getStreamID(frameData.constData());
-    const auto it = m_inFlightStreams.constFind(streamID);
-    if (it == m_inFlightStreams.cend()) {
+    if (!m_inFlightStreams.contains(streamID)) {
         sendRST_STREAM(streamID, RST_STREAM_INVALID_STREAM);
         return;
     }
@@ -883,7 +876,7 @@ void QSpdyProtocolHandler::parseHttpHeaders(char flags, const QByteArray &frameD
 
     QByteArray headerValuePairs = frameData.mid(4);
 
-    HttpMessagePair pair = it.value();
+    HttpMessagePair pair = m_inFlightStreams.value(streamID);
     QHttpNetworkReply *httpReply = pair.second;
     Q_ASSERT(httpReply != 0);
 
@@ -935,7 +928,19 @@ void QSpdyProtocolHandler::parseHttpHeaders(char flags, const QByteArray &frameD
         } else if (name == "content-length") {
             httpReply->setContentLength(value.toLongLong());
         } else {
-            value.replace('\0', name == "set-cookie" ? "\n" : ", ");
+            if (value.contains('\0')) {
+                QList<QByteArray> values = value.split('\0');
+                QByteArray binder(", ");
+                if (name == "set-cookie")
+                    binder = "\n";
+                value.clear();
+                Q_FOREACH (const QByteArray& ivalue, values) {
+                    if (value.isEmpty())
+                        value = ivalue;
+                    else
+                        value += binder + ivalue;
+                }
+            }
             httpReply->setHeaderField(name, value);
         }
     }
@@ -1073,7 +1078,7 @@ void QSpdyProtocolHandler::handleSETTINGS(char flags, quint32 /*length*/, const 
             break;
         }
         default:
-            qWarning("found unknown settings value %u", uint(value));
+            qWarning() << "found unknown settings value" << value;
         }
     }
 }
@@ -1112,7 +1117,7 @@ void QSpdyProtocolHandler::handleGOAWAY(char /*flags*/, quint32 /*length*/,
         break;
     }
     default:
-        qWarning("unexpected status code %d", int(statusCode));
+        qWarning() << "unexpected status code" << statusCode;
         errorCode = QNetworkReply::ProtocolUnknownError;
     }
 
@@ -1141,13 +1146,12 @@ void QSpdyProtocolHandler::handleWINDOW_UPDATE(char /*flags*/, quint32 /*length*
     qint32 streamID = getStreamID(frameData.constData());
     qint32 deltaWindowSize = fourBytesToInt(frameData.constData() + 4);
 
-    const auto it = m_inFlightStreams.constFind(streamID);
-    if (it == m_inFlightStreams.cend()) {
+    if (!m_inFlightStreams.contains(streamID)) {
         sendRST_STREAM(streamID, RST_STREAM_INVALID_STREAM);
         return;
     }
 
-    QHttpNetworkReply *reply = it.value().second;
+    QHttpNetworkReply *reply = m_inFlightStreams.value(streamID).second;
     Q_ASSERT(reply);
     QHttpNetworkReplyPrivate *replyPrivate = reply->d_func();
     Q_ASSERT(replyPrivate);
@@ -1166,8 +1170,7 @@ void QSpdyProtocolHandler::handleDataFrame(const QByteArray &frameHeaders)
     Q_ASSERT(frameHeaders.count() >= 8);
 
     qint32 streamID = getStreamID(frameHeaders.constData());
-    const auto it = m_inFlightStreams.constFind(streamID);
-    if (it == m_inFlightStreams.cend()) {
+    if (!m_inFlightStreams.contains(streamID)) {
         sendRST_STREAM(streamID, RST_STREAM_INVALID_STREAM);
         return;
     }
@@ -1189,7 +1192,7 @@ void QSpdyProtocolHandler::handleDataFrame(const QByteArray &frameHeaders)
         m_waitingForCompleteStream = false;
     }
 
-    HttpMessagePair pair = it.value();
+    HttpMessagePair pair = m_inFlightStreams.value(streamID);
     QHttpNetworkRequest httpRequest = pair.first;
     QHttpNetworkReply *httpReply = pair.second;
     Q_ASSERT(httpReply != 0);
@@ -1294,4 +1297,4 @@ qint32 QSpdyProtocolHandler::generateNextStreamID()
 
 QT_END_NAMESPACE
 
-#endif // !defined(QT_NO_SSL)
+#endif // !defined(QT_NO_HTTP) && !defined(QT_NO_SSL)

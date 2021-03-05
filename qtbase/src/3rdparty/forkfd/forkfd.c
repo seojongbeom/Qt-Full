@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Intel Corporation.
+** Copyright (C) 2015 Intel Corporation
 ** Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -164,7 +164,7 @@ static ProcessInfo *tryAllocateInSection(Header *header, ProcessInfo entries[], 
     }
 
     /* there isn't an available entry, undo our increment */
-    (void)ffd_atomic_add_fetch(&header->busyCount, -1, FFD_ATOMIC_RELAXED);
+    ffd_atomic_add_fetch(&header->busyCount, -1, FFD_ATOMIC_RELAXED);
     return NULL;
 }
 
@@ -269,7 +269,7 @@ static void freeInfo(Header *header, ProcessInfo *entry)
     entry->deathPipe = -1;
     entry->pid = 0;
 
-    (void)ffd_atomic_add_fetch(&header->busyCount, -1, FFD_ATOMIC_RELEASE);
+    ffd_atomic_add_fetch(&header->busyCount, -1, FFD_ATOMIC_RELEASE);
     assert(header->busyCount >= 0);
 }
 
@@ -283,7 +283,7 @@ static void notifyAndFreeInfo(Header *header, ProcessInfo *entry,
     freeInfo(header, entry);
 }
 
-static void sigchld_handler(int signum, siginfo_t *handler_info, void *handler_context)
+static void sigchld_handler(int signum)
 {
     /*
      * This is a signal handler, so we need to be careful about which functions
@@ -291,20 +291,7 @@ static void sigchld_handler(int signum, siginfo_t *handler_info, void *handler_c
      * specification at:
      *   http://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03
      *
-     * The handler_info and handler_context parameters may not be valid, if
-     * we're a chained handler from another handler that did not use
-     * SA_SIGINFO. Therefore, we must obtain the siginfo ourselves directly by
-     * calling waitid.
-     *
-     * But we pass them anyway. Let's call the chained handler first, while
-     * those two arguments have a chance of being correct.
      */
-    if (old_sigaction.sa_handler != SIG_IGN && old_sigaction.sa_handler != SIG_DFL) {
-        if (old_sigaction.sa_flags & SA_SIGINFO)
-            old_sigaction.sa_sigaction(signum, handler_info, handler_context);
-        else
-            old_sigaction.sa_handler(signum);
-    }
 
     if (ffd_atomic_load(&forkfd_status, FFD_ATOMIC_RELAXED) == 1) {
         /* is this one of our children? */
@@ -332,8 +319,9 @@ search_next_child:
         waitid(P_ALL, 0, &info, WNOHANG | WNOWAIT | WEXITED);
         if (info.si_pid == 0) {
             /* there are no further un-waited-for children, so we can just exit.
+             * But before, transfer control to the chained SIGCHLD handler.
              */
-            return;
+            goto chain_handler;
         }
 
         for (i = 0; i < (int)sizeofarray(children.entries); ++i) {
@@ -421,6 +409,12 @@ search_arrays:
             array = ffd_atomic_load(&array->header.nextArray, FFD_ATOMIC_ACQUIRE);
         }
     }
+
+#ifdef HAVE_WAITID
+chain_handler:
+#endif
+    if (old_sigaction.sa_handler != SIG_IGN && old_sigaction.sa_handler != SIG_DFL)
+        old_sigaction.sa_handler(signum);
 }
 
 static void ignore_sigpipe()
@@ -465,8 +459,8 @@ static void forkfd_initialize()
     struct sigaction action;
     memset(&action, 0, sizeof action);
     sigemptyset(&action.sa_mask);
-    action.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
-    action.sa_sigaction = sigchld_handler;
+    action.sa_flags = SA_NOCLDSTOP;
+    action.sa_handler = sigchld_handler;
 
     /* ### RACE CONDITION
      * The sigaction function does a memcpy from an internal buffer

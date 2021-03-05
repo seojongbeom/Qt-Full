@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,30 +34,27 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Controls.impl 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
 
 T.TextField {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            placeholderText ? placeholder.implicitWidth + leftPadding + rightPadding : 0)
-                            || contentWidth + leftPadding + rightPadding
-    implicitHeight: Math.max(contentHeight + topPadding + bottomPadding,
-                             background ? background.implicitHeight : 0,
+                            placeholder.implicitWidth + leftPadding + rightPadding)
+    implicitHeight: Math.max(background ? background.implicitHeight : 0,
                              placeholder.implicitHeight + topPadding + bottomPadding)
 
     padding: 6
-    leftPadding: padding + 4
+    leftPadding: 10
 
-    color: enabled ? Default.textColor : Default.textDisabledColor
-    selectionColor: Default.textSelectionColor
+    opacity: enabled ? 1 : 0.2
+    color: "#353637"
+    selectionColor: "#fddd5c"
     selectedTextColor: color
     verticalAlignment: TextInput.AlignVCenter
 
-    PlaceholderText {
+    Text {
         id: placeholder
         x: control.leftPadding
         y: control.topPadding
@@ -66,17 +63,20 @@ T.TextField {
 
         text: control.placeholderText
         font: control.font
-        color: enabled ? Default.textPlaceholderColor : Default.textDisabledColor
+        color: "#bdbebf"
+        horizontalAlignment: control.horizontalAlignment
         verticalAlignment: control.verticalAlignment
-        visible: !control.length && !control.preeditText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
+        visible: !control.displayText && (!control.activeFocus || control.horizontalAlignment !== Qt.AlignHCenter)
         elide: Text.ElideRight
     }
 
+    //! [background]
     background: Rectangle {
         implicitWidth: 200
         implicitHeight: 40
-        border.width: control.activeFocus ? 2 : 1
-        color: control.enabled ? Default.backgroundColor : Default.indicatorFrameDisabledColor
-        border.color: control.activeFocus ? Default.focusColor : (control.enabled ? Default.disabledLightColor : "transparent")
+//        border.width: control.activeFocus ? 2 : 1
+        color: control.enabled ? "transparent" : "#353637"
+        border.color: control.enabled ? "#bdbebf" : "transparent"
     }
+    //! [background]
 }

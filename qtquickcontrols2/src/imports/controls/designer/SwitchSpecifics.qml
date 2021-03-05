@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -41,15 +41,12 @@ import QtQuick.Layouts 1.0
 Column {
     width: parent.width
 
-    AbstractButtonSection {
+    ButtonSection {
+        caption: qsTr("Switch")
         width: parent.width
     }
 
     ControlSection {
-        width: parent.width
-    }
-
-    FontSection {
         width: parent.width
     }
 

@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -36,7 +36,6 @@
 
 #include <QtTest>
 #include <QtQuick>
-#include <QtQuickControls2>
 
 typedef QPair<QString, QString> QStringPair;
 
@@ -47,119 +46,71 @@ class tst_Snippets : public QObject
 private slots:
     void initTestCase();
 
-    void verify();
-    void verify_data();
+    void screenshots();
+    void screenshots_data();
 
 private:
-    void loadSnippet(const QString &source);
-
-    bool takeScreenshots;
-    QMap<QString, QStringPair> snippetPaths;
+    QQuickView view;
+    QMap<QString, QStringPair> filePaths;
 };
-
-static QMap<QString, QStringPair> findSnippets(const QDir &inputDir, const QDir &outputDir = QDir())
-{
-    QMap<QString, QStringPair> snippetPaths;
-    QDirIterator it(inputDir.path(), QStringList() << "qtquick*.qml" << "qtlabs*.qml", QDir::Files | QDir::Readable);
-    while (it.hasNext()) {
-        QFileInfo fi(it.next());
-        const QString outDirPath = !outputDir.path().isEmpty() ? outputDir.filePath(fi.baseName() + ".png") : QString();
-        snippetPaths.insert(fi.baseName(), qMakePair(fi.filePath(), outDirPath));
-    }
-    return snippetPaths;
-}
 
 void tst_Snippets::initTestCase()
 {
-    qInfo() << "Snippets are taken from" << QQC2_SNIPPETS_PATH;
+    QDir outdir(QDir::current().filePath("screenshots"));
+    QVERIFY(outdir.exists() || QDir::current().mkpath("screenshots"));
 
-    QDir snippetsDir(QQC2_SNIPPETS_PATH);
-    QVERIFY(!snippetsDir.path().isEmpty());
+    QString datadir(QQC2_SNIPPETS_PATH);
+    QVERIFY(!datadir.isEmpty());
 
-    QDir screenshotsDir(QDir::current().filePath("screenshots"));
+    qInfo() << datadir;
 
-    takeScreenshots = qgetenv("SCREENSHOTS").toInt();
-    if (takeScreenshots)
-        QVERIFY(screenshotsDir.exists() || QDir::current().mkpath("screenshots"));
-
-    snippetPaths = findSnippets(snippetsDir, screenshotsDir);
-    QVERIFY(!snippetPaths.isEmpty());
+    QDirIterator it(datadir, QStringList() << "qtlabs*.qml", QDir::Files | QDir::Readable, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QFileInfo fi(it.next());
+        filePaths.insert(fi.baseName(), qMakePair(fi.filePath(), outdir.filePath(fi.baseName() + ".png")));
+    }
+    QVERIFY(!filePaths.isEmpty());
 }
 
 Q_DECLARE_METATYPE(QList<QQmlError>)
 
-void tst_Snippets::verify()
+void tst_Snippets::screenshots()
 {
     QFETCH(QString, input);
     QFETCH(QString, output);
 
-    QQmlEngine engine;
-    QQmlComponent component(&engine);
-
     qRegisterMetaType<QList<QQmlError> >();
-    QSignalSpy warnings(&engine, SIGNAL(warnings(QList<QQmlError>)));
+
+    QSignalSpy warnings(view.engine(), SIGNAL(warnings(QList<QQmlError>)));
     QVERIFY(warnings.isValid());
 
-    QUrl url = QUrl::fromLocalFile(input);
-    component.loadUrl(url);
-
-    QObject *root = component.create();
-    QVERIFY(root);
-
-    QCOMPARE(component.status(), QQmlComponent::Ready);
-    QVERIFY(component.errors().isEmpty());
+    view.setSource(QUrl::fromLocalFile(input));
+    QCOMPARE(view.status(), QQuickView::Ready);
+    QVERIFY(view.errors().isEmpty());
+    QVERIFY(view.rootObject());
 
     QVERIFY(warnings.isEmpty());
 
-    if (takeScreenshots) {
-        const QString currentDataTag = QLatin1String(QTest::currentDataTag());
-        static const QString applicationStyle = QQuickStyle::name().isEmpty() ? "Default" : QQuickStyle::name();
-        static const QStringList availableStyles = QQuickStyle::availableStyles();
+    view.show();
+    view.requestActivate();
+    QVERIFY(QTest::qWaitForWindowActive(&view));
 
-        bool isStyledSnippet = false;
-        const QString snippetStyle = currentDataTag.section("-", 1, 1);
-        for (const QString &availableStyle : availableStyles) {
-            if (!snippetStyle.compare(availableStyle, Qt::CaseInsensitive)) {
-                if (applicationStyle != availableStyle)
-                    QSKIP(qPrintable(QString("%1 style specific snippet. Running with the %2 style.").arg(availableStyle, applicationStyle)));
-                isStyledSnippet = true;
-            }
-        }
+    QSharedPointer<QQuickItemGrabResult> result = view.rootObject()->grabToImage();
+    QSignalSpy spy(result.data(), SIGNAL(ready()));
+    QVERIFY(spy.isValid());
+    QVERIFY(spy.wait());
+    QVERIFY(result->saveToFile(output));
 
-        if (!isStyledSnippet && !applicationStyle.isEmpty()) {
-            int index = output.indexOf("-", output.lastIndexOf("/"));
-            if (index != -1)
-                output.insert(index, "-" + applicationStyle.toLower());
-        }
-
-        QQuickWindow *window = qobject_cast<QQuickWindow *>(root);
-        if (!window) {
-            QQuickView *view = new QQuickView;
-            view->setContent(url, &component, root);
-            window = view;
-        }
-
-        window->show();
-        window->requestActivate();
-        QVERIFY(QTest::qWaitForWindowActive(window));
-
-        QSharedPointer<QQuickItemGrabResult> result = window->contentItem()->grabToImage();
-        QSignalSpy spy(result.data(), SIGNAL(ready()));
-        QVERIFY(spy.isValid());
-        QVERIFY(spy.wait());
-        QVERIFY(result->saveToFile(output));
-
-        window->close();
-    }
+    QGuiApplication::processEvents();
 }
 
-void tst_Snippets::verify_data()
+void tst_Snippets::screenshots_data()
 {
     QTest::addColumn<QString>("input");
     QTest::addColumn<QString>("output");
 
     QMap<QString, QStringPair>::const_iterator it;
-    for (it = snippetPaths.constBegin(); it != snippetPaths.constEnd(); ++it)
+    for (it = filePaths.constBegin(); it != filePaths.constEnd(); ++it)
         QTest::newRow(qPrintable(it.key())) << it.value().first << it.value().second;
 }
 

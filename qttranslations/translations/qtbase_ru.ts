@@ -3804,6 +3804,20 @@ Please turn one of those options off.</source>
     </message>
 </context>
 <context>
+    <name>QQnxFileDialogHelper</name>
+    <message>
+        <source>All files (*.*)</source>
+        <translation>Все файлы (*.*)</translation>
+    </message>
+</context>
+<context>
+    <name>QQnxFilePicker</name>
+    <message>
+        <source>Pick a file</source>
+        <translation>Выбор файла</translation>
+    </message>
+</context>
+<context>
     <name>QRegExp</name>
     <message>
         <source>no error occurred</source>

@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -211,7 +216,9 @@ int TranslatablePropertyManager<PropertySheetValue>::setValue(QtVariantPropertyM
                                                               int expectedTypeId,
                                                               const QVariant &variantValue)
 {
-    const auto it = m_values.find(property);
+    typedef typename QMap<QtProperty *, PropertySheetValue>::iterator Iterator;
+
+    const Iterator it = m_values.find(property);
     if (it == m_values.end())
         return DesignerPropertyManager::NoMatch;
     if (variantValue.userType() != expectedTypeId)
@@ -232,7 +239,9 @@ int TranslatablePropertyManager<PropertySheetValue>::setValue(QtVariantPropertyM
 template <class PropertySheetValue>
 bool TranslatablePropertyManager<PropertySheetValue>::value(const QtProperty *property, QVariant *rc) const
 {
-    const auto it = m_values.constFind(const_cast<QtProperty *>(property));
+    typedef typename QMap<QtProperty *, PropertySheetValue>::const_iterator ConstIterator;
+
+    ConstIterator it = m_values.constFind(const_cast<QtProperty *>(property));
     if (it == m_values.constEnd())
         return false;
     *rc = QVariant::fromValue(it.value());
@@ -1244,8 +1253,9 @@ void DesignerPropertyManager::setAttribute(QtProperty *property,
             return;
 
         PropertyToPropertyListMap::iterator pfit = m_propertyToFlags.find(property);
-        for (QtProperty *prop : qAsConst(pfit.value())) {
-            if (prop) {
+        QListIterator<QtProperty *> itProp(pfit.value());
+        while (itProp.hasNext()) {
+            if (QtProperty *prop = itProp.next()) {
                 delete prop;
                 m_flagToProperty.remove(prop);
             }
@@ -1254,7 +1264,9 @@ void DesignerPropertyManager::setAttribute(QtProperty *property,
 
         QList<uint> values;
 
-        for (const QPair<QString, uint> &pair : flags) {
+        QListIterator<QPair<QString, uint> > itFlag(flags);
+        while (itFlag.hasNext()) {
+            const QPair<QString, uint> pair = itFlag.next();
             const QString flagName = pair.first;
             QtProperty *prop = addProperty(QVariant::Bool);
             prop->setPropertyName(flagName);
@@ -1379,8 +1391,9 @@ void DesignerPropertyManager::setAttribute(QtProperty *property,
         qdesigner_internal::PropertySheetIconValue icon = m_iconValues.value(property);
         if (icon.paths().isEmpty()) {
             QMap<QPair<QIcon::Mode, QIcon::State>, QtProperty *> subIconProperties = m_propertyToIconSubProperties.value(property);
-            for (auto itSub = subIconProperties.cbegin(), end = subIconProperties.cend(); itSub != end; ++itSub) {
-                QPair<QIcon::Mode, QIcon::State> pair = itSub.key();
+            QMapIterator<QPair<QIcon::Mode, QIcon::State>, QtProperty *> itSub(subIconProperties);
+            while (itSub.hasNext()) {
+                QPair<QIcon::Mode, QIcon::State> pair = itSub.next().key();
                 QtProperty *subProp = itSub.value();
                 setAttribute(subProp, QLatin1String(defaultResourceAttributeC),
                              defaultIcon.pixmap(16, 16, pair.first, pair.second));
@@ -1543,7 +1556,7 @@ QString DesignerPropertyManager::valueText(const QtProperty *property) const
     if (vType == QVariant::StringList || vType == designerStringListTypeId()) {
         QVariant v = value(property);
         const QStringList list = v.type() == QVariant::StringList ? v.toStringList() : qvariant_cast<PropertySheetStringListValue>(v).value();
-        return list.join(QLatin1String("; "));
+        return list.join(QStringLiteral("; "));
     }
     if (vType == designerKeySequenceTypeId()) {
         return qvariant_cast<PropertySheetKeySequenceValue>(value(property)).value().toString(QKeySequence::NativeText);
@@ -1561,8 +1574,9 @@ QString DesignerPropertyManager::valueText(const QtProperty *property) const
 void DesignerPropertyManager::reloadResourceProperties()
 {
     DesignerIconCache *iconCache = 0;
-    for (auto itIcon = m_iconValues.cbegin(), end = m_iconValues.cend(); itIcon!= end; ++itIcon) {
-        QtProperty *property = itIcon.key();
+    QMapIterator<QtProperty *, qdesigner_internal::PropertySheetIconValue> itIcon(m_iconValues);
+    while (itIcon.hasNext()) {
+        QtProperty *property = itIcon.next().key();
         PropertySheetIconValue icon = itIcon.value();
 
         QIcon defaultIcon = m_defaultIcons.value(property);
@@ -1579,8 +1593,9 @@ void DesignerPropertyManager::reloadResourceProperties()
         QMap<QPair<QIcon::Mode, QIcon::State>, PropertySheetPixmapValue> iconPaths = icon.paths();
 
         QMap<QPair<QIcon::Mode, QIcon::State>, QtProperty *> subProperties = m_propertyToIconSubProperties.value(property);
-        for (auto itSub = subProperties.cbegin(), end = subProperties.cend(); itSub != end; ++itSub) {
-            const QPair<QIcon::Mode, QIcon::State> pair = itSub.key();
+        QMapIterator<QPair<QIcon::Mode, QIcon::State>, QtProperty *> itSub(subProperties);
+        while (itSub.hasNext()) {
+            const QPair<QIcon::Mode, QIcon::State> pair = itSub.next().key();
             QtVariantProperty *subProperty = variantProperty(itSub.value());
             subProperty->setAttribute(QLatin1String(defaultResourceAttributeC),
                                       defaultIcon.pixmap(16, 16, pair.first, pair.second));
@@ -1589,8 +1604,9 @@ void DesignerPropertyManager::reloadResourceProperties()
         emit propertyChanged(property);
         emit QtVariantPropertyManager::valueChanged(property, QVariant::fromValue(itIcon.value()));
     }
-    for (auto itPix = m_pixmapValues.cbegin(), end = m_pixmapValues.cend(); itPix != end; ++itPix) {
-        QtProperty *property = itPix.key();
+    QMapIterator<QtProperty *, qdesigner_internal::PropertySheetPixmapValue> itPix(m_pixmapValues);
+    while (itPix.hasNext()) {
+        QtProperty *property = itPix.next().key();
         emit propertyChanged(property);
         emit QtVariantPropertyManager::valueChanged(property, QVariant::fromValue(itPix.value()));
     }
@@ -1825,8 +1841,9 @@ void DesignerPropertyManager::setValue(QtProperty *property, const QVariant &val
         QMap<QPair<QIcon::Mode, QIcon::State>, PropertySheetPixmapValue> iconPaths = icon.paths();
 
         QMap<QPair<QIcon::Mode, QIcon::State>, QtProperty *> subProperties = m_propertyToIconSubProperties.value(property);
-        for (auto itSub = subProperties.cbegin(), end = subProperties.cend(); itSub != end; ++itSub) {
-            const QPair<QIcon::Mode, QIcon::State> pair = itSub.key();
+        QMapIterator<QPair<QIcon::Mode, QIcon::State>, QtProperty *> itSub(subProperties);
+        while (itSub.hasNext()) {
+            const QPair<QIcon::Mode, QIcon::State> pair = itSub.next().key();
             QtVariantProperty *subProperty = variantProperty(itSub.value());
             bool hasPath = iconPaths.contains(pair);
             subProperty->setModified(hasPath);
@@ -2072,8 +2089,9 @@ void DesignerPropertyManager::uninitializeProperty(QtProperty *property)
 {
     m_resetMap.remove(property);
 
-    const auto propList = m_propertyToFlags.value(property);
-    for (QtProperty *prop : propList) {
+    QListIterator<QtProperty *> itProp(m_propertyToFlags[property]);
+    while (itProp.hasNext()) {
+        QtProperty *prop = itProp.next();
         if (prop) {
             delete prop;
             m_flagToProperty.remove(prop);
@@ -2117,8 +2135,9 @@ void DesignerPropertyManager::uninitializeProperty(QtProperty *property)
     m_defaultPixmaps.remove(property);
 
     QMap<QPair<QIcon::Mode, QIcon::State>, QtProperty *> iconSubProperties = m_propertyToIconSubProperties.value(property);
-    for (auto itIcon = iconSubProperties.cbegin(), end = iconSubProperties.cend(); itIcon != end; ++itIcon) {
-        QtProperty *subIcon = itIcon.value();
+    QMapIterator<QPair<QIcon::Mode, QIcon::State>, QtProperty *> itIcon(iconSubProperties);
+    while (itIcon.hasNext()) {
+        QtProperty *subIcon = itIcon.next().value();
         delete subIcon;
         m_iconSubPropertyToState.remove(subIcon);
         m_iconSubPropertyToProperty.remove(subIcon);
@@ -2191,10 +2210,16 @@ void DesignerEditorFactory::setFormWindowBase(qdesigner_internal::FormWindowBase
     DesignerPixmapCache *cache = 0;
     if (fwb)
         cache = fwb->pixmapCache();
-    for (auto it = m_editorToPixmapProperty.cbegin(), end = m_editorToPixmapProperty.cend(); it != end; ++it)
-        it.key()->setPixmapCache(cache);
-    for (auto it = m_editorToIconProperty.cbegin(), end = m_editorToIconProperty.cend(); it != end; ++it)
-        it.key()->setPixmapCache(cache);
+    QMapIterator<PixmapEditor *, QtProperty *> itPixmapEditor(m_editorToPixmapProperty);
+    while (itPixmapEditor.hasNext()) {
+        PixmapEditor *pe = itPixmapEditor.next().key();
+        pe->setPixmapCache(cache);
+    }
+    QMapIterator<PixmapEditor *, QtProperty *> itIconEditor(m_editorToIconProperty);
+    while (itIconEditor.hasNext()) {
+        PixmapEditor *pe = itIconEditor.next().key();
+        pe->setPixmapCache(cache);
+    }
 }
 
 void DesignerEditorFactory::connectPropertyManager(QtVariantPropertyManager *manager)
@@ -2226,10 +2251,12 @@ void DesignerEditorFactory::disconnectPropertyManager(QtVariantPropertyManager *
 template <class EditorContainer, class Editor, class SetterParameter, class Value>
 static inline void applyToEditors(const EditorContainer &list, void (Editor::*setter)(SetterParameter), const Value &value)
 {
+    typedef typename EditorContainer::const_iterator ListIterator;
     if (list.empty()) {
         return;
     }
-    for (auto it = list.constBegin(), end = list.constEnd(); it != end; ++it) {
+    const ListIterator end = list.constEnd();
+    for (ListIterator it = list.constBegin(); it != end; ++it) {
         Editor &editor = *(*it);
         (editor.*setter)(value);
     }
@@ -2271,9 +2298,12 @@ void DesignerEditorFactory::slotPropertyChanged(QtProperty *property)
             defaultPixmap = qvariant_cast<QIcon>(manager->attributeValue(property, QLatin1String(defaultResourceAttributeC))).pixmap(16, 16);
         else if (m_fwb)
             defaultPixmap = m_fwb->iconCache()->icon(qvariant_cast<PropertySheetIconValue>(manager->value(property))).pixmap(16, 16);
-        const QList<PixmapEditor *> editors = m_iconPropertyToEditors.value(property);
-        for (PixmapEditor *editor : editors)
+        QList<PixmapEditor *> editors = m_iconPropertyToEditors.value(property);
+        QListIterator<PixmapEditor *> it(editors);
+        while (it.hasNext()) {
+            PixmapEditor *editor = it.next();
             editor->setDefaultPixmap(defaultPixmap);
+        }
     }
 }
 
@@ -2507,16 +2537,15 @@ bool removeEditor(QObject *object,
         return false;
     if (!editorToProperty)
         return false;
-    for (auto e2pIt = editorToProperty->begin(), end = editorToProperty->end(); e2pIt != end; ++e2pIt) {
-        Editor editor = e2pIt.key();
+    QMapIterator<Editor, QtProperty *> it(*editorToProperty);
+    while (it.hasNext()) {
+        Editor editor = it.next().key();
         if (editor == object) {
-            const auto p2eIt = propertyToEditors->find(e2pIt.value());
-            if (p2eIt != propertyToEditors->end()) {
-                p2eIt.value().removeAll(editor);
-                if (p2eIt.value().isEmpty())
-                    propertyToEditors->erase(p2eIt);
-            }
-            editorToProperty->erase(e2pIt);
+            QtProperty *prop = it.value();
+            (*propertyToEditors)[prop].removeAll(editor);
+            if ((*propertyToEditors)[prop].count() == 0)
+                propertyToEditors->remove(prop);
+            editorToProperty->remove(editor);
             return true;
         }
     }
@@ -2555,8 +2584,9 @@ bool updateManager(QtVariantEditorFactory *factory, bool *changingPropertyValue,
 {
     if (!editor)
         return false;
-    for (auto it = editorToProperty.cbegin(), end = editorToProperty.cend(); it != end; ++it) {
-        if (it.key() == editor) {
+    QMapIterator<Editor, QtProperty *> it(editorToProperty);
+    while (it.hasNext()) {
+        if (it.next().key() == editor) {
             QtProperty *prop = it.value();
             QtVariantPropertyManager *manager = factory->propertyManager(prop);
             *changingPropertyValue = true;
@@ -2597,7 +2627,9 @@ template <class Editor>
 QtProperty *findPropertyForEditor(const QMap<Editor *, QtProperty *> &editorMap,
                                   const QObject *sender)
 {
-    for (auto it = editorMap.constBegin(), cend = editorMap.constEnd(); it != cend; ++it)
+    typedef typename QMap<Editor *, QtProperty *>::const_iterator Iterator;
+    const Iterator cend = editorMap.constEnd();
+    for (Iterator it = editorMap.constBegin(); it != cend; ++it)
         if (it.key() == sender)
             return it.value();
     return 0;
@@ -2700,8 +2732,10 @@ ResetDecorator::ResetDecorator(const QDesignerFormEditorInterface *core, QObject
 
 ResetDecorator::~ResetDecorator()
 {
-    const QList<ResetWidget *> editors = m_resetWidgetToProperty.keys();
-    qDeleteAll(editors);
+    QList<ResetWidget *> editors = m_resetWidgetToProperty.keys();
+    QListIterator<ResetWidget *> it(editors);
+    while (it.hasNext())
+        delete it.next();
 }
 
 void ResetDecorator::connectPropertyManager(QtAbstractPropertyManager *manager)

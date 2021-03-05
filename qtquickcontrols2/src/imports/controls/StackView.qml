@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,34 +34,46 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Controls 2.2
-import QtQuick.Templates 2.2 as T
+import QtQuick 2.4
+import Qt.labs.controls 1.0
+import Qt.labs.templates 1.0 as T
 
 T.StackView {
-    id: control
+    id: root
 
+    //! [popEnter]
     popEnter: Transition {
-        XAnimator { from: (control.mirrored ? -1 : 1) * -control.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
+        XAnimator { from: (root.mirrored ? -1 : 1) * -root.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
     }
+    //! [popEnter]
 
+    //! [popExit]
     popExit: Transition {
-        XAnimator { from: 0; to: (control.mirrored ? -1 : 1) * control.width; duration: 400; easing.type: Easing.OutCubic }
+        XAnimator { from: 0; to: (root.mirrored ? -1 : 1) * root.width; duration: 400; easing.type: Easing.OutCubic }
     }
+    //! [popExit]
 
+    //! [pushEnter]
     pushEnter: Transition {
-        XAnimator { from: (control.mirrored ? -1 : 1) * control.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
+        XAnimator { from: (root.mirrored ? -1 : 1) * root.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
     }
+    //! [pushEnter]
 
+    //! [pushExit]
     pushExit: Transition {
-        XAnimator { from: 0; to: (control.mirrored ? -1 : 1) * -control.width; duration: 400; easing.type: Easing.OutCubic }
+        XAnimator { from: 0; to: (root.mirrored ? -1 : 1) * -root.width; duration: 400; easing.type: Easing.OutCubic }
     }
+    //! [pushExit]
 
+    //! [replaceEnter]
     replaceEnter: Transition {
-        XAnimator { from: (control.mirrored ? -1 : 1) * control.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
+        XAnimator { from: (root.mirrored ? -1 : 1) * root.width; to: 0; duration: 400; easing.type: Easing.OutCubic }
     }
+    //! [replaceEnter]
 
+    //! [replaceExit]
     replaceExit: Transition {
-        XAnimator { from: 0; to: (control.mirrored ? -1 : 1) * -control.width; duration: 400; easing.type: Easing.OutCubic }
+        XAnimator { from: 0; to: (root.mirrored ? -1 : 1) * -root.width; duration: 400; easing.type: Easing.OutCubic }
     }
+    //! [replaceExit]
 }

@@ -9,3 +9,4 @@ include (../../shared/util.pri)
 TESTDATA = data/*
 
 QT += qml testlib
+CONFIG += parallel_test

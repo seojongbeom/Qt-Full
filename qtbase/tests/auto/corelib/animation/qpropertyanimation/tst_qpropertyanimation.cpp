@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -29,8 +34,6 @@
 #include <QtTest/QtTest>
 #include <QtCore/qpropertyanimation.h>
 #include <QtCore/qvariantanimation.h>
-#include <private/qabstractanimation_p.h>
-#include <QtGui/qtouchdevice.h>
 #include <QtWidgets/qwidget.h>
 
 Q_DECLARE_METATYPE(QAbstractAnimation::State)
@@ -75,80 +78,6 @@ public:
     MyObject o;
 };
 
-class TestAnimationDriver : public QAnimationDriver
-{
-public:
-    TestAnimationDriver()
-        : QAnimationDriver()
-        , m_elapsed(0)
-    {
-        QUnifiedTimer::instance()->installAnimationDriver(this);
-    }
-
-    ~TestAnimationDriver()
-    {
-        // This is to ensure that running animations are removed from the list of actual running
-        // animations.
-        QCoreApplication::sendPostedEvents();
-        QUnifiedTimer::instance()->uninstallAnimationDriver(this);
-    }
-
-    void wait(qint64 ms)
-    {
-        /*
-         * When QAbstractAnimation::start() is called it will end up calling
-         * QAnimationTimer::registerAnimation(). This will do
-         *
-         *      QMetaObject::invokeMethod(inst, "startAnimations", Qt::QueuedConnection);   // typeof(inst) == QAnimationTimer
-         *
-         * startAnimations() will again fire a queued connection to actually add the animation
-         * to the list of running animations:
-         *
-         *      QMetaObject::invokeMethod(inst, "startTimers", Qt::QueuedConnection);   // typeof(inst) == QUnifiedTimer
-         *
-         *  We therefore have to call QCoreApplication::sendPostedEvents() twice here.
-         */
-        QCoreApplication::sendPostedEvents();
-        QCoreApplication::sendPostedEvents();
-
-        // Simulates the ideal animation update freqency (approx. 60Hz)
-        static const int interval = 1000/60;
-        qint64 until = m_elapsed + ms;
-        while (m_elapsed < until) {
-            advanceAnimation(m_elapsed);
-            m_elapsed += interval;
-        }
-        advanceAnimation(m_elapsed);
-        // This is to make sure that animations that were started with DeleteWhenStopped
-        // will actually delete themselves within the test function.
-        // Normally, they won't be deleted until the main event loop is processed.
-        // Therefore, have to explicitly say that we want to process DeferredDelete events. Same
-        // trick is used by QTest::qWait().
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    }
-
-    qint64 elapsed() const override
-    {
-        return m_elapsed;
-    }
-
-    void start() override
-    {
-        d_func()->running = true;
-        m_elapsed = 0;
-        emit started();
-    }
-
-    void stop() override
-    {
-        d_func()->running = false;
-        emit stopped();
-    }
-
-private:
-    qint64 m_elapsed;
-    Q_DECLARE_PRIVATE(QAnimationDriver)
-};
 
 class tst_QPropertyAnimation : public QObject
 {
@@ -336,44 +265,40 @@ void tst_QPropertyAnimation::statesAndSignals()
     QCOMPARE(currentLoopSpy.count(), 2);
     runningSpy.clear();
 
-    {
-        TestAnimationDriver timeDriver;
-        anim->start();
-        timeDriver.wait(1000);
-        QCOMPARE(anim->state(), QAnimationGroup::Stopped);
-        QCOMPARE(runningSpy.count(), 2); //started and stopped again
-        runningSpy.clear();
-        QCOMPARE(finishedSpy.count(), 1);
-        QCOMPARE(anim->currentLoopTime(), 100);
-        QCOMPARE(anim->currentLoop(), 2);
-        QCOMPARE(currentLoopSpy.count(), 4);
+    anim->start();
+    QTest::qWait(1000);
+    QTRY_COMPARE(anim->state(), QAnimationGroup::Stopped);
+    QCOMPARE(runningSpy.count(), 2); //started and stopped again
+    runningSpy.clear();
+    QCOMPARE(finishedSpy.count(), 1);
+    QCOMPARE(anim->currentLoopTime(), 100);
+    QCOMPARE(anim->currentLoop(), 2);
+    QCOMPARE(currentLoopSpy.count(), 4);
 
-        anim->start(); // auto-rewinds
-        QCOMPARE(anim->state(), QAnimationGroup::Running);
-        QCOMPARE(anim->currentTime(), 0);
-        QCOMPARE(anim->currentLoop(), 0);
-        QCOMPARE(currentLoopSpy.count(), 5);
-        QCOMPARE(runningSpy.count(), 1); // anim has started
-        QCOMPARE(finishedSpy.count(), 1);
-        QCOMPARE(anim->currentLoop(), 0);
-        runningSpy.clear();
+    anim->start(); // auto-rewinds
+    QCOMPARE(anim->state(), QAnimationGroup::Running);
+    QCOMPARE(anim->currentTime(), 0);
+    QCOMPARE(anim->currentLoop(), 0);
+    QCOMPARE(currentLoopSpy.count(), 5);
+    QCOMPARE(runningSpy.count(), 1); // anim has started
+    QCOMPARE(finishedSpy.count(), 1);
+    QCOMPARE(anim->currentLoop(), 0);
+    runningSpy.clear();
 
-        timeDriver.wait(1000);
+    QTest::qWait(1000);
 
-        QCOMPARE(currentLoopSpy.count(), 7);
-        QCOMPARE(anim->state(), QAnimationGroup::Stopped);
-        QCOMPARE(anim->currentLoop(), 2);
-        QCOMPARE(runningSpy.count(), 1); // anim has stopped
-        QCOMPARE(finishedSpy.count(), 2);
-        QCOMPARE(anim->currentLoopTime(), 100);
+    QCOMPARE(currentLoopSpy.count(), 7);
+    QCOMPARE(anim->state(), QAnimationGroup::Stopped);
+    QCOMPARE(anim->currentLoop(), 2);
+    QCOMPARE(runningSpy.count(), 1); // anim has stopped
+    QCOMPARE(finishedSpy.count(), 2);
+    QCOMPARE(anim->currentLoopTime(), 100);
 
-        delete anim;
-    }
+    delete anim;
 }
 
 void tst_QPropertyAnimation::deletion1()
 {
-    TestAnimationDriver timeDriver;
     QObject *object = new QWidget;
     QPointer<QPropertyAnimation> anim = new QPropertyAnimation(object, "minimumWidth");
 
@@ -391,23 +316,23 @@ void tst_QPropertyAnimation::deletion1()
 
     QVERIFY(anim);
     QCOMPARE(anim->state(), QAnimationGroup::Running);
-    timeDriver.wait(100);
+    QTest::qWait(100);
     QVERIFY(anim);
     QCOMPARE(anim->state(), QAnimationGroup::Running);
-    timeDriver.wait(150);
+    QTest::qWait(150);
     QVERIFY(anim); //The animation should not have been deleted
-    QCOMPARE(anim->state(), QAnimationGroup::Stopped);
+    QTRY_COMPARE(anim->state(), QAnimationGroup::Stopped);
     QCOMPARE(runningSpy.count(), 2);
     QCOMPARE(finishedSpy.count(), 1);
 
     anim->start(QVariantAnimation::DeleteWhenStopped);
     QVERIFY(anim);
     QCOMPARE(anim->state(), QAnimationGroup::Running);
-    timeDriver.wait(100);
+    QTest::qWait(100);
     QVERIFY(anim);
     QCOMPARE(anim->state(), QAnimationGroup::Running);
-    timeDriver.wait(150);
-    QCOMPARE(runningSpy.count(), 4);
+    QTest::qWait(150);
+    QTRY_COMPARE(runningSpy.count(), 4);
     QCOMPARE(finishedSpy.count(), 2);
     QVERIFY(!anim);  //The animation must have been deleted
     delete object;
@@ -415,7 +340,6 @@ void tst_QPropertyAnimation::deletion1()
 
 void tst_QPropertyAnimation::deletion2()
 {
-    TestAnimationDriver timeDriver;
     //test that the animation get deleted if the object is deleted
     QObject *object = new QWidget;
     QPointer<QPropertyAnimation> anim = new QPropertyAnimation(object,"minimumWidth");
@@ -434,7 +358,7 @@ void tst_QPropertyAnimation::deletion2()
     anim->setDuration(200);
     anim->start();
 
-    timeDriver.wait(50);
+    QTest::qWait(50);
     QVERIFY(anim);
     QCOMPARE(anim->state(), QAnimationGroup::Running);
 
@@ -443,15 +367,14 @@ void tst_QPropertyAnimation::deletion2()
 
     //we can't call deletaLater directly because the delete would only happen in the next loop of _this_ event loop
     QTimer::singleShot(0, object, SLOT(deleteLater()));
-    timeDriver.wait(50);
+    QTest::qWait(50);
 
-    QVERIFY(!anim->targetObject());
+    QVERIFY(anim->targetObject() == 0);
 }
 
 void tst_QPropertyAnimation::deletion3()
 {
     //test that the stopped signal is emit when the animation is destroyed
-    TestAnimationDriver timeDriver;
     QObject *object = new QWidget;
     QPropertyAnimation *anim = new QPropertyAnimation(object,"minimumWidth");
     anim->setStartValue(10);
@@ -466,7 +389,7 @@ void tst_QPropertyAnimation::deletion3()
 
     anim->start();
 
-    timeDriver.wait(50);
+    QTest::qWait(50);
     QCOMPARE(anim->state(), QAnimationGroup::Running);
     QCOMPARE(runningSpy.count(), 1);
     QCOMPARE(finishedSpy.count(), 0);
@@ -508,12 +431,11 @@ public:
     void setOle(int v) { o = v; values << v; }
 
     int o;
-    QVector<int> values;
+    QList<int> values;
 };
 
 void tst_QPropertyAnimation::noStartValue()
 {
-    TestAnimationDriver timeDriver;
     StartValueTester o;
     o.setProperty("ole", 42);
     o.values.clear();
@@ -523,8 +445,7 @@ void tst_QPropertyAnimation::noStartValue()
     a.setDuration(250);
     a.start();
 
-    timeDriver.wait(a.duration());
-    QCOMPARE(o.values.value(o.values.size() - 1, -1), 420);
+    QTRY_COMPARE(o.values.value(o.values.size() - 1, -1), 420);
     QCOMPARE(o.values.first(), 42);
 }
 
@@ -554,7 +475,6 @@ void tst_QPropertyAnimation::startWhenAnotherIsRunning()
     StartValueTester o;
     o.setProperty("ole", 42);
     o.values.clear();
-    TestAnimationDriver timeDriver;
 
     {
         //normal case: the animation finishes and is deleted
@@ -563,17 +483,18 @@ void tst_QPropertyAnimation::startWhenAnotherIsRunning()
         QSignalSpy runningSpy(anim.data(), &QVariantAnimation::stateChanged);
         QVERIFY(runningSpy.isValid());
         anim->start(QVariantAnimation::DeleteWhenStopped);
-        timeDriver.wait(anim->duration());
-        QCOMPARE(runningSpy.count(), 2); //started and then stopped
+        QTest::qWait(anim->duration() + 100);
+        QTRY_COMPARE(runningSpy.count(), 2); //started and then stopped
         QVERIFY(!anim);
     }
+
     {
         QPointer<QVariantAnimation> anim = new QPropertyAnimation(&o, "ole");
         anim->setEndValue(100);
         QSignalSpy runningSpy(anim.data(), &QVariantAnimation::stateChanged);
         QVERIFY(runningSpy.isValid());
         anim->start(QVariantAnimation::DeleteWhenStopped);
-        timeDriver.wait(anim->duration()/2);
+        QTest::qWait(anim->duration()/2);
         QPointer<QVariantAnimation> anim2 = new QPropertyAnimation(&o, "ole");
         anim2->setEndValue(100);
         QCOMPARE(runningSpy.count(), 1);
@@ -581,11 +502,11 @@ void tst_QPropertyAnimation::startWhenAnotherIsRunning()
 
         //anim2 will interrupt anim1
         QMetaObject::invokeMethod(anim2, "start", Qt::QueuedConnection, Q_ARG(QAbstractAnimation::DeletionPolicy, QVariantAnimation::DeleteWhenStopped));
-        timeDriver.wait(50);
+        QTest::qWait(50);
         QVERIFY(!anim); //anim should have been deleted
         QVERIFY(anim2);
-        timeDriver.wait(anim2->duration());
-        QVERIFY(!anim2); //anim2 is finished: it should have been deleted by now
+        QTest::qWait(anim2->duration());
+        QTRY_VERIFY(!anim2); //anim2 is finished: it should have been deleted by now
         QVERIFY(!anim);
     }
 
@@ -642,7 +563,6 @@ void tst_QPropertyAnimation::easingcurve()
 
 void tst_QPropertyAnimation::startWithoutStartValue()
 {
-    TestAnimationDriver timeDriver;
     QObject o;
     o.setProperty("ole", 42);
     QCOMPARE(o.property("ole").toInt(), 42);
@@ -652,14 +572,14 @@ void tst_QPropertyAnimation::startWithoutStartValue()
 
     anim.start();
 
-    timeDriver.wait(100);
+    QTest::qWait(100);
     int current = anim.currentValue().toInt();
     //it is somewhere in the animation
     QVERIFY(current > 42);
     QVERIFY(current < 100);
 
-    timeDriver.wait(200);
-    QCOMPARE(anim.state(), QVariantAnimation::Stopped);
+    QTest::qWait(200);
+    QTRY_COMPARE(anim.state(), QVariantAnimation::Stopped);
     current = anim.currentValue().toInt();
     QCOMPARE(current, 100);
     QCOMPARE(o.property("ole").toInt(), current);
@@ -670,7 +590,7 @@ void tst_QPropertyAnimation::startWithoutStartValue()
     // the default start value will reevaluate the current property
     // and set it to the end value of the last iteration
     QCOMPARE(current, 100);
-    timeDriver.wait(100);
+    QTest::qWait(100);
     current = anim.currentValue().toInt();
     //it is somewhere in the animation
     QVERIFY(current >= 100);
@@ -679,7 +599,6 @@ void tst_QPropertyAnimation::startWithoutStartValue()
 
 void tst_QPropertyAnimation::startBackwardWithoutEndValue()
 {
-    TestAnimationDriver timeDriver;
     QObject o;
     o.setProperty("ole", 42);
     QCOMPARE(o.property("ole").toInt(), 42);
@@ -693,14 +612,14 @@ void tst_QPropertyAnimation::startBackwardWithoutEndValue()
     QCOMPARE(anim.state(), QAbstractAnimation::Running);
     QCOMPARE(o.property("ole").toInt(), 42); //the initial value
 
-    timeDriver.wait(100);
+    QTest::qWait(100);
     int current = anim.currentValue().toInt();
     //it is somewhere in the animation
     QVERIFY(current > 42);
     QVERIFY(current < 100);
 
-    timeDriver.wait(200);
-    QCOMPARE(anim.state(), QVariantAnimation::Stopped);
+    QTest::qWait(200);
+    QTRY_COMPARE(anim.state(), QVariantAnimation::Stopped);
     current = anim.currentValue().toInt();
     QCOMPARE(current, 100);
     QCOMPARE(o.property("ole").toInt(), current);
@@ -711,7 +630,7 @@ void tst_QPropertyAnimation::startBackwardWithoutEndValue()
     // the default start value will reevaluate the current property
     // and set it to the end value of the last iteration
     QCOMPARE(current, 100);
-    timeDriver.wait(100);
+    QTest::qWait(100);
     current = anim.currentValue().toInt();
     //it is somewhere in the animation
     QVERIFY(current >= 100);
@@ -721,7 +640,6 @@ void tst_QPropertyAnimation::startBackwardWithoutEndValue()
 
 void tst_QPropertyAnimation::playForwardBackward()
 {
-    TestAnimationDriver timeDriver;
     QObject o;
     o.setProperty("ole", 0);
     QCOMPARE(o.property("ole").toInt(), 0);
@@ -730,16 +648,16 @@ void tst_QPropertyAnimation::playForwardBackward()
     anim.setStartValue(0);
     anim.setEndValue(100);
     anim.start();
-    timeDriver.wait(anim.duration());
-    QCOMPARE(anim.state(), QAbstractAnimation::Stopped);
+    QTest::qWait(anim.duration() + 100);
+    QTRY_COMPARE(anim.state(), QAbstractAnimation::Stopped);
     QCOMPARE(anim.currentTime(), anim.duration());
 
     //the animation is at the end
     anim.setDirection(QVariantAnimation::Backward);
     anim.start();
     QCOMPARE(anim.state(), QAbstractAnimation::Running);
-    timeDriver.wait(anim.duration());
-    QCOMPARE(anim.state(), QAbstractAnimation::Stopped);
+    QTest::qWait(anim.duration() + 100);
+    QTRY_COMPARE(anim.state(), QAbstractAnimation::Stopped);
     QCOMPARE(anim.currentTime(), 0);
 
     //the direction is backward
@@ -747,8 +665,8 @@ void tst_QPropertyAnimation::playForwardBackward()
     anim.start();
     QCOMPARE(anim.state(), QAbstractAnimation::Running);
     QCOMPARE(anim.currentTime(), anim.duration());
-    timeDriver.wait(anim.duration());
-    QCOMPARE(anim.state(), QAbstractAnimation::Stopped);
+    QTest::qWait(anim.duration() + 100);
+    QTRY_COMPARE(anim.state(), QAbstractAnimation::Stopped);
     QCOMPARE(anim.currentTime(), 0);
 }
 
@@ -758,15 +676,19 @@ struct Number
     Number(int n)
         : n(n) {}
 
+    Number(const Number &other)
+        : n(other.n){}
+
+    Number &operator=(const Number &other) {
+        n = other.n;
+        return *this;
+    }
     bool operator==(const Number &other) const {
         return n == other.n;
     }
 
     int n;
 };
-QT_BEGIN_NAMESPACE
-Q_DECLARE_TYPEINFO(Number, Q_PRIMITIVE_TYPE);
-QT_END_NAMESPACE
 
 Q_DECLARE_METATYPE(Number)
 
@@ -1192,21 +1114,21 @@ void tst_QPropertyAnimation::restart()
 
 void tst_QPropertyAnimation::valueChanged()
 {
-    TestAnimationDriver timeDriver;
+
     //we check that we receive the valueChanged signal
     MyErrorObject o;
     o.setOle(0);
     QCOMPARE(o.property("ole").toInt(), 0);
     QPropertyAnimation anim(&o, "ole");
     anim.setEndValue(5);
-    anim.setDuration(200);
+    anim.setDuration(1000);
     QSignalSpy spy(&anim, &QPropertyAnimation::valueChanged);
     QVERIFY(spy.isValid());
     anim.start();
-    // Drive animation forward to its end
-    timeDriver.wait(anim.duration());
 
-    QCOMPARE(anim.state(), QAbstractAnimation::Stopped);
+    QTest::qWait(anim.duration() + 100);
+
+    QTRY_COMPARE(anim.state(), QAbstractAnimation::Stopped);
     QCOMPARE(anim.currentTime(), anim.duration());
 
     //let's check that the values go forward
@@ -1239,7 +1161,6 @@ public:
 
 void tst_QPropertyAnimation::twoAnimations()
 {
-    TestAnimationDriver timeDriver;
     MySyncObject o1, o2;
     o1.setOle(0);
     o2.setOle(0);
@@ -1256,8 +1177,8 @@ void tst_QPropertyAnimation::twoAnimations()
     o1.anim.start();
     o2.anim.start();
 
-    timeDriver.wait(o1.anim.duration());
-    QCOMPARE(o1.anim.state(), QAbstractAnimation::Stopped);
+    QTest::qWait(o1.anim.duration() + 100);
+    QTRY_COMPARE(o1.anim.state(), QAbstractAnimation::Stopped);
     QCOMPARE(o2.anim.state(), QAbstractAnimation::Stopped);
 
     QCOMPARE(o1.ole(), 1000);
@@ -1296,7 +1217,6 @@ public:
 
 void tst_QPropertyAnimation::deletedInUpdateCurrentTime()
 {
-    TestAnimationDriver timeDriver;
     // this test case reproduces an animation being deleted in the updateCurrentTime of
     // another animation(was causing segfault).
     // the deleted animation must have been started after the animation that is deleting.
@@ -1307,9 +1227,9 @@ void tst_QPropertyAnimation::deletedInUpdateCurrentTime()
     MyComposedAnimation composedAnimation(&o, "value", "realValue");
     composedAnimation.start();
     QCOMPARE(composedAnimation.state(), QAbstractAnimation::Running);
-    timeDriver.wait(composedAnimation.duration());
+    QTest::qWait(composedAnimation.duration() + 100);
 
-    QCOMPARE(composedAnimation.state(), QAbstractAnimation::Stopped);
+    QTRY_COMPARE(composedAnimation.state(), QAbstractAnimation::Stopped);
     QCOMPARE(o.value(), 1000);
 }
 
@@ -1381,7 +1301,6 @@ public:
 
 void tst_QPropertyAnimation::recursiveAnimations()
 {
-    TestAnimationDriver timeDriver;
     RecursiveObject o;
     QPropertyAnimation anim;
     anim.setTargetObject(&o);
@@ -1390,9 +1309,9 @@ void tst_QPropertyAnimation::recursiveAnimations()
 
     anim.setEndValue(4000);
     anim.start();
-    timeDriver.wait(anim.duration() + o.animation.duration());
-    QCOMPARE(anim.state(), QAbstractAnimation::Stopped);
-    QCOMPARE(o.animation.state(), QAbstractAnimation::Stopped);
+    QTest::qWait(anim.duration() + o.animation.duration());
+    QTRY_COMPARE(anim.state(), QAbstractAnimation::Stopped);
+    QTRY_COMPARE(o.animation.state(), QAbstractAnimation::Stopped);
     QCOMPARE(o.y(), qreal(4000));
 }
 

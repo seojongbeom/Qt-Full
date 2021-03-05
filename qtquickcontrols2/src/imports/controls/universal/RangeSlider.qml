@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,22 +34,25 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Universal 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.universal 1.0
 
 T.RangeSlider {
     id: control
 
     implicitWidth: Math.max(background ? background.implicitWidth : 0,
-        Math.max(first.handle ? first.handle.implicitWidth : 0,
-                 second.handle ? second.handle.implicitWidth : 0) + leftPadding + rightPadding)
+        Math.max(track ? track.implicitWidth : 0,
+            first.handle ? first.handle.implicitWidth : 0,
+                second.handle ? second.handle.implicitWidth : 0) + leftPadding + rightPadding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
-        Math.max(first.handle ? first.handle.implicitHeight : 0,
-                 second.handle ? second.handle.implicitHeight : 0) + topPadding + bottomPadding)
+        Math.max(track ? track.implicitHeight : 0,
+            first.handle ? first.handle.implicitHeight : 0,
+                second.handle ? second.handle.implicitHeight : 0) + topPadding + bottomPadding)
 
     padding: 6
 
+    //! [firstHandle]
     first.handle: Rectangle {
         implicitWidth: horizontal ? 8 : 24
         implicitHeight: horizontal ? 24 : 8
@@ -60,11 +63,11 @@ T.RangeSlider {
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : control.first.visualPosition * (control.availableHeight - height))
 
         radius: 4
-        color: control.first.pressed ? control.Universal.chromeHighColor :
-               control.first.hovered ? control.Universal.chromeAltLowColor :
-               control.enabled ? control.Universal.accent : control.Universal.chromeDisabledHighColor
+        color: control.first.pressed ? control.Universal.chromeHighColor : control.enabled ? control.Universal.accent : control.Universal.chromeDisabledHighColor
     }
+    //! [firstHandle]
 
+    //! [secondHandle]
     second.handle: Rectangle {
         implicitWidth: horizontal ? 8 : 24
         implicitHeight: horizontal ? 24 : 8
@@ -75,12 +78,12 @@ T.RangeSlider {
         y: control.topPadding + (horizontal ? (control.availableHeight - height) / 2 : control.second.visualPosition * (control.availableHeight - height))
 
         radius: 4
-        color: control.second.pressed ? control.Universal.chromeHighColor :
-               control.second.hovered ? control.Universal.chromeAltLowColor :
-               control.enabled ? control.Universal.accent : control.Universal.chromeDisabledHighColor
+        color: control.second.pressed ? control.Universal.chromeHighColor : control.enabled ? control.Universal.accent : control.Universal.chromeDisabledHighColor
     }
+    //! [secondHandle]
 
-    background: Item {
+    //! [track]
+    track: Item {
         implicitWidth: horizontal ? 200 : 18
         implicitHeight: horizontal ? 18 : 200
 
@@ -96,20 +99,20 @@ T.RangeSlider {
         Rectangle {
             x: parent.horizontal ? 0 : (parent.width - width) / 2
             y: parent.horizontal ? (parent.height - height) / 2 : 0
-            width: parent.horizontal ? parent.width : 2 // SliderBackgroundThemeHeight
-            height: !parent.horizontal ? parent.height : 2 // SliderBackgroundThemeHeight
+            width: parent.horizontal ? parent.width : 2 // SliderTrackThemeHeight
+            height: !parent.horizontal ? parent.height : 2 // SliderTrackThemeHeight
 
-            color: control.hovered && !control.pressed ? control.Universal.baseMediumColor :
-                   control.enabled ? control.Universal.baseMediumLowColor : control.Universal.chromeDisabledHighColor
+            color: control.enabled ? control.Universal.baseMediumLowColor : control.Universal.chromeDisabledHighColor
         }
 
         Rectangle {
-            x: parent.horizontal ? control.first.position * parent.width : (parent.width - width) / 2
+            x: parent.horizontal ? control.first.position * parent.width : 0
             y: parent.horizontal ? (parent.height - height) / 2 : control.second.visualPosition * parent.height
-            width: parent.horizontal ? control.second.position * parent.width - control.first.position * parent.width : 2 // SliderBackgroundThemeHeight
-            height: !parent.horizontal ? control.second.position * parent.height - control.first.position * parent.height : 2 // SliderBackgroundThemeHeight
+            width: parent.horizontal ? control.second.position * parent.width - control.first.position * parent.width : 2 // SliderTrackThemeHeight
+            height: !parent.horizontal ? control.second.position * parent.height - control.first.position * parent.height : 2 // SliderTrackThemeHeight
 
             color: control.enabled ? control.Universal.accent : control.Universal.chromeDisabledHighColor
         }
     }
+    //! [track]
 }

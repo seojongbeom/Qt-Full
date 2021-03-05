@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,8 +34,8 @@
 **
 ****************************************************************************/
 
-#ifndef QQUICKUNIVERSALTHEME_P_H
-#define QQUICKUNIVERSALTHEME_P_H
+#ifndef QQUICKUNIVERSALTHEME_H
+#define QQUICKUNIVERSALTHEME_H
 
 //
 //  W A R N I N G
@@ -48,17 +48,20 @@
 // We mean it.
 //
 
+#include <QtGui/qpa/qplatformtheme.h>
 #include <QtGui/qfont.h>
-#include <QtQuickControls2/private/qquickproxytheme_p.h>
+#include <QtLabsControls/private/qquickproxytheme_p.h>
 
 QT_BEGIN_NAMESPACE
 
 class QQuickUniversalTheme :  public QQuickProxyTheme
 {
 public:
-    explicit QQuickUniversalTheme(QPlatformTheme *theme = nullptr);
+    QQuickUniversalTheme(QPlatformTheme *theme);
 
-    const QFont *font(Font type = SystemFont) const override;
+    ~QQuickUniversalTheme();
+
+    const QFont *font(Font type = SystemFont) const Q_DECL_OVERRIDE;
 
 private:
     QFont systemFont;
@@ -68,4 +71,4 @@ private:
 
 QT_END_NAMESPACE
 
-#endif // QQUICKUNIVERSALTHEME_P_H
+#endif // QQUICKUNIVERSALTHEME_H

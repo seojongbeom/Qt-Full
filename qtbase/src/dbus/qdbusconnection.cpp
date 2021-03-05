@@ -1,38 +1,32 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Copyright (C) 2015 Intel Corporation.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtDBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,7 +38,6 @@
 #include <qdebug.h>
 #include <qcoreapplication.h>
 #include <qstringlist.h>
-#include <qvector.h>
 #include <qtimer.h>
 #include <qthread.h>
 
@@ -425,7 +418,7 @@ void QDBusConnectionManager::createServer(const QString &address, void *server)
 */
 QDBusConnection::QDBusConnection(const QString &name)
 {
-    if (name.isEmpty() || _q_manager.isDestroyed()) {
+    if (name.isEmpty()) {
         d = 0;
     } else {
         QMutexLocker locker(&_q_manager()->mutex);
@@ -490,7 +483,7 @@ QDBusConnection &QDBusConnection::operator=(const QDBusConnection &other)
 */
 QDBusConnection QDBusConnection::connectToBus(BusType type, const QString &name)
 {
-    if (_q_manager.isDestroyed() || !qdbus_loadLibDBus()) {
+    if (!qdbus_loadLibDBus()) {
         QDBusConnectionPrivate *d = 0;
         return QDBusConnection(d);
     }
@@ -504,7 +497,7 @@ QDBusConnection QDBusConnection::connectToBus(BusType type, const QString &name)
 QDBusConnection QDBusConnection::connectToBus(const QString &address,
                                               const QString &name)
 {
-    if (_q_manager.isDestroyed() || !qdbus_loadLibDBus()) {
+    if (!qdbus_loadLibDBus()) {
         QDBusConnectionPrivate *d = 0;
         return QDBusConnection(d);
     }
@@ -519,7 +512,7 @@ QDBusConnection QDBusConnection::connectToBus(const QString &address,
 QDBusConnection QDBusConnection::connectToPeer(const QString &address,
                                                const QString &name)
 {
-    if (_q_manager.isDestroyed() || !qdbus_loadLibDBus()) {
+    if (!qdbus_loadLibDBus()) {
         QDBusConnectionPrivate *d = 0;
         return QDBusConnection(d);
     }
@@ -900,8 +893,8 @@ bool QDBusConnection::registerObject(const QString &path, const QString &interfa
     if (!d || !d->connection || !object || !options || !QDBusUtil::isValidObjectPath(path))
         return false;
 
-    auto pathComponents = path.splitRef(QLatin1Char('/'));
-    if (pathComponents.constLast().isEmpty())
+    QStringList pathComponents = path.split(QLatin1Char('/'));
+    if (pathComponents.last().isEmpty())
         pathComponents.removeLast();
     QDBusWriteLocker locker(RegisterObjectAction, d);
 
@@ -956,7 +949,7 @@ bool QDBusConnection::registerObject(const QString &path, const QString &interfa
             }
         } else {
             // add entry
-            node = node->children.insert(it, pathComponents.at(i).toString());
+            node = node->children.insert(it, pathComponents.at(i));
         }
 
         // iterate
@@ -1008,8 +1001,8 @@ QObject *QDBusConnection::objectRegisteredAt(const QString &path) const
     if (!d || !d->connection || !QDBusUtil::isValidObjectPath(path))
         return 0;
 
-    auto pathComponents = path.splitRef(QLatin1Char('/'));
-    if (pathComponents.constLast().isEmpty())
+    QStringList pathComponents = path.split(QLatin1Char('/'));
+    if (pathComponents.last().isEmpty())
         pathComponents.removeLast();
 
     // lower-bound search for where this object should enter in the tree
@@ -1174,8 +1167,6 @@ bool QDBusConnection::unregisterService(const QString &serviceName)
 */
 QDBusConnection QDBusConnection::sessionBus()
 {
-    if (_q_manager.isDestroyed())
-        return QDBusConnection(Q_NULLPTR);
     return QDBusConnection(_q_manager()->busConnection(SessionBus));
 }
 
@@ -1188,8 +1179,6 @@ QDBusConnection QDBusConnection::sessionBus()
 */
 QDBusConnection QDBusConnection::systemBus()
 {
-    if (_q_manager.isDestroyed())
-        return QDBusConnection(Q_NULLPTR);
     return QDBusConnection(_q_manager()->busConnection(SystemBus));
 }
 
@@ -1219,8 +1208,8 @@ void QDBusConnectionPrivate::createBusService()
     ref.deref(); // busService has increased the refcounting to us
                  // avoid cyclic refcounting
 
-    QObject::connect(this, &QDBusConnectionPrivate::callWithCallbackFailed,
-                     busService, emit &QDBusConnectionInterface::callWithCallbackFailed,
+    QObject::connect(this, SIGNAL(callWithCallbackFailed(QDBusError,QDBusMessage)),
+                     busService, SIGNAL(callWithCallbackFailed(QDBusError,QDBusMessage)),
                      Qt::QueuedConnection);
 }
 

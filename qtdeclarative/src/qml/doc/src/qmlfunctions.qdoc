@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the documentation of the Qt Toolkit.
 **
@@ -11,8 +11,8 @@
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Free Documentation License Usage
 ** Alternatively, this file may be used under the terms of the GNU Free
@@ -20,7 +20,7 @@
 ** Foundation and appearing in the file included in the packaging of
 ** this file. Please review the following information to ensure
 ** the GNU Free Documentation License version 1.3 requirements
-** will be met: https://www.gnu.org/licenses/fdl-1.3.html.
+** will be met: http://www.gnu.org/copyleft/fdl.html.
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
@@ -30,6 +30,8 @@
   \relates QQmlEngine
 
   Equivalent to \c Q_DECLARE_METATYPE(TYPE *) and \c Q_DECLARE_METATYPE(QQmlListProperty<TYPE>)
+
+  #include <QtQml> to use this macro.
 */
 
 /*!
@@ -42,6 +44,8 @@
   Current the only supported type info is \c QML_HAS_ATTACHED_PROPERTIES which
   declares that the \a Type supports \l {Attached Properties and Attached Signal Handlers}
   {attached properties}.
+
+  #include <QtQml> to use this macro.
 */
 
 /*!
@@ -54,6 +58,8 @@
   Any existing QQmlEngines must be deleted before calling this function.  This function
   only affects the application global cache. Delete the QQmlEngine to clear all cached
   data relating to that engine.
+
+  #include <QtQml> to use this method.
 */
 
 
@@ -87,6 +93,10 @@
   "com.mycompany.qmlcomponents":
 
   \code
+  #include <QtQml>
+
+  ...
+
   qmlRegisterType<MySliderItem>("com.mycompany.qmlcomponents", 1, 0, "Slider");
   \endcode
 
@@ -141,6 +151,8 @@
 
   Returns the QML type id.
 
+  #include <QtQml> to use this function.
+
   \sa qmlRegisterTypeNotAvailable()
 */
 
@@ -155,6 +167,8 @@
 
   Returns the QML type id.
 
+  #include <QtQml> to use this function.
+
   \sa qmlRegisterType(), {Registering Extension Objects}
 */
 
@@ -168,55 +182,17 @@
   from \a uri having version number composed from \a versionMajor and
   \a versionMinor.
 
-  While the type has a name and a type, it cannot be created. An error
-  message with the given \a reason is printed if the user attempts to
-  create an instance of this type.
+  While the type has a name and a type, it cannot be created, and the
+  given error \a reason will result if creation is attempted.
 
   This is useful where the type is only intended for providing attached
   properties, enum values or an abstract base class with its extension.
 
   Returns the QML type id.
 
+  #include <QtQml> to use this function.
+
   \sa qmlRegisterUncreatableType()
-*/
-
-/*!
-  \fn static inline int qmlRegisterUncreatableMetaObject(const QMetaObject &staticMetaObject, const char *uri, int versionMajor, int versionMinor, const char *qmlName, const QString& reason)
-  \relates QQmlEngine
-  \since 5.8
-
-  This function registers the \a staticMetaObject and its extension
-  in the QML system with the name \a qmlName in the library imported
-  from \a uri having version number composed from \a versionMajor and
-  \a versionMinor.
-
-  An instance of the meta object cannot be created. An error message with
-  the given \a reason is printed if the user attempts to create it.
-
-  This function is useful for registering Q_NAMESPACE namespaces.
-
-  Returns the QML type id.
-
-  For example:
-
-  \code
-  namespace MyNamespace {
-    Q_NAMESPACE
-    enum MyEnum {
-        Key1,
-        Key2,
-    };
-    Q_ENUMS(MyEnum)
-  }
-
-  //...
-  qmlRegisterUncreatableMetaObject(MyNamespace::staticMetaObject, "io.qt", 1, 0, "MyNamespace", "Access to enums & flags only");
-  \endcode
-
-  On the QML side, you can now use the registered enums:
-  \code
-  Component.onCompleted: console.log(MyNamespace.Key2)
-  \endcode
 */
 
 /*!
@@ -232,6 +208,8 @@
   the \a parser provided.
 
   Returns the QML type id.
+
+  #include <QtQml> to use this function.
 */
 
 /*!
@@ -266,6 +244,8 @@
 
   Without this, a generic "Game is not a type" message would be given.
 
+  #include <QtQml> to use this function.
+
   \sa qmlRegisterUncreatableType()
 */
 
@@ -278,6 +258,8 @@
   system. Instances of this type cannot be created from the QML
   system.
 
+  #include <QtQml> to use this function.
+
   Returns the QML type id.
 */
 
@@ -287,6 +269,8 @@
 
   This template function registers the C++ type in the QML system
   under the name \a typeName.
+
+  #include <QtQml> to use this function.
 
   Returns the QML type id.
 */
@@ -321,20 +305,10 @@
    }
 
    // Second, register the singleton type provider with QML by calling this function in an initialization function.
+   #include <QtQml>
+   ...
    qmlRegisterSingletonType("Qt.example.qjsvalueApi", 1, 0, "MyApi", example_qjsvalue_singletontype_provider);
-   \endcode
-
-   Alternatively, you can use a C++11 lambda:
-
-   \code
-   qmlRegisterSingletonType("Qt.example.qjsvalueApi", 1, 0, "MyApi", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QJSValue {
-       Q_UNUSED(engine)
-
-       static int seedValue = 5;
-       QJSValue example = scriptEngine->newObject();
-       example.setProperty("someProperty", seedValue++);
-       return example;
-   });
+   ...
    \endcode
 
    In order to use the registered singleton type in QML, you must import the singleton type.
@@ -367,7 +341,7 @@
     Returns 0 if type \e T is not a valid attaching type, or if \a create is false and no
     attachment object instance has previously been created for \a attachee.
 
-    \sa {Providing Attached Properties}
+    \sa {Providing Attached Objects for Data Annotations}
 
 */
 
@@ -433,19 +407,10 @@
    }
 
    // Third, register the singleton type provider with QML by calling this function in an initialization function.
+   #include <QtQml>
+   ...
    qmlRegisterSingletonType<SingletonTypeExample>("Qt.example.qobjectSingleton", 1, 0, "MyApi", example_qobject_singletontype_provider);
-   \endcode
-
-   Alternatively, you can use a C++11 lambda:
-
-   \code
-   qmlRegisterSingletonType<SingletonTypeExample>("Qt.example.qjsvalueApi", 1, 0, "MyApi", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
-       Q_UNUSED(engine)
-       Q_UNUSED(scriptEngine)
-
-       SingletonTypeExample *example = new SingletonTypeExample();
-       return example;
-   });
+   ...
    \endcode
 
    In order to use the registered singleton type in QML, you must import the singleton type.
@@ -515,7 +480,10 @@
 
    \code
    // Second, register the QML singleton type by calling this function in an initialization function.
+   #include <QtQml>
+   ...
    qmlRegisterSingletonType(QUrl("file:///absolute/path/SingletonType.qml"), "Qt.example.qobjectSingleton", 1, 0, "RegisteredSingleton");
+   ...
    \endcode
 
    In order to use the registered singleton type in QML, you must import the singleton type.
@@ -545,6 +513,8 @@
   Normally QML files can be loaded as types directly from other QML files, or using a qmldir file. This function allows
   registration of files to types from C++ code, such as when the type mapping needs to be procedurally determined at startup.
 
+  #include <QtQml> to use this function.
+
   Returns -1 if the registration was not successful.
 */
 
@@ -567,21 +537,11 @@
   uri, major version combination will lead to a runtime error. Call this after
   you have registered all of your types with the engine.
 
+  #include <QtQml> to use this function.
+
   Returns true if the module with \a uri as a \l{Identified Modules}
   {module identifier} and \a majVersion as a major version number was found
   and locked, otherwise returns false. The module must contain exported types
   in order to be found.
 */
 
-/*!
-  \since 5.9
-  \fn void qmlRegisterModule(const char* uri, int versionMajor, int versionMinor);
-  \relates QQmlEngine
-
-  This function registers a module in a particular \a uri with a version specified
-  in \a versionMajor and \a versionMinor.
-
-  This can be used to make a certain module version available, even if no types
-  are registered for that version. This is particularly useful for keeping the
-  versions of related modules in sync.
-*/

@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWidgets module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -48,16 +42,12 @@
 #include <QtGui/qevent.h>
 #include <QtWidgets/qapplication.h>
 #include <QtGui/qpaintengine.h>
-#if QT_CONFIG(graphicsview)
 #include <QtWidgets/qgraphicsproxywidget.h>
-#endif
 
 #include <private/qwidget_p.h>
 #include <private/qapplication_p.h>
 #include <private/qpaintengine_raster_p.h>
-#if QT_CONFIG(graphicseffect)
 #include <private/qgraphicseffect_p.h>
-#endif
 #include <QtGui/private/qwindow_p.h>
 
 #include <qpa/qplatformbackingstore.h>
@@ -168,13 +158,25 @@ static void showYellowThing_win(QWidget *widget, const QRegion &region, int msec
         return;
     const HDC hdc = reinterpret_cast<HDC>(hdcV);
 
-    static const COLORREF colors[] = {RGB(255, 255, 0), RGB(255, 200, 55), RGB(200, 255, 55), RGB(200, 200, 0)};
+    HBRUSH brush;
+    static int i = 0;
+    switch (i) {
+    case 0:
+        brush = CreateSolidBrush(RGB(255, 255, 0));
+        break;
+    case 1:
+        brush = CreateSolidBrush(RGB(255, 200, 55));
+        break;
+    case 2:
+        brush = CreateSolidBrush(RGB(200, 255, 55));
+        break;
+    case 3:
+        brush = CreateSolidBrush(RGB(200, 200, 0));
+        break;
+    }
+    i = (i + 1) & 3;
 
-    static size_t i = 0;
-    const HBRUSH brush = CreateSolidBrush(colors[i]);
-    i = (i + 1) % (sizeof(colors) / sizeof(colors[0]));
-
-    for (const QRect &rect : region) {
+    foreach (const QRect &rect, region.rects()) {
         RECT winRect;
         SetRect(&winRect, rect.left(), rect.top(), rect.right(), rect.bottom());
         FillRect(hdc, &winRect, brush);
@@ -301,7 +303,7 @@ bool QWidgetBackingStore::bltRect(const QRect &rect, int dx, int dy, QWidget *wi
 {
     const QPoint pos(tlwOffset + widget->mapTo(tlw, rect.topLeft()));
     const QRect tlwRect(QRect(pos, rect.size()));
-    if (dirty.intersects(tlwRect))
+    if (fullUpdatePending || dirty.intersects(tlwRect))
         return false; // We don't want to scroll junk.
     return store->scroll(tlwRect, dx, dy);
 }
@@ -370,7 +372,7 @@ QRegion QWidgetBackingStore::dirtyRegion(QWidget *widget) const
     const bool widgetDirty = widget && widget != tlw;
     const QRect tlwRect(topLevelRect());
     const QRect surfaceGeometry(tlwRect.topLeft(), store->size());
-    if (surfaceGeometry != tlwRect && surfaceGeometry.size() != tlwRect.size()) {
+    if (fullUpdatePending || (surfaceGeometry != tlwRect && surfaceGeometry.size() != tlwRect.size())) {
         if (widgetDirty) {
             const QRect dirtyTlwRect = QRect(QPoint(), tlwRect.size());
             const QPoint offset(widget->mapTo(tlw, QPoint()));
@@ -526,9 +528,9 @@ void QWidgetBackingStore::markDirty(const QRegion &rgn, QWidget *widget,
     Q_ASSERT(widget->window() == tlw);
     Q_ASSERT(!rgn.isEmpty());
 
-#if QT_CONFIG(graphicseffect)
+#ifndef QT_NO_GRAPHICSEFFECT
     widget->d_func()->invalidateGraphicsEffectsRecursively();
-#endif // QT_CONFIG(graphicseffect)
+#endif //QT_NO_GRAPHICSEFFECT
 
     if (widget->d_func()->paintOnScreen()) {
         if (widget->d_func()->dirty.isEmpty()) {
@@ -545,6 +547,13 @@ void QWidgetBackingStore::markDirty(const QRegion &rgn, QWidget *widget,
         widget->d_func()->dirty += rgn;
         if (!eventAlreadyPosted || updateTime == UpdateNow)
             sendUpdateRequest(widget, updateTime);
+        return;
+    }
+
+    //### FIXME fullUpdatePending seems to be always false????
+    if (fullUpdatePending) {
+        if (updateTime == UpdateNow)
+            sendUpdateRequest(tlw, updateTime);
         return;
     }
 
@@ -567,11 +576,11 @@ void QWidgetBackingStore::markDirty(const QRegion &rgn, QWidget *widget,
 
     if (bufferState == BufferInvalid) {
         const bool eventAlreadyPosted = !dirty.isEmpty() || updateRequestSent;
-#if QT_CONFIG(graphicseffect)
+#ifndef QT_NO_GRAPHICSEFFECT
         if (widget->d_func()->graphicsEffect)
             dirty += widget->d_func()->effectiveRectFor(rgn.boundingRect()).translated(offset);
         else
-#endif // QT_CONFIG(graphicseffect)
+#endif //QT_NO_GRAPHICSEFFECT
             dirty += rgn.translated(offset);
         if (!eventAlreadyPosted || updateTime == UpdateNow)
             sendUpdateRequest(tlw, updateTime);
@@ -586,11 +595,11 @@ void QWidgetBackingStore::markDirty(const QRegion &rgn, QWidget *widget,
 
     if (widget->d_func()->inDirtyList) {
         if (!qt_region_strictContains(widget->d_func()->dirty, widgetRect)) {
-#if QT_CONFIG(graphicseffect)
+#ifndef QT_NO_GRAPHICSEFFECT
             if (widget->d_func()->graphicsEffect)
                 widget->d_func()->dirty += widget->d_func()->effectiveRectFor(rgn.boundingRect());
             else
-#endif // QT_CONFIG(graphicseffect)
+#endif //QT_NO_GRAPHICSEFFECT
                 widget->d_func()->dirty += rgn;
         }
     } else {
@@ -618,9 +627,9 @@ void QWidgetBackingStore::markDirty(const QRect &rect, QWidget *widget,
     Q_ASSERT(widget->window() == tlw);
     Q_ASSERT(!rect.isEmpty());
 
-#if QT_CONFIG(graphicseffect)
+#ifndef QT_NO_GRAPHICSEFFECT
     widget->d_func()->invalidateGraphicsEffectsRecursively();
-#endif // QT_CONFIG(graphicseffect)
+#endif //QT_NO_GRAPHICSEFFECT
 
     if (widget->d_func()->paintOnScreen()) {
         if (widget->d_func()->dirty.isEmpty()) {
@@ -637,6 +646,12 @@ void QWidgetBackingStore::markDirty(const QRect &rect, QWidget *widget,
         widget->d_func()->dirty += rect;
         if (!eventAlreadyPosted || updateTime == UpdateNow)
             sendUpdateRequest(widget, updateTime);
+        return;
+    }
+
+    if (fullUpdatePending) {
+        if (updateTime == UpdateNow)
+            sendUpdateRequest(tlw, updateTime);
         return;
     }
 
@@ -697,7 +712,7 @@ void QWidgetBackingStore::markDirtyOnScreen(const QRegion &region, QWidget *widg
     if (!widget || widget->d_func()->paintOnScreen() || region.isEmpty())
         return;
 
-#if 0 // Used to be included in Qt4 for Q_WS_MAC
+#if defined(Q_DEAD_CODE_FROM_QT4_MAC)
     if (!widget->testAttribute(Qt::WA_WState_InPaintEvent))
         dirtyOnScreen += region.translated(topLevelOffset);
     return;
@@ -776,6 +791,7 @@ void QWidgetBackingStore::updateLists(QWidget *cur)
 QWidgetBackingStore::QWidgetBackingStore(QWidget *topLevel)
     : tlw(topLevel),
       dirtyOnScreenWidgets(0),
+      fullUpdatePending(0),
       updateRequestSent(0),
       textureListWatcher(0),
       perfFrames(0)
@@ -825,7 +841,7 @@ void QWidgetPrivate::moveRect(const QRect &rect, int dx, int dy)
     const bool nativeWithTextureChild = textureChildSeen && q->internalWinId();
 
     bool accelerateMove = accelEnv && isOpaque && !nativeWithTextureChild
-#if QT_CONFIG(graphicsview)
+#ifndef QT_NO_GRAPHICSVIEW
                           // No accelerate move for proxy widgets.
                           && !tlw->d_func()->extra->proxyWidget
 #endif
@@ -1154,6 +1170,7 @@ void QWidgetBackingStore::sync()
             for (int i = 0; i < dirtyWidgets.size(); ++i)
                 resetWidget(dirtyWidgets.at(i));
             dirtyWidgets.clear();
+            fullUpdatePending = false;
         }
         return;
     }
@@ -1170,7 +1187,7 @@ void QWidgetBackingStore::doSync()
     const bool inTopLevelResize = tlw->d_func()->maybeTopData()->inTopLevelResize;
     const QRect tlwRect(topLevelRect());
     const QRect surfaceGeometry(tlwRect.topLeft(), store->size());
-    if ((inTopLevelResize || surfaceGeometry.size() != tlwRect.size()) && !updatesDisabled) {
+    if ((fullUpdatePending || inTopLevelResize || surfaceGeometry.size() != tlwRect.size()) && !updatesDisabled) {
         if (hasStaticContents() && !store->size().isEmpty() ) {
             // Repaint existing dirty area and newly visible area.
             const QRect clipRect(0, 0, surfaceGeometry.width(), surfaceGeometry.height());
@@ -1241,7 +1258,7 @@ void QWidgetBackingStore::doSync()
                                            : wd->dirty);
         toClean += widgetDirty;
 
-#if QT_CONFIG(graphicsview)
+#ifndef QT_NO_GRAPHICSVIEW
         if (tlw->d_func()->extra->proxyWidget) {
             resetWidget(w);
             continue;
@@ -1266,6 +1283,7 @@ void QWidgetBackingStore::doSync()
     tlwExtra->widgetTextures.clear();
     findAllTextureWidgetsRecursively(tlw, tlw);
     qt_window_private(tlw->windowHandle())->compositing = false; // will get updated in qt_flush()
+    fullUpdatePending = false;
 #endif
 
     if (toClean.isEmpty()) {
@@ -1326,13 +1344,14 @@ void QWidgetBackingStore::doSync()
     dirtyRenderToTextureWidgets.clear();
 #endif
 
-#if QT_CONFIG(graphicsview)
+#ifndef QT_NO_GRAPHICSVIEW
     if (tlw->d_func()->extra->proxyWidget) {
         updateStaticContentsSize();
         dirty = QRegion();
         updateRequestSent = false;
-        for (const QRect &rect : toClean)
-            tlw->d_func()->extra->proxyWidget->update(rect);
+        const QVector<QRect> rects(toClean.rects());
+        for (int i = 0; i < rects.size(); ++i)
+            tlw->d_func()->extra->proxyWidget->update(rects.at(i));
         return;
     }
 #endif
@@ -1622,7 +1641,7 @@ void QWidgetPrivate::repaint_sys(const QRegion &rgn)
                                         && (usesDoubleBufferedGLContext || q->autoFillBackground());
     QRegion toBePainted(noPartialUpdateSupport ? q->rect() : rgn);
 
-#if 0 // Used to be included in Qt4 for Q_WS_MAC
+#ifdef Q_DEAD_CODE_FROM_QT4_MAC
     // No difference between update() and repaint() on the Mac.
     update_sys(toBePainted);
     return;
@@ -1644,7 +1663,7 @@ void QWidgetPrivate::repaint_sys(const QRegion &rgn)
         QWidgetBackingStore::unflushPaint(q, toBePainted);
 #endif
 
-    if (Q_UNLIKELY(q->paintingActive()))
+    if (q->paintingActive())
         qWarning("QWidget::repaint: It is dangerous to leave painters active on a widget outside of the PaintEvent");
 }
 

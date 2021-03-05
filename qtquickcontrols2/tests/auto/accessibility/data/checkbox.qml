@@ -1,6 +1,13 @@
 import QtQuick 2.5
-import QtQuick.Controls 2.1
+import QtQuick.Window 2.2
+import Qt.labs.controls 1.0
 
-CheckBox {
-    text: "CheckBox"
+Window {
+    visible: true
+
+    CheckBox {
+        id: checkbox
+        objectName: "checkbox"
+        text: "CheckBox"
+    }
 }

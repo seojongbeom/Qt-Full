@@ -1,6 +1,13 @@
 import QtQuick 2.5
-import QtQuick.Controls 2.1
+import QtQuick.Window 2.2
+import Qt.labs.controls 1.0
 
-RadioButton {
-    text: "RadioButton"
+Window {
+    visible: true
+
+    RadioButton {
+        id: radiobutton
+        objectName: "radiobutton"
+        text: "RadioButton"
+    }
 }

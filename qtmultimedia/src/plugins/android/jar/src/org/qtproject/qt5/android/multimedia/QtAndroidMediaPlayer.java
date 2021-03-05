@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtMultimedia of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,6 +38,7 @@ import java.lang.String;
 import java.io.FileInputStream;
 
 // API is level is < 9 unless marked otherwise.
+import android.app.Activity;
 import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -67,7 +62,7 @@ public class QtAndroidMediaPlayer
     private MediaPlayer mMediaPlayer = null;
     private Uri mUri = null;
     private final long mID;
-    private final Context mContext;
+    private final Activity mActivity;
     private boolean mMuted = false;
     private int mVolume = 100;
     private static final String TAG = "Qt MediaPlayer";
@@ -206,10 +201,10 @@ public class QtAndroidMediaPlayer
 
     }
 
-    public QtAndroidMediaPlayer(final Context context, final long id)
+    public QtAndroidMediaPlayer(final Activity activity, final long id)
     {
         mID = id;
-        mContext = context;
+        mActivity = activity;
     }
 
     private void setState(int state)
@@ -362,7 +357,7 @@ public class QtAndroidMediaPlayer
             final boolean inAssets = (mUri.getScheme().compareTo("assets") == 0);
             if (inAssets) {
                 final String asset = mUri.getPath().substring(1 /* Remove first '/' */);
-                final AssetManager am = mContext.getAssets();
+                final AssetManager am = mActivity.getAssets();
                 afd = am.openFd(asset);
                 final long offset = afd.getStartOffset();
                 final long length = afd.getLength();
@@ -373,7 +368,7 @@ public class QtAndroidMediaPlayer
                 FileDescriptor fd = fis.getFD();
                 mMediaPlayer.setDataSource(fd);
             } else {
-                mMediaPlayer.setDataSource(mContext, mUri);
+                mMediaPlayer.setDataSource(mActivity, mUri);
             }
             setState(State.Initialized);
         } catch (final IOException e) {
@@ -448,6 +443,17 @@ public class QtAndroidMediaPlayer
        return duration;
    }
 
+   private float adjustVolume(final int volume)
+   {
+       if (volume < 1)
+           return 0.0f;
+
+       if (volume > 98)
+           return 1.0f;
+
+       return (float) (1-(Math.log(100-volume)/Math.log(100)));
+   }
+
    public void setVolume(int volume)
    {
        if (volume < 0)
@@ -475,7 +481,7 @@ public class QtAndroidMediaPlayer
        }
 
        try {
-           float newVolume = (float)volume / 100;
+           float newVolume = adjustVolume(volume);
            mMediaPlayer.setVolume(newVolume, newVolume);
        } catch (final IllegalStateException e) {
            Log.d(TAG, "" + e.getMessage());

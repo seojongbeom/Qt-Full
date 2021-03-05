@@ -7,3 +7,8 @@ RESOURCES += embeddedsvgviewer.qrc
 
 target.path = $$[QT_INSTALL_EXAMPLES]/svg/embeddedsvgviewer
 INSTALLS += target
+
+wince* {
+   DEPLOYMENT_PLUGIN += qsvg
+}
+

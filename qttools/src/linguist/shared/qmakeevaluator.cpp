@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Linguist of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -186,7 +191,6 @@ void QMakeEvaluator::initStatics()
         { "IN_PWD", "PWD" },
         { "DEPLOYMENT", "INSTALLS" }
     };
-    statics.varMap.reserve((int)(sizeof(mapInits)/sizeof(mapInits[0])));
     for (unsigned i = 0; i < sizeof(mapInits)/sizeof(mapInits[0]); ++i)
         statics.varMap.insert(ProKey(mapInits[i].oldname), ProKey(mapInits[i].newname));
 }
@@ -270,7 +274,7 @@ void QMakeEvaluator::skipHashStr(const ushort *&tokPtr)
 
 // FIXME: this should not build new strings for direct sections.
 // Note that the E_SPRINTF and E_LIST implementations rely on the deep copy.
-ProStringList QMakeEvaluator::split_value_list(const QStringRef &vals, const ProFile *source)
+ProStringList QMakeEvaluator::split_value_list(const QString &vals, const ProFile *source)
 {
     QString build;
     ProStringList ret;
@@ -318,7 +322,7 @@ ProStringList QMakeEvaluator::split_value_list(const QStringRef &vals, const Pro
                     --x;
                 }
             }
-            Q_FALLTHROUGH();
+            // fallthrough
         default:
             hadWord = true;
             break;
@@ -629,7 +633,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::visitProBlock(
                         evalError(fL1S("Conditional must expand to exactly one word."));
                     okey = false;
                 } else {
-                    okey = isActiveConfig(curr.at(0).toQStringRef(), true);
+                    okey = isActiveConfig(curr.at(0).toQString(m_tmp2), true);
                     traceMsg("condition %s is %s", dbgStr(curr.at(0)), dbgBool(okey));
                     okey ^= invert;
                 }
@@ -764,14 +768,12 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::visitProLoop(
                 if (ok) {
                     int end = itl.mid(dotdot+2).toInt(&ok);
                     if (ok) {
-                        const int absDiff = qAbs(end - start);
-                        if (m_cumulative && absDiff > 100) {
+                        if (m_cumulative && qAbs(end - start) > 100) {
                             // Such a loop is unlikely to contribute something useful to the
                             // file collection, and may cause considerable delay.
                             traceMsg("skipping excessive loop in cumulative mode");
                             return ReturnFalse;
                         }
-                        list.reserve(absDiff + 1);
                         if (start < end) {
                             for (int i = start; i <= end; i++)
                                 list << ProString(QString::number(i));
@@ -990,8 +992,7 @@ static ProString msvcArchitecture(const QString &vcInstallDir, const QString &pa
     QString vcBinDir = vcInstallDir;
     if (vcBinDir.endsWith(QLatin1Char('\\')))
         vcBinDir.chop(1);
-    const auto dirs = pathVar.split(QLatin1Char(';'));
-    for (const QString &dir : dirs) {
+    foreach (const QString &dir, pathVar.split(QLatin1Char(';'))) {
         if (!dir.startsWith(vcBinDir, Qt::CaseInsensitive))
             continue;
         const ProString arch = msvcBinDirToQMakeArch(dir.mid(vcBinDir.length() + 1));
@@ -1013,8 +1014,6 @@ void QMakeEvaluator::loadDefaults()
         vars[ProKey("QMAKE_QMAKE")] << ProString(m_option->qmake_abslocation);
     if (!m_option->qmake_args.isEmpty())
         vars[ProKey("QMAKE_ARGS")] = ProStringList(m_option->qmake_args);
-    if (!m_option->qtconf.isEmpty())
-        vars[ProKey("QMAKE_QTCONF")] = ProString(m_option->qtconf);
     vars[ProKey("QMAKE_HOST.cpu_count")] = ProString(QString::number(idealThreadCount()));
 #if defined(Q_OS_WIN32)
     vars[ProKey("QMAKE_HOST.os")] << ProString("Windows");
@@ -1024,8 +1023,21 @@ void QMakeEvaluator::loadDefaults()
     if (GetComputerName(name, &name_length))
         vars[ProKey("QMAKE_HOST.name")] << ProString(QString::fromWCharArray(name));
 
-    vars[ProKey("QMAKE_HOST.version")] << ProString(QSysInfo::kernelVersion());
-    vars[ProKey("QMAKE_HOST.version_string")] << ProString(QSysInfo::productVersion());
+    QSysInfo::WinVersion ver = QSysInfo::WindowsVersion;
+    vars[ProKey("QMAKE_HOST.version")] << ProString(QString::number(ver));
+    ProString verStr;
+    switch (ver) {
+    case QSysInfo::WV_Me: verStr = ProString("WinMe"); break;
+    case QSysInfo::WV_95: verStr = ProString("Win95"); break;
+    case QSysInfo::WV_98: verStr = ProString("Win98"); break;
+    case QSysInfo::WV_NT: verStr = ProString("WinNT"); break;
+    case QSysInfo::WV_2000: verStr = ProString("Win2000"); break;
+    case QSysInfo::WV_2003: verStr = ProString("Win2003"); break;
+    case QSysInfo::WV_XP: verStr = ProString("WinXP"); break;
+    case QSysInfo::WV_VISTA: verStr = ProString("WinVista"); break;
+    default: verStr = ProString("Unknown"); break;
+    }
+    vars[ProKey("QMAKE_HOST.version_string")] << verStr;
 
     SYSTEM_INFO info;
     GetSystemInfo(&info);
@@ -1222,7 +1234,7 @@ bool QMakeEvaluator::loadSpec()
         qmakespec = m_hostBuild ? QLatin1String("default-host") : QLatin1String("default");
 #endif
     if (IoUtils::isRelativePath(qmakespec)) {
-        for (const QString &root : qAsConst(m_mkspecPaths)) {
+        foreach (const QString &root, m_mkspecPaths) {
             QString mkspec = root + QLatin1Char('/') + qmakespec;
             if (IoUtils::exists(mkspec)) {
                 qmakespec = mkspec;
@@ -1278,7 +1290,7 @@ void QMakeEvaluator::setupProject()
 void QMakeEvaluator::evaluateCommand(const QString &cmds, const QString &where)
 {
     if (!cmds.isEmpty()) {
-        ProFile *pro = m_parser->parsedProBlock(QStringRef(&cmds), where, -1);
+        ProFile *pro = m_parser->parsedProBlock(cmds, where, -1);
         if (pro->isOk()) {
             m_locationStack.push(m_current);
             visitProBlock(pro, pro->tokPtr());
@@ -1452,11 +1464,10 @@ void QMakeEvaluator::updateMkspecPaths()
     QStringList ret;
     const QString concat = QLatin1String("/mkspecs");
 
-    const auto paths = m_option->getPathListEnv(QLatin1String("QMAKEPATH"));
-    for (const QString &it : paths)
+    foreach (const QString &it, m_option->getPathListEnv(QLatin1String("QMAKEPATH")))
         ret << it + concat;
 
-    for (const QString &it : qAsConst(m_qmakepath))
+    foreach (const QString &it, m_qmakepath)
         ret << it + concat;
 
     if (!m_buildRoot.isEmpty())
@@ -1478,8 +1489,11 @@ void QMakeEvaluator::updateFeaturePaths()
 
     QStringList feature_roots;
 
-    feature_roots += m_option->getPathListEnv(QLatin1String("QMAKEFEATURES"));
+    foreach (const QString &f, m_option->getPathListEnv(QLatin1String("QMAKEFEATURES")))
+        feature_roots += f;
+
     feature_roots += m_qmakefeatures;
+
     feature_roots += m_option->splitPathList(
                 m_option->propertyValue(ProKey("QMAKEFEATURES")).toQString(m_mtmp));
 
@@ -1493,11 +1507,10 @@ void QMakeEvaluator::updateFeaturePaths()
         feature_bases << m_sourceRoot;
     }
 
-    const auto items = m_option->getPathListEnv(QLatin1String("QMAKEPATH"));
-    for (const QString &item : items)
+    foreach (const QString &item, m_option->getPathListEnv(QLatin1String("QMAKEPATH")))
         feature_bases << (item + mkspecs_concat);
 
-    for (const QString &item : qAsConst(m_qmakepath))
+    foreach (const QString &item, m_qmakepath)
         feature_bases << (item + mkspecs_concat);
 
     if (!m_qmakespec.isEmpty()) {
@@ -1519,9 +1532,8 @@ void QMakeEvaluator::updateFeaturePaths()
     feature_bases << (m_option->propertyValue(ProKey("QT_HOST_DATA/get")) + mkspecs_concat);
     feature_bases << (m_option->propertyValue(ProKey("QT_HOST_DATA/src")) + mkspecs_concat);
 
-    for (const QString &fb : qAsConst(feature_bases)) {
-        const auto sfxs = values(ProKey("QMAKE_PLATFORM"));
-        for (const ProString &sfx : sfxs)
+    foreach (const QString &fb, feature_bases) {
+        foreach (const ProString &sfx, values(ProKey("QMAKE_PLATFORM")))
             feature_roots << (fb + features_concat + sfx + QLatin1Char('/'));
         feature_roots << (fb + features_concat);
     }
@@ -1533,7 +1545,7 @@ void QMakeEvaluator::updateFeaturePaths()
     feature_roots.removeDuplicates();
 
     QStringList ret;
-    for (const QString &root : qAsConst(feature_roots))
+    foreach (const QString &root, feature_roots)
         if (IoUtils::exists(root))
             ret << root;
     m_featureRoots = new QMakeFeatureRoots(ret);
@@ -1572,7 +1584,7 @@ QString QMakeEvaluator::currentDirectory() const
     return QString();
 }
 
-bool QMakeEvaluator::isActiveConfig(const QStringRef &config, bool regex)
+bool QMakeEvaluator::isActiveConfig(const QString &config, bool regex)
 {
     // magic types for easy flipping
     if (config == statics.strtrue)
@@ -1584,7 +1596,7 @@ bool QMakeEvaluator::isActiveConfig(const QStringRef &config, bool regex)
         return m_hostBuild;
 
     if (regex && (config.contains(QLatin1Char('*')) || config.contains(QLatin1Char('?')))) {
-        QString cfg = config.toString();
+        QString cfg = config;
         cfg.detach(); // Keep m_tmp out of QRegExp's cache
         QRegExp re(cfg, Qt::CaseSensitive, QRegExp::Wildcard);
 
@@ -1594,8 +1606,7 @@ bool QMakeEvaluator::isActiveConfig(const QStringRef &config, bool regex)
 
         // CONFIG variable
         int t = 0;
-        const auto configValues = values(statics.strCONFIG);
-        for (const ProString &configValue : configValues) {
+        foreach (const ProString &configValue, values(statics.strCONFIG)) {
             if (re.exactMatch(configValue.toQString(m_tmp[t])))
                 return true;
             t ^= 1;
@@ -1606,7 +1617,7 @@ bool QMakeEvaluator::isActiveConfig(const QStringRef &config, bool regex)
             return true;
 
         // CONFIG variable
-        if (values(statics.strCONFIG).contains(config))
+        if (values(statics.strCONFIG).contains(ProString(config)))
             return true;
     }
 
@@ -1630,7 +1641,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::expandVariableReferences(
                 tokPtr++;
                 continue;
             }
-            Q_FALLTHROUGH();
+            // fallthrough
         default:
             Q_ASSERT_X(false, "expandVariableReferences", "Unrecognized token");
             break;
@@ -1770,7 +1781,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateExpandFunction(
 }
 
 QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateConditional(
-        const QStringRef &cond, const QString &where, int line)
+        const QString &cond, const QString &where, int line)
 {
     VisitReturn ret = ReturnFalse;
     ProFile *pro = m_parser->parsedProBlock(cond, where, line, QMakeParser::TestGrammar);
@@ -1787,8 +1798,8 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateConditional(
 QMakeEvaluator::VisitReturn QMakeEvaluator::checkRequirements(const ProStringList &deps)
 {
     ProStringList &failed = valuesRef(ProKey("QMAKE_FAILED_REQUIREMENTS"));
-    for (const ProString &dep : deps) {
-        VisitReturn vr = evaluateConditional(dep.toQStringRef(), m_current.pro->fileName(), m_current.line);
+    foreach (const ProString &dep, deps) {
+        VisitReturn vr = evaluateConditional(dep.toQString(), m_current.pro->fileName(), m_current.line);
         if (vr == ReturnError)
             return ReturnError;
         if (vr != ReturnTrue)
@@ -1911,9 +1922,9 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateFileChecked(
 {
     if (fileName.isEmpty())
         return ReturnFalse;
-    const QMakeEvaluator *ref = this;
+    QMakeEvaluator *ref = this;
     do {
-        for (const ProFile *pf : ref->m_profileStack)
+        foreach (const ProFile *pf, ref->m_profileStack)
             if (pf->fileName() == fileName) {
                 evalError(fL1S("Circular inclusion of %1.").arg(fileName));
                 return ReturnFalse;
@@ -2025,8 +2036,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateFileInto(
     *values = visitor.m_valuemapStack.top();
     ProKey qiif("QMAKE_INTERNAL_INCLUDED_FILES");
     ProStringList &iif = m_valuemapStack.first()[qiif];
-    const auto ifns = values->value(qiif);
-    for (const ProString &ifn : ifns)
+    foreach (const ProString &ifn, values->value(qiif))
         if (!iif.contains(ifn))
             iif << ifn;
     return ReturnTrue;
@@ -2107,7 +2117,7 @@ QString QMakeEvaluator::formatValue(const ProString &val, bool forceQuote)
                 break;
             case 32:
                 quote = true;
-                Q_FALLTHROUGH();
+                // fallthrough
             default:
                 ret += c;
                 break;
@@ -2125,7 +2135,7 @@ QString QMakeEvaluator::formatValueList(const ProStringList &vals, bool commas)
 {
     QString ret;
 
-    for (const ProString &str : vals) {
+    foreach (const ProString &str, vals) {
         if (!ret.isEmpty()) {
             if (commas)
                 ret += QLatin1Char(',');
@@ -2140,7 +2150,7 @@ QString QMakeEvaluator::formatValueListList(const QList<ProStringList> &lists)
 {
     QString ret;
 
-    for (const ProStringList &list : lists) {
+    foreach (const ProStringList &list, lists) {
         if (!ret.isEmpty())
             ret += QLatin1String(", ");
         ret += formatValueList(list);

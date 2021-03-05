@@ -1,9 +1,9 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
-** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+** This file is part of the Qt Labs Controls module of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
@@ -34,26 +34,20 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.9
-import QtQuick.Templates 2.2 as T
-import QtQuick.Controls.Material 2.2
+import QtQuick 2.6
+import Qt.labs.templates 1.0 as T
+import Qt.labs.controls.material 1.0
 
 T.Page {
     id: control
 
-    implicitWidth: Math.max(background ? background.implicitWidth : 0,
-                            Math.max(contentWidth,
-                                     header && header.visible ? header.implicitWidth : 0,
-                                     footer && footer.visible ? footer.implicitWidth : 0) + leftPadding + rightPadding)
-    implicitHeight: Math.max(background ? background.implicitHeight : 0,
-                             contentHeight + topPadding + bottomPadding
-                             + (header && header.visible ? header.implicitHeight + spacing : 0)
-                             + (footer && footer.visible ? footer.implicitHeight + spacing : 0))
+    //! [contentItem]
+    contentItem: Item { }
+    //! [contentItem]
 
-    contentWidth: contentItem.implicitWidth || (contentChildren.length === 1 ? contentChildren[0].implicitWidth : 0)
-    contentHeight: contentItem.implicitHeight || (contentChildren.length === 1 ? contentChildren[0].implicitHeight : 0)
-
+    //! [background]
     background: Rectangle {
         color: control.Material.backgroundColor
     }
+    //! [background]
 }

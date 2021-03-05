@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -43,16 +48,18 @@ namespace qdesigner_internal {
 
 // Data structure containing form dialog data providing comparison
 struct FormWindowData {
+    FormWindowData();
+
     bool equals(const FormWindowData&) const;
 
     void fromFormWindow(FormWindowBase* fw);
     void applyToFormWindow(FormWindowBase* fw) const;
 
-    bool layoutDefaultEnabled{false};
-    int defaultMargin{0};
-    int defaultSpacing{0};
+    bool layoutDefaultEnabled;
+    int defaultMargin;
+    int defaultSpacing;
 
-    bool layoutFunctionsEnabled{false};
+    bool layoutFunctionsEnabled;
     QString marginFunction;
     QString spacingFunction;
 
@@ -62,7 +69,7 @@ struct FormWindowData {
 
     QStringList includeHints;
 
-    bool hasFormGrid{false};
+    bool hasFormGrid;
     Grid grid;
 };
 
@@ -77,6 +84,15 @@ QDebug operator<<(QDebug str, const  FormWindowData &d)
         << d.pixFunction << " Author=" << d.author << " Hints=" << d.includeHints
         << " Grid=" << d.hasFormGrid << d.grid.deltaX() << d.grid.deltaY() << '\n';
     return str;
+}
+
+FormWindowData::FormWindowData() :
+    layoutDefaultEnabled(false),
+    defaultMargin(0),
+    defaultSpacing(0),
+    layoutFunctionsEnabled(false),
+    hasFormGrid(false)
+{
 }
 
 bool FormWindowData::equals(const FormWindowData &rhs) const
@@ -100,7 +116,7 @@ void FormWindowData::fromFormWindow(FormWindowBase* fw)
     fw->layoutDefault(&defaultMargin, &defaultSpacing);
 
     QStyle *style = fw->formContainer()->style();
-    layoutDefaultEnabled = defaultMargin != INT_MIN || defaultSpacing != INT_MIN;
+    layoutDefaultEnabled = defaultMargin != INT_MIN || defaultMargin != INT_MIN;
     if (defaultMargin == INT_MIN)
         defaultMargin = style->pixelMetric(QStyle::PM_DefaultChildMargin, 0);
     if (defaultSpacing == INT_MIN)
@@ -236,7 +252,7 @@ void FormWindowSettings::setData(const FormWindowData &data)
     if (data.includeHints.empty()) {
         m_ui->includeHintsTextEdit->clear();
     } else {
-        m_ui->includeHintsTextEdit->setText(data.includeHints.join(QLatin1Char('\n')));
+        m_ui->includeHintsTextEdit->setText(data.includeHints.join(QStringLiteral("\n")));
     }
 
     m_ui->gridPanel->setChecked(data.hasFormGrid);

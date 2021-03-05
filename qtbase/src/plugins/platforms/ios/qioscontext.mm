@@ -1,57 +1,46 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
 #include "qioscontext.h"
-
-#include "qiosintegration.h"
 #include "qioswindow.h"
 
 #include <dlfcn.h>
 
-#include <QtGui/QGuiApplication>
 #include <QtGui/QOpenGLContext>
 
 #import <OpenGLES/EAGL.h>
 #import <OpenGLES/ES2/glext.h>
 #import <QuartzCore/CAEAGLLayer.h>
-
-QT_BEGIN_NAMESPACE
 
 Q_LOGGING_CATEGORY(lcQpaGLContext, "qt.qpa.glcontext");
 
@@ -139,9 +128,6 @@ bool QIOSContext::makeCurrent(QPlatformSurface *surface)
 {
     Q_ASSERT_IS_GL_SURFACE(surface);
 
-    if (!verifyGraphicsHardwareAvailability())
-        return false;
-
     [EAGLContext setCurrentContext:m_eaglContext];
 
     // For offscreen surfaces we don't prepare a default FBO
@@ -171,6 +157,8 @@ bool QIOSContext::makeCurrent(QPlatformSurface *surface)
                 glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER,
                     framebufferObject.depthRenderbuffer);
         }
+
+        connect(static_cast<QIOSWindow *>(surface), SIGNAL(destroyed(QObject*)), this, SLOT(windowDestroyed(QObject*)));
     } else {
         glBindFramebuffer(GL_FRAMEBUFFER, framebufferObject.handle);
     }
@@ -220,11 +208,17 @@ void QIOSContext::swapBuffers(QPlatformSurface *surface)
 {
     Q_ASSERT_IS_GL_SURFACE(surface);
 
-    if (!verifyGraphicsHardwareAvailability())
-        return;
-
     if (surface->surface()->surfaceClass() == QSurface::Offscreen)
         return; // Nothing to do
+
+    // When using threaded rendering, the render-thread may not have picked up
+    // yet on the fact that a window is no longer exposed, and will try to swap
+    // a non-exposed window. This may in some cases result in crashes, e.g. when
+    // iOS is suspending an application, so we have an extra guard here.
+    if (!static_cast<QIOSWindow *>(surface)->isExposed()) {
+        qCDebug(lcQpaGLContext, "Detected swapBuffers on a non-exposed window, skipping flush");
+        return;
+    }
 
     FramebufferObject &framebufferObject = backingFramebufferObjectFor(surface);
     Q_ASSERT_X(framebufferObject.isComplete, "QIOSContext", "swapBuffers on incomplete FBO");
@@ -247,13 +241,8 @@ QIOSContext::FramebufferObject &QIOSContext::backingFramebufferObjectFor(QPlatfo
     // should probably use QOpenGLMultiGroupSharedResource to track the shared default-FBOs.
     if (m_sharedContext)
         return m_sharedContext->backingFramebufferObjectFor(surface);
-
-    if (!m_framebufferObjects.contains(surface)) {
-        // We're about to create a new FBO, make sure it's cleaned up as well
-        connect(static_cast<QIOSWindow *>(surface), SIGNAL(destroyed(QObject*)), this, SLOT(windowDestroyed(QObject*)));
-    }
-
-    return m_framebufferObjects[surface];
+    else
+        return m_framebufferObjects[surface];
 }
 
 GLuint QIOSContext::defaultFramebufferObject(QPlatformSurface *surface) const
@@ -287,54 +276,6 @@ bool QIOSContext::needsRenderbufferResize(QPlatformSurface *surface) const
     return false;
 }
 
-bool QIOSContext::verifyGraphicsHardwareAvailability()
-{
-    // Per the iOS OpenGL ES Programming Guide, background apps may not execute commands on the
-    // graphics hardware. Specifically: "In your app delegate’s applicationDidEnterBackground:
-    // method, your app may want to delete some of its OpenGL ES objects to make memory and
-    // resources available to the foreground app. Call the glFinish function to ensure that
-    // the resources are removed immediately. After your app exits its applicationDidEnterBackground:
-    // method, it must not make any new OpenGL ES calls. If it makes an OpenGL ES call, it is
-    // terminated by iOS.".
-    static bool applicationBackgrounded = QGuiApplication::applicationState() == Qt::ApplicationSuspended;
-
-    static dispatch_once_t onceToken = 0;
-    dispatch_once(&onceToken, ^{
-        QIOSApplicationState *applicationState = &QIOSIntegration::instance()->applicationState;
-        connect(applicationState, &QIOSApplicationState::applicationStateWillChange, [](Qt::ApplicationState state) {
-            if (applicationBackgrounded && state != Qt::ApplicationSuspended) {
-                qCDebug(lcQpaGLContext) << "app no longer backgrounded, rendering enabled";
-                applicationBackgrounded = false;
-            }
-        });
-        connect(applicationState, &QIOSApplicationState::applicationStateDidChange, [](Qt::ApplicationState state) {
-            if (state != Qt::ApplicationSuspended)
-                return;
-
-            qCDebug(lcQpaGLContext) << "app backgrounded, rendering disabled";
-            applicationBackgrounded = true;
-
-            // By the time we receive this signal the application has moved into
-            // Qt::ApplactionStateSuspended, and all windows have been obscured,
-            // which should stop all rendering. If there's still an active GL context,
-            // we follow Apple's advice and call glFinish before making it inactive.
-            if (QOpenGLContext *currentContext = QOpenGLContext::currentContext()) {
-                qCWarning(lcQpaGLContext) << "explicitly glFinishing and deactivating" << currentContext;
-                glFinish();
-                currentContext->doneCurrent();
-            }
-        });
-    });
-
-    if (applicationBackgrounded) {
-        static const char warning[] = "OpenGL ES calls are not allowed while an application is backgrounded";
-        Q_ASSERT_X(!applicationBackgrounded, "QIOSContext", warning);
-        qCWarning(lcQpaGLContext, warning);
-    }
-
-    return !applicationBackgrounded;
-}
-
 void QIOSContext::windowDestroyed(QObject *object)
 {
     QIOSWindow *window = static_cast<QIOSWindow *>(object);
@@ -350,9 +291,9 @@ void QIOSContext::windowDestroyed(QObject *object)
     [EAGLContext setCurrentContext:originalContext];
 }
 
-QFunctionPointer QIOSContext::getProcAddress(const char *functionName)
+QFunctionPointer QIOSContext::getProcAddress(const QByteArray& functionName)
 {
-    return QFunctionPointer(dlsym(RTLD_DEFAULT, functionName));
+    return QFunctionPointer(dlsym(RTLD_DEFAULT, functionName.constData()));
 }
 
 bool QIOSContext::isValid() const
@@ -367,4 +308,3 @@ bool QIOSContext::isSharing() const
 
 #include "moc_qioscontext.cpp"
 
-QT_END_NAMESPACE

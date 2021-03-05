@@ -1,37 +1,31 @@
 /****************************************************************************
 **
 ** Copyright (C) 2014 John Layt <jlayt@kde.org>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtPrintSupport module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -40,9 +34,7 @@
 #include "qplatformprintdevice.h"
 
 #include "qprintdevice_p.h"
-#if QT_CONFIG(printdialog)
 #include "qprintdialog.h"
-#endif
 
 #include <QtGui/qpagelayout.h>
 
@@ -61,7 +53,7 @@ QPlatformPrintDevice::QPlatformPrintDevice()
       m_haveOutputBins(false),
       m_haveDuplexModes(false),
       m_haveColorModes(false)
-#ifndef QT_NO_MIMETYPE
+#ifndef QT_NO_MIMETYPES
     , m_haveMimeTypes(false)
 #endif
 {
@@ -79,7 +71,7 @@ QPlatformPrintDevice::QPlatformPrintDevice(const QString &id)
       m_haveOutputBins(false),
       m_haveDuplexModes(false),
       m_haveColorModes(false)
-#ifndef QT_NO_MIMETYPE
+#ifndef QT_NO_MIMETYPES
     , m_haveMimeTypes(false)
 #endif
 {
@@ -182,7 +174,7 @@ QPageSize QPlatformPrintDevice::supportedPageSize(const QPageSize &pageSize) con
     // e.g. Windows defines DMPAPER_11X17 and DMPAPER_TABLOID with names "11x17" and "Tabloid", but both
     // map to QPageSize::Tabloid / PPD Key "Tabloid" / ANSI B Tabloid
     if (pageSize.id() != QPageSize::Custom) {
-        for (const QPageSize &ps : m_pageSizes) {
+        foreach (const QPageSize &ps, m_pageSizes) {
             if (ps.id() == pageSize.id() && ps.name() == pageSize.name())
                 return ps;
         }
@@ -190,7 +182,7 @@ QPageSize QPlatformPrintDevice::supportedPageSize(const QPageSize &pageSize) con
 
     // Next try match on id only if not custom
     if (pageSize.id() != QPageSize::Custom) {
-        for (const QPageSize &ps : m_pageSizes) {
+        foreach (const QPageSize &ps, m_pageSizes) {
             if (ps.id() == pageSize.id())
                 return ps;
         }
@@ -205,7 +197,7 @@ QPageSize QPlatformPrintDevice::supportedPageSize(QPageSize::PageSizeId pageSize
     if (!m_havePageSizes)
         loadPageSizes();
 
-    for (const QPageSize &ps : m_pageSizes) {
+    foreach (const QPageSize &ps, m_pageSizes) {
         if (ps.id() == pageSizeId)
             return ps;
     }
@@ -219,7 +211,7 @@ QPageSize QPlatformPrintDevice::supportedPageSize(const QString &pageName) const
     if (!m_havePageSizes)
         loadPageSizes();
 
-    for (const QPageSize &ps : m_pageSizes) {
+    foreach (const QPageSize &ps, m_pageSizes) {
         if (ps.name() == pageName)
             return ps;
     }
@@ -248,7 +240,7 @@ QPageSize QPlatformPrintDevice::supportedPageSize(const QSizeF &size, QPageSize:
 QPageSize QPlatformPrintDevice::supportedPageSizeMatch(const QPageSize &pageSize) const
 {
     // Try to find a supported page size based on point size
-    for (const QPageSize &ps : m_pageSizes) {
+    foreach (const QPageSize &ps, m_pageSizes) {
         if (ps.sizePoints() == pageSize.sizePoints())
             return ps;
     }
@@ -304,11 +296,7 @@ QPrint::InputSlot QPlatformPrintDevice::defaultInputSlot() const
 {
     QPrint::InputSlot input;
     input.key = QByteArrayLiteral("Auto");
-#if QT_CONFIG(printdialog)
     input.name = QPrintDialog::tr("Automatic");
-#else
-    input.name = QString::fromLatin1("Automatic");
-#endif
     input.id = QPrint::Auto;
     return input;
 }
@@ -328,11 +316,7 @@ QPrint::OutputBin QPlatformPrintDevice::defaultOutputBin() const
 {
     QPrint::OutputBin output;
     output.key = QByteArrayLiteral("Auto");
-#if QT_CONFIG(printdialog)
     output.name = QPrintDialog::tr("Automatic");
-#else
-    output.name = QString::fromLatin1("Automatic");
-#endif
     output.id = QPrint::AutoOutputBin;
     return output;
 }

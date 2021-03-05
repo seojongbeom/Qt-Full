@@ -1,33 +1,37 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
 
-#include <QDialog>
-#include <QMainWindow>
+
 #include <QtTest/QtTest>
 
 #include <qapplication.h>
@@ -43,12 +47,15 @@ class tst_QAction : public QObject
 
 public:
     tst_QAction();
+    virtual ~tst_QAction();
+
 
     void updateState(QActionEvent *e);
 
+public slots:
+    void initTestCase();
+    void cleanupTestCase();
 private slots:
-    void init();
-    void cleanup();
     void getSetCheck();
     void setText_data();
     void setText();
@@ -63,31 +70,13 @@ private slots:
     void task229128TriggeredSignalWithoutActiongroup();
     void task229128TriggeredSignalWhenInActiongroup();
     void repeat();
-    void setData();
-    void disableShortcutsWithBlockedWidgets_data();
-    void disableShortcutsWithBlockedWidgets();
 
 private:
     int m_lastEventType;
-    const int m_keyboardScheme;
+    int m_keyboardScheme;
     QAction *m_lastAction;
+    QWidget *m_tstWidget;
 };
-
-tst_QAction::tst_QAction()
-    : m_keyboardScheme(QGuiApplicationPrivate::platformTheme()->themeHint(QPlatformTheme::KeyboardScheme).toInt())
-{
-}
-
-void tst_QAction::init()
-{
-    m_lastEventType = 0;
-    m_lastAction = nullptr;
-}
-
-void tst_QAction::cleanup()
-{
-    QVERIFY(QApplication::topLevelWidgets().isEmpty());
-}
 
 // Testing get/set functions
 void tst_QAction::getSetCheck()
@@ -120,15 +109,45 @@ class MyWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit MyWidget(tst_QAction *tst, QWidget *parent = nullptr) : QWidget(parent), m_test(tst)
-    { setWindowTitle(QTest::currentTestFunction()); }
+    MyWidget(tst_QAction *tst, QWidget *parent = 0) : QWidget(parent) { this->tst = tst; }
 
 protected:
-    void actionEvent(QActionEvent *e) override { m_test->updateState(e); }
+    virtual void actionEvent(QActionEvent *e) { tst->updateState(e); }
 
 private:
-    tst_QAction *m_test;
+    tst_QAction *tst;
 };
+
+tst_QAction::tst_QAction() : m_keyboardScheme(QPlatformTheme::WindowsKeyboardScheme)
+{
+    if (const QPlatformTheme *theme = QGuiApplicationPrivate::platformTheme())
+        m_keyboardScheme = theme->themeHint(QPlatformTheme::KeyboardScheme).toInt();
+}
+
+tst_QAction::~tst_QAction()
+{
+
+}
+
+void tst_QAction::initTestCase()
+{
+    m_lastEventType = 0;
+    m_lastAction = 0;
+
+    MyWidget *mw = new MyWidget(this);
+    m_tstWidget = mw;
+    mw->show();
+    qApp->setActiveWindow(mw);
+}
+
+void tst_QAction::cleanupTestCase()
+{
+    QWidget *testWidget = m_tstWidget;
+    if (testWidget) {
+        testWidget->hide();
+        delete testWidget;
+    }
+}
 
 void tst_QAction::setText_data()
 {
@@ -194,10 +213,7 @@ void tst_QAction::actionEvent()
     a.setText("action text");
 
     // add action
-    MyWidget testWidget(this);
-    testWidget.show();
-    QApplication::setActiveWindow(&testWidget);
-    testWidget.addAction(&a);
+    m_tstWidget->addAction(&a);
     qApp->processEvents();
 
     QCOMPARE(m_lastEventType, (int)QEvent::ActionAdded);
@@ -211,7 +227,7 @@ void tst_QAction::actionEvent()
     QCOMPARE(m_lastAction, &a);
 
     // remove action
-    testWidget.removeAction(&a);
+    m_tstWidget->removeAction(&a);
     qApp->processEvents();
 
     QCOMPARE(m_lastEventType, (int)QEvent::ActionRemoved);
@@ -251,24 +267,22 @@ void tst_QAction::alternateShortcuts()
 {
     //test the alternate shortcuts (by adding more than 1 shortcut)
 
-    MyWidget testWidget(this);
-    testWidget.show();
-    QApplication::setActiveWindow(&testWidget);
+    QWidget *wid = m_tstWidget;
 
     {
-        QAction act(&testWidget);
-        testWidget.addAction(&act);
+        QAction act(wid);
+        wid->addAction(&act);
         QList<QKeySequence> shlist = QList<QKeySequence>() << QKeySequence("CTRL+P") << QKeySequence("CTRL+A");
         act.setShortcuts(shlist);
 
         QSignalSpy spy(&act, SIGNAL(triggered()));
 
         act.setAutoRepeat(true);
-        QTest::keyClick(&testWidget, Qt::Key_A, Qt::ControlModifier);
+        QTest::keyClick(wid, Qt::Key_A, Qt::ControlModifier);
         QCOMPARE(spy.count(), 1); //act should have been triggered
 
         act.setAutoRepeat(false);
-        QTest::keyClick(&testWidget, Qt::Key_A, Qt::ControlModifier);
+        QTest::keyClick(wid, Qt::Key_A, Qt::ControlModifier);
         QCOMPARE(spy.count(), 2); //act should have been triggered a 2nd time
 
         //end of the scope of the action, it will be destroyed and removed from wid
@@ -277,15 +291,11 @@ void tst_QAction::alternateShortcuts()
 
 
     //this tests a crash (if the action did not unregister its alternate shortcuts)
-    QTest::keyClick(&testWidget, Qt::Key_A, Qt::ControlModifier);
+    QTest::keyClick(wid, Qt::Key_A, Qt::ControlModifier);
 }
 
 void tst_QAction::enabledVisibleInteraction()
 {
-    MyWidget testWidget(this);
-    testWidget.show();
-    QApplication::setActiveWindow(&testWidget);
-
     QAction act(0);
     // check defaults
     QVERIFY(act.isEnabled());
@@ -300,20 +310,20 @@ void tst_QAction::enabledVisibleInteraction()
     QVERIFY(act.isVisible());
 
     // check if shortcut is disabled if not visible
-    testWidget.addAction(&act);
+    m_tstWidget->addAction(&act);
     act.setShortcut(QKeySequence("Ctrl+T"));
     QSignalSpy spy(&act, SIGNAL(triggered()));
     act.setEnabled(true);
     act.setVisible(false);
-    QTest::keyClick(&testWidget, Qt::Key_T, Qt::ControlModifier);
+    QTest::keyClick(m_tstWidget, Qt::Key_T, Qt::ControlModifier);
     QCOMPARE(spy.count(), 0); //act is not visible, so don't trigger
     act.setVisible(false);
     act.setEnabled(true);
-    QTest::keyClick(&testWidget, Qt::Key_T, Qt::ControlModifier);
+    QTest::keyClick(m_tstWidget, Qt::Key_T, Qt::ControlModifier);
     QCOMPARE(spy.count(), 0); //act is not visible, so don't trigger
     act.setVisible(true);
     act.setEnabled(true);
-    QTest::keyClick(&testWidget, Qt::Key_T, Qt::ControlModifier);
+    QTest::keyClick(m_tstWidget, Qt::Key_T, Qt::ControlModifier);
     QCOMPARE(spy.count(), 1); //act is visible and enabled, so trigger
 }
 
@@ -324,9 +334,9 @@ void tst_QAction::task200823_tooltip()
     action->setShortcut(shortcut);
 
     // we want a non-standard tooltip that shows the shortcut
-    action->setToolTip(action->text() + QLatin1String(" (") + action->shortcut().toString() + QLatin1Char(')'));
+    action->setToolTip(QString("%1 (%2)").arg(action->text()).arg(action->shortcut().toString()));
 
-    QString ref = QLatin1String("foo (") + QKeySequence(shortcut).toString() + QLatin1Char(')');
+    QString ref = QString("foo (%1)").arg(QKeySequence(shortcut).toString());
     QCOMPARE(action->toolTip(), ref);
 }
 
@@ -373,105 +383,39 @@ void tst_QAction::task229128TriggeredSignalWhenInActiongroup()
 
 void tst_QAction::repeat()
 {
-    MyWidget testWidget(this);
-    testWidget.show();
-    QApplication::setActiveWindow(&testWidget);
-    QVERIFY(QTest::qWaitForWindowActive(&testWidget));
-
-    QAction act(&testWidget);
-    testWidget.addAction(&act);
+    QWidget *wid = m_tstWidget;
+    QAction act(wid);
+    wid->addAction(&act);
     act.setShortcut(QKeySequence(Qt::Key_F));
     QSignalSpy spy(&act, SIGNAL(triggered()));
 
     act.setAutoRepeat(true);
-    QTest::keyPress(&testWidget, Qt::Key_F);
-    QTest::keyRelease(&testWidget, Qt::Key_F);
+    QTest::keyPress(wid, Qt::Key_F);
+    QTest::keyRelease(wid, Qt::Key_F);
     QCOMPARE(spy.count(), 1);
 
     spy.clear();
-    QTest::keyPress(&testWidget, Qt::Key_F);
+    QTest::keyPress(wid, Qt::Key_F);
     // repeat event
-    QTest::simulateEvent(&testWidget, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
-    QTest::simulateEvent(&testWidget, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
-    QTest::keyRelease(&testWidget, Qt::Key_F);
+    QTest::simulateEvent(wid, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
+    QTest::simulateEvent(wid, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
+    QTest::keyRelease(wid, Qt::Key_F);
     QCOMPARE(spy.count(), 3);
 
     spy.clear();
     act.setAutoRepeat(false);
-    QTest::keyPress(&testWidget, Qt::Key_F);
-    QTest::simulateEvent(&testWidget, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
-    QTest::simulateEvent(&testWidget, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
-    QTest::keyRelease(&testWidget, Qt::Key_F);
+    QTest::keyPress(wid, Qt::Key_F);
+    QTest::simulateEvent(wid, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
+    QTest::simulateEvent(wid, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
+    QTest::keyRelease(wid, Qt::Key_F);
     QCOMPARE(spy.count(), 1);
 
     spy.clear();
     act.setAutoRepeat(true);
-    QTest::keyPress(&testWidget, Qt::Key_F);
-    QTest::simulateEvent(&testWidget, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
-    QTest::keyRelease(&testWidget, Qt::Key_F);
+    QTest::keyPress(wid, Qt::Key_F);
+    QTest::simulateEvent(wid, true, Qt::Key_F, Qt::NoModifier, QString("f"), true);
+    QTest::keyRelease(wid, Qt::Key_F);
     QCOMPARE(spy.count(), 2);
-}
-
-void tst_QAction::setData() // QTBUG-62006
-{
-    QAction act(nullptr);
-    QSignalSpy spy(&act, &QAction::changed);
-    QCOMPARE(act.data(), QVariant());
-    QCOMPARE(spy.count(), 0);
-    act.setData(QVariant());
-    QCOMPARE(spy.count(), 0);
-
-    act.setData(-1);
-    QCOMPARE(spy.count(), 1);
-    act.setData(-1);
-    QCOMPARE(spy.count(), 1);
-}
-
-void tst_QAction::disableShortcutsWithBlockedWidgets_data()
-{
-    QTest::addColumn<Qt::ShortcutContext>("shortcutContext");
-    QTest::addColumn<Qt::WindowModality>("windowModality");
-
-    QTest::newRow("application modal dialog should block window shortcut.")
-        << Qt::WindowShortcut << Qt::ApplicationModal;
-
-    QTest::newRow("application modal dialog should block application shortcut.")
-        << Qt::ApplicationShortcut << Qt::ApplicationModal;
-
-    QTest::newRow("window modal dialog should block application shortcut.")
-        << Qt::ApplicationShortcut << Qt::WindowModal;
-
-    QTest::newRow("window modal dialog should block window shortcut.")
-        << Qt::WindowShortcut << Qt::WindowModal;
-}
-
-
-void tst_QAction::disableShortcutsWithBlockedWidgets()
-{
-    QMainWindow window;
-
-    QFETCH(Qt::ShortcutContext, shortcutContext);
-    QAction action(&window);
-    window.addAction(&action);
-    action.setShortcut(QKeySequence(Qt::Key_1));
-    action.setShortcutContext(shortcutContext);
-
-    window.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&window));
-
-    QDialog dialog(&window);
-    QFETCH(Qt::WindowModality, windowModality);
-    dialog.setWindowModality(windowModality);
-
-    dialog.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&dialog));
-
-    QApplication::setActiveWindow(&window);
-    QVERIFY(QTest::qWaitForWindowActive(&window));
-
-    QSignalSpy spy(&action, &QAction::triggered);
-    QTest::keyPress(&window, Qt::Key_1);
-    QCOMPARE(spy.count(), 0);
 }
 
 QTEST_MAIN(tst_QAction)

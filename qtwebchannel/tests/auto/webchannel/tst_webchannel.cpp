@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Milian Wolff <milian.wolff@kdab.com>
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2014 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com, author Milian Wolff <milian.wolff@kdab.com>
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtWebChannel module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -536,10 +541,6 @@ void TestWebChannel::testInvokeMethodConversion()
         QVERIFY(method != -1);
         channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastInt, args.at(0).toInt());
-        int getterMethod = metaObject()->indexOfMethod("readInt()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, args.at(0).toVariant());
     }
     {
         int method = metaObject()->indexOfMethod("setBool(bool)");
@@ -548,40 +549,24 @@ void TestWebChannel::testInvokeMethodConversion()
         args.append(QJsonValue(!m_lastBool));
         channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastBool, args.at(0).toBool());
-        int getterMethod = metaObject()->indexOfMethod("readBool()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, args.at(0).toVariant());
     }
     {
         int method = metaObject()->indexOfMethod("setDouble(double)");
         QVERIFY(method != -1);
         channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastDouble, args.at(0).toDouble());
-        int getterMethod = metaObject()->indexOfMethod("readDouble()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, args.at(0).toVariant());
     }
     {
         int method = metaObject()->indexOfMethod("setVariant(QVariant)");
         QVERIFY(method != -1);
         channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastVariant, args.at(0).toVariant());
-        int getterMethod = metaObject()->indexOfMethod("readVariant()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, args.at(0).toVariant());
     }
     {
         int method = metaObject()->indexOfMethod("setJsonValue(QJsonValue)");
         QVERIFY(method != -1);
         channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastJsonValue, args.at(0));
-        int getterMethod = metaObject()->indexOfMethod("readJsonValue()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, args.at(0).toVariant());
     }
     {
         int method = metaObject()->indexOfMethod("setJsonObject(QJsonObject)");
@@ -592,24 +577,16 @@ void TestWebChannel::testInvokeMethodConversion()
         args[0] = object;
         channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastJsonObject, object);
-        int getterMethod = metaObject()->indexOfMethod("readJsonObject()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, QVariant::fromValue(object));
     }
     {
-        int setterMethod = metaObject()->indexOfMethod("setJsonArray(QJsonArray)");
-        QVERIFY(setterMethod != -1);
+        int method = metaObject()->indexOfMethod("setJsonArray(QJsonArray)");
+        QVERIFY(method != -1);
         QJsonArray array;
         array << QJsonValue(123);
         array <<  QJsonValue(4.2);
         args[0] = array;
-        channel.d_func()->publisher->invokeMethod(this, setterMethod, args);
+        channel.d_func()->publisher->invokeMethod(this, method, args);
         QCOMPARE(m_lastJsonArray, array);
-        int getterMethod = metaObject()->indexOfMethod("readJsonArray()");
-        QVERIFY(getterMethod != -1);
-        auto retVal = channel.d_func()->publisher->invokeMethod(this, getterMethod, {});
-        QCOMPARE(retVal, QVariant::fromValue(array));
     }
 }
 
@@ -788,7 +765,7 @@ void TestWebChannel::testAsyncObject()
     {
         QSignalSpy spy(&obj, &TestObject::propChanged);
         channel.d_func()->publisher->invokeMethod(&obj, method, args);
-        QTRY_COMPARE(spy.count(), 1);
+        QVERIFY(spy.wait());
         QCOMPARE(spy.at(0).at(0).toString(), args.at(0).toString());
     }
 
@@ -804,66 +781,14 @@ void TestWebChannel::testAsyncObject()
     {
         QSignalSpy spy(&obj, &TestObject::replay);
         QMetaObject::invokeMethod(&obj, "fire");
-        QTRY_COMPARE(spy.count(), 1);
+        QVERIFY(spy.wait());
         channel.deregisterObject(&obj);
         QMetaObject::invokeMethod(&obj, "fire");
-        QTRY_COMPARE(spy.count(), 2);
+        QVERIFY(spy.wait());
     }
 
     thread.quit();
     thread.wait();
-}
-
-class FunctionWrapper : public QObject
-{
-    Q_OBJECT
-    std::function<void()> m_fun;
-public:
-    FunctionWrapper(std::function<void()> fun) : m_fun(std::move(fun)) {}
-public slots:
-    void invoke()
-    {
-        m_fun();
-    }
-};
-
-void TestWebChannel::testDeletionDuringMethodInvocation_data()
-{
-    QTest::addColumn<bool>("deleteChannel");
-    QTest::addColumn<bool>("deleteTransport");
-    QTest::newRow("delete neither")   << false << false;
-    QTest::newRow("delete channel")   << true  << false;
-    QTest::newRow("delete transport") << false << true;
-    QTest::newRow("delete both")      << true  << true;
-}
-
-void TestWebChannel::testDeletionDuringMethodInvocation()
-{
-    QFETCH(bool, deleteChannel);
-    QFETCH(bool, deleteTransport);
-
-    QScopedPointer<QWebChannel> channel(new QWebChannel);
-    QScopedPointer<DummyTransport> transport(new DummyTransport(nullptr));
-    FunctionWrapper deleter([&](){
-        if (deleteChannel)
-            channel.reset();
-        if (deleteTransport)
-            transport.reset();
-    });
-    channel->registerObject("deleter", &deleter);
-    channel->connectTo(transport.data());
-
-    transport->emitMessageReceived({
-        {"type", TypeInvokeMethod},
-        {"object", "deleter"},
-        {"method", deleter.metaObject()->indexOfMethod("invoke()")},
-        {"id", 42}
-    });
-
-    QCOMPARE(deleteChannel, !channel);
-    QCOMPARE(deleteTransport, !transport);
-    if (!deleteTransport)
-        QCOMPARE(transport->messagesSent().size(), deleteChannel ? 0 : 1);
 }
 
 static QHash<QString, QObject*> createObjects(QObject *parent)
@@ -972,7 +897,7 @@ void TestWebChannel::benchRemoveTransport()
     }
 
     QBENCHMARK_ONCE {
-        for (auto transport : dummyTransports)
+        foreach (DummyTransport *transport, dummyTransports)
             pub->transportRemoved(transport);
     }
 

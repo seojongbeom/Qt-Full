@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -640,7 +645,9 @@ void tst_qqmllocale::dateToLocaleString()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7)); // weirdly, JS Date month range is 0-11
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
@@ -699,7 +706,9 @@ void tst_qqmllocale::dateToLocaleStringFormatted()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7)); // weirdly, JS Date month range is 0-11
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
@@ -728,7 +737,9 @@ void tst_qqmllocale::dateToLocaleDateString()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7)); // weirdly, JS Date month range is 0-11
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
@@ -787,7 +798,9 @@ void tst_qqmllocale::dateToLocaleDateStringFormatted()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7)); // weirdly, JS Date month range is 0-11
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
@@ -816,7 +829,9 @@ void tst_qqmllocale::dateToLocaleTimeString()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7)); // weirdly, JS Date month range is 0-11
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
@@ -875,7 +890,9 @@ void tst_qqmllocale::dateToLocaleTimeStringFormatted()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7)); // weirdly, JS Date month range is 0-11
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
@@ -915,20 +932,21 @@ void tst_qqmllocale::dateFromLocaleString()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7));
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
 
     QLocale l(locale);
-    const QString localeText(l.toString(dt, format));
     QVariant val;
     QMetaObject::invokeMethod(obj, "fromLocaleString", Qt::DirectConnection,
         Q_RETURN_ARG(QVariant, val),
-        Q_ARG(QVariant, QVariant(localeText)),
+        Q_ARG(QVariant, QVariant(l.toString(dt, format))),
         Q_ARG(QVariant, QVariant(format)));
 
-    QDateTime pd = l.toDateTime(localeText, format);
+    QDateTime pd = l.toDateTime(l.toString(dt, format), format);
     QCOMPARE(val.toDateTime(), pd);
 }
 
@@ -958,20 +976,21 @@ void tst_qqmllocale::dateFromLocaleDateString()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7));
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
 
     QLocale l(locale);
-    const QString localeText(l.toString(dt, format));
     QVariant val;
     QMetaObject::invokeMethod(obj, "fromLocaleDateString", Qt::DirectConnection,
         Q_RETURN_ARG(QVariant, val),
-        Q_ARG(QVariant, QVariant(localeText)),
+        Q_ARG(QVariant, QVariant(l.toString(dt, format))),
         Q_ARG(QVariant, QVariant(format)));
 
-    QDate pd = l.toDate(localeText, format);
+    QDate pd = l.toDate(l.toString(dt, format), format);
     QCOMPARE(val.toDate(), pd);
 }
 
@@ -1001,20 +1020,21 @@ void tst_qqmllocale::dateFromLocaleTimeString()
     QObject *obj = c.create();
     QVERIFY(obj);
 
-    const QDateTime dt(QDate(2011, 10, 7), QTime(18, 53, 48, 345));
+    QDateTime dt;
+    dt.setDate(QDate(2011, 10, 7));
+    dt.setTime(QTime(18, 53, 48, 345));
 
     QMetaObject::invokeMethod(obj, "setLocale", Qt::DirectConnection,
         Q_ARG(QVariant, QVariant(locale)));
 
     QLocale l(locale);
-    const QString localeText(l.toString(dt, format));
     QVariant val;
     QMetaObject::invokeMethod(obj, "fromLocaleTimeString", Qt::DirectConnection,
         Q_RETURN_ARG(QVariant, val),
-        Q_ARG(QVariant, QVariant(localeText)),
+        Q_ARG(QVariant, QVariant(l.toString(dt, format))),
         Q_ARG(QVariant, QVariant(format)));
 
-    QTime pd = l.toTime(localeText, format);
+    QTime pd = l.toTime(l.toString(dt, format), format);
     QCOMPARE(val.toTime(), pd);
 }
 
@@ -1252,10 +1272,7 @@ QString DateFormatter::getLocalizedForm(const QString &isoTimestamp)
 // which will require linking to a different library to access that API.
 static void setTimeZone(const QByteArray &tz)
 {
-    if (tz.isEmpty())
-        qunsetenv("TZ");
-    else
-        qputenv("TZ", tz);
+    qputenv("TZ", tz);
     ::tzset();
 
 // following left for future reference, see comment above
@@ -1268,8 +1285,8 @@ void tst_qqmllocale::timeZoneUpdated()
 {
     QByteArray original(qgetenv("TZ"));
 
-    // Set the timezone to Brisbane time, AEST-10:00
-    setTimeZone(QByteArray("Australia/Brisbane"));
+    // Set the timezone to Brisbane time
+    setTimeZone(QByteArray("AEST-10:00"));
 
     DateFormatter formatter;
 
@@ -1279,10 +1296,10 @@ void tst_qqmllocale::timeZoneUpdated()
     QQmlComponent c(&e, testFileUrl("timeZoneUpdated.qml"));
     QScopedPointer<QObject> obj(c.create());
     QVERIFY(obj);
-    QVERIFY(obj->property("success").toBool());
+    QCOMPARE(obj->property("success").toBool(), true);
 
-    // Change to Indian time, IST-05:30
-    setTimeZone(QByteArray("Asia/Kolkata"));
+    // Change to Indian time
+    setTimeZone(QByteArray("IST-05:30"));
 
     QMetaObject::invokeMethod(obj.data(), "check");
 
@@ -1290,7 +1307,7 @@ void tst_qqmllocale::timeZoneUpdated()
     setTimeZone(original);
     QMetaObject::invokeMethod(obj.data(), "resetTimeZone");
 
-    QVERIFY(obj->property("success").toBool());
+    QCOMPARE(obj->property("success").toBool(), true);
 }
 #endif
 

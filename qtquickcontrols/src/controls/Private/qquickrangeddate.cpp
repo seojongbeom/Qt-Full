@@ -1,37 +1,34 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL3$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** will be met: https://www.gnu.org/licenses/lgpl.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -42,12 +39,12 @@
 QT_BEGIN_NAMESPACE
 
 // JavaScript Date > QDate conversion is not correct for large negative dates.
-Q_GLOBAL_STATIC_WITH_ARGS(const QDateTime, jsMinimumDate, (QDateTime(QDate(1, 1, 1), QTime())))
-Q_GLOBAL_STATIC_WITH_ARGS(const QDateTime, jsMaximumDate, (QDateTime(QDate(275759, 10, 25), QTime())))
+Q_GLOBAL_STATIC_WITH_ARGS(const QDate, jsMinimumDate, (QDate(1, 1, 1)))
+Q_GLOBAL_STATIC_WITH_ARGS(const QDate, jsMaximumDate, (QDate(275759, 10, 25)))
 
-QQuickRangedDate1::QQuickRangedDate1() :
+QQuickRangedDate::QQuickRangedDate() :
     QObject(0),
-    mDate(QDateTime::currentDateTime()),
+    mDate(QDate::currentDate()),
     mMinimumDate(*jsMinimumDate),
     mMaximumDate(*jsMaximumDate)
 {
@@ -56,7 +53,7 @@ QQuickRangedDate1::QQuickRangedDate1() :
 /*! \internal
     \qmlproperty date QQuickRangedDate::date
 */
-void QQuickRangedDate1::setDate(const QDateTime &date)
+void QQuickRangedDate::setDate(const QDate &date)
 {
     if (date == mDate)
         return;
@@ -75,7 +72,7 @@ void QQuickRangedDate1::setDate(const QDateTime &date)
 /*! \internal
     \qmlproperty date QQuickRangedDate::minimumDate
 */
-void QQuickRangedDate1::setMinimumDate(const QDateTime &minimumDate)
+void QQuickRangedDate::setMinimumDate(const QDate &minimumDate)
 {
     if (minimumDate == mMinimumDate)
         return;
@@ -93,7 +90,7 @@ void QQuickRangedDate1::setMinimumDate(const QDateTime &minimumDate)
 /*! \internal
     \qmlproperty date QQuickRangedDate::maximumDate
 */
-void QQuickRangedDate1::setMaximumDate(const QDateTime &maximumDate)
+void QQuickRangedDate::setMaximumDate(const QDate &maximumDate)
 {
     if (maximumDate == mMaximumDate)
         return;

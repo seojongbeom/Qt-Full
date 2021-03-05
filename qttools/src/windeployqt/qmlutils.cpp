@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -39,20 +44,38 @@
 
 QT_BEGIN_NAMESPACE
 
-bool operator==(const QmlImportScanResult::Module &m1, const QmlImportScanResult::Module &m2)
+// Return the relative install path, that is, for example for
+// module "QtQuick.Controls.Styles" in "path/qtbase/qml/QtQuick/Controls/Styles.3"
+// --> "QtQuick/Controls" suitable for updateFile() (cp -r semantics).
+QString QmlImportScanResult::Module::relativeInstallPath() const
 {
-    return m1.className.isEmpty() ? m1.name == m2.name : m1.className == m2.className;
+    const QChar dot = QLatin1Char('.');
+    const QChar slash = QLatin1Char('/');
+
+    // Find relative path by module name.
+    if (!name.contains(dot))
+        return QString(); // "QtQuick.2" -> flat folder.
+    QString result = sourcePath;
+    QString pathComponent = name;
+    pathComponent.replace(dot, slash);
+    const int pos = result.lastIndexOf(pathComponent);
+    if (pos < 0)
+        return QString();
+    result.remove(0, pos);
+    // return base name.
+    const int lastSlash = result.lastIndexOf(slash);
+    if (lastSlash >= 0)
+        result.truncate(lastSlash);
+    return result;
 }
 
-// Return install path (cp -r semantics)
 QString QmlImportScanResult::Module::installPath(const QString &root) const
 {
     QString result = root;
-    const int lastSlashPos = relativePath.lastIndexOf(QLatin1Char('/'));
-    if (lastSlashPos != -1) {
+    const QString relPath = relativeInstallPath();
+    if (!relPath.isEmpty())
         result += QLatin1Char('/');
-        result += relativePath.left(lastSlashPos);
-    }
+    result += relPath;
     return result;
 }
 
@@ -61,10 +84,9 @@ static QString qmlDirectoryRecursion(Platform platform, const QString &path)
     QDir dir(path);
     if (!dir.entryList(QStringList(QStringLiteral("*.qml")), QDir::Files, QDir::NoSort).isEmpty())
         return dir.path();
-    const QFileInfoList &subDirs = dir.entryInfoList(QStringList(), QDir::Dirs | QDir::NoDotAndDotDot, QDir::NoSort);
-    for (const QFileInfo &subDirFi : subDirs) {
-        if (!isBuildDirectory(platform, subDirFi.fileName())) {
-            const QString subPath = qmlDirectoryRecursion(platform, subDirFi.absoluteFilePath());
+    foreach (const QString &subDir, dir.entryList(QStringList(), QDir::Dirs | QDir::NoDotAndDotDot, QDir::NoSort)) {
+        if (!isBuildDirectory(platform, subDir)) {
+            const QString subPath = qmlDirectoryRecursion(platform, dir.path() +  QLatin1Char('/') + subDir);
             if (!subPath.isEmpty())
                 return subPath;
         }
@@ -84,13 +106,11 @@ QString findQmlDirectory(int platform, const QString &startDirectoryName)
 static void findFileRecursion(const QDir &directory, Platform platform,
                               DebugMatchMode debugMatchMode, QStringList *matches)
 {
-    const QStringList &dlls = findSharedLibraries(directory, platform, debugMatchMode);
-    for (const QString &dll : dlls)
+    foreach (const QString &dll, findSharedLibraries(directory, platform, debugMatchMode))
         matches->append(directory.filePath(dll));
-    const QFileInfoList &subDirs = directory.entryInfoList(QStringList(), QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
-    for (const QFileInfo &subDirFi : subDirs) {
-        QDir subDirectory(subDirFi.absoluteFilePath());
-        if (subDirectory.isReadable())
+    foreach (const QString &subDir, directory.entryList(QStringList(), QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks)) {
+        QDir subDirectory = directory;
+        if (subDirectory.cd(subDir))
             findFileRecursion(subDirectory, platform, debugMatchMode, matches);
     }
 }
@@ -133,7 +153,6 @@ QmlImportScanResult runQmlImportScanner(const QString &directory, const QString 
                 module.name = object.value(QStringLiteral("name")).toString();
                 module.className = object.value(QStringLiteral("classname")).toString();
                 module.sourcePath = path;
-                module.relativePath = object.value(QStringLiteral("relativePath")).toString();
                 result.modules.append(module);
                 findFileRecursion(QDir(path), Platform(platform), debugMatchMode, &result.plugins);
                 // QTBUG-48424, QTBUG-45977: In release mode, qmlimportscanner does not report
@@ -147,7 +166,6 @@ QmlImportScanResult runQmlImportScanner(const QString &directory, const QString 
                     privateWidgetsModule.name = QStringLiteral("QtQuick.PrivateWidgets");
                     privateWidgetsModule.className = QStringLiteral("QtQuick2PrivateWidgetsPlugin");
                     privateWidgetsModule.sourcePath = QFileInfo(path).absolutePath() + QStringLiteral("/PrivateWidgets");
-                    privateWidgetsModule.relativePath = QStringLiteral("QtQuick/PrivateWidgets");
                     result.modules.append(privateWidgetsModule);
                     findFileRecursion(QDir(privateWidgetsModule.sourcePath), Platform(platform), debugMatchMode, &result.plugins);
                 }
@@ -158,13 +176,22 @@ QmlImportScanResult runQmlImportScanner(const QString &directory, const QString 
     return result;
 }
 
+static inline bool contains(const QList<QmlImportScanResult::Module> &modules, const QString &name)
+{
+    foreach (const QmlImportScanResult::Module &m, modules) {
+        if (m.name == name)
+            return true;
+    }
+    return false;
+}
+
 void QmlImportScanResult::append(const QmlImportScanResult &other)
 {
-    for (const QmlImportScanResult::Module &module : other.modules) {
-        if (std::find(modules.cbegin(), modules.cend(), module) == modules.cend())
+    foreach (const QmlImportScanResult::Module &module, other.modules) {
+        if (!contains(modules, module.name))
             modules.append(module);
     }
-    for (const QString &plugin : other.plugins) {
+    foreach (const QString &plugin, other.plugins) {
         if (!plugins.contains(plugin))
             plugins.append(plugin);
     }

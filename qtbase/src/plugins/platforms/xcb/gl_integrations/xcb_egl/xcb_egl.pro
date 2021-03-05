@@ -1,11 +1,10 @@
 TARGET = qxcb-egl-integration
 
 include(../gl_integrations_plugin_base.pri)
-QT += egl_support-private
 
 CONFIG += egl
 
-DEFINES += QT_NO_FOREACH
+contains(QT_CONFIG, xcb-xlib): DEFINES += XCB_USE_XLIB
 
 HEADERS += \
     qxcbeglcontext.h \

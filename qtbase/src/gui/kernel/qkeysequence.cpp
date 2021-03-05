@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -1153,23 +1147,22 @@ int QKeySequencePrivate::decodeString(const QString &str, QKeySequence::Sequence
         lastI = i + 1;
     }
 
-    int p = accel.lastIndexOf(QLatin1Char('+'), accel.length() - 2); // -2 so that Ctrl++ works
-    QStringRef accelRef(&accel);
+    int p = accel.lastIndexOf(QLatin1Char('+'), str.length() - 2); // -2 so that Ctrl++ works
     if(p > 0)
-        accelRef = accelRef.mid(p + 1);
+        accel = accel.mid(p + 1);
 
     int fnum = 0;
-    if (accelRef.length() == 1) {
+    if (accel.length() == 1) {
 #if defined(Q_OS_MACX)
-        int qtKey = qtkeyForMacSymbol(accelRef.at(0));
+        int qtKey = qtkeyForMacSymbol(accel[0]);
         if (qtKey != -1) {
             ret |= qtKey;
         } else
 #endif
         {
-            ret |= accelRef.at(0).toUpper().unicode();
+            ret |= accel[0].toUpper().unicode();
         }
-    } else if (accelRef.at(0) == QLatin1Char('f') && (fnum = accelRef.mid(1).toInt()) >= 1 && fnum <= 35) {
+    } else if (accel[0] == QLatin1Char('f') && (fnum = accel.mid(1).toInt()) && (fnum >= 1) && (fnum <= 35)) {
         ret |= Qt::Key_F1 + fnum - 1;
     } else {
         // For NativeText, check the traslation table first,
@@ -1183,7 +1176,7 @@ int QKeySequencePrivate::decodeString(const QString &str, QKeySequence::Sequence
                 QString keyName(tran == 0
                                 ? QCoreApplication::translate("QShortcut", keyname[i].name)
                                 : QString::fromLatin1(keyname[i].name));
-                if (accelRef == std::move(keyName).toLower()) {
+                if (accel == keyName.toLower()) {
                     ret |= keyname[i].key;
                     found = true;
                     break;
@@ -1211,13 +1204,9 @@ QString QKeySequence::encodeString(int key)
 
 static inline void addKey(QString &str, const QString &theKey, QKeySequence::SequenceFormat format)
 {
-    if (!str.isEmpty()) {
-        if (format == QKeySequence::NativeText)
-            str += QCoreApplication::translate("QShortcut", "+");
-        else
-            str += QLatin1Char('+');
-    }
-
+    if (!str.isEmpty())
+        str += (format == QKeySequence::NativeText) ? QCoreApplication::translate("QShortcut", "+")
+                                                    : QString::fromLatin1("+");
     str += theKey;
 }
 
@@ -1572,9 +1561,9 @@ QList<QKeySequence> QKeySequence::listFromString(const QString &str, SequenceFor
 {
     QList<QKeySequence> result;
 
-    const QStringList strings = str.split(QLatin1String("; "));
+    QStringList strings = str.split(QLatin1String("; "));
     result.reserve(strings.count());
-    for (const QString &string : strings) {
+    foreach (const QString &string, strings) {
         result << fromString(string, format);
     }
 
@@ -1593,7 +1582,7 @@ QString QKeySequence::listToString(const QList<QKeySequence> &list, SequenceForm
 {
     QString result;
 
-    for (const QKeySequence &sequence : list) {
+    foreach (const QKeySequence &sequence, list) {
         result += sequence.toString(format);
         result += QLatin1String("; ");
     }

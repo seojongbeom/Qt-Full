@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -34,11 +39,8 @@
 #include "openpagesmanager.h"
 #include "tracer.h"
 
-#include <QtCore/QAbstractListModel>
 #include <QtCore/QtAlgorithms>
 #include <QtCore/QFileSystemWatcher>
-#include <QtCore/QSortFilterProxyModel>
-#include <QtCore/QVector>
 
 #include <QtWidgets/QDesktopWidget>
 #include <QtWidgets/QFileDialog>
@@ -49,127 +51,40 @@
 
 #include <QtHelp/QHelpEngineCore>
 
-#include <algorithm>
-
 QT_BEGIN_NAMESPACE
-
-struct RegisteredDocEntry
-{
-    QString nameSpace;
-    QString fileName;
-};
-
-typedef QVector<RegisteredDocEntry> RegisteredDocEntries;
-
-class RegisteredDocsModel : public QAbstractListModel {
-public:
-
-    explicit RegisteredDocsModel(const RegisteredDocEntries &e = RegisteredDocEntries(), QObject *parent = nullptr)
-        : QAbstractListModel(parent), m_docEntries(e) {}
-
-    int rowCount(const QModelIndex & = QModelIndex()) const override { return m_docEntries.size(); }
-    QVariant data(const QModelIndex &index, int role) const override;
-
-    bool contains(const QString &nameSpace) const
-    {
-        return m_docEntries.cend() !=
-            std::find_if(m_docEntries.cbegin(), m_docEntries.cend(),
-                         [nameSpace] (const RegisteredDocEntry &e) { return e.nameSpace == nameSpace; });
-    }
-
-    void append(const RegisteredDocEntry &e);
-
-    const RegisteredDocEntries &docEntries() const { return m_docEntries; }
-    void setDocEntries(const RegisteredDocEntries &);
-
-private:
-    RegisteredDocEntries m_docEntries;
-};
-
-QVariant RegisteredDocsModel::data(const QModelIndex &index, int role) const
-{
-    QVariant result;
-    const int row = index.row();
-    if (index.isValid() && row < m_docEntries.size()) {
-        switch (role) {
-        case Qt::DisplayRole:
-            result = QVariant(m_docEntries.at(row).nameSpace);
-            break;
-        case Qt::ToolTipRole:
-            result = QVariant(QDir::toNativeSeparators(m_docEntries.at(row).fileName));
-            break;
-        default:
-            break;
-        }
-    }
-    return result;
-}
-
-void RegisteredDocsModel::append(const RegisteredDocEntry &e)
-{
-    beginInsertRows(QModelIndex(), m_docEntries.size(), m_docEntries.size());
-    m_docEntries.append(e);
-    endInsertRows();
-}
-
-void RegisteredDocsModel::setDocEntries(const RegisteredDocEntries &e)
-{
-    beginResetModel();
-    m_docEntries = e;
-    endResetModel();
-}
-
-static RegisteredDocEntries registeredDocEntries(const HelpEngineWrapper &wrapper)
-{
-    RegisteredDocEntries result;
-    const QStringList &nameSpaces = wrapper.registeredDocumentations();
-    result.reserve(nameSpaces.size());
-    for (const QString &nameSpace : nameSpaces) {
-        RegisteredDocEntry entry;
-        entry.nameSpace = nameSpace;
-        entry.fileName = wrapper.documentationFileName(nameSpace);
-        result.append(entry);
-    }
-    return result;
-}
 
 PreferencesDialog::PreferencesDialog(QWidget *parent)
     : QDialog(parent)
     , m_appFontChanged(false)
     , m_browserFontChanged(false)
     , helpEngine(HelpEngineWrapper::instance())
-    , m_hideFiltersTab(!helpEngine.filterFunctionalityEnabled())
-    , m_hideDocsTab(!helpEngine.documentationManagerEnabled())
 {
     TRACE_OBJ
     m_ui.setupUi(this);
 
-    m_registeredDocsModel =
-        new RegisteredDocsModel(m_hideDocsTab ? RegisteredDocEntries() : registeredDocEntries(helpEngine));
-    m_registereredDocsFilterModel = new QSortFilterProxyModel(m_ui.registeredDocsListView);
-    m_registereredDocsFilterModel->setSourceModel(m_registeredDocsModel);
-    m_ui.registeredDocsListView->setModel(m_registereredDocsFilterModel);
-    connect(m_ui.registeredDocsFilterLineEdit, &QLineEdit::textChanged,
-            m_registereredDocsFilterModel, &QSortFilterProxyModel::setFilterFixedString);
+    connect(m_ui.buttonBox->button(QDialogButtonBox::Ok), SIGNAL(clicked()),
+        this, SLOT(applyChanges()));
+    connect(m_ui.buttonBox->button(QDialogButtonBox::Cancel), SIGNAL(clicked()),
+        this, SLOT(reject()));
 
-    connect(m_ui.buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked,
-            this, &PreferencesDialog::applyChanges);
-    connect(m_ui.buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked,
-            this, &QDialog::reject);
+    m_hideFiltersTab = !helpEngine.filterFunctionalityEnabled();
+    m_hideDocsTab = !helpEngine.documentationManagerEnabled();
 
     if (!m_hideFiltersTab) {
         m_ui.attributeWidget->header()->hide();
         m_ui.attributeWidget->setRootIsDecorated(false);
 
-        connect(m_ui.attributeWidget, &QTreeWidget::itemChanged,
-                this, &PreferencesDialog::updateFilterMap);
-        connect(m_ui.filterWidget, &QListWidget::currentItemChanged,
-                this, &PreferencesDialog::updateAttributes);
+        connect(m_ui.attributeWidget, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
+            this, SLOT(updateFilterMap()));
 
-        connect(m_ui.filterAddButton, &QAbstractButton::clicked,
-                this, &PreferencesDialog::addFilter);
-        connect(m_ui.filterRemoveButton, &QAbstractButton::clicked,
-                this, &PreferencesDialog::removeFilter);
+        connect(m_ui.filterWidget,
+            SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), this,
+            SLOT(updateAttributes(QListWidgetItem*)));
+
+        connect(m_ui.filterAddButton, SIGNAL(clicked()), this,
+            SLOT(addFilter()));
+        connect(m_ui.filterRemoveButton, SIGNAL(clicked()), this,
+            SLOT(removeFilter()));
 
         updateFilterPage();
     } else {
@@ -177,14 +92,13 @@ PreferencesDialog::PreferencesDialog(QWidget *parent)
     }
 
     if (!m_hideDocsTab) {
-        connect(m_ui.docAddButton, &QAbstractButton::clicked,
-                this, &PreferencesDialog::addDocumentationLocal);
-        connect(m_ui.docRemoveButton, &QAbstractButton::clicked,
-                this, &PreferencesDialog::removeDocumentation);
+        connect(m_ui.docAddButton, SIGNAL(clicked()), this,
+            SLOT(addDocumentationLocal()));
+        connect(m_ui.docRemoveButton, SIGNAL(clicked()), this,
+            SLOT(removeDocumentation()));
 
-        m_docsBackup.reserve(m_registeredDocsModel->rowCount());
-        for (const RegisteredDocEntry &e : m_registeredDocsModel->docEntries())
-            m_docsBackup.append(e.nameSpace);
+        m_docsBackup = helpEngine.registeredDocumentations();
+        m_ui.registeredDocsListWidget->addItems(m_docsBackup);
     } else {
         m_ui.tabWidget->removeTab(m_ui.tabWidget->indexOf(m_ui.docsTab));
     }
@@ -237,7 +151,7 @@ void PreferencesDialog::updateFilterPage()
 
     m_filterMapBackup.clear();
     const QStringList &filters = helpEngine.customFilters();
-    for (const QString &filter : filters) {
+    foreach (const QString &filter, filters) {
         if (filter == HelpEngineWrapper::TrUnfiltered())
             continue;
         QStringList atts = helpEngine.filterAttributes(filter);
@@ -248,20 +162,22 @@ void PreferencesDialog::updateFilterPage()
 
     m_ui.filterWidget->addItems(m_filterMap.keys());
 
-    for (const QString &a : helpEngine.filterAttributes())
+    foreach (const QString &a, helpEngine.filterAttributes())
         new QTreeWidgetItem(m_ui.attributeWidget, QStringList() << a);
 
-    if (!m_filterMap.isEmpty())
+    if (!m_filterMap.keys().isEmpty())
         m_ui.filterWidget->setCurrentRow(0);
 }
 
 void PreferencesDialog::updateAttributes(QListWidgetItem *item)
 {
     TRACE_OBJ
-    const QStringList &checkedList = item ? m_filterMap.value(item->text()) : QStringList();
-
+    QStringList checkedList;
+    if (item)
+        checkedList = m_filterMap.value(item->text());
+    QTreeWidgetItem *itm;
     for (int i = 0; i < m_ui.attributeWidget->topLevelItemCount(); ++i) {
-        QTreeWidgetItem *itm = m_ui.attributeWidget->topLevelItem(i);
+        itm = m_ui.attributeWidget->topLevelItem(i);
         if (checkedList.contains(itm->text(0)))
             itm->setCheckState(0, Qt::Checked);
         else
@@ -324,30 +240,28 @@ void PreferencesDialog::removeFilter()
 void PreferencesDialog::addDocumentationLocal()
 {
     TRACE_OBJ
-    const QStringList &fileNames = QFileDialog::getOpenFileNames(this,
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this,
         tr("Add Documentation"), QString(), tr("Qt Compressed Help Files (*.qch)"));
     if (fileNames.isEmpty())
         return;
 
     QStringList invalidFiles;
     QStringList alreadyRegistered;
-    for (const QString &fileName : fileNames) {
+    foreach (const QString &fileName, fileNames) {
         const QString nameSpace = QHelpEngineCore::namespaceName(fileName);
         if (nameSpace.isEmpty()) {
             invalidFiles.append(fileName);
             continue;
         }
 
-        if (m_registeredDocsModel->contains(nameSpace)) {
+        if (m_ui.registeredDocsListWidget->findItems(nameSpace,
+            Qt::MatchFixedString).count()) {
                 alreadyRegistered.append(nameSpace);
                 continue;
         }
 
         if (helpEngine.registerDocumentation(fileName)) {
-            RegisteredDocEntry entry;
-            entry.nameSpace = nameSpace;
-            entry.fileName = fileName;
-            m_registeredDocsModel->append(entry);
+            m_ui.registeredDocsListWidget->addItem(nameSpace);
             m_regDocs.append(nameSpace);
             m_unregDocs.removeAll(nameSpace);
         }
@@ -356,7 +270,7 @@ void PreferencesDialog::addDocumentationLocal()
     if (!invalidFiles.isEmpty() || !alreadyRegistered.isEmpty()) {
         QString message;
         if (!alreadyRegistered.isEmpty()) {
-            for (const QString &ns : qAsConst(alreadyRegistered)) {
+            foreach (const QString &ns, alreadyRegistered) {
                 message += tr("The namespace %1 is already registered!")
                     .arg(QString("<b>%1</b>").arg(ns)) + QLatin1String("<br>");
             }
@@ -367,7 +281,7 @@ void PreferencesDialog::addDocumentationLocal()
         if (!invalidFiles.isEmpty()) {
             message += tr("The specified file is not a valid Qt Help File!");
             message.append(QLatin1String("<ul>"));
-            for (const QString &file : qAsConst(invalidFiles))
+            foreach (const QString &file, invalidFiles)
                 message += QLatin1String("<li>") + file + QLatin1String("</li>");
             message.append(QLatin1String("</ul>"));
         }
@@ -377,29 +291,14 @@ void PreferencesDialog::addDocumentationLocal()
     updateFilterPage();
 }
 
-QList<int> PreferencesDialog::currentRegisteredDocsSelection() const
-{
-    QList<int> result;
-    for (const QModelIndex &index : m_ui.registeredDocsListView->selectionModel()->selectedRows())
-        result.append(m_registereredDocsFilterModel->mapToSource(index).row());
-    std::sort(result.begin(), result.end());
-    return result;
-}
-
 void PreferencesDialog::removeDocumentation()
 {
     TRACE_OBJ
 
-    const QList<int> currentSelection = currentRegisteredDocsSelection();
-    if (currentSelection.isEmpty())
-        return;
-
-    RegisteredDocEntries entries = m_registeredDocsModel->docEntries();
-
     bool foundBefore = false;
-    for (int i = currentSelection.size() - 1; i >= 0; --i) {
-        const int row = currentSelection.at(i);
-        const QString &ns = entries.at(row).nameSpace;
+    QList<QListWidgetItem*> l = m_ui.registeredDocsListWidget->selectedItems();
+    foreach (QListWidgetItem* item, l) {
+        const QString& ns = item->text();
         if (!foundBefore && OpenPagesManager::instance()->pagesOpenForNamespace(ns)) {
             if (0 == QMessageBox::information(this, tr("Remove Documentation"),
                 tr("Some documents currently opened in Assistant reference the "
@@ -410,15 +309,13 @@ void PreferencesDialog::removeDocumentation()
         }
 
         m_unregDocs.append(ns);
-        entries.removeAt(row);
+        delete m_ui.registeredDocsListWidget->takeItem(
+            m_ui.registeredDocsListWidget->row(item));
     }
 
-    m_registeredDocsModel->setDocEntries(entries);
-
-    if (m_registereredDocsFilterModel->rowCount()) {
-        const QModelIndex &first = m_registereredDocsFilterModel->index(0, 0);
-        m_ui.registeredDocsListView->selectionModel()->setCurrentIndex(first,
-                                                                       QItemSelectionModel::ClearAndSelect);
+    if (m_ui.registeredDocsListWidget->count()) {
+        m_ui.registeredDocsListWidget->setCurrentRow(0,
+            QItemSelectionModel::ClearAndSelect);
     }
 }
 
@@ -430,20 +327,24 @@ void PreferencesDialog::applyChanges()
         if (m_filterMap.count() != m_filterMapBackup.count()) {
             filtersWereChanged = true;
         } else {
-            for (auto it = m_filterMapBackup.cbegin(), end = m_filterMapBackup.cend(); it != end && !filtersWereChanged; ++it) {
+            QMapIterator<QString, QStringList> it(m_filterMapBackup);
+            while (it.hasNext() && !filtersWereChanged) {
+                it.next();
                 if (!m_filterMap.contains(it.key())) {
                     filtersWereChanged = true;
                 } else {
-                    const QStringList &a = it.value();
-                    const QStringList &b = m_filterMap.value(it.key());
+                    QStringList a = it.value();
+                    QStringList b = m_filterMap.value(it.key());
                     if (a.count() != b.count()) {
                         filtersWereChanged = true;
                     } else {
-                        for (const QString &aStr : a) {
-                            if (!b.contains(aStr)) {
+                        QStringList::const_iterator i(a.constBegin());
+                        while (i != a.constEnd()) {
+                            if (!b.contains(*i)) {
                                 filtersWereChanged = true;
                                 break;
                             }
+                            ++i;
                         }
                     }
                 }
@@ -452,13 +353,16 @@ void PreferencesDialog::applyChanges()
     }
 
     if (filtersWereChanged) {
-        for (const QString &filter : qAsConst(m_removedFilters))
+        foreach (const QString &filter, m_removedFilters)
             helpEngine.removeCustomFilter(filter);
-        for (auto it = m_filterMap.cbegin(), end = m_filterMap.cend(); it != end; ++it)
+        QMapIterator<QString, QStringList> it(m_filterMap);
+        while (it.hasNext()) {
+            it.next();
             helpEngine.addCustomFilter(it.key(), it.value());
+        }
     }
 
-    for (const QString &doc : qAsConst(m_unregDocs)) {
+    foreach (const QString &doc, m_unregDocs) {
         OpenPagesManager::instance()->closePages(doc);
         helpEngine.unregisterDocumentation(doc);
     }
@@ -507,21 +411,21 @@ void PreferencesDialog::updateFontSettingsPage()
 
     m_browserFontPanel->setChecked(helpEngine.usesBrowserFont());
 
-    connect(m_appFontPanel, &QGroupBox::toggled,
-            this, &PreferencesDialog::appFontSettingToggled);
-    connect(m_browserFontPanel, &QGroupBox::toggled,
-            this, &PreferencesDialog::browserFontSettingToggled);
+    connect(m_appFontPanel, SIGNAL(toggled(bool)), this,
+        SLOT(appFontSettingToggled(bool)));
+    connect(m_browserFontPanel, SIGNAL(toggled(bool)), this,
+        SLOT(browserFontSettingToggled(bool)));
 
-    const QList<QComboBox*> &appCombos = m_appFontPanel->findChildren<QComboBox*>();
-    for (QComboBox* box : appCombos) {
-        connect(box, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, &PreferencesDialog::appFontSettingChanged);
+    QList<QComboBox*> allCombos = m_appFontPanel->findChildren<QComboBox*>();
+    foreach (QComboBox* box, allCombos) {
+        connect(box, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(appFontSettingChanged(int)));
     }
 
-    const QList<QComboBox*> &browserCombos = m_browserFontPanel->findChildren<QComboBox*>();
-    for (QComboBox* box : browserCombos) {
-        connect(box, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, &PreferencesDialog::browserFontSettingChanged);
+    allCombos = m_browserFontPanel->findChildren<QComboBox*>();
+    foreach (QComboBox* box, allCombos) {
+        connect(box, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(browserFontSettingChanged(int)));
     }
 }
 
@@ -564,12 +468,9 @@ void PreferencesDialog::updateOptionsPage()
     m_showTabs = helpEngine.showTabs();
     m_ui.showTabs->setChecked(m_showTabs);
 
-    connect(m_ui.blankPageButton, &QAbstractButton::clicked,
-            this, &PreferencesDialog::setBlankPage);
-    connect(m_ui.currentPageButton, &QAbstractButton::clicked,
-            this, &PreferencesDialog::setCurrentPage);
-    connect(m_ui.defaultPageButton, &QAbstractButton::clicked,
-            this, &PreferencesDialog::setDefaultPage);
+    connect(m_ui.blankPageButton, SIGNAL(clicked()), this, SLOT(setBlankPage()));
+    connect(m_ui.currentPageButton, SIGNAL(clicked()), this, SLOT(setCurrentPage()));
+    connect(m_ui.defaultPageButton, SIGNAL(clicked()), this, SLOT(setDefaultPage()));
 }
 
 void PreferencesDialog::setBlankPage()

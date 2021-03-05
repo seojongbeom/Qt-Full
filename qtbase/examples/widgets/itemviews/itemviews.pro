@@ -20,4 +20,3 @@ SUBDIRS       = addressbook \
                 stardelegate \
                 storageview
 contains(DEFINES, QT_NO_DRAGANDDROP): SUBDIRS -= puzzle
-!qtHaveModule(xml): SUBDIRS -= simpledommodel

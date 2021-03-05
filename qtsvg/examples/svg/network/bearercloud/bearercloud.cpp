@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -123,19 +113,17 @@ void BearerCloud::cloudMoved()
 
 void BearerCloud::timerEvent(QTimerEvent *)
 {
-    std::vector<Cloud *> clouds;
-    const auto graphicsItems = items();
-    clouds.reserve(graphicsItems.size());
-    for (QGraphicsItem *item : graphicsItems) {
+    QList<Cloud *> clouds;
+    foreach (QGraphicsItem *item, items()) {
         if (Cloud *cloud = qgraphicsitem_cast<Cloud *>(item))
-            clouds.push_back(cloud);
+            clouds << cloud;
     }
 
-    for (Cloud *cloud : clouds)
+    foreach (Cloud *cloud, clouds)
         cloud->calculateForces();
 
     bool cloudsMoved = false;
-    for (Cloud *cloud : clouds)
+    foreach (Cloud *cloud, clouds)
         cloudsMoved |= cloud->advance();
 
     if (!cloudsMoved) {
@@ -170,13 +158,8 @@ void BearerCloud::configurationAdded(const QNetworkConfiguration &config)
 //! [3]
 void BearerCloud::configurationRemoved(const QNetworkConfiguration &config)
 {
-    const auto id = config.identifier();
-    for (auto it = configStates.begin(), end = configStates.end(); it != end; /* erasing */) {
-        if (it.value() == id)
-            it = configStates.erase(it);
-        else
-            ++it;
-    }
+    foreach (const QNetworkConfiguration::StateFlags &state, configStates.uniqueKeys())
+        configStates.remove(state, config.identifier());
 
     Cloud *item = configurations.take(config.identifier());
 
@@ -190,15 +173,10 @@ void BearerCloud::configurationRemoved(const QNetworkConfiguration &config)
 //! [4]
 void BearerCloud::configurationChanged(const QNetworkConfiguration &config)
 {
-    const auto id = config.identifier();
-    for (auto it = configStates.begin(), end = configStates.end(); it != end; /* erasing */) {
-        if (it.value() == id)
-            it = configStates.erase(it);
-        else
-            ++it;
-    }
+    foreach (const QNetworkConfiguration::StateFlags &state, configStates.uniqueKeys())
+        configStates.remove(state, config.identifier());
 
-    configStates.insert(config.state(), id);
+    configStates.insert(config.state(), config.identifier());
 
     cloudMoved();
 }
@@ -207,9 +185,10 @@ void BearerCloud::configurationChanged(const QNetworkConfiguration &config)
 //! [1]
 void BearerCloud::updateConfigurations()
 {
-    const auto allConfigurations = manager.allConfigurations();
-    for (const QNetworkConfiguration &config : allConfigurations)
-        configurationAdded(config);
+    QList<QNetworkConfiguration> allConfigurations = manager.allConfigurations();
+
+    while (!allConfigurations.isEmpty())
+        configurationAdded(allConfigurations.takeFirst());
 
     cloudMoved();
 }

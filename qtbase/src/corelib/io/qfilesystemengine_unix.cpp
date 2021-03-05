@@ -1,39 +1,33 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 Intel Corporation.
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Copyright (C) 2013 Samuel Gaist <samuel.gaist@edeltech.ch>
-** Contact: https://www.qt.io/licensing/
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -45,7 +39,6 @@
 
 #include <QtCore/qvarlengtharray.h>
 
-#include <pwd.h>
 #include <stdlib.h> // for realpath()
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -63,7 +56,7 @@
 #include <CoreServices/CoreServices.h>
 #endif
 
-#if defined(QT_PLATFORM_UIKIT)
+#ifdef Q_OS_IOS
 #include <MobileCoreServices/MobileCoreServices.h>
 #endif
 
@@ -110,13 +103,13 @@ static bool isPackage(const QFileSystemMetaData &data, const QFileSystemEntry &e
 
     if (suffix.length() > 0) {
         // First step: is the extension known ?
-        QCFType<CFStringRef> extensionRef = suffix.toCFString();
+        QCFType<CFStringRef> extensionRef = QCFString::toCFStringRef(suffix);
         QCFType<CFStringRef> uniformTypeIdentifier = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, extensionRef, NULL);
         if (UTTypeConformsTo(uniformTypeIdentifier, kUTTypeBundle))
             return true;
 
         // Second step: check if an application knows the package type
-        QCFType<CFStringRef> path = entry.filePath().toCFString();
+        QCFType<CFStringRef> path = QCFString::toCFStringRef(entry.filePath());
         QCFType<CFURLRef> url = CFURLCreateWithFileSystemPath(0, path, kCFURLPOSIXPathStyle, true);
 
         UInt32 type, creator;
@@ -124,15 +117,18 @@ static bool isPackage(const QFileSystemMetaData &data, const QFileSystemEntry &e
         if (CFBundleGetPackageInfoInDirectory(url, &type, &creator))
             return true;
 
-#ifdef Q_OS_MACOS
+#ifdef Q_OS_OSX
         // Find if an application other than Finder claims to know how to handle the package
-        QCFType<CFURLRef> application = LSCopyDefaultApplicationURLForURL(url,
-            kLSRolesEditor | kLSRolesViewer, nullptr);
+        QCFType<CFURLRef> application;
+        LSGetApplicationForURL(url,
+                               kLSRolesEditor|kLSRolesViewer|kLSRolesViewer,
+                               NULL,
+                               &application);
 
         if (application) {
             QCFType<CFBundleRef> bundle = CFBundleCreate(kCFAllocatorDefault, application);
             CFStringRef identifier = CFBundleGetIdentifier(bundle);
-            QString applicationId = QString::fromCFString(identifier);
+            QString applicationId = QCFString::toQString(identifier);
             if (applicationId != QLatin1String("com.apple.finder"))
                 return true;
         }
@@ -188,11 +184,12 @@ QFileSystemEntry QFileSystemEngine::getLinkTarget(const QFileSystemEntry &link, 
 #endif
 
         if (!ret.startsWith(QLatin1Char('/'))) {
-            const QString linkPath = link.path();
-            if (linkPath.startsWith(QLatin1Char('/')))
-                ret.prepend(linkPath + QLatin1Char('/'));
-            else
-                ret.prepend(QDir::currentPath() + QLatin1Char('/') + linkPath + QLatin1Char('/'));
+            if (link.filePath().startsWith(QLatin1Char('/'))) {
+                ret.prepend(link.filePath().left(link.filePath().lastIndexOf(QLatin1Char('/')))
+                            + QLatin1Char('/'));
+            } else {
+                ret.prepend(QDir::currentPath() + QLatin1Char('/'));
+            }
         }
         ret = QDir::cleanPath(ret);
         if (ret.size() > 1 && ret.endsWith(QLatin1Char('/')))
@@ -226,7 +223,7 @@ QFileSystemEntry QFileSystemEngine::getLinkTarget(const QFileSystemEntry &link, 
         if (!cfstr)
             return QFileSystemEntry();
 
-        return QFileSystemEntry(QString::fromCFString(cfstr));
+        return QFileSystemEntry(QCFString::toQString(cfstr));
     }
 #endif
     return QFileSystemEntry();
@@ -335,24 +332,9 @@ QFileSystemEntry QFileSystemEngine::absoluteName(const QFileSystemEntry &entry)
 //static
 QByteArray QFileSystemEngine::id(const QFileSystemEntry &entry)
 {
-    QT_STATBUF statResult;
-    if (QT_STAT(entry.nativeFilePath().constData(), &statResult)) {
-        if (errno != ENOENT)
-            qErrnoWarning("stat() failed for '%s'", entry.nativeFilePath().constData());
-        return QByteArray();
-    }
-    QByteArray result = QByteArray::number(quint64(statResult.st_dev), 16);
-    result += ':';
-    result += QByteArray::number(quint64(statResult.st_ino));
-    return result;
-}
-
-//static
-QByteArray QFileSystemEngine::id(int id)
-{
-    QT_STATBUF statResult;
-    if (QT_FSTAT(id, &statResult)) {
-        qErrnoWarning("fstat() failed for fd %d", id);
+    struct stat statResult;
+    if (stat(entry.nativeFilePath().constData(), &statResult)) {
+        qErrnoWarning("stat() failed for '%s'", entry.nativeFilePath().constData());
         return QByteArray();
     }
     QByteArray result = QByteArray::number(quint64(statResult.st_dev), 16);
@@ -371,17 +353,17 @@ QString QFileSystemEngine::resolveUserName(uint userId)
     QVarLengthArray<char, 1024> buf(size_max);
 #endif
 
-#if !defined(Q_OS_INTEGRITY)
     struct passwd *pw = 0;
+#if !defined(Q_OS_INTEGRITY)
 #if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_OPENBSD) && !defined(Q_OS_VXWORKS)
     struct passwd entry;
     getpwuid_r(userId, &entry, buf.data(), buf.size(), &pw);
 #else
     pw = getpwuid(userId);
 #endif
+#endif
     if (pw)
         return QFile::decodeName(QByteArray(pw->pw_name));
-#endif
     return QString();
 }
 
@@ -395,9 +377,9 @@ QString QFileSystemEngine::resolveGroupName(uint groupId)
     QVarLengthArray<char, 1024> buf(size_max);
 #endif
 
-#if !defined(Q_OS_INTEGRITY)
     struct group *gr = 0;
-#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_OPENBSD) && !defined(Q_OS_VXWORKS) && (!defined(Q_OS_ANDROID) || defined(Q_OS_ANDROID) && (__ANDROID_API__ >= 24))
+#if !defined(Q_OS_INTEGRITY)
+#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_OPENBSD) && !defined(Q_OS_VXWORKS)
     size_max = sysconf(_SC_GETGR_R_SIZE_MAX);
     if (size_max == -1)
         size_max = 1024;
@@ -416,9 +398,9 @@ QString QFileSystemEngine::resolveGroupName(uint groupId)
 #else
     gr = getgrgid(groupId);
 #endif
+#endif
     if (gr)
         return QFile::decodeName(QByteArray(gr->gr_name));
-#endif
     return QString();
 }
 
@@ -431,7 +413,7 @@ QString QFileSystemEngine::bundleName(const QFileSystemEntry &entry)
     if (QCFType<CFDictionaryRef> dict = CFBundleCopyInfoDictionaryForURL(url)) {
         if (CFTypeRef name = (CFTypeRef)CFDictionaryGetValue(dict, kCFBundleNameKey)) {
             if (CFGetTypeID(name) == CFStringGetTypeID())
-                return QString::fromCFString((CFStringRef)name);
+                return QCFString::toQString((CFStringRef)name);
         }
     }
     return QString();
@@ -463,7 +445,15 @@ bool QFileSystemEngine::fillMetaData(const QFileSystemEntry &entry, QFileSystemM
 
     data.entryFlags &= ~what;
 
-    const QByteArray nativeFilePath = entry.nativeFilePath();
+    const char * nativeFilePath;
+    int nativeFilePathLength;
+    {
+        const QByteArray &path = entry.nativeFilePath();
+        nativeFilePath = path.constData();
+        nativeFilePathLength = path.size();
+        Q_UNUSED(nativeFilePathLength);
+    }
+
     bool entryExists = true; // innocent until proven otherwise
 
     QT_STATBUF statBuffer;
@@ -560,22 +550,23 @@ bool QFileSystemEngine::fillMetaData(const QFileSystemEntry &entry, QFileSystemM
     return data.hasFlags(what);
 }
 
-// Note: if \a shouldMkdirFirst is false, we assume the caller did try to mkdir
-// before calling this function.
-static bool createDirectoryWithParents(const QByteArray &nativeName, bool shouldMkdirFirst = true)
+static bool pathIsDir(const QByteArray &nativeName)
 {
     // helper function to check if a given path is a directory, since mkdir can
     // fail if the dir already exists (it may have been created by another
     // thread or another process)
-    const auto isDir = [](const QByteArray &nativeName) {
-        QT_STATBUF st;
-        return QT_STAT(nativeName.constData(), &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR;
-    };
+    QT_STATBUF st;
+    return QT_STAT(nativeName.constData(), &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR;
+};
 
+// Note: if \a shouldMkdirFirst is false, we assume the caller did try to mkdir
+// before calling this function.
+static bool createDirectoryWithParents(const QByteArray &nativeName, bool shouldMkdirFirst = true)
+{
     if (shouldMkdirFirst && QT_MKDIR(nativeName, 0777) == 0)
         return true;
     if (errno == EEXIST)
-        return isDir(nativeName);
+        return pathIsDir(nativeName);
     if (errno != ENOENT)
         return false;
 
@@ -591,7 +582,7 @@ static bool createDirectoryWithParents(const QByteArray &nativeName, bool should
     // try again
     if (QT_MKDIR(nativeName, 0777) == 0)
         return true;
-    return errno == EEXIST && isDir(nativeName);
+    return errno == EEXIST && pathIsDir(nativeName);
 }
 
 //static
@@ -610,7 +601,25 @@ bool QFileSystemEngine::createDirectory(const QFileSystemEntry &entry, bool crea
     if (!createParents)
         return false;
 
-    return createDirectoryWithParents(nativeName, false);
+    // we need the cleaned path in order to create the parents
+    // and we save errno just in case encodeName needs to load codecs
+    int savedErrno = errno;
+    bool pathChanged;
+    {
+        QString cleanName = QDir::cleanPath(dirName);
+
+        // Check if the cleaned name is the same or not. If we were given a
+        // path with resolvable "../" sections, cleanPath will remove them, but
+        // this may change the target dir if one of those segments was a
+        // symlink. This operation depends on cleanPath's optimization of
+        // returning the original string if it didn't modify anything.
+        pathChanged = !dirName.isSharedWith(cleanName);
+        if (pathChanged)
+            nativeName = QFile::encodeName(cleanName);
+    }
+
+    errno = savedErrno;
+    return createDirectoryWithParents(nativeName, pathChanged);
 }
 
 //static
@@ -673,7 +682,8 @@ bool QFileSystemEngine::removeFile(const QFileSystemEntry &entry, QSystemError &
 
 }
 
-static mode_t toMode_t(QFile::Permissions permissions)
+//static
+bool QFileSystemEngine::setPermissions(const QFileSystemEntry &entry, QFile::Permissions permissions, QSystemError &error, QFileSystemMetaData *data)
 {
     mode_t mode = 0;
     if (permissions & (QFile::ReadOwner | QFile::ReadUser))
@@ -694,31 +704,8 @@ static mode_t toMode_t(QFile::Permissions permissions)
         mode |= S_IWOTH;
     if (permissions & QFile::ExeOther)
         mode |= S_IXOTH;
-    return mode;
-}
-
-//static
-bool QFileSystemEngine::setPermissions(const QFileSystemEntry &entry, QFile::Permissions permissions, QSystemError &error, QFileSystemMetaData *data)
-{
-    mode_t mode = toMode_t(permissions);
 
     bool success = ::chmod(entry.nativeFilePath().constData(), mode) == 0;
-    if (success && data) {
-        data->entryFlags &= ~QFileSystemMetaData::Permissions;
-        data->entryFlags |= QFileSystemMetaData::MetaDataFlag(uint(permissions));
-        data->knownFlagsMask |= QFileSystemMetaData::Permissions;
-    }
-    if (!success)
-        error = QSystemError(errno, QSystemError::StandardLibraryError);
-    return success;
-}
-
-//static
-bool QFileSystemEngine::setPermissions(int fd, QFile::Permissions permissions, QSystemError &error, QFileSystemMetaData *data)
-{
-    mode_t mode = toMode_t(permissions);
-
-    bool success = ::fchmod(fd, mode) == 0;
     if (success && data) {
         data->entryFlags &= ~QFileSystemMetaData::Permissions;
         data->entryFlags |= QFileSystemMetaData::MetaDataFlag(uint(permissions));
@@ -746,6 +733,16 @@ QString QFileSystemEngine::tempPath()
 {
 #ifdef QT_UNIX_TEMP_PATH_OVERRIDE
     return QLatin1String(QT_UNIX_TEMP_PATH_OVERRIDE);
+#elif defined(Q_OS_BLACKBERRY)
+    QString temp = QFile::decodeName(qgetenv("TEMP"));
+    if (temp.isEmpty())
+        temp = QFile::decodeName(qgetenv("TMPDIR"));
+
+    if (temp.isEmpty()) {
+        qWarning("Neither the TEMP nor the TMPDIR environment variable is set, falling back to /var/tmp.");
+        temp = QLatin1String("/var/tmp");
+    }
+    return QDir::cleanPath(temp);
 #else
     QString temp = QFile::decodeName(qgetenv("TMPDIR"));
     if (temp.isEmpty()) {

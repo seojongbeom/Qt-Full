@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQml module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -44,6 +38,30 @@
 #include "qv4string_p.h"
 
 using namespace QV4;
+
+ObjectIterator::ObjectIterator(ExecutionEngine *e, Value *scratch1, Value *scratch2, Object *o, uint flags)
+    : engine(e)
+    , object(scratch1)
+    , current(scratch2)
+    , arrayNode(0)
+    , arrayIndex(0)
+    , memberIndex(0)
+    , flags(flags)
+{
+    init(o);
+}
+
+ObjectIterator::ObjectIterator(Scope &scope, const Object *o, uint flags)
+    : engine(scope.engine)
+    , object(scope.alloc(1))
+    , current(scope.alloc(1))
+    , arrayNode(0)
+    , arrayIndex(0)
+    , memberIndex(0)
+    , flags(flags)
+{
+    init(o);
+}
 
 void ObjectIterator::init(const Object *o)
 {
@@ -70,16 +88,15 @@ void ObjectIterator::next(Value *name, uint *index, Property *pd, PropertyAttrib
     ScopedString n(scope);
 
     while (1) {
-        Object *co = current->objectValue();
-        if (!co)
+        if (!current->as<Object>())
             break;
 
         while (1) {
-            co->advanceIterator(this, name, index, pd, attrs);
+            current->as<Object>()->advanceIterator(this, name, index, pd, attrs);
             if (attrs->isEmpty())
                 break;
             // check the property is not already defined earlier in the proto chain
-            if (co->heapObject() != object->heapObject()) {
+            if (current->heapObject() != object->heapObject()) {
                 o = object->as<Object>();
                 n = *name;
                 bool shadowed = false;
@@ -98,7 +115,7 @@ void ObjectIterator::next(Value *name, uint *index, Property *pd, PropertyAttrib
         }
 
         if (flags & WithProtoChain)
-            current->setM(co->prototype());
+            current->setM(current->objectValue()->prototype());
         else
             current->setM(0);
 
@@ -110,8 +127,7 @@ void ObjectIterator::next(Value *name, uint *index, Property *pd, PropertyAttrib
 
 ReturnedValue ObjectIterator::nextPropertyName(Value *value)
 {
-    Object *o = object->objectValue();
-    if (!o)
+    if (!object->as<Object>())
         return Encode::null();
 
     PropertyAttributes attrs;
@@ -123,7 +139,7 @@ ReturnedValue ObjectIterator::nextPropertyName(Value *value)
     if (attrs.isEmpty())
         return Encode::null();
 
-    *value = o->getValue(p->value, attrs);
+    *value = object->objectValue()->getValue(p->value, attrs);
 
     if (!!name)
         return name->asReturnedValue();
@@ -133,8 +149,7 @@ ReturnedValue ObjectIterator::nextPropertyName(Value *value)
 
 ReturnedValue ObjectIterator::nextPropertyNameAsString(Value *value)
 {
-    Object *o = object->objectValue();
-    if (!o)
+    if (!object->as<Object>())
         return Encode::null();
 
     PropertyAttributes attrs;
@@ -146,7 +161,7 @@ ReturnedValue ObjectIterator::nextPropertyNameAsString(Value *value)
     if (attrs.isEmpty())
         return Encode::null();
 
-    *value = o->getValue(p->value, attrs);
+    *value = object->objectValue()->getValue(p->value, attrs);
 
     if (!!name)
         return name->asReturnedValue();

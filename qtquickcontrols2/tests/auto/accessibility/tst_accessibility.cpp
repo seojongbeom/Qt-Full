@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2015 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
@@ -34,21 +34,27 @@
 **
 ****************************************************************************/
 
-#include <QtTest/qtest.h>
+#include <qtest.h>
+#include <QtTest/QSignalSpy>
 #include <QtQml/qqmlengine.h>
 #include <QtQml/qqmlcomponent.h>
 #include <QtQml/qqmlcontext.h>
+#include <QtQuick/qquickview.h>
 #include <QtQuick/private/qquickitem_p.h>
-#include <QtQuickTemplates2/private/qquickpopup_p.h>
+#include <QtLabsTemplates/private/qquickpopup_p.h>
 #include "../shared/util.h"
+#include "../shared/visualtestutil.h"
 
-#if QT_CONFIG(accessibility)
+#ifndef QT_NO_ACCESSIBILITY
 #include <QtQuick/private/qquickaccessibleattached_p.h>
 #endif
+
+using namespace QQuickVisualTestUtil;
 
 class tst_accessibility : public QQmlDataTest
 {
     Q_OBJECT
+public:
 
 private slots:
     void a11y_data();
@@ -64,56 +70,41 @@ void tst_accessibility::a11y_data()
     QTest::addColumn<int>("role");
     QTest::addColumn<QString>("text");
 
-    QTest::newRow("AbstractButton") << "abstractbutton" << 0x0000002B << "AbstractButton"; //QAccessible::Button
     QTest::newRow("BusyIndicator") << "busyindicator" << 0x00000027 << ""; //QAccessible::Indicator
     QTest::newRow("Button") << "button" << 0x0000002B << "Button"; //QAccessible::Button
     QTest::newRow("CheckBox") << "checkbox" << 0x0000002C << "CheckBox"; //QAccessible::CheckBox
-    QTest::newRow("CheckDelegate") << "checkdelegate" << 0x0000002C << "CheckDelegate"; //QAccessible::CheckBox
-    QTest::newRow("ComboBox") << "combobox" << 0x0000002E << "ComboBox"; //QAccessible::ComboBox
-    QTest::newRow("Container") << "container" << 0x00000000 << ""; //QAccessible::NoRole
-    QTest::newRow("Control") << "control" << 0x00000000 << ""; //QAccessible::NoRole
-    QTest::newRow("Dial") << "dial" << 0x00000031 << ""; //QAccessible::Dial
-    QTest::newRow("Dialog") << "dialog" << 0x00000012 << "Dialog"; //QAccessible::Dialog
-    QTest::newRow("Drawer") << "drawer" << 0x00000012 << ""; //QAccessible::Dialog
-    QTest::newRow("Frame") << "frame" << 0x00000013 << ""; //QAccessible::Border
-    QTest::newRow("GroupBox") << "groupbox" << 0x00000014 << "GroupBox"; //QAccessible::Grouping
-    QTest::newRow("ItemDelegate") << "itemdelegate" << 0x00000022 << "ItemDelegate"; //QAccessible::ListItem
+    // Frame
+    // GroupBox
     QTest::newRow("Label") << "label" << 0x00000029 << "Label"; //QAccessible::StaticText
     QTest::newRow("Menu") << "menu" << 0x0000000B << ""; //QAccessible::PopupMenu
-    QTest::newRow("MenuItem") << "menuitem" << 0x0000000C << "MenuItem"; //QAccessible::MenuItem
-    QTest::newRow("Page") << "page" << 0x00000025 << "Page"; //QAccessible::PageTab
     QTest::newRow("PageIndicator") << "pageindicator" << 0x00000027 << ""; //QAccessible::Indicator
-    QTest::newRow("Pane") << "pane" << 0x00000010 << ""; //QAccessible::Pane
-    QTest::newRow("Popup") << "popup" << 0x00000012 << ""; //QAccessible::Dialog
+    QTest::newRow("Popup") << "popup" << 0x00000080 << ""; //QAccessible::LayeredPane
     QTest::newRow("ProgressBar") << "progressbar" << 0x00000030 << ""; //QAccessible::ProgressBar
     QTest::newRow("RadioButton") << "radiobutton" << 0x0000002D << "RadioButton"; //QAccessible::RadioButton
-    QTest::newRow("RadioDelegate") << "radiodelegate" << 0x0000002D << "RadioDelegate"; //QAccessible::RadioButton
     QTest::newRow("RangeSlider") << "rangeslider" << 0x00000033 << ""; //QAccessible::Slider
-    QTest::newRow("RoundButton") << "roundbutton" << 0x0000002B << "RoundButton"; //QAccessible::Button
     QTest::newRow("ScrollBar") << "scrollbar" << 0x00000003 << ""; //QAccessible::ScrollBar
     QTest::newRow("ScrollIndicator") << "scrollindicator" << 0x00000027 << ""; //QAccessible::Indicator
     QTest::newRow("Slider") << "slider" << 0x00000033 << ""; //QAccessible::Slider
     QTest::newRow("SpinBox") << "spinbox" << 0x00000034 << ""; //QAccessible::SpinBox
-    QTest::newRow("StackView") << "stackview" << 0x00000080 << ""; //QAccessible::LayeredPane
-    QTest::newRow("SwipeDelegate") << "swipedelegate" << 0x00000022 << "SwipeDelegate"; //QAccessible::ListItem
-    QTest::newRow("SwipeView") << "swipeview" << 0x0000003C << ""; //QAccessible::Pane
+    // StackView
     QTest::newRow("Switch") << "switch" << 0x0000002B << "Switch"; //QAccessible::Button
-    QTest::newRow("SwitchDelegate") << "switchdelegate" << 0x00000022 << "SwitchDelegate"; //QAccessible::ListItem
     QTest::newRow("TabBar") << "tabbar" << 0x0000003C << ""; //QAccessible::PageTabList
     QTest::newRow("TabButton") << "tabbutton" << 0x00000025 << "TabButton"; //QAccessible::PageTab
     QTest::newRow("TextArea") << "textarea" << 0x0000002A << ""; //QAccessible::Accessible.EditableText
     QTest::newRow("TextField") << "textfield" << 0x0000002A << ""; //QAccessible::Accessible.EditableText
     QTest::newRow("ToolBar") << "toolbar" << 0x00000016 << ""; //QAccessible::ToolBar
     QTest::newRow("ToolButton") << "toolbutton" << 0x0000002B << "ToolButton"; //QAccessible::Button
-    QTest::newRow("ToolTip") << "tooltip" << 0x0000000D << "ToolTip"; //QAccessible::ToolTip
-    QTest::newRow("Tumbler") << "tumbler" << 0x00000000 << ""; //QAccessible::NoRole (TODO)
+
+    QTest::newRow("Dial") << "dial" << 0x00000031 << ""; //QAccessible::Dial
+    // Drawer
+    // SwipeView
+    // Tumbler
 
     QTest::newRow("DayOfWeekRow") << "dayofweekrow" << 0x0 << "DayOfWeekRow"; //QAccessible::NoRole
     QTest::newRow("MonthGrid") << "monthgrid" << 0x0 << "MonthGrid"; //QAccessible::NoRole
     QTest::newRow("WeekNumberColumn") << "weeknumbercolumn" << 0x0 << "WeekNumberColumn"; //QAccessible::NoRole
 }
 
-#if QT_CONFIG(accessibility)
 static QQuickAccessibleAttached *accessibleAttached(QQuickItem *item)
 {
     QQuickAccessibleAttached *acc = qobject_cast<QQuickAccessibleAttached *>(qmlAttachedPropertiesObject<QQuickAccessibleAttached>(item, false));
@@ -121,7 +112,6 @@ static QQuickAccessibleAttached *accessibleAttached(QQuickItem *item)
         acc = item->findChild<QQuickAccessibleAttached *>();
     return acc;
 }
-#endif
 
 void tst_accessibility::a11y()
 {
@@ -129,29 +119,34 @@ void tst_accessibility::a11y()
     QFETCH(int, role);
     QFETCH(QString, text);
 
+    QQmlComponent component(&engine);
     QString fn = name;
-#if !QT_CONFIG(accessibility)
+#ifdef QT_NO_ACCESSIBILITY
     if (name == QLatin1Literal("dayofweekrow")
             || name == QLatin1Literal("monthgrid")
             || name == QLatin1Literal("weeknumbercolumn"))
         fn += QLatin1Literal("-2");
 #endif
-
-    QQmlComponent component(&engine);
     component.loadUrl(testFileUrl(fn + ".qml"));
+    QObject* created = component.create();
+    QVERIFY2(created, qPrintable(component.errorString()));
+    QScopedPointer<QObject> cleanup(created);
+    QVERIFY(!cleanup.isNull());
 
-    QScopedPointer<QObject> object(component.create());
-    QVERIFY2(!object.isNull(), qPrintable(component.errorString()));
+    QQuickWindow* window = qobject_cast<QQuickWindow*>(created);
+    QVERIFY(window);
+    window->show();
+    QVERIFY(QTest::qWaitForWindowActive(window));
 
-    QQuickItem *item = qobject_cast<QQuickItem *>(object.data());
+    QQuickItem *item = findItem<QQuickItem>(window->contentItem(), name);
     if (!item) {
-        QQuickPopup *popup = qobject_cast<QQuickPopup *>(object.data());
+        QQuickPopup *popup = window->contentItem()->findChild<QQuickPopup *>(name);
         if (popup)
             item = popup->popupItem();
     }
     QVERIFY(item);
 
-#if QT_CONFIG(accessibility)
+#ifndef QT_NO_ACCESSIBILITY
     QQuickAccessibleAttached *acc = accessibleAttached(item);
     if (name != QLatin1Literal("dayofweekrow")
             && name != QLatin1Literal("monthgrid")

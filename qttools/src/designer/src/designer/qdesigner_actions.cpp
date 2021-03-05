@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Designer of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -111,12 +116,6 @@ static QActionGroup *createActionGroup(QObject *parent, bool exclusive = false) 
     QActionGroup * rc = new QActionGroup(parent);
     rc->setExclusive(exclusive);
     return rc;
-}
-
-static void fixActionContext(const QList<QAction *> &actions)
-{
-    for (QAction *a : actions)
-        a->setShortcutContext(Qt::ApplicationShortcut);
 }
 
 static inline QString savedMessage(const QString &fileName)
@@ -334,7 +333,9 @@ QDesignerActions::QDesignerActions(QDesignerWorkbench *workbench)
     m_editWidgetsAction->setCheckable(true);
     QList<QKeySequence> shortcuts;
     shortcuts.append(QKeySequence(Qt::Key_F3));
+#if QT_VERSION >= 0x040900 // "ESC" switching to edit mode: Activate once item delegates handle shortcut overrides for ESC.
     shortcuts.append(QKeySequence(Qt::Key_Escape));
+#endif
     m_editWidgetsAction->setShortcuts(shortcuts);
     QIcon fallback(m_core->resourceLocation() + QStringLiteral("/widgettool.png"));
     m_editWidgetsAction->setIcon(QIcon::fromTheme("designer-edit-widget", fallback));
@@ -347,9 +348,9 @@ QDesignerActions::QDesignerActions(QDesignerWorkbench *workbench)
     connect(formWindowManager, &QDesignerFormWindowManager::activeFormWindowChanged,
                 this, &QDesignerActions::activeFormWindowChanged);
 
-    const QObjectList builtinPlugins = QPluginLoader::staticInstances()
-        + m_core->pluginManager()->instances();
-    for (QObject *plugin : builtinPlugins) {
+    QList<QObject*> builtinPlugins = QPluginLoader::staticInstances();
+    builtinPlugins += m_core->pluginManager()->instances();
+    foreach (QObject *plugin, builtinPlugins) {
         if (QDesignerFormEditorPluginInterface *formEditorPlugin = qobject_cast<QDesignerFormEditorPluginInterface*>(plugin)) {
             if (QAction *action = formEditorPlugin->action()) {
                 m_toolActions->addAction(action);
@@ -423,13 +424,7 @@ QDesignerActions::QDesignerActions(QDesignerWorkbench *workbench)
 //
 // connections
 //
-    fixActionContext(m_fileActions->actions());
-    fixActionContext(m_editActions->actions());
-    fixActionContext(m_toolActions->actions());
-    fixActionContext(m_formActions->actions());
-    fixActionContext(m_windowActions->actions());
-    fixActionContext(m_helpActions->actions());
-
+    fixActionContext();
     activeFormWindowChanged(core()->formWindowManager()->activeFormWindow());
 
     m_backupTimer->start(180000); // 3min
@@ -605,7 +600,7 @@ bool QDesignerActions::openForm(QWidget *parent)
         return false;
 
     bool atLeastOne = false;
-    for (const QString &fileName : fileNames) {
+    foreach (const QString &fileName, fileNames) {
         if (readInForm(fileName) && !atLeastOne)
             atLeastOne = true;
     }
@@ -741,6 +736,21 @@ void  QDesignerActions::viewCode()
         QMessageBox::warning(fw, tr("Code generation failed"), errorMessage);
 }
 
+void QDesignerActions::fixActionContext()
+{
+    QList<QAction*> actions;
+    actions += m_fileActions->actions();
+    actions += m_editActions->actions();
+    actions += m_toolActions->actions();
+    actions += m_formActions->actions();
+    actions += m_windowActions->actions();
+    actions += m_helpActions->actions();
+
+    foreach (QAction *a, actions) {
+        a->setShortcutContext(Qt::ApplicationShortcut);
+    }
+}
+
 bool QDesignerActions::readInForm(const QString &fileName)
 {
     QString fn = fileName;
@@ -841,7 +851,7 @@ bool QDesignerActions::writeOutForm(QDesignerFormWindowInterface *fw, const QStr
     if (check) {
         const QStringList problems = fw->checkContents();
         if (!problems.isEmpty())
-            QMessageBox::information(fw->window(), tr("Qt Designer"), problems.join(QLatin1String("<br>")));
+            QMessageBox::information(fw->window(), tr("Qt Designer"), problems.join(QStringLiteral("<br>")));
     }
 
     QString contents = fw->contents();
@@ -1137,10 +1147,15 @@ void QDesignerActions::backupForms()
     }
     if(!tmpFiles.isEmpty()) {
         const QStringList backupFiles = backupDir.entryList(QDir::Files);
-        for (const QString &backupFile : backupFiles)
-            backupDir.remove(backupFile);
+        if(!backupFiles.isEmpty()) {
+            QStringListIterator it(backupFiles);
+            while (it.hasNext())
+                backupDir.remove(it.next());
+        }
 
-        for (const QString &tmpName : qAsConst(tmpFiles)) {
+        QStringListIterator it(tmpFiles);
+        while (it.hasNext()) {
+            const QString tmpName = it.next();
             QString name(tmpName);
             name.replace(m_backupTmpPath, m_backupPath);
             QFile tmpFile(tmpName);

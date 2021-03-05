@@ -5,11 +5,11 @@
         <key>CFBundlePackageType</key>
         <string>APPL</string>
         <key>CFBundleSignature</key>
-        <string>????</string>
+        <string>@TYPEINFO@</string>
         <key>CFBundleExecutable</key>
-        <string>qmlplugindump</string>
+        <string>@EXECUTABLE@</string>
         <key>CFBundleIdentifier</key>
-        <string>org.qt-project.qt.qmlplugindump</string>
+        <string>com.nokia.qt.qmlplugindump</string>
         <key>LSUIElement</key>
         <string>1</string>
 </dict>

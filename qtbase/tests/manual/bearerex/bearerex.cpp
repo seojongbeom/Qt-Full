@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -142,7 +147,7 @@ void BearerEx::on_createSessionButton_clicked()
     QNetworkConfiguration networkConfiguration = qvariant_cast<QNetworkConfiguration>(item->data(Qt::UserRole));
     int newTabIndex = mainTabWidget->count();
     SessionTab* newTab = new SessionTab(&networkConfiguration,&m_NetworkConfigurationManager,eventListWidget,newTabIndex-1);
-    QString label = QLatin1Char('S') + QString::number(newTabIndex-1);
+    QString label = QString("S")+QString::number(newTabIndex-1);
     mainTabWidget->insertTab(newTabIndex,newTab,label);
     mainTabWidget->setCurrentIndex(newTabIndex);
 }
@@ -266,11 +271,9 @@ SessionTab::SessionTab(QNetworkConfiguration* apNetworkConfiguration,
         snapLabel->hide();
         snapLineEdit->hide();
         alrButton->hide();
-        iapLineEdit->setText(apNetworkConfiguration->name()+ " (" + apNetworkConfiguration->identifier()
-                             + QLatin1Char(')'));
+        iapLineEdit->setText(apNetworkConfiguration->name()+" ("+apNetworkConfiguration->identifier()+")");
     } else if (apNetworkConfiguration->type() == QNetworkConfiguration::ServiceNetwork) {
-        snapLineEdit->setText(apNetworkConfiguration->name()+ " (" + apNetworkConfiguration->identifier()
-                              + QLatin1Char(')'));
+        snapLineEdit->setText(apNetworkConfiguration->name()+" ("+apNetworkConfiguration->identifier()+")");
     }
     bearerLineEdit->setText(apNetworkConfiguration->bearerTypeName());
     sentRecDataLineEdit->setText(QString::number(m_NetworkSession->bytesWritten())+
@@ -377,7 +380,7 @@ void SessionTab::newConfigurationActivated()
     msgBox.setDefaultButton(QMessageBox::Yes);
     if (msgBox.exec() == QMessageBox::Yes) {
         m_NetworkSession->accept();
-        iapLineEdit->setText(m_config.name() + " (" + m_config.identifier() + QLatin1Char(')'));
+        iapLineEdit->setText(m_config.name()+" ("+m_config.identifier()+")");
     } else {
         m_NetworkSession->reject();
     }
@@ -388,7 +391,7 @@ void SessionTab::preferredConfigurationChanged(const QNetworkConfiguration& conf
     m_config =  config;
     QMessageBox msgBox;
     msgBox.setText("Roaming to new configuration.");
-    msgBox.setInformativeText("Do you want to migrate to " + config.name() + QLatin1Char('?'));
+    msgBox.setInformativeText("Do you want to migrate to "+config.name()+"?");
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::Yes);
     if (msgBox.exec() == QMessageBox::Yes) {
@@ -404,7 +407,7 @@ void SessionTab::opened()
     QFont font = listItem->font();
     font.setBold(true);
     listItem->setFont(font);
-    listItem->setText(QLatin1Char('S') + QString::number(m_index) + QLatin1String(" - Opened"));
+    listItem->setText(QString("S")+QString::number(m_index)+QString(" - ")+QString("Opened"));
     m_eventListWidget->addItem(listItem);
 
     QVariant identifier = m_NetworkSession->sessionProperty("ActiveConfiguration");
@@ -412,7 +415,7 @@ void SessionTab::opened()
         QString configId = identifier.toString();
         QNetworkConfiguration config = m_ConfigManager->configurationFromIdentifier(configId);
         if (config.isValid()) {
-            iapLineEdit->setText(config.name() + " (" + config.identifier() + QLatin1Char(')'));
+            iapLineEdit->setText(config.name()+" ("+config.identifier()+")");
         }
     }
     newState(m_NetworkSession->state()); // Update the "(open)"
@@ -435,7 +438,7 @@ void SessionTab::closed()
     QFont font = listItem->font();
     font.setBold(true);
     listItem->setFont(font);
-    listItem->setText(QLatin1Char('S') + QString::number(m_index) + QLatin1String(" - Closed"));
+    listItem->setText(QString("S")+QString::number(m_index)+QString(" - ")+QString("Closed"));
     m_eventListWidget->addItem(listItem);
 }
 
@@ -486,7 +489,7 @@ void SessionTab::stateChanged(QNetworkSession::State state)
     newState(state);
 
     QListWidgetItem* listItem = new QListWidgetItem();
-    listItem->setText(QLatin1Char('S') + QString::number(m_index) + QLatin1String(" - ") + stateString(state));
+    listItem->setText(QString("S")+QString::number(m_index)+QString(" - ")+stateString(state));
     m_eventListWidget->addItem(listItem);
 }
 
@@ -497,7 +500,7 @@ void SessionTab::newState(QNetworkSession::State state)
         QString configId = identifier.toString();
         QNetworkConfiguration config = m_ConfigManager->configurationFromIdentifier(configId);
         if (config.isValid()) {
-            iapLineEdit->setText(config.name() + " (" + config.identifier() + QLatin1Char(')'));
+            iapLineEdit->setText(config.name()+" ("+config.identifier()+")");
             bearerLineEdit->setText(config.bearerTypeName());
         }
     } else {
@@ -536,7 +539,7 @@ void SessionTab::error(QNetworkSession::SessionError error)
             errorString = "InvalidConfigurationError";
             break;
     }
-    listItem->setText(QLatin1Char('S') + QString::number(m_index) + QString(" - ") + errorString);
+    listItem->setText(QString("S")+QString::number(m_index)+QString(" - ")+errorString);
     m_eventListWidget->addItem(listItem);
 
     msgBox.setText(errorString);

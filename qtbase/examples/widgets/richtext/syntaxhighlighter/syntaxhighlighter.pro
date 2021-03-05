@@ -9,3 +9,10 @@ SOURCES         = highlighter.cpp \
 # install
 target.path = $$[QT_INSTALL_EXAMPLES]/widgets/richtext/syntaxhighlighter
 INSTALLS += target
+
+
+wince {
+   addFiles.files = main.cpp mainwindow.cpp
+   addFiles.path = .
+   INSTALLS += addFiles
+}

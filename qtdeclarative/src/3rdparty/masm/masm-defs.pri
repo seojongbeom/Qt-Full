@@ -1,5 +1,6 @@
+
+
 DEFINES += WTF_EXPORT_PRIVATE="" JS_EXPORT_PRIVATE=""
-DEFINES += ENABLE_ASSEMBLER_WX_EXCLUSIVE=1
 
 # Avoid symbol clashes with QtScript during static linking
 DEFINES += WTFReportAssertionFailure=qmlWTFReportAssertionFailure
@@ -25,19 +26,16 @@ INCLUDEPATH += $$PWD
 disassembler {
     if(isEqual(QT_ARCH, "i386")|isEqual(QT_ARCH, "x86_64")): DEFINES += WTF_USE_UDIS86=1
     if(isEqual(QT_ARCH, "arm")): DEFINES += WTF_USE_ARMV7_DISASSEMBLER=1
-    if(isEqual(QT_ARCH, "arm64")): DEFINES += WTF_USE_ARM64_DISASSEMBLER=1
     if(isEqual(QT_ARCH, "mips")): DEFINES += WTF_USE_MIPS32_DISASSEMBLER=1
 } else {
     DEFINES += WTF_USE_UDIS86=0
 }
 
-force-compile-jit {
-    DEFINES += V4_FORCE_COMPILE_JIT
-}
-
 INCLUDEPATH += $$PWD/disassembler
 INCLUDEPATH += $$PWD/disassembler/udis86
 INCLUDEPATH += $$_OUT_PWD
+
+win32-msvc2008|wince*: INCLUDEPATH += $$PWD/stubs/compat
 
 CONFIG(release, debug|release): DEFINES += NDEBUG
 

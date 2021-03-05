@@ -1,53 +1,36 @@
 /****************************************************************************
  **
- ** Copyright (C) 2016 Ivan Vizir <define-true-false@yandex.com>
- ** Copyright (C) 2016 The Qt Company Ltd.
- ** Contact: https://www.qt.io/licensing/
+ ** Copyright (C) 2013 Ivan Vizir <define-true-false@yandex.com>
+ ** Copyright (C) 2015 The Qt Company Ltd.
+ ** Contact: http://www.qt.io/licensing/
  **
  ** This file is part of the QtWinExtras module of the Qt Toolkit.
  **
- ** $QT_BEGIN_LICENSE:LGPL$
+ ** $QT_BEGIN_LICENSE:LGPL21$
  ** Commercial License Usage
  ** Licensees holding valid commercial Qt licenses may use this file in
  ** accordance with the commercial license agreement provided with the
  ** Software or, alternatively, in accordance with the terms contained in
  ** a written agreement between you and The Qt Company. For licensing terms
- ** and conditions see https://www.qt.io/terms-conditions. For further
- ** information use the contact form at https://www.qt.io/contact-us.
+ ** and conditions see http://www.qt.io/terms-conditions. For further
+ ** information use the contact form at http://www.qt.io/contact-us.
  **
  ** GNU Lesser General Public License Usage
  ** Alternatively, this file may be used under the terms of the GNU Lesser
- ** General Public License version 3 as published by the Free Software
- ** Foundation and appearing in the file LICENSE.LGPL3 included in the
- ** packaging of this file. Please review the following information to
- ** ensure the GNU Lesser General Public License version 3 requirements
- ** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+ ** General Public License version 2.1 or version 3 as published by the Free
+ ** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+ ** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+ ** following information to ensure the GNU Lesser General Public License
+ ** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+ ** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
  **
- ** GNU General Public License Usage
- ** Alternatively, this file may be used under the terms of the GNU
- ** General Public License version 2.0 or (at your option) the GNU General
- ** Public license version 3 or any later version approved by the KDE Free
- ** Qt Foundation. The licenses are as published by the Free Software
- ** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
- ** included in the packaging of this file. Please review the following
- ** information to ensure the GNU General Public License requirements will
- ** be met: https://www.gnu.org/licenses/gpl-2.0.html and
- ** https://www.gnu.org/licenses/gpl-3.0.html.
+ ** As a special exception, The Qt Company gives you certain additional
+ ** rights. These rights are described in The Qt Company LGPL Exception
+ ** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
  **
  ** $QT_END_LICENSE$
  **
  ****************************************************************************/
-
-#include <QtCore/QtGlobal>
-
-#ifdef Q_CC_MINGW // MinGW: Enable SHCreateItemFromParsingName()
-#  if defined(_WIN32_IE) && _WIN32_IE < 0x0700 // _WIN32_IE_IE70
-#     undef _WIN32_IE
-#  endif
-#  ifndef _WIN32_IE
-#    define _WIN32_IE 0x0700
-#  endif
-#endif // Q_CC_MINGW
 
 #include "qwinjumplist.h"
 #include "qwinjumplist_p.h"
@@ -60,15 +43,12 @@
 #include <QDir>
 #include <QtCore/QDebug>
 #include <QCoreApplication>
-#include <QRegularExpression>
 #include <qt_windows.h>
 #include <propvarutil.h>
 
 #include "qwinfunctions.h"
 #include "qwinfunctions_p.h"
 #include "winpropkey_p.h"
-
-#include <shobjidl.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -96,7 +76,7 @@ static QString createArguments(const QStringList &arguments)
     for (int i=0; i<arguments.size(); ++i) {
         QString tmp = arguments.at(i);
         // Quotes are escaped and their preceding backslashes are doubled.
-        tmp.replace(QRegularExpression(QLatin1String("(\\\\*)\"")), QLatin1String("\\1\\1\\\""));
+        tmp.replace(QRegExp(QLatin1String("(\\\\*)\"")), QLatin1String("\\1\\1\\\""));
         if (tmp.isEmpty() || tmp.contains(QLatin1Char(' ')) || tmp.contains(QLatin1Char('\t'))) {
             // The argument must not end with a \ since this would be interpreted
             // as escaping the quote -- rather put the \ behind the quote: e.g.
@@ -110,6 +90,11 @@ static QString createArguments(const QStringList &arguments)
         args += QLatin1Char(' ') + tmp;
     }
     return args;
+}
+
+QWinJumpListPrivate::QWinJumpListPrivate() :
+    pDestList(0), recent(0), frequent(0), tasks(0), dirty(false)
+{
 }
 
 void QWinJumpListPrivate::warning(const char *function, HRESULT hresult)
@@ -144,7 +129,7 @@ void QWinJumpListPrivate::_q_rebuild()
             appendKnownCategory(KDC_RECENT);
         if (frequent && frequent->isVisible())
             appendKnownCategory(KDC_FREQUENT);
-        for (QWinJumpListCategory *category : qAsConst(categories)) {
+        foreach (QWinJumpListCategory *category, categories) {
             if (category->isVisible())
                 appendCustomCategory(category);
         }
@@ -268,7 +253,7 @@ IObjectCollection *QWinJumpListPrivate::toComCollection(const QList<QWinJumpList
         QWinJumpListPrivate::warning("QWinJumpList: failed to instantiate IObjectCollection", hresult);
         return 0;
     }
-    for (QWinJumpListItem *item : list) {
+    Q_FOREACH (QWinJumpListItem *item, list) {
         IUnknown *iitem = toICustomDestinationListItem(item);
         if (iitem) {
             collection->AddObject(iitem);
@@ -396,8 +381,11 @@ IShellLinkW *QWinJumpListPrivate::toIShellLink(const QWinJumpListItem *item)
 IShellItem2 *QWinJumpListPrivate::toIShellItem(const QWinJumpListItem *item)
 {
     IShellItem2 *shellitem = 0;
-    QScopedArrayPointer<wchar_t> buffer(qt_qstringToNullTerminated(item->filePath()));
-    SHCreateItemFromParsingName(buffer.data(), 0, qIID_IShellItem2, reinterpret_cast<void **>(&shellitem));
+    qtShell32Dll.init();
+    if (qtShell32Dll.sHCreateItemFromParsingName) {
+        QScopedArrayPointer<wchar_t> buffer(qt_qstringToNullTerminated(item->filePath()));
+        qtShell32Dll.sHCreateItemFromParsingName(buffer.data(), 0, qIID_IShellItem2, reinterpret_cast<void **>(&shellitem));
+    }
     return shellitem;
 }
 
@@ -558,7 +546,7 @@ void QWinJumpList::addCategory(QWinJumpListCategory *category)
 QWinJumpListCategory *QWinJumpList::addCategory(const QString &title, const QList<QWinJumpListItem *> items)
 {
     QWinJumpListCategory *category = new QWinJumpListCategory(title);
-    for (QWinJumpListItem *item : items)
+    foreach (QWinJumpListItem *item, items)
         category->addItem(item);
     addCategory(category);
     return category;
@@ -576,7 +564,7 @@ void QWinJumpList::clear()
     frequent()->clear();
     if (d->tasks)
         d->tasks->clear();
-    for (QWinJumpListCategory *category : qAsConst(d->categories))
+    foreach (QWinJumpListCategory *category, d->categories)
         category->clear();
     d->destroy();
 }

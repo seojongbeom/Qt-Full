@@ -1,2 +1,8 @@
 TEMPLATE = subdirs
-SUBDIRS = test stdinprocess
+wince* {
+  SUBDIRS = test
+} else {
+  SUBDIRS = test stdinprocess
+}
+
+CONFIG += parallel_test

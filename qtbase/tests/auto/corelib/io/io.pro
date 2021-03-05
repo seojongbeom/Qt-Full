@@ -11,7 +11,6 @@ SUBDIRS=\
     largefile \
     qfileinfo \
     qfileselector \
-    qfilesystemmetadata \
     qfilesystementry \
     qfilesystemwatcher \
     qiodevice \
@@ -36,7 +35,7 @@ SUBDIRS=\
     qurlquery \
     qwinoverlappedionotifier \
 
-!win32 {
+!win32|wince* {
     SUBDIRS -=\
         qwinoverlappedionotifier
 }
@@ -50,28 +49,19 @@ SUBDIRS=\
     qprocess \
     qtextstream
 
-!qtHaveModule(concurrent): SUBDIRS -= \
-    qdebug \
-    qlockfile \
-    qurl
-
-!qtConfig(private_tests): SUBDIRS -= \
+!contains(QT_CONFIG, private_tests): SUBDIRS -= \
     qabstractfileengine \
     qfileinfo \
     qipaddress \
     qurlinternal \
     qloggingregistry
 
-win32:!qtConfig(private_tests): SUBDIRS -= \
+win32:!contains(QT_CONFIG, private_tests): SUBDIRS -= \
     qfilesystementry
 
-!qtConfig(processenvironment): SUBDIRS -= \
-    qprocessenvironment
-
-!qtConfig(process): SUBDIRS -= \
-    qprocess \
-    qprocess-noapplication
-
 winrt: SUBDIRS -= \
+    qprocess \
+    qprocess-noapplication \
+    qprocessenvironment \
     qstorageinfo \
     qwinoverlappedionotifier

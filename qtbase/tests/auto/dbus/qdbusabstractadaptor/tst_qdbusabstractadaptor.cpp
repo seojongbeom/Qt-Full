@@ -1,27 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the test suite of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -503,7 +507,7 @@ void tst_QDBusAbstractAdaptor::initTestCase()
     // get peer server address
     QDBusMessage req = QDBusMessage::createMethodCall(serviceName, objectPath, interfaceName, "address");
     QDBusMessage rpl = QDBusConnection::sessionBus().call(req);
-    QCOMPARE(rpl.type(), QDBusMessage::ReplyMessage);
+    QVERIFY(rpl.type() == QDBusMessage::ReplyMessage);
     QString address = rpl.arguments().at(0).toString();
 
     // connect to peer server
@@ -1083,12 +1087,6 @@ void tst_QDBusAbstractAdaptor::methodCallsPeer_data()
 
 void tst_QDBusAbstractAdaptor::methodCallsPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
-    if (QSysInfo::productType().compare("opensuse", Qt::CaseInsensitive) == 0
-        && QSysInfo::productVersion() == QLatin1String("42.1")
-        && qgetenv("QTEST_ENVIRONMENT").split(' ').contains("ci")) {
-        QSKIP("This test is occasionally hanging in the CI");
-    }
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1151,7 +1149,6 @@ void tst_QDBusAbstractAdaptor::methodCallsPeer()
 
 void tst_QDBusAbstractAdaptor::methodCallScriptablePeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1171,7 +1168,6 @@ void tst_QDBusAbstractAdaptor::signalEmissionsPeer_data()
 
 void tst_QDBusAbstractAdaptor::signalEmissionsPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QFETCH(QString, interface);
     QFETCH(QString, name);
     QFETCH(QVariant, parameter);
@@ -1236,7 +1232,6 @@ void tst_QDBusAbstractAdaptor::signalEmissionsPeer()
 
 void tst_QDBusAbstractAdaptor::sameSignalDifferentPathsPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1265,7 +1260,6 @@ void tst_QDBusAbstractAdaptor::sameSignalDifferentPathsPeer()
 
 void tst_QDBusAbstractAdaptor::sameObjectDifferentPathsPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1288,7 +1282,6 @@ void tst_QDBusAbstractAdaptor::sameObjectDifferentPathsPeer()
 
 void tst_QDBusAbstractAdaptor::scriptableSignalOrNotPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");;
     QVERIFY(con.isConnected());
 
@@ -1362,7 +1355,6 @@ void tst_QDBusAbstractAdaptor::overloadedSignalEmissionPeer_data()
 
 void tst_QDBusAbstractAdaptor::overloadedSignalEmissionPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1414,7 +1406,6 @@ void tst_QDBusAbstractAdaptor::overloadedSignalEmissionPeer()
 
 void tst_QDBusAbstractAdaptor::readPropertiesPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1439,7 +1430,6 @@ void tst_QDBusAbstractAdaptor::readPropertiesPeer()
 
 void tst_QDBusAbstractAdaptor::readPropertiesInvalidInterfacePeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1460,7 +1450,6 @@ void tst_QDBusAbstractAdaptor::readPropertiesEmptyInterfacePeer_data()
 
 void tst_QDBusAbstractAdaptor::readPropertiesEmptyInterfacePeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1491,7 +1480,6 @@ void tst_QDBusAbstractAdaptor::readPropertiesEmptyInterfacePeer()
 
 void tst_QDBusAbstractAdaptor::readAllPropertiesPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1518,7 +1506,6 @@ void tst_QDBusAbstractAdaptor::readAllPropertiesPeer()
 
 void tst_QDBusAbstractAdaptor::readAllPropertiesInvalidInterfacePeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1584,7 +1571,6 @@ void tst_QDBusAbstractAdaptor::readAllPropertiesEmptyInterfacePeer()
 
 void tst_QDBusAbstractAdaptor::writePropertiesPeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1836,7 +1822,7 @@ void tst_QDBusAbstractAdaptor::typeMatching_data()
     LLDateTimeMap lldtmap;
     lldtmap[-1] = QDateTime();
     QDateTime now = QDateTime::currentDateTime();
-    lldtmap[now.toSecsSinceEpoch()] = now; // array of struct of int64 and struct of 3 ints and struct of 4 ints and int
+    lldtmap[now.toTime_t()] = now; // array of struct of int64 and struct of 3 ints and struct of 4 ints and int
     QTest::newRow("lldtmap") << "LLDateTimeMap" << "a{x((iii)(iiii)i)}" << QVariant::fromValue(lldtmap);
 
     MyStruct s;
@@ -1884,7 +1870,7 @@ void tst_QDBusAbstractAdaptor::methodWithMoreThanOneReturnValue()
 
     QDBusInterface remote(con.baseService(), "/", "local.Interface3", con);
     QDBusMessage reply = remote.call(QDBus::BlockWithGui, "methodStringString", testString);
-    QCOMPARE(reply.arguments().count(), 2);
+    QVERIFY(reply.arguments().count() == 2);
 
     QDBusReply<int> intreply = reply;
     QVERIFY(intreply.isValid());
@@ -1896,7 +1882,6 @@ void tst_QDBusAbstractAdaptor::methodWithMoreThanOneReturnValue()
 
 void tst_QDBusAbstractAdaptor::methodWithMoreThanOneReturnValuePeer()
 {
-    QSKIP("Test is currently too flaky (QTBUG-66223)");
     QDBusConnection con("peer");
     QVERIFY(con.isConnected());
 
@@ -1907,7 +1892,7 @@ void tst_QDBusAbstractAdaptor::methodWithMoreThanOneReturnValuePeer()
 
     QDBusInterface remote(QString(), "/", "local.Interface3", con);
     QDBusMessage reply = remote.call(QDBus::BlockWithGui, "methodStringString", testString);
-    QCOMPARE(reply.arguments().count(), 2);
+    QVERIFY(reply.arguments().count() == 2);
 
     QDBusReply<int> intreply = reply;
     QVERIFY(intreply.isValid());

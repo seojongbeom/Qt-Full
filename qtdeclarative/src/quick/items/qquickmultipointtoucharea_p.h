@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtQuick module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -67,13 +61,10 @@ class Q_AUTOTEST_EXPORT QQuickTouchPoint : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(int pointId READ pointId NOTIFY pointIdChanged)
-    Q_PROPERTY(QPointingDeviceUniqueId uniqueId READ uniqueId NOTIFY uniqueIdChanged REVISION 9)
     Q_PROPERTY(bool pressed READ pressed NOTIFY pressedChanged)
     Q_PROPERTY(qreal x READ x NOTIFY xChanged)
     Q_PROPERTY(qreal y READ y NOTIFY yChanged)
-    Q_PROPERTY(QSizeF ellipseDiameters READ ellipseDiameters NOTIFY ellipseDiametersChanged REVISION 9)
     Q_PROPERTY(qreal pressure READ pressure NOTIFY pressureChanged)
-    Q_PROPERTY(qreal rotation READ rotation NOTIFY rotationChanged REVISION 9)
     Q_PROPERTY(QVector2D velocity READ velocity NOTIFY velocityChanged)
     Q_PROPERTY(QRectF area READ area NOTIFY areaChanged)
 
@@ -89,7 +80,6 @@ public:
         : _id(0),
           _x(0.0), _y(0.0),
           _pressure(0.0),
-          _rotation(0),
           _qmlDefined(qmlDefined),
           _inUse(false),
           _pressed(false),
@@ -101,23 +91,14 @@ public:
     int pointId() const { return _id; }
     void setPointId(int id);
 
-    QPointingDeviceUniqueId uniqueId() const { return _uniqueId; }
-    void setUniqueId(const QPointingDeviceUniqueId &id);
-
     qreal x() const { return _x; }
     void setX(qreal x);
 
     qreal y() const { return _y; }
     void setY(qreal y);
 
-    QSizeF ellipseDiameters() const { return _ellipseDiameters; }
-    void setEllipseDiameters(const QSizeF &d);
-
     qreal pressure() const { return _pressure; }
     void setPressure(qreal pressure);
-
-    qreal rotation() const { return _rotation; }
-    void setRotation(qreal r);
 
     QVector2D velocity() const { return _velocity; }
     void setVelocity(const QVector2D &velocity);
@@ -154,12 +135,9 @@ public:
 Q_SIGNALS:
     void pressedChanged();
     void pointIdChanged();
-    Q_REVISION(9) void uniqueIdChanged();
     void xChanged();
     void yChanged();
-    Q_REVISION(9) void ellipseDiametersChanged();
     void pressureChanged();
-    Q_REVISION(9) void rotationChanged();
     void velocityChanged();
     void areaChanged();
     void startXChanged();
@@ -175,8 +153,6 @@ private:
     qreal _x;
     qreal _y;
     qreal _pressure;
-    qreal _rotation;
-    QSizeF _ellipseDiameters;
     QVector2D _velocity;
     QRectF _area;
     bool _qmlDefined;
@@ -188,7 +164,6 @@ private:
     qreal _previousY;
     qreal _sceneX;
     qreal _sceneY;
-    QPointingDeviceUniqueId _uniqueId;
 };
 
 class QQuickGrabGestureEvent : public QObject
@@ -250,7 +225,7 @@ public:
 
     static QQuickTouchPoint* touchPoint_at(QQmlListProperty<QQuickTouchPoint> *list, int index) {
         QQuickMultiPointTouchArea *q = static_cast<QQuickMultiPointTouchArea*>(list->object);
-        return q->_touchPrototypes.value(index);
+        return q->_touchPrototypes[index];
     }
 
 Q_SIGNALS:
@@ -266,7 +241,7 @@ Q_SIGNALS:
 
 protected:
     void touchEvent(QTouchEvent *) Q_DECL_OVERRIDE;
-    bool childMouseEventFilter(QQuickItem *receiver, QEvent *event) Q_DECL_OVERRIDE;
+    bool childMouseEventFilter(QQuickItem *i, QEvent *event) Q_DECL_OVERRIDE;
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
     void mouseReleaseEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
     void mouseMoveEvent(QMouseEvent *event) Q_DECL_OVERRIDE;

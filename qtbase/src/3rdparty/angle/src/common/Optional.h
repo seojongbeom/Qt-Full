@@ -35,26 +35,10 @@ struct Optional
         return *this;
     }
 
-    Optional &operator=(const T &value)
+    static Optional None()
     {
-        mValue = value;
-        mValid = true;
-        return *this;
+        return Optional();
     }
-
-    Optional &operator=(T &&value)
-    {
-        mValue = std::move(value);
-        mValid = true;
-        return *this;
-    }
-
-    void reset()
-    {
-        mValid = false;
-    }
-
-    static Optional Invalid() { return Optional(); }
 
     bool valid() const { return mValid; }
     const T &value() const { return mValue; }

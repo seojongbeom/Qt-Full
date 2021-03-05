@@ -44,16 +44,16 @@ void output(bool traceInDebugOnly, MessageType messageType, DebugTraceOutputType
           case DebugTraceOutputTypeNone:
             break;
           case DebugTraceOutputTypeBeginEvent:
-            g_debugAnnotator->beginEvent(formattedWideMessage.c_str());
+            g_debugAnnotator->beginEvent(formattedWideMessage);
             break;
           case DebugTraceOutputTypeSetMarker:
-            g_debugAnnotator->setMarker(formattedWideMessage.c_str());
+            g_debugAnnotator->setMarker(formattedWideMessage);
             break;
         }
     }
 
     std::string formattedMessage;
-    UNUSED_VARIABLE(formattedMessage);
+    UNUSED_TRACE_VARIABLE(formattedMessage);
 
 #if !defined(NDEBUG) && defined(_MSC_VER)
     if (messageType == MESSAGE_ERR)

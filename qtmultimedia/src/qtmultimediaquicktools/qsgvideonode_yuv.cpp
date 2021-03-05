@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,8 +47,7 @@ QList<QVideoFrame::PixelFormat> QSGVideoNodeFactory_YUV::supportedPixelFormats(
 
     if (handleType == QAbstractVideoBuffer::NoHandle) {
         formats << QVideoFrame::Format_YUV420P << QVideoFrame::Format_YV12
-                << QVideoFrame::Format_NV12 << QVideoFrame::Format_NV21
-                << QVideoFrame::Format_UYVY << QVideoFrame::Format_YUYV;
+                << QVideoFrame::Format_NV12 << QVideoFrame::Format_NV21;
     }
 
     return formats;
@@ -79,9 +72,9 @@ public:
         setShaderSourceFile(QOpenGLShader::Fragment, QStringLiteral(":/qtmultimediaquicktools/shaders/biplanaryuvvideo.frag"));
     }
 
-    void updateState(const RenderState &state, QSGMaterial *newMaterial, QSGMaterial *oldMaterial) override;
+    virtual void updateState(const RenderState &state, QSGMaterial *newMaterial, QSGMaterial *oldMaterial);
 
-    char const *const *attributeNames() const override {
+    virtual char const *const *attributeNames() const {
         static const char *names[] = {
             "qt_VertexPosition",
             "qt_VertexTexCoord",
@@ -91,7 +84,7 @@ public:
     }
 
 protected:
-    void initialize() override {
+    virtual void initialize() {
         m_id_matrix = program()->uniformLocation("qt_Matrix");
         m_id_plane1Width = program()->uniformLocation("plane1Width");
         m_id_plane2Width = program()->uniformLocation("plane2Width");
@@ -108,55 +101,6 @@ protected:
     int m_id_plane2Texture;
     int m_id_colorMatrix;
     int m_id_opacity;
-};
-
-class QSGVideoMaterialShader_UYVY : public QSGMaterialShader
-{
-public:
-    QSGVideoMaterialShader_UYVY()
-        : QSGMaterialShader()
-    {
-        setShaderSourceFile(QOpenGLShader::Vertex, QStringLiteral(":/qtmultimediaquicktools/shaders/monoplanarvideo.vert"));
-        setShaderSourceFile(QOpenGLShader::Fragment, QStringLiteral(":/qtmultimediaquicktools/shaders/uyvyvideo.frag"));
-    }
-
-    void updateState(const RenderState &state, QSGMaterial *newMaterial, QSGMaterial *oldMaterial) Q_DECL_OVERRIDE;
-
-    char const *const *attributeNames() const Q_DECL_OVERRIDE {
-        static const char *names[] = {
-            "qt_VertexPosition",
-            "qt_VertexTexCoord",
-            0
-        };
-        return names;
-    }
-
-protected:
-    void initialize() Q_DECL_OVERRIDE {
-        m_id_matrix = program()->uniformLocation("qt_Matrix");
-        m_id_yTexture = program()->uniformLocation("yTexture");
-        m_id_uvTexture = program()->uniformLocation("uvTexture");
-        m_id_colorMatrix = program()->uniformLocation("colorMatrix");
-        m_id_opacity = program()->uniformLocation("opacity");
-        QSGMaterialShader::initialize();
-    }
-
-    int m_id_matrix;
-    int m_id_yTexture;
-    int m_id_uvTexture;
-    int m_id_colorMatrix;
-    int m_id_opacity;
-};
-
-
-class QSGVideoMaterialShader_YUYV : public QSGVideoMaterialShader_UYVY
-{
-public:
-    QSGVideoMaterialShader_YUYV()
-        : QSGVideoMaterialShader_UYVY()
-    {
-        setShaderSourceFile(QOpenGLShader::Fragment, QStringLiteral(":/qtmultimediaquicktools/shaders/yuyvvideo.frag"));
-    }
 };
 
 
@@ -181,10 +125,10 @@ public:
         setShaderSourceFile(QOpenGLShader::Fragment, QStringLiteral(":/qtmultimediaquicktools/shaders/triplanaryuvvideo.frag"));
     }
 
-    void updateState(const RenderState &state, QSGMaterial *newMaterial, QSGMaterial *oldMaterial) override;
+    virtual void updateState(const RenderState &state, QSGMaterial *newMaterial, QSGMaterial *oldMaterial);
 
 protected:
-    void initialize() override {
+    virtual void initialize() {
         m_id_plane3Width = program()->uniformLocation("plane3Width");
         m_id_plane3Texture = program()->uniformLocation("plane3Texture");
         QSGVideoMaterialShader_YUV_BiPlanar::initialize();
@@ -201,39 +145,31 @@ public:
     QSGVideoMaterial_YUV(const QVideoSurfaceFormat &format);
     ~QSGVideoMaterial_YUV();
 
-    QSGMaterialType *type() const override {
-        static QSGMaterialType biPlanarType, biPlanarSwizzleType, triPlanarType, uyvyType, yuyvType;
+    virtual QSGMaterialType *type() const {
+        static QSGMaterialType biPlanarType, biPlanarSwizzleType, triPlanarType;
 
         switch (m_format.pixelFormat()) {
         case QVideoFrame::Format_NV12:
             return &biPlanarType;
         case QVideoFrame::Format_NV21:
             return &biPlanarSwizzleType;
-        case QVideoFrame::Format_UYVY:
-            return &uyvyType;
-        case QVideoFrame::Format_YUYV:
-            return &yuyvType;
         default: // Currently: YUV420P and YV12
             return &triPlanarType;
         }
     }
 
-    QSGMaterialShader *createShader() const override {
+    virtual QSGMaterialShader *createShader() const {
         switch (m_format.pixelFormat()) {
         case QVideoFrame::Format_NV12:
             return new QSGVideoMaterialShader_YUV_BiPlanar;
         case QVideoFrame::Format_NV21:
             return new QSGVideoMaterialShader_YUV_BiPlanar_swizzle;
-        case QVideoFrame::Format_UYVY:
-            return new QSGVideoMaterialShader_UYVY;
-        case QVideoFrame::Format_YUYV:
-            return new QSGVideoMaterialShader_YUYV;
         default: // Currently: YUV420P and YV12
             return new QSGVideoMaterialShader_YUV_TriPlanar;
         }
     }
 
-    int compare(const QSGMaterial *other) const override {
+    virtual int compare(const QSGMaterial *other) const {
         const QSGVideoMaterial_YUV *m = static_cast<const QSGVideoMaterial_YUV *>(other);
         if (!m_textureIds[0])
             return 1;
@@ -288,10 +224,8 @@ QSGVideoMaterial_YUV::QSGVideoMaterial_YUV(const QVideoSurfaceFormat &format) :
     case QVideoFrame::Format_YV12:
         m_planeCount = 3;
         break;
-    case QVideoFrame::Format_UYVY:
-    case QVideoFrame::Format_YUYV:
     default:
-        m_planeCount = 2;
+        m_planeCount = 1;
         break;
     }
 
@@ -353,22 +287,7 @@ void QSGVideoMaterial_YUV::bind()
             functions->glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousAlignment);
             functions->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-             if (m_format.pixelFormat() == QVideoFrame::Format_UYVY
-              || m_format.pixelFormat() == QVideoFrame::Format_YUYV) {
-                int fw = m_frame.width();
-                m_planeWidth[0] = fw;
-                 // In YUYV texture the UV plane appears with the 1/2 of image and Y width.
-                m_planeWidth[1] = fw / 2;
-                functions->glActiveTexture(GL_TEXTURE1);
-                // Either r,b (YUYV) or g,a (UYVY) values are used as source of YV.
-                // Additionally Y and V are set per 2 pixels hence only 1/2 of image with is used.
-                // Interpreting this properly in shaders allows to not copy or not make conditionals inside shaders,
-                // only interpretation of data changes.
-                bindTexture(m_textureIds[1], m_planeWidth[1], m_frame.height(), m_frame.bits(), GL_RGBA);
-                functions->glActiveTexture(GL_TEXTURE0); // Finish with 0 as default texture unit
-                // Either red (YUYV) or alpha (UYVY) values are used as source of Y
-                bindTexture(m_textureIds[0], m_planeWidth[0], m_frame.height(), m_frame.bits(), GL_LUMINANCE_ALPHA);
-            } else if (m_format.pixelFormat() == QVideoFrame::Format_NV12
+            if (m_format.pixelFormat() == QVideoFrame::Format_NV12
                     || m_format.pixelFormat() == QVideoFrame::Format_NV21) {
                 const int y = 0;
                 const int uv = 1;
@@ -413,6 +332,7 @@ void QSGVideoMaterial_YUV::bind()
 void QSGVideoMaterial_YUV::bindTexture(int id, int w, int h, const uchar *bits, GLenum format)
 {
     QOpenGLFunctions *functions = QOpenGLContext::currentContext()->functions();
+
     functions->glBindTexture(GL_TEXTURE_2D, id);
     functions->glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, bits);
     functions->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -471,29 +391,6 @@ void QSGVideoMaterialShader_YUV_TriPlanar::updateState(const RenderState &state,
     QSGVideoMaterial_YUV *mat = static_cast<QSGVideoMaterial_YUV *>(newMaterial);
     program()->setUniformValue(m_id_plane3Texture, 2);
     program()->setUniformValue(m_id_plane3Width, mat->m_planeWidth[2]);
-}
-
-void QSGVideoMaterialShader_UYVY::updateState(const RenderState &state,
-                                                       QSGMaterial *newMaterial,
-                                                       QSGMaterial *oldMaterial)
-{
-    Q_UNUSED(oldMaterial);
-
-    QSGVideoMaterial_YUV *mat = static_cast<QSGVideoMaterial_YUV *>(newMaterial);
-    program()->setUniformValue(m_id_yTexture, 0);
-    program()->setUniformValue(m_id_uvTexture, 1);
-
-    mat->bind();
-
-    program()->setUniformValue(m_id_colorMatrix, mat->m_colorMatrix);
-
-    if (state.isOpacityDirty()) {
-        mat->m_opacity = state.opacity();
-        program()->setUniformValue(m_id_opacity, GLfloat(mat->m_opacity));
-    }
-
-    if (state.isMatrixDirty())
-        program()->setUniformValue(m_id_matrix, state.combinedMatrix());
 }
 
 QT_END_NAMESPACE

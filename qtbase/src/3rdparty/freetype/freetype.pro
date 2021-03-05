@@ -6,8 +6,6 @@ CONFIG += \
     exceptions_off rtti_off warn_off \
     installed
 
-MODULE_INCLUDEPATH += $$PWD/include
-
 load(qt_helper_lib)
 
 SOURCES += \
@@ -24,7 +22,6 @@ SOURCES += \
     $$PWD/src/base/ftbbox.c \
     $$PWD/src/base/ftdebug.c \
     $$PWD/src/base/ftglyph.c \
-    $$PWD/src/base/ftfntfmt.c \
     $$PWD/src/base/ftinit.c \
     $$PWD/src/base/ftlcdfil.c \
     $$PWD/src/base/ftmm.c \
@@ -64,13 +61,16 @@ win32 {
     INCLUDEPATH += $$PWD/builds/unix
 }
 
+INCLUDEPATH += $$PWD/include
+
 DEFINES += FT2_BUILD_LIBRARY
 
 DEFINES += FT_CONFIG_OPTION_SYSTEM_ZLIB
 include(../zlib_dependency.pri)
 
-DEFINES += FT_CONFIG_OPTION_USE_PNG
-include($$OUT_PWD/../../gui/qtgui-config.pri)
-QMAKE_USE_PRIVATE += libpng
+contains(QT_CONFIG, system-png) {
+    DEFINES += FT_CONFIG_OPTION_USE_PNG
+    include($$PWD/../png_dependency.pri)
+}
 
 DEFINES += TT_CONFIG_OPTION_SUBPIXEL_HINTING

@@ -32,7 +32,7 @@
    packages produce RGBA files but don't mark the alpha properly. */
 /* #undef DEFAULT_EXTRASAMPLE_AS_ALPHA */
 
-/* enable deferred strip/tile offset/size loading */
+/* enable deferred strip/tile offset/size loading (experimental) */
 /* #undef DEFER_STRILE_LOAD */
 
 /* Define to 1 if you have the <assert.h> header file. */
@@ -139,7 +139,7 @@
 /* #undef HAVE_PTHREAD */
 
 /* Define to 1 if you have the <search.h> header file. */
-#if !defined(Q_OS_WINCE) && !defined(Q_OS_VXWORKS) && !defined(Q_OS_ANDROID) && !defined(Q_OS_INTEGRITY)
+#if !defined(Q_OS_WINCE) && !defined(Q_OS_VXWORKS) && !defined(Q_OS_ANDROID)
 #define HAVE_SEARCH_H 1
 #endif
 
@@ -266,7 +266,7 @@
 /* #undef PACKAGE_URL */
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.0.9"
+#define PACKAGE_VERSION "4.0.6"
 
 /* Support Macintosh PackBits algorithm */
 /* #undef PACKBITS_SUPPORT */

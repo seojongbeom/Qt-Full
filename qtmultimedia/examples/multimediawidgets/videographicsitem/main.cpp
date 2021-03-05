@@ -1,22 +1,12 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** BSD License Usage
-** Alternatively, you may use this file under the terms of the BSD license
-** as follows:
+** You may use this file under the terms of the BSD license as follows:
 **
 ** "Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -51,33 +41,12 @@
 #include "videoplayer.h"
 
 #include <QApplication>
-#include <QCommandLineParser>
-#include <QCommandLineOption>
-#include <QDir>
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
 
-    QCoreApplication::setApplicationName("Player Example");
-    QCoreApplication::setOrganizationName("QtProject");
-    QCoreApplication::setApplicationVersion(QT_VERSION_STR);
-    QCommandLineParser parser;
-    parser.setApplicationDescription("Qt MultiMedia Player QGraphicsView Example");
-    parser.addHelpOption();
-    parser.addVersionOption();
-    parser.addPositionalArgument("url", "The URL to open.");
-    parser.process(app);
-
     VideoPlayer player;
-
-    if (!parser.positionalArguments().isEmpty() && player.isPlayerAvailable()) {
-        const QUrl url =
-            QUrl::fromUserInput(parser.positionalArguments().constFirst(),
-                                QDir::currentPath(), QUrl::AssumeLocalFile);
-        player.load(url);
-    }
-
     player.show();
 
     return app.exec();

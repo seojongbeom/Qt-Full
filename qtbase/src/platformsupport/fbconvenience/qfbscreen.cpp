@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -51,23 +45,19 @@
 
 QT_BEGIN_NAMESPACE
 
-QFbScreen::QFbScreen()
-    : mUpdatePending(false),
-      mCursor(0),
-      mDepth(16),
-      mFormat(QImage::Format_RGB16),
-      mPainter(nullptr)
+QFbScreen::QFbScreen() : mUpdatePending(false), mCursor(0), mGeometry(), mDepth(16), mFormat(QImage::Format_RGB16), mScreenImage(0), mCompositePainter(0), mIsUpToDate(false)
 {
 }
 
 QFbScreen::~QFbScreen()
 {
-    delete mPainter;
+    delete mCompositePainter;
+    delete mScreenImage;
 }
 
 void QFbScreen::initializeCompositor()
 {
-    mScreenImage = QImage(mGeometry.size(), mFormat);
+    mScreenImage = new QImage(mGeometry.size(), mFormat);
     scheduleUpdate();
 }
 
@@ -97,6 +87,7 @@ void QFbScreen::addWindow(QFbWindow *window)
             }
         }
     }
+    invalidateRectCache();
     setDirty(window->geometry());
     QWindow *w = topWindow();
     QWindowSystemInterface::handleWindowActivated(w);
@@ -106,6 +97,7 @@ void QFbScreen::addWindow(QFbWindow *window)
 void QFbScreen::removeWindow(QFbWindow *window)
 {
     mWindowStack.removeOne(window);
+    invalidateRectCache();
     setDirty(window->geometry());
     QWindow *w = topWindow();
     QWindowSystemInterface::handleWindowActivated(w);
@@ -118,6 +110,7 @@ void QFbScreen::raise(QFbWindow *window)
     if (index <= 0)
         return;
     mWindowStack.move(index, 0);
+    invalidateRectCache();
     setDirty(window->geometry());
     QWindow *w = topWindow();
     QWindowSystemInterface::handleWindowActivated(w);
@@ -130,6 +123,7 @@ void QFbScreen::lower(QFbWindow *window)
     if (index == -1 || index == (mWindowStack.size() - 1))
         return;
     mWindowStack.move(index, mWindowStack.size() - 1);
+    invalidateRectCache();
     setDirty(window->geometry());
     QWindow *w = topWindow();
     QWindowSystemInterface::handleWindowActivated(w);
@@ -138,32 +132,26 @@ void QFbScreen::lower(QFbWindow *window)
 
 QWindow *QFbScreen::topWindow() const
 {
-    for (QFbWindow *fbw : mWindowStack) {
+    foreach (QFbWindow *fbw, mWindowStack)
         if (fbw->window()->type() == Qt::Window || fbw->window()->type() == Qt::Dialog)
             return fbw->window();
-    }
-    return nullptr;
+    return 0;
 }
 
 QWindow *QFbScreen::topLevelAt(const QPoint & p) const
 {
-    for (QFbWindow *fbw : mWindowStack) {
+    foreach (QFbWindow *fbw, mWindowStack) {
         if (fbw->geometry().contains(p, false) && fbw->window()->isVisible())
             return fbw->window();
     }
-    return nullptr;
-}
-
-int QFbScreen::windowCount() const
-{
-    return mWindowStack.count();
+    return 0;
 }
 
 void QFbScreen::setDirty(const QRect &rect)
 {
-    const QRect intersection = rect.intersected(mGeometry);
-    const QPoint screenOffset = mGeometry.topLeft();
-    mRepaintRegion += intersection.translated(-screenOffset); // global to local translation
+    QRect intersection = rect.intersected(mGeometry);
+    QPoint screenOffset = mGeometry.topLeft();
+    mRepaintRegion += intersection.translated(-screenOffset);    // global to local translation
     scheduleUpdate();
 }
 
@@ -182,81 +170,143 @@ void QFbScreen::setPhysicalSize(const QSize &size)
 
 void QFbScreen::setGeometry(const QRect &rect)
 {
-    delete mPainter;
-    mPainter = nullptr;
+    delete mCompositePainter;
+    mCompositePainter = 0;
+    delete mScreenImage;
     mGeometry = rect;
-    mScreenImage = QImage(mGeometry.size(), mFormat);
+    mScreenImage = new QImage(mGeometry.size(), mFormat);
+    invalidateRectCache();
     QWindowSystemInterface::handleScreenGeometryChange(QPlatformScreen::screen(), geometry(), availableGeometry());
     resizeMaximizedWindows();
 }
 
-bool QFbScreen::initialize()
+void QFbScreen::generateRects()
 {
-    return true;
+    mCachedRects.clear();
+    QPoint screenOffset = mGeometry.topLeft();
+    QRegion remainingScreen(mGeometry.translated(-screenOffset)); // global to local translation
+
+    for (int i = 0; i < mWindowStack.length(); i++) {
+        if (remainingScreen.isEmpty())
+            break;
+#if 0
+        if (!mWindowStack[i]->isVisible())
+            continue;
+        if (mWindowStack[i]->isMinimized())
+            continue;
+
+        if (!mWindowStack[i]->testAttribute(Qt::WA_TranslucentBackground)) {
+            QRect localGeometry = mWindowStack.at(i)->geometry().translated(-screenOffset); // global to local translation
+            remainingScreen -= localGeometry;
+            QRegion windowRegion(localGeometry);
+            windowRegion -= remainingScreen;
+            foreach (const QRect &rect, windowRegion.rects()) {
+                mCachedRects += QPair<QRect, int>(rect, i);
+            }
+        }
+#endif
+    }
+    const QVector<QRect> remainingScreenRects = remainingScreen.rects();
+    mCachedRects.reserve(mCachedRects.count() + remainingScreenRects.count());
+    foreach (const QRect &rect, remainingScreenRects)
+        mCachedRects += QPair<QRect, int>(rect, -1);
+    mIsUpToDate = true;
 }
 
 QRegion QFbScreen::doRedraw()
 {
-    const QPoint screenOffset = mGeometry.topLeft();
+    QPoint screenOffset = mGeometry.topLeft();
 
     QRegion touchedRegion;
     if (mCursor && mCursor->isDirty() && mCursor->isOnScreen()) {
-        const QRect lastCursor = mCursor->dirtyRect();
+        QRect lastCursor = mCursor->dirtyRect();
         mRepaintRegion += lastCursor;
     }
-    if (mRepaintRegion.isEmpty() && (!mCursor || !mCursor->isDirty()))
+    if (mRepaintRegion.isEmpty() && (!mCursor || !mCursor->isDirty())) {
         return touchedRegion;
+    }
 
-    if (!mPainter)
-        mPainter = new QPainter(&mScreenImage);
+    QVector<QRect> rects = mRepaintRegion.rects();
 
-    const QVector<QRect> rects = mRepaintRegion.rects();
-    const QRect screenRect = mGeometry.translated(-screenOffset);
+    if (!mIsUpToDate)
+        generateRects();
+
+    if (!mCompositePainter)
+        mCompositePainter = new QPainter(mScreenImage);
+
     for (int rectIndex = 0; rectIndex < mRepaintRegion.rectCount(); rectIndex++) {
-        const QRect rect = rects[rectIndex].intersected(screenRect);
-        if (rect.isEmpty())
-            continue;
+        QRegion rectRegion = rects[rectIndex];
 
-        mPainter->setCompositionMode(QPainter::CompositionMode_Source);
-        mPainter->fillRect(rect, mScreenImage.hasAlphaChannel() ? Qt::transparent : Qt::black);
+        for (int i = 0; i < mCachedRects.length(); i++) {
+            QRect screenSubRect = mCachedRects[i].first;
+            int layer = mCachedRects[i].second;
+            QRegion intersect = rectRegion.intersected(screenSubRect);
 
-        for (int layerIndex = mWindowStack.size() - 1; layerIndex != -1; layerIndex--) {
-            if (!mWindowStack[layerIndex]->window()->isVisible())
+            if (intersect.isEmpty())
                 continue;
 
-            const QRect windowRect = mWindowStack[layerIndex]->geometry().translated(-screenOffset);
-            const QRect windowIntersect = rect.translated(-windowRect.left(), -windowRect.top());
-            QFbBackingStore *backingStore = mWindowStack[layerIndex]->backingStore();
-            if (backingStore) {
-                backingStore->lock();
-                mPainter->drawImage(rect, backingStore->image(), windowIntersect);
-                backingStore->unlock();
+            rectRegion -= intersect;
+
+            // we only expect one rectangle, but defensive coding...
+            foreach (const QRect &rect, intersect.rects()) {
+                bool firstLayer = true;
+                if (layer == -1) {
+                    mCompositePainter->setCompositionMode(QPainter::CompositionMode_Source);
+                    mCompositePainter->fillRect(rect, mScreenImage->hasAlphaChannel() ? Qt::transparent : Qt::black);
+                    firstLayer = false;
+                    layer = mWindowStack.size() - 1;
+                }
+
+                for (int layerIndex = layer; layerIndex != -1; layerIndex--) {
+                    if (!mWindowStack[layerIndex]->window()->isVisible())
+                        continue;
+                    // if (mWindowStack[layerIndex]->isMinimized())
+                    //     continue;
+
+                    QRect windowRect = mWindowStack[layerIndex]->geometry().translated(-screenOffset);
+                    QRect windowIntersect = rect.translated(-windowRect.left(),
+                                                            -windowRect.top());
+
+
+                    QFbBackingStore *backingStore = mWindowStack[layerIndex]->backingStore();
+
+                    if (backingStore) {
+                        backingStore->lock();
+                        mCompositePainter->drawImage(rect, backingStore->image(), windowIntersect);
+                        backingStore->unlock();
+                    }
+                    if (firstLayer) {
+                        firstLayer = false;
+                    }
+                }
             }
         }
     }
 
+    QRect cursorRect;
     if (mCursor && (mCursor->isDirty() || mRepaintRegion.intersects(mCursor->lastPainted()))) {
-        mPainter->setCompositionMode(QPainter::CompositionMode_SourceOver);
-        touchedRegion += mCursor->drawCursor(*mPainter);
+        mCompositePainter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+        cursorRect = mCursor->drawCursor(*mCompositePainter);
+        touchedRegion += cursorRect;
     }
     touchedRegion += mRepaintRegion;
     mRepaintRegion = QRegion();
+
+
+
+//    qDebug() << "QFbScreen::doRedraw"  << mWindowStack.size() << mScreenImage->size() << touchedRegion;
 
     return touchedRegion;
 }
 
 QFbWindow *QFbScreen::windowForId(WId wid) const
 {
-    for (int i = 0; i < mWindowStack.count(); ++i) {
+    for (int i = 0; i < mWindowStack.count(); ++i)
         if (mWindowStack[i]->winId() == wid)
             return mWindowStack[i];
-    }
-    return nullptr;
-}
 
-QFbScreen::Flags QFbScreen::flags() const
-{
     return 0;
 }
 
 QT_END_NAMESPACE
+

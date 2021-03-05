@@ -1,26 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:GPL-EXCEPT$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 3 as published by the Free Software
-** Foundation with exceptions as appearing in the file LICENSE.GPL3-EXCEPT
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-3.0.html.
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -256,19 +261,9 @@ void HtmlGenerator::initializeGenerator(const Config &config)
                                     + Config::dot
                                     + CONFIG_CPPCLASSESPAGE);
 
-    cppclassestitle = config.getString(CONFIG_NAVIGATION
-                                       + Config::dot
-                                       + CONFIG_CPPCLASSESTITLE,
-                                       QLatin1String("C++ Classes"));
-
     qmltypespage = config.getString(CONFIG_NAVIGATION
                                     + Config::dot
                                     + CONFIG_QMLTYPESPAGE);
-
-    qmltypestitle = config.getString(CONFIG_NAVIGATION
-                                     + Config::dot
-                                     + CONFIG_QMLTYPESTITLE,
-                                     QLatin1String("QML Types"));
 
     buildversion = config.getString(CONFIG_BUILDVERSION);
 }
@@ -523,34 +518,48 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
     case Atom::BaseName:
         break;
     case Atom::BriefLeft:
-        if (!hasBrief(relative)) {
+        // Do not output the brief for QML nodes, doc nodes or collections
+        // (groups, modules, qml module nodes)
+        if (relative->isQmlType() ||
+            relative->isDocumentNode() ||
+            relative->isCollectionNode() ||
+            relative->isJsType()) {
             skipAhead = skipAtoms(atom, Atom::BriefRight);
             break;
         }
+
         out() << "<p>";
         if (relative->type() == Node::Property ||
                 relative->type() == Node::Variable) {
+            QString str;
             atom = atom->next();
-            if (atom != 0 && atom->type() == Atom::String) {
-                QString firstWord = atom->string().toLower().section(' ', 0, 0, QString::SectionSkipEmpty);
-                if (firstWord == QLatin1String("the")
-                      || firstWord == QLatin1String("a")
-                      || firstWord == QLatin1String("an")
-                      || firstWord == QLatin1String("whether")
-                      || firstWord == QLatin1String("which")) {
-                    QString str = "This ";
-                    if (relative->type() == Node::Property)
-                        str += "property holds ";
-                    else
-                        str += "variable holds ";
-                    str += atom->string().left(1).toLower() + atom->string().mid(1);
-                    const_cast<Atom *>(atom)->setString(str);
-                }
+            while (atom != 0 && atom->type() != Atom::BriefRight) {
+                if (atom->type() == Atom::String ||
+                        atom->type() == Atom::AutoLink)
+                    str += atom->string();
+                skipAhead++;
+                atom = atom->next();
             }
+            str[0] = str[0].toLower();
+            if (str.endsWith(QLatin1Char('.')))
+                str.truncate(str.length() - 1);
+            out() << "This ";
+            if (relative->type() == Node::Property)
+                out() << "property";
+            else
+                out() << "variable";
+            QStringList words = str.split(QLatin1Char(' '));
+            if (!(words.first() == QLatin1String("contains") || words.first() == QLatin1String("specifies")
+                  || words.first() == QLatin1String("describes") || words.first() == QLatin1String("defines")
+                  || words.first() == QLatin1String("holds") || words.first() == QLatin1String("determines")))
+                out() << " holds ";
+            else
+                out() << ' ';
+            out() << str << '.';
         }
         break;
     case Atom::BriefRight:
-        if (hasBrief(relative))
+        if (!relative->isDocumentNode())
             out() << "</p>\n";
         break;
     case Atom::C:
@@ -599,7 +608,7 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
         out() << "<p>For example, if you have code like</p>\n";
         // fallthrough
     case Atom::CodeBad:
-        out() << "<pre class=\"cpp plain\">"
+        out() << "<pre class=\"cpp\">"
               << trimmedTrailing(protectEnc(plainCode(indent(codeIndent,atom->string()))), codePrefix, codeSuffix)
               << "</pre>\n";
         break;
@@ -670,9 +679,6 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
         else if (atom->string() == QLatin1String("annotatedexamples")) {
             generateAnnotatedLists(relative, marker, qdb_->getExamples());
         }
-        else if (atom->string() == QLatin1String("annotatedattributions")) {
-            generateAnnotatedLists(relative, marker, qdb_->getAttributions());
-        }
         else if (atom->string() == QLatin1String("classes")) {
             generateCompactList(Generic, relative, qdb_->getCppClasses(), true, QStringLiteral(""));
         }
@@ -693,8 +699,6 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
                 genus = Node::QML;
             else if (atom->string().startsWith(QLatin1String("js")))
                 genus = Node::JS;
-            else if (atom->string().startsWith(QLatin1String("groups")))
-                genus = Node::DOC;
             QDocDatabase* qdb = QDocDatabase::qdocDB();
             const CollectionNode* cn = qdb->getCollectionNode(moduleName, genus);
             if (cn) {
@@ -726,9 +730,6 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
         }
         else if (atom->string() == QLatin1String("functionindex")) {
             generateFunctionIndex(relative);
-        }
-        else if (atom->string() == QLatin1String("attributions")) {
-            generateAnnotatedList(relative, marker, qdb_->getAttributions());
         }
         else if (atom->string() == QLatin1String("legalese")) {
             generateLegaleseList(relative, marker);
@@ -1903,11 +1904,11 @@ void HtmlGenerator::generateNavigationBar(const QString &title,
                     << Atom(itemRight);
 
     if (node->isClass()) {
-        if (!cppclassespage.isEmpty() && !cppclassestitle.isEmpty())
+        if (!cppclassespage.isEmpty())
             navigationbar << Atom(itemLeft)
                         << Atom(Atom::NavLink, cppclassespage)
                         << Atom(Atom::FormattingLeft, ATOM_FORMATTING_LINK)
-                        << Atom(Atom::String, cppclassestitle)
+                        << Atom(Atom::String, QLatin1String("C++ Classes"))
                         << Atom(Atom::FormattingRight, ATOM_FORMATTING_LINK)
                         << Atom(itemRight);
 
@@ -1918,11 +1919,11 @@ void HtmlGenerator::generateNavigationBar(const QString &title,
     }
     else if (node->isQmlType() || node->isQmlBasicType() ||
              node->isJsType() || node->isJsBasicType()) {
-        if (!qmltypespage.isEmpty() && !qmltypestitle.isEmpty())
+        if (!qmltypespage.isEmpty())
             navigationbar << Atom(itemLeft)
                           << Atom(Atom::NavLink, qmltypespage)
                           << Atom(Atom::FormattingLeft, ATOM_FORMATTING_LINK)
-                          << Atom(Atom::String, qmltypestitle)
+                          << Atom(Atom::String, QLatin1String("QML Types"))
                           << Atom(Atom::FormattingRight, ATOM_FORMATTING_LINK)
                           << Atom(itemRight)
                           << Atom(itemLeft)
@@ -1938,19 +1939,6 @@ void HtmlGenerator::generateNavigationBar(const QString &title,
                           << Atom(Atom::FormattingRight, ATOM_FORMATTING_LINK)
                           << Atom(itemRight);
 
-        } else if (node->isAggregate()) {
-            QStringList groups = static_cast<const Aggregate*>(node)->groupNames();
-            if (groups.length() == 1) {
-                const Node *groupNode = qdb_->findNodeByNameAndType(QStringList(groups[0]), Node::Group);
-                if (groupNode && !groupNode->title().isEmpty()) {
-                    navigationbar << Atom(itemLeft)
-                                  << Atom(Atom::NavLink, groupNode->name())
-                                  << Atom(Atom::FormattingLeft, ATOM_FORMATTING_LINK)
-                                  << Atom(Atom::String, groupNode->title())
-                                  << Atom(Atom::FormattingRight, ATOM_FORMATTING_LINK)
-                                  << Atom(itemRight);
-                }
-            }
         }
         navigationbar << Atom(itemLeft)
                       << Atom(Atom::String, title)
@@ -2239,7 +2227,10 @@ void HtmlGenerator::generateRequisites(Aggregate *inner, CodeMarker *marker)
             index = 0;
             while (r != classe->baseClasses().constEnd()) {
                 if ((*r).node_) {
-                    appendFullName(text, (*r).node_, classe);
+                    text << Atom(Atom::LinkNode, CodeMarker::stringForNode((*r).node_))
+                         << Atom(Atom::FormattingLeft, ATOM_FORMATTING_LINK)
+                         << Atom(Atom::String, (*r).signature_)
+                         << Atom(Atom::FormattingRight, ATOM_FORMATTING_LINK);
 
                     if ((*r).access_ == Node::Protected) {
                         text << " (protected)";
@@ -2374,7 +2365,7 @@ void HtmlGenerator::generateQmlRequisites(QmlTypeNode *qcn, CodeMarker *marker)
 
     //add the inherited-by to the map
     NodeList subs;
-    QmlTypeNode::subclasses(qcn, subs);
+    QmlTypeNode::subclasses(qcn->name(), subs);
     if (!subs.isEmpty()) {
         text.clear();
         text << Atom::ParaLeft;
@@ -3534,7 +3525,7 @@ QString HtmlGenerator::highlightedCode(const QString& markedCode,
             }
             else if (parseArg(src, headerTag, &i, srcSize, &arg, &par1)) {
                 par1 = QStringRef();
-                if (arg.startsWith(QLatin1Char('&')))
+                if (arg.at(0) == QChar('&'))
                     html += arg;
                 else {
                     const Node* n = qdb_->findNodeForInclude(QStringList(arg.toString()));

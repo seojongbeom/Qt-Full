@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -63,7 +57,7 @@ public:
     QSet<int> indexIds(QHelpDBReader *reader) const;
 
 private:
-    void run() override;
+    void run();
 
     QHelpEnginePrivate *m_helpEngine;
     QStringList m_indices;
@@ -71,30 +65,37 @@ private:
     QMap<QHelpDBReader*, QSet<int> > m_indexIds;
     QStringList m_filterAttributes;
     mutable QMutex m_mutex;
-    bool m_abort = false;
+    bool m_abort;
 };
 
 class QHelpIndexModelPrivate
 {
 public:
     QHelpIndexModelPrivate(QHelpEnginePrivate *hE)
-        : helpEngine(hE),
-          indexProvider(new QHelpIndexProvider(helpEngine))
     {
+        helpEngine = hE;
+        indexProvider = new QHelpIndexProvider(helpEngine);
+        insertedRows = 0;
     }
 
     QHelpEnginePrivate *helpEngine;
     QHelpIndexProvider *indexProvider;
     QStringList indices;
-    int insertedRows = 0;
+    int insertedRows;
     QString currentFilter;
     QList<QHelpDBReader*> activeReaders;
 };
 
-QHelpIndexProvider::QHelpIndexProvider(QHelpEnginePrivate *helpEngine)
-    : QThread(helpEngine),
-      m_helpEngine(helpEngine)
+static bool caseInsensitiveLessThan(const QString &as, const QString &bs)
 {
+    return QString::compare(as, bs, Qt::CaseInsensitive) < 0;
+}
+
+QHelpIndexProvider::QHelpIndexProvider(QHelpEnginePrivate *helpEngine)
+    : QThread(helpEngine)
+{
+    m_helpEngine = helpEngine;
+    m_abort = false;
 }
 
 QHelpIndexProvider::~QHelpIndexProvider()
@@ -141,7 +142,9 @@ QList<QHelpDBReader*> QHelpIndexProvider::activeReaders() const
 QSet<int> QHelpIndexProvider::indexIds(QHelpDBReader *reader) const
 {
     QMutexLocker lck(&m_mutex);
-    return m_indexIds.value(reader);
+    if (m_indexIds.contains(reader))
+        return m_indexIds.value(reader);
+    return QSet<int>();
 }
 
 void QHelpIndexProvider::run()
@@ -153,7 +156,7 @@ void QHelpIndexProvider::run()
     QSet<QString> indicesSet;
     m_mutex.unlock();
 
-    for (const QString &dbFileName : m_helpEngine->fileNameReaderMap.keys()) {
+    foreach (const QString &dbFileName, m_helpEngine->fileNameReaderMap.keys()) {
         m_mutex.lock();
         if (m_abort) {
             m_mutex.unlock();
@@ -166,10 +169,10 @@ void QHelpIndexProvider::run()
             QThread::currentThread()), 0);
         if (!reader.init())
             continue;
-        const QStringList &list = reader.indicesForFilter(atts);
-        if (!list.isEmpty()) {
+        QStringList lst = reader.indicesForFilter(atts);
+        if (!lst.isEmpty()) {
             m_mutex.lock();
-            for (const QString &s : list)
+            foreach (const QString &s, lst)
                 indicesSet.insert(s);
             if (m_abort) {
                 m_mutex.unlock();
@@ -183,7 +186,7 @@ void QHelpIndexProvider::run()
     }
     m_mutex.lock();
     m_indices = indicesSet.values();
-    m_indices.sort(Qt::CaseInsensitive);
+    std::sort(m_indices.begin(), m_indices.end(), caseInsensitiveLessThan);
     m_mutex.unlock();
 }
 
@@ -220,10 +223,8 @@ QHelpIndexModel::QHelpIndexModel(QHelpEnginePrivate *helpEngine)
 {
     d = new QHelpIndexModelPrivate(helpEngine);
 
-    connect(d->indexProvider, &QThread::finished,
-            this, &QHelpIndexModel::insertIndices);
-    connect(helpEngine->q, &QHelpEngineCore::readersAboutToBeInvalidated,
-            [this]() { invalidateIndex(); });
+    connect(d->indexProvider, SIGNAL(finished()), this, SLOT(insertIndices()));
+    connect(helpEngine->q, SIGNAL(readersAboutToBeInvalidated()), this, SLOT(invalidateIndex()));
 }
 
 QHelpIndexModel::~QHelpIndexModel()
@@ -233,10 +234,8 @@ QHelpIndexModel::~QHelpIndexModel()
 
 void QHelpIndexModel::invalidateIndex(bool onShutDown)
 {
-    if (onShutDown) {
-        disconnect(d->indexProvider, &QThread::finished,
-                   this, &QHelpIndexModel::insertIndices);
-    }
+    if (onShutDown)
+        disconnect(this, SLOT(insertIndices()));
     d->indexProvider->stopCollecting();
     d->indices.clear();
     if (!onShutDown)
@@ -258,9 +257,9 @@ void QHelpIndexModel::insertIndices()
 {
     d->indices = d->indexProvider->indices();
     d->activeReaders = d->indexProvider->activeReaders();
-    const QStringList &attributes = d->helpEngine->q->filterAttributes(d->currentFilter);
+    QStringList attributes = d->helpEngine->q->filterAttributes(d->currentFilter);
     if (attributes.count() > 1) {
-        for (QHelpDBReader *r : qAsConst(d->activeReaders))
+        foreach (QHelpDBReader *r, d->activeReaders)
             r->createAttributesCache(attributes, d->indexProvider->indexIds(r));
     }
     filter(QString());
@@ -277,12 +276,16 @@ bool QHelpIndexModel::isCreatingIndex() const
 }
 
 /*!
-    \obsolete
-    Use QHelpEngineCore::linksForKeyword() instead.
+    Returns all hits found for the \a keyword. A hit consists of
+    the URL and the document title.
 */
 QMap<QString, QUrl> QHelpIndexModel::linksForKeyword(const QString &keyword) const
 {
-    return d->helpEngine->q->linksForKeyword(keyword);
+    QMap<QString, QUrl> linkMap;
+    QStringList filterAttributes = d->helpEngine->q->filterAttributes(d->currentFilter);
+    foreach (QHelpDBReader *reader, d->activeReaders)
+        reader->linksForKeyword(keyword, filterAttributes, linkMap);
+    return linkMap;
 }
 
 /*!
@@ -307,33 +310,34 @@ QModelIndex QHelpIndexModel::filter(const QString &filter, const QString &wildca
     int perfectMatch = -1;
 
     if (!wildcard.isEmpty()) {
-        const QRegExp regExp(wildcard, Qt::CaseInsensitive, QRegExp::Wildcard);
-        for (const QString &index : qAsConst(d->indices)) {
+        QRegExp regExp(wildcard, Qt::CaseInsensitive);
+        regExp.setPatternSyntax(QRegExp::Wildcard);
+        foreach (const QString &index, d->indices) {
             if (index.contains(regExp)) {
                 lst.append(index);
                 if (perfectMatch == -1 && index.startsWith(filter, Qt::CaseInsensitive)) {
                     if (goodMatch == -1)
-                        goodMatch = lst.count() - 1;
+                        goodMatch = lst.count()-1;
                     if (filter.length() == index.length()){
-                        perfectMatch = lst.count() - 1;
+                        perfectMatch = lst.count()-1;
                     }
                 } else if (perfectMatch > -1 && index == filter) {
-                    perfectMatch = lst.count() - 1;
+                    perfectMatch = lst.count()-1;
                 }
             }
         }
     } else {
-        for (const QString &index : qAsConst(d->indices)) {
+        foreach (const QString &index, d->indices) {
             if (index.contains(filter, Qt::CaseInsensitive)) {
                 lst.append(index);
                 if (perfectMatch == -1 && index.startsWith(filter, Qt::CaseInsensitive)) {
                     if (goodMatch == -1)
-                        goodMatch = lst.count() - 1;
+                        goodMatch = lst.count()-1;
                     if (filter.length() == index.length()){
-                        perfectMatch = lst.count() - 1;
+                        perfectMatch = lst.count()-1;
                     }
                 } else if (perfectMatch > -1 && index == filter) {
-                    perfectMatch = lst.count() - 1;
+                    perfectMatch = lst.count()-1;
                 }
             }
         }
@@ -372,7 +376,7 @@ QModelIndex QHelpIndexModel::filter(const QString &filter, const QString &wildca
 
     This signal is emitted when the item representing the \a keyword
     is activated and the item has more than one link associated.
-    The \a links consist of the document titles and their URLs.
+    The \a links consist of the document title and their URL.
 */
 
 QHelpIndexWidget::QHelpIndexWidget()
@@ -380,8 +384,8 @@ QHelpIndexWidget::QHelpIndexWidget()
 {
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setUniformItemSizes(true);
-    connect(this, &QAbstractItemView::activated,
-            this, &QHelpIndexWidget::showLink);
+    connect(this, SIGNAL(activated(QModelIndex)),
+        this, SLOT(showLink(QModelIndex)));
 }
 
 void QHelpIndexWidget::showLink(const QModelIndex &index)
@@ -392,15 +396,17 @@ void QHelpIndexWidget::showLink(const QModelIndex &index)
     QHelpIndexModel *indexModel = qobject_cast<QHelpIndexModel*>(model());
     if (!indexModel)
         return;
+    QVariant v = indexModel->data(index, Qt::DisplayRole);
+    QString name;
+    if (v.isValid())
+        name = v.toString();
 
-    const QVariant &v = indexModel->data(index, Qt::DisplayRole);
-    const QString name = v.isValid() ? v.toString() : QString();
-
-    const QMap<QString, QUrl> &links = indexModel->linksForKeyword(name);
-    if (links.count() > 1)
+    QMap<QString, QUrl> links = indexModel->linksForKeyword(name);
+    if (links.count() == 1) {
+        emit linkActivated(links.constBegin().value(), name);
+    } else if (links.count() > 1) {
         emit linksActivated(links, name);
-    else if (!links.isEmpty())
-        emit linkActivated(links.first(), name);
+    }
 }
 
 /*!
@@ -424,7 +430,7 @@ void QHelpIndexWidget::filterIndices(const QString &filter, const QString &wildc
     QHelpIndexModel *indexModel = qobject_cast<QHelpIndexModel*>(model());
     if (!indexModel)
         return;
-    const QModelIndex &idx = indexModel->filter(filter, wildcard);
+    QModelIndex idx = indexModel->filter(filter, wildcard);
     if (idx.isValid())
         setCurrentIndex(idx);
 }

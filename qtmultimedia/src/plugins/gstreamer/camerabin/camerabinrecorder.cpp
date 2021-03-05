@@ -1,37 +1,31 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL$
+** $QT_BEGIN_LICENSE:LGPL21$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
+** General Public License version 2.1 or version 3 as published by the Free
+** Software Foundation and appearing in the file LICENSE.LGPLv21 and
+** LICENSE.LGPLv3 included in the packaging of this file. Please review the
+** following information to ensure the GNU Lesser General Public License
+** requirements will be met: https://www.gnu.org/licenses/lgpl.html and
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** $QT_END_LICENSE$
 **
@@ -136,7 +130,7 @@ qint64 CameraBinRecorder::duration() const
 
 void CameraBinRecorder::applySettings()
 {
-#if QT_CONFIG(gstreamer_encodingprofiles)
+#ifdef HAVE_GST_ENCODING_PROFILES
     CameraBinContainer *containerControl = m_session->mediaContainerControl();
     CameraBinAudioEncoder *audioEncoderControl = m_session->audioEncodeControl();
     CameraBinVideoEncoder *videoEncoderControl = m_session->videoEncodeControl();
@@ -153,43 +147,14 @@ void CameraBinRecorder::applySettings()
             videoEncoderControl->videoSettings().codec().isEmpty()) {
 
         QList<QStringList> candidates;
-
-        // By order of preference
-
-        // .mp4 (h264, AAC)
-        candidates.append(QStringList() << "video/quicktime, variant=(string)iso" << "video/x-h264" << "audio/mpeg, mpegversion=(int)4");
-
-        // .mp4 (h264, AC3)
-        candidates.append(QStringList() << "video/quicktime, variant=(string)iso" << "video/x-h264" << "audio/x-ac3");
-
-        // .mp4 (h264, MP3)
-        candidates.append(QStringList() << "video/quicktime, variant=(string)iso" << "video/x-h264" << "audio/mpeg, mpegversion=(int)1, layer=(int)3");
-
-        // .mkv (h264, AAC)
         candidates.append(QStringList() << "video/x-matroska" << "video/x-h264" << "audio/mpeg, mpegversion=(int)4");
-
-        // .mkv (h264, AC3)
-        candidates.append(QStringList() << "video/x-matroska" << "video/x-h264" << "audio/x-ac3");
-
-        // .mkv (h264, MP3)
-        candidates.append(QStringList() << "video/x-matroska" << "video/x-h264" << "audio/mpeg, mpegversion=(int)1, layer=(int)3");
-
-        // .mov (h264, AAC)
-        candidates.append(QStringList() << "video/quicktime" << "video/x-h264" << "audio/mpeg, mpegversion=(int)4");
-
-        // .mov (h264, MP3)
-        candidates.append(QStringList() << "video/quicktime" << "video/x-h264" << "audio/mpeg, mpegversion=(int)1, layer=(int)3");
-
-        // .webm (VP8, Vorbis)
         candidates.append(QStringList() << "video/webm" << "video/x-vp8" << "audio/x-vorbis");
-
-        // .ogg (Theora, Vorbis)
         candidates.append(QStringList() << "application/ogg" << "video/x-theora" << "audio/x-vorbis");
+        candidates.append(QStringList() << "video/quicktime" << "video/x-h264" << "audio/mpeg, mpegversion=(int)4");
+        candidates.append(QStringList() << "video/quicktime" << "video/x-h264" << "audio/mpeg");
+        candidates.append(QStringList() << "video/x-msvideo" << "video/x-divx" << "audio/mpeg");
 
-        // .avi (DivX, MP3)
-        candidates.append(QStringList() << "video/x-msvideo" << "video/x-divx" << "audio/mpeg, mpegversion=(int)1, layer=(int)3");
-
-        for (const QStringList &candidate : qAsConst(candidates)) {
+        foreach (const QStringList &candidate, candidates) {
             if (containerControl->supportedContainers().contains(candidate[0]) &&
                     videoEncoderControl->supportedVideoCodecs().contains(candidate[1]) &&
                     audioEncoderControl->supportedAudioCodecs().contains(candidate[2])) {
@@ -210,7 +175,7 @@ void CameraBinRecorder::applySettings()
 #endif
 }
 
-#if QT_CONFIG(gstreamer_encodingprofiles)
+#ifdef HAVE_GST_ENCODING_PROFILES
 
 GstEncodingContainerProfile *CameraBinRecorder::videoProfile()
 {
