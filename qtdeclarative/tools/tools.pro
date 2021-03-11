@@ -14,10 +14,10 @@ qmlimportscanner.CONFIG = host_build
     qtHaveModule(quick) {
         !static: {
             SUBDIRS += \
-                qmlscene \
                 qmlplugindump \
                 qmltime
         }
+        SUBDIRS += qmlscene
         qtHaveModule(widgets): SUBDIRS += qmleasing
     }
     qtHaveModule(qmltest): SUBDIRS += qmltestrunner
