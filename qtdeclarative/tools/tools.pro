@@ -15,15 +15,13 @@ qtConfig(commandlineparser): SUBDIRS += qmlcachegen
 
     qtHaveModule(quick) {
         !static: {
-            SUBDIRS += \
-                qmlscene \
-                qmltime
-
+            SUBDIRS += qmltime
             qtConfig(regularexpression):qtConfig(process) {
                 SUBDIRS += \
                     qmlplugindump
             }
         }
+        SUBDIRS += qmlscene 
         qtHaveModule(widgets): SUBDIRS += qmleasing
     }
     qtHaveModule(qmltest): SUBDIRS += qmltestrunner
